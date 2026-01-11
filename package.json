@@ -1,0 +1,58 @@
+{
+  "name": "trelk-support-bot",
+  "version": "2.0.0",
+  "description": "Official Telegram support platform for Trelk Bot (@TrelkSupportBot)",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:dashboard": "cd dashboard && npm run dev",
+    "dev:all": "npm run dev & npm run dev:dashboard",
+    "build": "tsc",
+    "build:dashboard": "cd dashboard && npm run build",
+    "build:all": "npm run build && npm run build:dashboard",
+    "start": "node dist/server.js",
+    "setup": "tsx scripts/setup.ts",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "nginx-conf": "sudo cp scripts/trelk.site.conf /etc/nginx/sites-available/trelk.site && sudo ln -sf /etc/nginx/sites-available/trelk.site /etc/nginx/sites-enabled/trelk.site && sudo nginx -t && sudo systemctl reload nginx"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "support",
+    "trelk",
+    "webhook",
+    "socket.io",
+    "mongodb",
+    "dashboard"
+  ],
+  "author": "Trelk Team",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cookie": "^10.0.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/multipart": "^9.3.0",
+    "@fastify/static": "^8.3.0",
+    "@fastify/websocket": "^11.0.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.5.0",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.19.28",
+    "@types/uuid": "^9.0.7",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
