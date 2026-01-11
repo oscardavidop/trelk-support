@@ -38,8 +38,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-2xl mb-4">
-            <MessageCircle className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center mb-4 w-50">
+            <img src="/assets/img/logo-dark.png" alt="Trelk Logo" />
           </div>
           <h1 className="text-2xl font-bold text-white">Trelk Support</h1>
           <p className="text-gray-400 mt-2">Agent Dashboard</p>

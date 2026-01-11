@@ -106,3 +106,53 @@ export async function optionalAuth(
     // Ignore errors - auth is optional
   }
 }
+
+/**
+ * Role-based access control middleware factory
+ * Creates a middleware that requires one of the specified roles
+ */
+export function requireRole(allowedRoles: string[]): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    // First ensure auth
+    await authMiddleware(request, reply);
+    
+    if (!request.agent) return;
+    
+    // Check role hierarchy
+    const agent = request.agent;
+    const hasRole = allowedRoles.some(role => {
+      // Admin has all permissions
+      if (agent.role === 'admin') return true;
+      // Supervisor can access supervisor or lower
+      if (agent.role === 'supervisor' && ['supervisor', 'support', 'junior'].includes(role)) return true;
+      // Direct role match
+      return agent.role === role;
+    });
+    
+    if (!hasRole) {
+      return reply.code(403).send({
+        ok: false,
+        error: `Access denied. Required role: ${allowedRoles.join(' or ')}`,
+      });
+    }
+  };
+}
+
+/**
+ * Supervisor or admin only middleware
+ */
+export async function supervisorMiddleware(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  await authMiddleware(request, reply);
+  
+  if (!request.agent) return;
+  
+  if (!['admin', 'supervisor'].includes(request.agent.role)) {
+    return reply.code(403).send({
+      ok: false,
+      error: 'Supervisor access required',
+    });
+  }
+}

@@ -111,10 +111,17 @@ export interface TelegramCallbackQuery {
   data?: string;
 }
 
+export interface TelegramPollAnswer {
+  poll_id: string;
+  user: TelegramUser;
+  option_ids: number[];
+}
+
 export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  poll_answer?: TelegramPollAnswer;
 }
 
 // ============= INLINE KEYBOARD TYPES =============

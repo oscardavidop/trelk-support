@@ -4,6 +4,9 @@
  */
 
 import { Agent, type IAgent, type AgentRole, type OnlineStatus } from '../database/index.js';
+import { MAX_CONCURRENT_CHATS, RECONNECTION_GRACE_MINUTES, type AvailabilityStatus } from '../database/models/Agent.js';
+
+export { MAX_CONCURRENT_CHATS, RECONNECTION_GRACE_MINUTES };
 
 /**
  * Create new agent
@@ -126,4 +129,141 @@ export async function getAgentStats(): Promise<{
   }
   
   return result;
+}
+
+/**
+ * Get availability status for an agent
+ */
+export function getAvailabilityStatus(agent: IAgent): AvailabilityStatus {
+  if (agent.onlineStatus === 'offline') return 'offline';
+  if (agent.activeChats >= MAX_CONCURRENT_CHATS) return 'busy';
+  return 'available';
+}
+
+/**
+ * Get available agents (online and not at max capacity)
+ */
+export async function getAvailableAgents(): Promise<IAgent[]> {
+  return Agent.find({
+    onlineStatus: { $in: ['online', 'away'] },
+    isActive: true,
+    activeChats: { $lt: MAX_CONCURRENT_CHATS },
+  }).sort({ activeChats: 1 }); // Prefer agents with fewer active chats
+}
+
+/**
+ * Increment agent's active chat count
+ */
+export async function incrementActiveChats(agentId: string): Promise<IAgent | null> {
+  return Agent.findByIdAndUpdate(
+    agentId,
+    { 
+      $inc: { activeChats: 1, totalChatsHandled: 1 },
+      $set: { lastActivity: new Date() },
+    },
+    { new: true }
+  );
+}
+
+/**
+ * Decrement agent's active chat count
+ */
+export async function decrementActiveChats(agentId: string): Promise<IAgent | null> {
+  return Agent.findByIdAndUpdate(
+    agentId,
+    { 
+      $inc: { activeChats: -1 },
+      $set: { lastActivity: new Date() },
+    },
+    { new: true }
+  );
+}
+
+/**
+ * Set agent socket ID (for tracking connection)
+ */
+export async function setAgentSocketId(agentId: string, socketId: string | null): Promise<void> {
+  await Agent.updateOne(
+    { _id: agentId },
+    { 
+      socketId,
+      ...(socketId ? { onlineStatus: 'online' } : { lastDisconnect: new Date() }),
+    }
+  );
+}
+
+/**
+ * Get agent by socket ID
+ */
+export async function getAgentBySocketId(socketId: string): Promise<IAgent | null> {
+  return Agent.findOne({ socketId });
+}
+
+/**
+ * Mark agent as disconnected and handle their chats
+ */
+export async function handleAgentDisconnect(agentId: string): Promise<{
+  agent: IAgent | null;
+  affectedChats: number;
+}> {
+  const agent = await Agent.findByIdAndUpdate(
+    agentId,
+    {
+      onlineStatus: 'offline',
+      socketId: null,
+      lastDisconnect: new Date(),
+    },
+    { new: true }
+  );
+  
+  return { agent, affectedChats: agent?.activeChats || 0 };
+}
+
+/**
+ * Check if agent is within reconnection grace period
+ */
+export function isWithinGracePeriod(agent: IAgent): boolean {
+  if (!agent.lastDisconnect) return false;
+  const elapsed = Date.now() - agent.lastDisconnect.getTime();
+  return elapsed < RECONNECTION_GRACE_MINUTES * 60 * 1000;
+}
+
+/**
+ * Reconcile agent state on server restart
+ * - Agents without socket connection -> offline
+ * - Return list of agents that were marked offline
+ */
+export async function reconcileAgentStates(): Promise<IAgent[]> {
+  const onlineAgents = await Agent.find({
+    onlineStatus: { $ne: 'offline' },
+  });
+  
+  // Mark all as offline (they need to reconnect)
+  await Agent.updateMany(
+    { onlineStatus: { $ne: 'offline' } },
+    { 
+      onlineStatus: 'offline',
+      socketId: null,
+      lastDisconnect: new Date(),
+    }
+  );
+  
+  return onlineAgents;
+}
+
+/**
+ * Get agents with active chats who are offline (for reassignment)
+ */
+export async function getOfflineAgentsWithChats(): Promise<IAgent[]> {
+  return Agent.find({
+    onlineStatus: 'offline',
+    activeChats: { $gt: 0 },
+  });
+}
+
+/**
+ * Reset agent's active chat count (for reconciliation)
+ */
+export async function resetActiveChats(agentId: string, count = 0): Promise<void> {
+  await Agent.updateOne({ _id: agentId }, { activeChats: count });
 }

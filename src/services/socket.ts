@@ -7,7 +7,16 @@ import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { ENV } from '../config/index.js';
 import { verifyToken } from './auth.service.js';
-import { updateAgentStatus, getOnlineAgents, findAgentById } from './agent.service.js';
+import { 
+  updateAgentStatus, 
+  getOnlineAgents, 
+  findAgentById,
+  setAgentSocketId,
+  incrementActiveChats,
+  decrementActiveChats,
+  getAvailabilityStatus,
+  MAX_CONCURRENT_CHATS,
+} from './agent.service.js';
 import { 
   getSessionById, 
   getWaitingSessions, 
@@ -20,11 +29,16 @@ import {
   getSessionMessages,
   markMessagesAsRead,
   getSessionStats,
+  canAgentAccessSession,
+  autoAssignFromQueue,
+  getVisibleSessionsForAgent,
+  getQueuedSessions,
+  addToQueue,
 } from './chat.service.js';
 import { getAgentStats } from './agent.service.js';
-import { sendMessage as sendTelegramMessage, sendPhoto, sendDocument, sendVoice, sendChatAction } from './telegram.js';
+import { sendMessage as sendTelegramMessage, sendPhoto, sendDocument, sendVoice, sendChatAction, editMessage as editTelegramMessage } from './telegram.js';
 import { logger } from './logger.js';
-import { startInactivityTimer, closeByAgent } from './inactivity.service.js';
+import { startInactivityTimer, closeByAgent, clearQueuedTimer } from './inactivity.service.js';
 import { getAbsolutePath } from './upload.service.js';
 import { 
   transferSession, 
@@ -34,7 +48,15 @@ import {
   setSessionCategory,
   recordFirstResponse,
 } from './enterprise.service.js';
+import {
+  handleAgentDisconnection,
+  handleAgentReconnection,
+  getAgentSyncState,
+  tryAssignSession,
+} from './reconciliation.service.js';
 import type { ChatCategory } from '../database/models/ChatSession.js';
+import { Message } from '../database/models/Message.js';
+import type { AvailabilityStatus } from '../database/models/Agent.js';
 
 // Socket.IO event types
 export interface ServerToClientEvents {
@@ -50,9 +72,19 @@ export interface ServerToClientEvents {
   }) => void;
   'session:reopened': (data: { sessionId: string; reopenedBy: string }) => void;
   
+  // Queue and assignment events (visibility-aware)
+  'session:queued': (session: SessionData) => void;
+  'session:assigned': (data: { sessionId: string; agentId: string; agentName: string }) => void;
+  'session:unassigned': (data: { sessionId: string }) => void;
+  'session:accessDenied': (data: { sessionId: string; reason: string }) => void;
+  
   // Message events
   'message:new': (message: MessageData) => void;
   'message:read': (data: { sessionId: string; messageId: string }) => void;
+  'message:updated': (message: MessageData) => void;
+  'message:deleted': (data: { messageId: string; sessionId: string }) => void;
+  'message:pinned': (data: { messageId: string; sessionId: string; message: MessageData }) => void;
+  'message:unpinned': (data: { sessionId: string }) => void;
   
   // Typing indicators
   'typing:start': (data: { sessionId: string; userId?: number; agentId?: string; agentName?: string }) => void;
@@ -62,6 +94,11 @@ export interface ServerToClientEvents {
   'agent:online': (agent: AgentData) => void;
   'agent:offline': (agentId: string) => void;
   'agent:status': (data: { agentId: string; status: string }) => void;
+  'agent:availability': (data: { agentId: string; availability: AvailabilityStatus; activeChats: number; maxChats: number }) => void;
+  
+  // Sync events (for reconnection)
+  'sync:state': (data: SyncStateData) => void;
+  'sync:error': (data: { message: string }) => void;
   
   // Stats events
   'stats:update': (stats: DashboardStats) => void;
@@ -90,6 +127,117 @@ export interface ServerToClientEvents {
   'contact:tag:removed': (data: { userId: string; tagId: string }) => void;
   'contact:field:updated': (data: { userId: string; fieldKey: string; value: unknown }) => void;
   
+  // Supervisor & Whisper events
+  'whisper:new': (whisper: { 
+    id: string; 
+    sessionId: string; 
+    supervisorId: string; 
+    supervisorName: string; 
+    content: string; 
+    createdAt: Date; 
+  }) => void;
+  'whisper:received': (whisper: { 
+    id: string; 
+    sessionId: string; 
+    fromSupervisor: { id: string; name: string }; 
+    content: string; 
+    createdAt: Date; 
+  }) => void;
+  'whisper:read': (data: { whisperId: string }) => void;
+  'session:watched': (data: { 
+    sessionId: string; 
+    supervisorId: string; 
+    supervisorName: string; 
+    action: 'start' | 'stop'; 
+  }) => void;
+  'supervisor:watching': (data: { 
+    supervisorId: string; 
+    supervisorName: string; 
+    action: 'start' | 'stop'; 
+  }) => void;
+  'session:takenOver': (data: { 
+    sessionId: string; 
+    takenBy: { id: string; name: string }; 
+    reason: string;
+    bySupervisor?: { id: string; name: string };
+  }) => void;
+  'session:update': (data: { 
+    sessionId: string; 
+    [key: string]: unknown; 
+  }) => void;
+  'agent:statsUpdate': (data: { 
+    agentId: string; 
+    activeChats: number; 
+    resolvedToday: number; 
+    avgResponseTime: number; 
+  }) => void;
+  'activity:new': (data: { 
+    sessionId: string; 
+    type: string; 
+    description: string; 
+    agentId?: string; 
+    agentName?: string; 
+    metadata?: Record<string, unknown>; 
+    createdAt: Date; 
+  }) => void;
+  
+  // AI Copilot events
+  'copilot:suggestion': (data: { 
+    sessionId: string; 
+    id: string; 
+    type: 'response' | 'summary' | 'category'; 
+    content: string; 
+    confidence: number; 
+  }) => void;
+  
+  // Automation events
+  'automation:triggered': (data: { 
+    sessionId: string; 
+    id: string; 
+    name: string; 
+    action: string; 
+    result: 'success' | 'failure'; 
+  }) => void;
+  
+  // Escalation events
+  'escalation:new': (data: { 
+    sessionId: string; 
+    reason?: string; 
+    priority?: string; 
+    from?: string;
+    [key: string]: unknown;
+  }) => void;
+  
+  // Alert events
+  'alert:automation': (data: { 
+    type: string; 
+    message?: string; 
+    [key: string]: unknown; 
+  }) => void;
+  'alert:low-rating': (data: { 
+    sessionId: string; 
+    agentId: string; 
+    agentName: string; 
+    rating: number; 
+    ratingLabel: string;
+    userName: string;
+    answeredAt: Date;
+  }) => void;
+  
+  // Survey events
+  'survey:sent': (data: { 
+    sessionId: string; 
+    pollId: string; 
+    sentAt: Date; 
+  }) => void;
+  'survey:answered': (data: { 
+    sessionId: string; 
+    rating: number; 
+    satisfaction: string; 
+    label: string; 
+    answeredAt: Date; 
+  }) => void;
+  
   // Errors
   'error': (error: { message: string }) => void;
 }
@@ -117,10 +265,17 @@ export interface ClientToServerEvents {
   'session:transfer': (data: { sessionId: string; toAgentId: string; reason: string }, callback?: (result: ResultData) => void) => void;
   'session:reopen': (data: { sessionId: string }, callback?: (result: ResultData) => void) => void;
   'session:setCategory': (data: { sessionId: string; category: string }, callback?: (result: ResultData) => void) => void;
+  'session:takeFromQueue': (data: { sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'session:returnToQueue': (data: { sessionId: string; reason?: string }, callback?: (result: ResultData) => void) => void;
   
   // Message actions
-  'message:send': (data: { sessionId: string; content: string }, callback: (result: ResultData) => void) => void;
+  'message:send': (data: { sessionId: string; content: string; replyToMessageId?: string }, callback: (result: ResultData) => void) => void;
   'message:read': (data: { sessionId: string; messageId: string }) => void;
+  'message:edit': (data: { messageId: string; sessionId: string; newContent: string }, callback?: (result: ResultData) => void) => void;
+  'message:delete': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'message:pin': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'message:unpin': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'message:reportSpam': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
   
   // Media message actions
   'message:sendImage': (data: { sessionId: string; url: string; caption?: string }, callback: (result: ResultData) => void) => void;
@@ -137,6 +292,13 @@ export interface ClientToServerEvents {
   
   // Agent actions
   'agent:status': (status: 'online' | 'away' | 'offline') => void;
+  'agent:requestSync': (callback: (result: ResultData) => void) => void;
+  
+  // Supervisor actions
+  'supervisor:sendWhisper': (data: { sessionId: string; targetAgentId: string; content: string }, callback?: (result: ResultData) => void) => void;
+  'supervisor:watchSession': (data: { sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'supervisor:unwatchSession': (data: { sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'supervisor:takeover': (data: { sessionId: string; reason: string }, callback?: (result: ResultData) => void) => void;
   
   // Request data
   'stats:request': (callback: (stats: DashboardStats) => void) => void;
@@ -179,6 +341,15 @@ interface MessageData {
   mediaUrl?: string;
   fileName?: string;
   createdAt: Date;
+  isEdited?: boolean;
+  editedAt?: Date;
+  isPinned?: boolean;
+  replyToMessage?: {
+    _id: string;
+    sender: string;
+    senderAgent?: { name: string };
+    content: string;
+  };
 }
 
 interface AgentData {
@@ -187,6 +358,8 @@ interface AgentData {
   email: string;
   role: string;
   onlineStatus: string;
+  availability?: AvailabilityStatus;
+  activeChats?: number;
   avatar?: string;
 }
 
@@ -195,6 +368,7 @@ interface DashboardStats {
     total: number;
     bot: number;
     waiting: number;
+    queued: number;
     human: number;
     closed: number;
   };
@@ -203,7 +377,21 @@ interface DashboardStats {
     online: number;
     away: number;
     offline: number;
+    available: number;
+    busy: number;
   };
+}
+
+interface SyncStateData {
+  agent: AgentData;
+  mySessions: SessionData[];
+  queuedSessions: SessionData[];
+  stats: {
+    myActive: number;
+    queue: number;
+  };
+  reconnected: boolean;
+  recoveredSessions: number;
 }
 
 interface NotificationData {
@@ -225,6 +413,19 @@ const sessionRooms = new Map<string, Set<string>>(); // sessionId -> Set of agen
 let io: SocketServer<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
 /**
+ * Get the Socket.IO server instance
+ */
+export function getIO(): SocketServer<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData> {
+  if (!io) {
+    throw new Error('Socket.IO not initialized. Call initializeSocketIO first.');
+  }
+  return io;
+}
+
+// Re-export io for backward compatibility (will throw if accessed before init)
+export { io };
+
+/**
  * Initialize Socket.IO server
  */
 export function initializeSocketIO(httpServer: HttpServer): SocketServer {
@@ -234,7 +435,7 @@ export function initializeSocketIO(httpServer: HttpServer): SocketServer {
       methods: ['GET', 'POST'],
       credentials: true,
     },
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
   });
   
   // Authentication middleware
@@ -275,46 +476,123 @@ export function initializeSocketIO(httpServer: HttpServer): SocketServer {
 async function handleConnection(socket: Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>): Promise<void> {
   const { agentId, email } = socket.data;
   
-  logger.info('api', { action: 'agent_connected', agentId, email });
+  logger.info('api', { action: 'agent_connected', agentId, email, socketId: socket.id });
   
   // Store socket reference
   agentSockets.set(agentId, socket);
   
-  // Set agent online
-  await updateAgentStatus(agentId, 'online');
+  // Handle reconnection (checks grace period, recovers sessions if applicable)
+  const reconnectionResult = await handleAgentReconnection(agentId, socket.id);
   
-  // Notify other agents
-  const agent = await findAgentById(agentId);
-  if (agent) {
-    socket.broadcast.emit('agent:online', {
+  // Get full sync state
+  const syncState = await getAgentSyncState(agentId);
+  const agent = syncState.agent;
+  
+  if (!agent) {
+    socket.emit('sync:error', { message: 'Agent not found' });
+    socket.disconnect();
+    return;
+  }
+  
+  // Calculate availability
+  const availability = getAvailabilityStatus(agent);
+  
+  // Send sync state to the connecting agent
+  socket.emit('sync:state', {
+    agent: {
       _id: agent._id.toString(),
       name: agent.name,
       email: agent.email,
       role: agent.role,
-      onlineStatus: 'online',
+      onlineStatus: agent.onlineStatus,
+      availability,
+      activeChats: agent.activeChats,
       avatar: agent.avatar,
-    });
-  }
+    },
+    mySessions: syncState.mySessions.map(formatSessionData),
+    queuedSessions: syncState.queuedSessions.map(formatSessionData),
+    stats: syncState.stats,
+    reconnected: reconnectionResult.isGracePeriodRecovery,
+    recoveredSessions: reconnectionResult.recoveredSessions.length,
+  });
+  
+  // Notify other agents
+  socket.broadcast.emit('agent:online', {
+    _id: agent._id.toString(),
+    name: agent.name,
+    email: agent.email,
+    role: agent.role,
+    onlineStatus: 'online',
+    availability,
+    activeChats: agent.activeChats,
+    avatar: agent.avatar,
+  });
+  
+  // Broadcast availability update
+  io.emit('agent:availability', {
+    agentId: agent._id.toString(),
+    availability,
+    activeChats: agent.activeChats,
+    maxChats: MAX_CONCURRENT_CHATS,
+  });
   
   // Broadcast updated stats
   await broadcastStats();
   
   // ============= SESSION HANDLERS =============
   
-  // Accept waiting session
+  // Accept waiting session (from queue or waiting list)
   socket.on('session:accept', async (sessionId, callback) => {
     try {
-      const session = await assignAgent(sessionId, agentId);
+      const session = await getSessionById(sessionId);
       
       if (!session) {
         return callback({ ok: false, error: 'Session not found' });
       }
       
+      // Verify session is available (queued or waiting, not assigned to another agent)
+      const isAdmin = socket.data.role === 'admin';
+      if (!isAdmin) {
+        // Check if session is already assigned to another agent
+        if (session.assignedAgent && session.assignedAgent._id.toString() !== agentId) {
+          return callback({ ok: false, error: 'Session is already assigned to another agent' });
+        }
+        // Check if session is available for taking
+        if (!['queued', 'waiting', 'bot'].includes(session.status)) {
+          return callback({ ok: false, error: 'Session is not available for assignment' });
+        }
+      }
+      
+      const assignedSession = await assignAgent(sessionId, agentId);
+      
+      if (!assignedSession) {
+        return callback({ ok: false, error: 'Failed to assign session' });
+      }
+      
+      // Clear queued timer and start regular inactivity timer
+      clearQueuedTimer(sessionId);
+      await startInactivityTimer(sessionId, assignedSession.telegramChatId);
+      
       // Join session room
       socket.join(`session:${sessionId}`);
       
-      // Notify all agents of update
-      io.emit('session:updated', formatSessionData(session));
+      // Emit session:assigned to notify the specific agent
+      socket.emit('session:assigned', {
+        sessionId,
+        agentId,
+        agentName: agent?.name || 'Agent',
+      });
+      
+      // Emit session:updated to the assigned agent
+      socket.emit('session:updated', formatSessionData(assignedSession));
+      
+      // For admins, broadcast update to all
+      if (isAdmin) {
+        socket.broadcast.emit('session:updated', formatSessionData(assignedSession));
+      } else {
+        // For other agents, emit session:unassigned so they remove it from their queue view
+        socket.broadcast.emit('session:unassigned', { sessionId });
+      }
       
       // Send system message
       await addMessage(sessionId, 'agent', `Agent ${agent?.name} joined the conversation`, {
@@ -323,14 +601,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       });
       
       // Notify user via Telegram - Show close keyboard
-      const userMessage = session.user && 'language' in session.user
-        ? (session.user as unknown as { language: string }).language === 'es'
+      const userMessage = assignedSession.user && 'language' in assignedSession.user
+        ? (assignedSession.user as unknown as { language: string }).language === 'es'
           ? '✅ Un agente de soporte se ha unido a la conversación.\n\nPuedes cerrar el chat en cualquier momento usando el botón de abajo.'
           : '✅ A support agent has joined the conversation.\n\nYou can close the chat at any time using the button below.'
         : '✅ A support agent has joined the conversation.\n\nYou can close the chat at any time using the button below.';
       
       // Show ReplyKeyboard with close button
-      await sendTelegramMessage(session.telegramChatId, userMessage, {
+      await sendTelegramMessage(assignedSession.telegramChatId, userMessage, {
         replyMarkup: {
           keyboard: [[{ text: '🔒 Cerrar chat' }]],
           resize_keyboard: true,
@@ -339,7 +617,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       });
       
       await broadcastStats();
-      callback({ ok: true, data: session });
+      callback({ ok: true, data: assignedSession });
     } catch (error) {
       logger.error('api', { action: 'session_accept_error', error: String(error) });
       callback({ ok: false, error: 'Failed to accept session' });
@@ -417,6 +695,28 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       });
       
       await broadcastStats();
+      
+      // Auto-assign next session from queue to this agent
+      const nextSession = await autoAssignFromQueue(agentId);
+      if (nextSession) {
+        // Notify this agent about new assignment
+        socket.emit('session:assigned', {
+          sessionId: nextSession.sessionId,
+          agentId,
+          agentName: agent?.name || 'Agent',
+        });
+        socket.emit('session:updated', formatSessionData(nextSession));
+        
+        // Notify other agents that this session is no longer in queue
+        socket.broadcast.emit('session:unassigned', { sessionId: nextSession.sessionId });
+        
+        logger.info('chat', { 
+          action: 'auto_assigned_from_queue', 
+          sessionId: nextSession.sessionId, 
+          agentId 
+        });
+      }
+      
       callback({ ok: true });
     } catch (error) {
       logger.error('api', { action: 'session_close_error', error: String(error) });
@@ -424,8 +724,19 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     }
   });
   
-  // Join session room (for viewing)
-  socket.on('session:join', (sessionId) => {
+  // Join session room (for viewing) - with access control
+  socket.on('session:join', async (sessionId) => {
+    const isAdmin = socket.data.role === 'admin';
+    const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin);
+    
+    if (!canAccess) {
+      socket.emit('session:accessDenied', { 
+        sessionId, 
+        reason: 'You do not have access to this session' 
+      });
+      return;
+    }
+    
     socket.join(`session:${sessionId}`);
     
     // Track which agents are viewing this session
@@ -441,10 +752,104 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     sessionRooms.get(sessionId)?.delete(agentId);
   });
   
+  // ============= QUEUE MANAGEMENT =============
+  
+  // Take session from queue (explicit action)
+  socket.on('session:takeFromQueue', async ({ sessionId }, callback?) => {
+    try {
+      const session = await getSessionById(sessionId);
+      
+      if (!session) {
+        callback?.({ ok: false, error: 'Session not found' });
+        return;
+      }
+      
+      // Verify session is in queue
+      if (session.status !== 'queued' && session.status !== 'waiting') {
+        callback?.({ ok: false, error: 'Session is not in queue' });
+        return;
+      }
+      
+      // Assign to this agent
+      const assignedSession = await assignAgent(sessionId, agentId);
+      
+      if (!assignedSession) {
+        callback?.({ ok: false, error: 'Failed to take session from queue' });
+        return;
+      }
+      
+      // Join session room
+      socket.join(`session:${sessionId}`);
+      
+      // Notify this agent
+      socket.emit('session:assigned', {
+        sessionId,
+        agentId,
+        agentName: agent?.name || 'Agent',
+      });
+      socket.emit('session:updated', formatSessionData(assignedSession));
+      
+      // Notify other agents to remove from queue view
+      socket.broadcast.emit('session:unassigned', { sessionId });
+      
+      await broadcastStats();
+      callback?.({ ok: true, data: assignedSession });
+    } catch (error) {
+      logger.error('api', { action: 'take_from_queue_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to take session from queue' });
+    }
+  });
+  
+  // Return session to queue (agent releases the session)
+  socket.on('session:returnToQueue', async ({ sessionId, reason }, callback?) => {
+    try {
+      const session = await getSessionById(sessionId);
+      
+      if (!session) {
+        callback?.({ ok: false, error: 'Session not found' });
+        return;
+      }
+      
+      const isAdmin = socket.data.role === 'admin';
+      
+      // Verify agent has access to this session
+      if (!isAdmin && session.assignedAgent?._id.toString() !== agentId) {
+        callback?.({ ok: false, error: 'Not authorized to return this session' });
+        return;
+      }
+      
+      // Return to queue
+      const queuedSession = await addToQueue(sessionId);
+      
+      if (!queuedSession) {
+        callback?.({ ok: false, error: 'Failed to return session to queue' });
+        return;
+      }
+      
+      // Leave session room
+      socket.leave(`session:${sessionId}`);
+      
+      // Log the action
+      await addMessage(sessionId, 'agent', `Agent ${agent?.name} returned the session to queue. Reason: ${reason || 'No reason provided'}`, {
+        senderAgentId: agentId,
+        messageType: 'system',
+      });
+      
+      // Notify all agents about queue update (session now available)
+      io.emit('session:queued', formatSessionData(queuedSession));
+      
+      await broadcastStats();
+      callback?.({ ok: true });
+    } catch (error) {
+      logger.error('api', { action: 'return_to_queue_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to return session to queue' });
+    }
+  });
+
   // ============= MESSAGE HANDLERS =============
   
   // Send message to user
-  socket.on('message:send', async ({ sessionId, content }, callback) => {
+  socket.on('message:send', async ({ sessionId, content, replyToMessageId }, callback) => {
     try {
       const session = await getSessionById(sessionId);
       
@@ -452,13 +857,39 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         return callback({ ok: false, error: 'Session not found' });
       }
       
+      // Verify agent has access to this session
+      const isAdmin = socket.data.role === 'admin';
+      const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin);
+      if (!canAccess) {
+        return callback({ ok: false, error: 'Access denied to this session' });
+      }
+      
+      // Get reply message if exists
+      let replyToMessage: { _id: string; sender: string; senderAgent?: { name: string }; content: string } | undefined;
+      let telegramReplyToMessageId: number | undefined;
+      if (replyToMessageId) {
+        const replyMsg = await Message.findById(replyToMessageId);
+        if (replyMsg) {
+          replyToMessage = {
+            _id: replyMsg._id.toString(),
+            sender: replyMsg.sender,
+            senderAgent: (replyMsg as any).senderAgent,
+            content: replyMsg.content,
+          };
+          telegramReplyToMessageId = replyMsg.telegramMessageId;
+        }
+      }
+      
       // Save message to DB
       const message = await addMessage(sessionId, 'agent', content, {
         senderAgentId: agentId,
+        replyToMessageId,
       });
       
-      // Send to user via Telegram
-      await sendTelegramMessage(session.telegramChatId, content);
+      // Send to user via Telegram with reply_to_message_id if applicable
+      await sendTelegramMessage(session.telegramChatId, content, {
+        reply_to_message_id: telegramReplyToMessageId,
+      });
       
       // Start/restart inactivity timer - agent sent message, waiting for user response
       await startInactivityTimer(sessionId, session.telegramChatId);
@@ -471,6 +902,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         senderAgent: { name: agent?.name || 'Agent' },
         content,
         createdAt: message.createdAt,
+        replyToMessage,
       });
       
       callback({ ok: true, data: message });
@@ -630,6 +1062,217 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     } catch (error) {
       logger.error('api', { action: 'message_send_voice_error', error: String(error) });
       callback({ ok: false, error: 'Failed to send voice' });
+    }
+  });
+
+  // ============= MESSAGE ACTIONS =============
+  
+  // Edit message
+  socket.on('message:edit', async ({ messageId, sessionId, newContent }, callback?) => {
+    try {
+      const message = await Message.findById(messageId).populate('session');
+      
+      if (!message) {
+        callback?.({ ok: false, error: 'Message not found' });
+        return;
+      }
+      
+      // Verify ownership - only the agent who sent can edit
+      const senderAgent = message.senderAgent as any;
+      if (message.sender !== 'agent' || senderAgent?._id?.toString() !== agentId) {
+        callback?.({ ok: false, error: 'Not authorized to edit this message' });
+        return;
+      }
+      
+      // Check if message is less than 48h old (Telegram limit is 48h)
+      const messageAge = Date.now() - new Date(message.createdAt).getTime();
+      if (messageAge > 48 * 60 * 60 * 1000) {
+        callback?.({ ok: false, error: 'Cannot edit messages older than 48 hours' });
+        return;
+      }
+      
+      // Store previous version
+      const previousContent = message.content;
+      
+      // Try to edit in Telegram if we have the telegram message ID
+      const session = message.session as any;
+      if (message.telegramMessageId && session?.telegramChatId) {
+        try {
+          await editTelegramMessage(
+            session.telegramChatId,
+            message.telegramMessageId,
+            newContent
+          );
+        } catch (telegramError) {
+          logger.warn('chat', { 
+            action: 'telegram_edit_failed', 
+            messageId, 
+            error: String(telegramError) 
+          });
+          // Continue with DB update even if Telegram edit fails
+        }
+      }
+      
+      // Update message in database
+      message.content = newContent;
+      message.isEdited = true;
+      message.editedAt = new Date();
+      message.previousContent = previousContent;
+      await message.save();
+      
+      // Broadcast update
+      io.to(`session:${sessionId}`).emit('message:updated', {
+        _id: message._id.toString(),
+        session: sessionId,
+        sender: message.sender,
+        senderAgent: { name: agent?.name || 'Agent' },
+        content: message.content,
+        messageType: message.messageType,
+        isEdited: true,
+        editedAt: message.editedAt,
+        createdAt: message.createdAt,
+      });
+      
+      logger.info('chat', { action: 'message_edited', messageId, agentId });
+      callback?.({ ok: true, data: message });
+    } catch (error) {
+      logger.error('api', { action: 'message_edit_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to edit message' });
+    }
+  });
+  
+  // Delete message
+  socket.on('message:delete', async ({ messageId, sessionId }, callback?) => {
+    try {
+      const message = await Message.findById(messageId);
+      
+      if (!message) {
+        callback?.({ ok: false, error: 'Message not found' });
+        return;
+      }
+      
+      // Verify ownership
+      const senderAgent = message.senderAgent as any;
+      if (message.sender !== 'agent' || senderAgent?._id?.toString() !== agentId) {
+        callback?.({ ok: false, error: 'Not authorized to delete this message' });
+        return;
+      }
+      
+      // Soft delete - replace content
+      message.content = 'Mensaje eliminado por el agente';
+      message.messageType = 'system';
+      (message as any).isDeleted = true;
+      (message as any).deletedAt = new Date();
+      (message as any).deletedBy = agentId;
+      await message.save();
+      
+      // Broadcast deletion
+      io.to(`session:${sessionId}`).emit('message:deleted', { messageId, sessionId });
+      
+      logger.info('chat', { action: 'message_deleted', messageId, agentId });
+      callback?.({ ok: true });
+    } catch (error) {
+      logger.error('api', { action: 'message_delete_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to delete message' });
+    }
+  });
+  
+  // Pin message
+  socket.on('message:pin', async ({ messageId, sessionId }, callback?) => {
+    try {
+      const message = await Message.findById(messageId);
+      
+      if (!message) {
+        callback?.({ ok: false, error: 'Message not found' });
+        return;
+      }
+      
+      // Unpin any existing pinned message in this session
+      await Message.updateMany(
+        { session: message.session, isPinned: true },
+        { isPinned: false }
+      );
+      
+      // Pin this message
+      (message as any).isPinned = true;
+      (message as any).pinnedAt = new Date();
+      (message as any).pinnedBy = agentId;
+      await message.save();
+      
+      // Broadcast pin
+      io.to(`session:${sessionId}`).emit('message:pinned', {
+        messageId,
+        sessionId,
+        message: {
+          _id: message._id.toString(),
+          session: sessionId,
+          sender: message.sender,
+          content: message.content,
+          createdAt: message.createdAt,
+        },
+      });
+      
+      logger.info('chat', { action: 'message_pinned', messageId, agentId });
+      callback?.({ ok: true });
+    } catch (error) {
+      logger.error('api', { action: 'message_pin_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to pin message' });
+    }
+  });
+  
+  // Unpin message
+  socket.on('message:unpin', async ({ messageId, sessionId }, callback?) => {
+    try {
+      const message = await Message.findById(messageId);
+      
+      if (!message) {
+        callback?.({ ok: false, error: 'Message not found' });
+        return;
+      }
+      
+      (message as any).isPinned = false;
+      await message.save();
+      
+      io.to(`session:${sessionId}`).emit('message:unpinned', { sessionId });
+      
+      logger.info('chat', { action: 'message_unpinned', messageId, agentId });
+      callback?.({ ok: true });
+    } catch (error) {
+      logger.error('api', { action: 'message_unpin_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to unpin message' });
+    }
+  });
+  
+  // Report spam
+  socket.on('message:reportSpam', async ({ messageId, sessionId }, callback?) => {
+    try {
+      const message = await Message.findById(messageId);
+      const session = await getSessionById(sessionId);
+      
+      if (!message || !session) {
+        callback?.({ ok: false, error: 'Message or session not found' });
+        return;
+      }
+      
+      // Mark message as spam
+      (message as any).isSpam = true;
+      (message as any).reportedAt = new Date();
+      (message as any).reportedBy = agentId;
+      await message.save();
+      
+      // Optionally block user
+      logger.warn('api', { 
+        action: 'spam_reported', 
+        messageId, 
+        sessionId, 
+        agentId,
+        userId: session.user,
+      });
+      
+      callback?.({ ok: true });
+    } catch (error) {
+      logger.error('api', { action: 'report_spam_error', error: String(error) });
+      callback?.({ ok: false, error: 'Failed to report spam' });
     }
   });
 
@@ -802,6 +1445,40 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     await broadcastStats();
   });
   
+  // Request full sync (for manual refresh)
+  socket.on('agent:requestSync', async (callback) => {
+    try {
+      const syncState = await getAgentSyncState(agentId);
+      if (!syncState.agent) {
+        return callback({ ok: false, error: 'Agent not found' });
+      }
+      
+      const availability = getAvailabilityStatus(syncState.agent);
+      
+      socket.emit('sync:state', {
+        agent: {
+          _id: syncState.agent._id.toString(),
+          name: syncState.agent.name,
+          email: syncState.agent.email,
+          role: syncState.agent.role,
+          onlineStatus: syncState.agent.onlineStatus,
+          availability,
+          activeChats: syncState.agent.activeChats,
+          avatar: syncState.agent.avatar,
+        },
+        mySessions: syncState.mySessions.map(formatSessionData),
+        queuedSessions: syncState.queuedSessions.map(formatSessionData),
+        stats: syncState.stats,
+        reconnected: false,
+        recoveredSessions: 0,
+      });
+      
+      callback({ ok: true });
+    } catch (error) {
+      callback({ ok: false, error: 'Failed to sync state' });
+    }
+  });
+  
   // ============= DATA REQUESTS =============
   
   socket.on('stats:request', async (callback) => {
@@ -810,17 +1487,25 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   });
   
   socket.on('sessions:request', async (callback) => {
-    const sessions = await getAllActiveSessions();
+    const isAdmin = socket.data.role === 'admin';
+    const sessions = await getVisibleSessionsForAgent(agentId, isAdmin);
     callback(sessions.map(formatSessionData));
   });
   
   // ============= DISCONNECTION =============
   
   socket.on('disconnect', async () => {
-    logger.info('api', { action: 'agent_disconnected', agentId, email });
+    logger.info('api', { action: 'agent_disconnected', agentId, email, socketId: socket.id });
     
     agentSockets.delete(agentId);
-    await updateAgentStatus(agentId, 'offline');
+    
+    // Handle disconnection with chat reassignment
+    const { affectedSessions } = await handleAgentDisconnection(agentId);
+    
+    // Notify about affected sessions going to queue
+    for (const session of affectedSessions) {
+      io.emit('session:queued', formatSessionData(session));
+    }
     
     socket.broadcast.emit('agent:offline', agentId);
     await broadcastStats();
@@ -849,12 +1534,30 @@ function formatSessionData(session: any): SessionData {
 }
 
 async function getDashboardStats(): Promise<DashboardStats> {
-  const [sessions, agents] = await Promise.all([
+  const [sessionStats, agentStats] = await Promise.all([
     getSessionStats(),
     getAgentStats(),
   ]);
   
-  return { sessions, agents };
+  // Extend agent stats with availability info
+  const agents = {
+    ...agentStats,
+    available: 0, // Will be calculated
+    busy: 0,
+  };
+  
+  // Calculate available vs busy agents
+  const { Agent } = await import('../database/models/Agent.js');
+  const onlineAgents = await Agent.find({ onlineStatus: { $in: ['online', 'away'] } });
+  for (const agent of onlineAgents) {
+    if (agent.activeChats >= MAX_CONCURRENT_CHATS) {
+      agents.busy++;
+    } else {
+      agents.available++;
+    }
+  }
+  
+  return { sessions: sessionStats, agents };
 }
 
 async function broadcastStats(): Promise<void> {
@@ -865,12 +1568,19 @@ async function broadcastStats(): Promise<void> {
 // ============= EXPORTED FUNCTIONS FOR BOT =============
 
 /**
- * Notify agents of new waiting session
+ * Notify agents of new waiting/queued session
+ * All agents can see sessions in queue
  */
 export async function notifyNewSession(session: any): Promise<void> {
   if (!io) return;
   
-  io.emit('session:new', formatSessionData(session));
+  // For sessions entering queue, emit session:queued
+  if (session.status === 'queued' || session.status === 'waiting') {
+    io.emit('session:queued', formatSessionData(session));
+  } else {
+    io.emit('session:new', formatSessionData(session));
+  }
+  
   await broadcastStats();
 }
 
@@ -898,10 +1608,10 @@ export async function notifyNewMessage(sessionId: string, content: string, teleg
     createdAt: message.createdAt,
   };
   
-  // Emit to session room and all agents if waiting
+  // Emit to session room if assigned, or to all agents if in queue (waiting/queued)
   if (session.status === 'human') {
     io.to(`session:${sessionId}`).emit('message:new', messageData);
-  } else if (session.status === 'waiting') {
+  } else if (session.status === 'waiting' || session.status === 'queued') {
     io.emit('message:new', messageData);
   }
 }
@@ -943,19 +1653,12 @@ export async function notifyNewMediaMessage(
     createdAt: message.createdAt,
   };
   
-  // Emit to session room and all agents if waiting
+  // Emit to session room if assigned, or to all agents if in queue (waiting/queued)
   if (session.status === 'human') {
     io.to(`session:${sessionId}`).emit('message:new', messageData);
-  } else if (session.status === 'waiting') {
+  } else if (session.status === 'waiting' || session.status === 'queued') {
     io.emit('message:new', messageData);
   }
-}
-
-/**
- * Get Socket.IO instance
- */
-export function getIO(): SocketServer | null {
-  return io || null;
 }
 
 /**
@@ -1031,4 +1734,172 @@ export function emitTagRemoved(userId: string, tagId: string): void {
 export function emitFieldUpdated(userId: string, fieldKey: string, value: unknown): void {
   if (!io) return;
   io.emit('contact:field:updated', { userId, fieldKey, value });
+}
+
+// ============= SUPERVISOR & WHISPER EVENTS =============
+
+/**
+ * Emit whisper to specific agent
+ * Whispers are private messages from supervisors to agents
+ */
+export function emitWhisper(
+  targetAgentId: string,
+  whisper: {
+    id: string;
+    sessionId: string;
+    supervisorId: string;
+    supervisorName: string;
+    content: string;
+    createdAt: Date;
+  }
+): void {
+  if (!io) return;
+  
+  const targetSocket = agentSockets.get(targetAgentId);
+  if (targetSocket) {
+    targetSocket.emit('whisper:new' as any, whisper);
+  }
+}
+
+/**
+ * Emit session watch event (supervisor started watching)
+ */
+export function emitSessionWatch(
+  sessionId: string,
+  data: { 
+    supervisorId: string; 
+    supervisorName: string; 
+    action: 'start' | 'stop';
+  }
+): void {
+  if (!io) return;
+  
+  // Emit to session room
+  io.to(`session:${sessionId}`).emit('session:watched' as any, {
+    sessionId,
+    ...data,
+  });
+}
+
+/**
+ * Emit session takeover event (supervisor took over)
+ */
+export function emitSessionTakeover(
+  sessionId: string,
+  data: {
+    previousAgentId: string;
+    previousAgentName: string;
+    newAgentId: string;
+    newAgentName: string;
+    reason: string;
+  }
+): void {
+  if (!io) return;
+  
+  // Notify previous agent
+  const prevSocket = agentSockets.get(data.previousAgentId);
+  if (prevSocket) {
+    prevSocket.emit('session:takenOver' as any, {
+      sessionId,
+      takenBy: { id: data.newAgentId, name: data.newAgentName },
+      reason: data.reason,
+    });
+  }
+  
+  // Broadcast assignment update
+  io.emit('session:assigned', {
+    sessionId,
+    agentId: data.newAgentId,
+    agentName: data.newAgentName,
+  });
+  
+  // Update stats
+  broadcastStats();
+}
+
+/**
+ * Emit agent stats update (for supervisor dashboard)
+ */
+export function emitAgentStatsUpdate(agentId: string, stats: {
+  activeChats: number;
+  resolvedToday: number;
+  avgResponseTime: number;
+}): void {
+  if (!io) return;
+  
+  // Only emit to supervisors/admins
+  io.fetchSockets().then(sockets => {
+    sockets.forEach(socket => {
+      if (socket.data.role === 'admin' || socket.data.role === 'supervisor') {
+        socket.emit('agent:statsUpdate' as any, { agentId, ...stats });
+      }
+    });
+  });
+}
+
+/**
+ * Emit activity log event (for sidebar timeline)
+ */
+export function emitActivityLog(
+  sessionId: string,
+  activity: {
+    type: string;
+    description: string;
+    agentId?: string;
+    agentName?: string;
+    metadata?: Record<string, unknown>;
+    createdAt: Date;
+  }
+): void {
+  if (!io) return;
+  
+  io.to(`session:${sessionId}`).emit('activity:new' as any, {
+    sessionId,
+    ...activity,
+  });
+}
+
+/**
+ * Emit copilot suggestion (AI suggestion for agent)
+ */
+export function emitCopilotSuggestion(
+  agentId: string,
+  sessionId: string,
+  suggestion: {
+    id: string;
+    type: 'response' | 'summary' | 'category';
+    content: string;
+    confidence: number;
+  }
+): void {
+  if (!io) return;
+  
+  const targetSocket = agentSockets.get(agentId);
+  if (targetSocket) {
+    targetSocket.emit('copilot:suggestion' as any, {
+      sessionId,
+      ...suggestion,
+    });
+  }
+}
+
+/**
+ * Emit automation rule triggered event
+ */
+export function emitRuleTriggered(
+  sessionId: string,
+  rule: {
+    id: string;
+    name: string;
+    action: string;
+    result: 'success' | 'failure';
+  }
+): void {
+  if (!io) return;
+  
+  // Emit to admins and session room
+  io.to(`session:${sessionId}`).emit('automation:triggered' as any, {
+    sessionId,
+    ...rule,
+  });
 }

@@ -186,10 +186,79 @@ textarea::-webkit-scrollbar-thumb:hover {
   }
 }
 
+@keyframes context-menu {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-modal-in {
   animation: modal-in 0.2s ease-out;
 }
 
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
+}
+
+.animate-context-menu {
+  animation: context-menu 0.15s ease-out;
+}
+
+/* ============= TOAST ANIMATIONS ============= */
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shrink-width {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes pulse-highlight {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(37, 99, 235, 0.1);
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-pulse-highlight {
+  animation: pulse-highlight 1.5s ease-in-out 3;
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 0.3s ease-out;
 }

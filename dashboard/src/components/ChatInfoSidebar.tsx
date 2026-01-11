@@ -13,6 +13,7 @@ import { SidebarTags } from './sidebar/Tags';
 import { SidebarHistory } from './sidebar/History';
 import { SidebarCustomFields } from './sidebar/CustomFields';
 import { SidebarSystemFields } from './sidebar/SystemFields';
+import { LiveContactTimer } from './sidebar/LiveContactTimer';
 
 interface ChatInfoSidebarProps {
   sessionId: string | null;
@@ -135,6 +136,51 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 
         {contactInfo && !isLoading && (
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {/* User Profile Card - Always visible */}
+            <div className="p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+              <div className="flex flex-col items-center text-center">
+                {/* Avatar */}
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg mb-3">
+                  {contactInfo.user.firstName.charAt(0).toUpperCase()}
+                  {contactInfo.user.lastName ? contactInfo.user.lastName.charAt(0).toUpperCase() : ''}
+                </div>
+                
+                {/* Name */}
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {contactInfo.user.firstName} {contactInfo.user.lastName || ''}
+                </h2>
+                
+                {/* Username */}
+                {contactInfo.user.username && (
+                  <a 
+                    href={`https://t.me/${contactInfo.user.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                  >
+                    @{contactInfo.user.username}
+                  </a>
+                )}
+                
+                {/* Telegram ID */}
+                <code className="mt-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500">
+                  ID: {contactInfo.user.telegramId}
+                </code>
+                
+                {/* Quick stats */}
+                <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" />
+                    <span>{contactInfo.stats.totalMessages} msgs</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <History className="w-3 h-3" />
+                    <span>{contactInfo.stats.totalSessions} chats</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Conversation Status Section */}
             <SidebarSection
               title="Estado de la conversación"
@@ -152,21 +198,19 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               />
             </SidebarSection>
 
-            {/* Contact Time */}
+            {/* Contact Time - Live Timer */}
             <SidebarSection
               title="Tiempo de contacto"
               icon={<Clock className="w-4 h-4" />}
               isExpanded={expandedSections.has('time')}
               onToggle={() => toggleSection('time')}
             >
-              <div className="px-4 py-2">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {formatDuration(contactInfo.stats.chatDuration)}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {contactInfo.stats.totalMessages} mensajes en esta sesión
-                </div>
-              </div>
+              <LiveContactTimer
+                startTime={contactInfo.session.createdAt}
+                messageCount={contactInfo.stats.totalMessages}
+                isClosed={contactInfo.session.status === 'closed'}
+                endTime={contactInfo.session.closedAt}
+              />
             </SidebarSection>
 
             {/* User Identity */}

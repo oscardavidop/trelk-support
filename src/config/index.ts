@@ -24,7 +24,7 @@ export const ENV = {
   WEBHOOK_URL: process.env.WEBHOOK_URL || '',
   
   // Server
-  PORT: parseInt(process.env.PORT || '3001', 10),
+  PORT: parseInt(process.env.PORT || '8443', 10),
   HOST: process.env.HOST || '0.0.0.0',
   NODE_ENV: process.env.NODE_ENV || 'development',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
@@ -108,7 +108,7 @@ export const SUPPORT_GROUP_ID = process.env.SUPPORT_GROUP_ID
 // ============= TELEGRAM API =============
 
 export const TELEGRAM_API = {
-  baseUrl: 'https://api.telegram.org',
+  baseUrl: process.env.TELEGRAM_API_BASE_URL || 'https://api.telegram.org',
   getUrl: (method: string) => `${TELEGRAM_API.baseUrl}/bot${ENV.BOT_TOKEN}/${method}`,
 } as const;
 

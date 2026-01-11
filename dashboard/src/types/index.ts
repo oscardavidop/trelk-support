@@ -1,11 +1,21 @@
 // Types for the support dashboard
 
+export type AvailabilityStatus = 'available' | 'busy' | 'offline';
+
+// Agent roles with hierarchy: admin > supervisor > support > junior
+export type AgentRole = 'admin' | 'supervisor' | 'support' | 'junior';
+
+export type OnlineStatus = 'available' | 'busy' | 'away' | 'offline';
+
 export interface Agent {
   _id: string;
+  id?: string; // Alias for compatibility
   name: string;
   email: string;
-  role: 'admin' | 'support';
+  role: AgentRole;
   onlineStatus: 'online' | 'away' | 'offline';
+  status?: OnlineStatus; // Live status for agent cards
+  availability?: AvailabilityStatus;
   isActive: boolean;
   avatar?: string;
   lastLogin?: string;
@@ -14,6 +24,16 @@ export interface Agent {
   totalChatsHandled: number;
   createdAt: string;
   updatedAt: string;
+  // Enterprise fields
+  teamId?: string;
+  isSupervisingEnabled?: boolean;
+  watchingSessions?: string[];
+  // Additional agent fields
+  department?: string;
+  skills?: string[];
+  maxConcurrentChats?: number;
+  avgResponseTime?: string;
+  rating?: number;
 }
 
 export interface User {
@@ -31,7 +51,7 @@ export interface ChatSession {
   sessionId: string;
   user: User;
   telegramChatId: number;
-  status: 'bot' | 'waiting' | 'human' | 'closed';
+  status: 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
   assignedAgent?: Agent;
   closedBy?: Agent;
   closedByType?: 'user' | 'agent' | 'system';
@@ -56,6 +76,19 @@ export interface Message {
   telegramMessageId?: number;
   isRead: boolean;
   createdAt: string;
+  // Reply support
+  replyToMessage?: {
+    _id: string;
+    sender: 'user' | 'bot' | 'agent';
+    senderAgent?: { name: string };
+    content: string;
+  };
+  // Meta
+  isEdited?: boolean;
+  editedAt?: string;
+  isPinned?: boolean;
+  internalNote?: string;
+  tags?: string[];
 }
 
 export interface DashboardStats {

@@ -1,13 +1,20 @@
 // Chat Window component
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { 
   acceptSession, 
   closeSession, 
   joinSession, 
-  leaveSession 
+  leaveSession,
+  editMessage,
+  deleteMessage,
+  pinMessage,
+  unpinMessage,
+  reportSpam
 } from '../services/socket';
+import { toast } from '../stores/toastStore';
 import { 
   X, 
   CheckCircle, 
@@ -31,11 +38,14 @@ import {
   Pause,
   Maximize2,
   ArrowRightLeft,
-  Ban
+  Ban,
+  Pin
 } from 'lucide-react';
 import type { ChatSession, Message, TypingEvent, ChatCategory } from '../types';
 import AgentComposer from './AgentComposer';
 import { TypingIndicator, TransferModal, BlockUserModal, CategorySelector, ReopenChatButton, SurveyDisplay } from './enterprise';
+import MessageContextMenu from './MessageContextMenu';
+import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal, TagSelectorModal } from './MessageActionModals';
 
 interface ChatWindowProps {
   session: ChatSession;
@@ -45,7 +55,7 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: ChatWindowProps) {
   const agent = useAuthStore((state) => state.agent);
-  const { messages, setMessages, isLoadingMessages, setLoadingMessages } = useChatStore();
+  const { messages, setMessages, isLoadingMessages, setLoadingMessages, updateMessage, deleteMessage: removeMessage, pinnedMessages, setPinnedMessage, clearPinnedMessage } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Enterprise states
@@ -53,11 +63,64 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [survey, setSurvey] = useState<{ rating: number; comment?: string } | null>(null);
+  
+  // Context menu states
+  const [contextMenu, setContextMenu] = useState<{
+    message: Message;
+    position: { x: number; y: number };
+  } | null>(null);
+  
+  // Modal states
+  const [editModal, setEditModal] = useState<{ message: Message } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ message: Message } | null>(null);
+  const [saveQuickReplyModal, setSaveQuickReplyModal] = useState<{ message: Message } | null>(null);
+  const [addNoteModal, setAddNoteModal] = useState<{ message: Message } | null>(null);
+  const [tagSelectorModal, setTagSelectorModal] = useState<{ message: Message } | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   // Join session room and load messages
   useEffect(() => {
+    let isMounted = true;
+    
+    // Clear previous messages immediately to avoid showing stale data
+    setMessages([]);
+    
+    const loadSessionMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        const res = await fetch(`/api/sessions/${session.sessionId}/messages`, {
+          headers: {
+            Authorization: `Bearer ${useAuthStore.getState().token}`,
+          },
+        });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        
+        const data = await res.json();
+        
+        // Only update if component is still mounted and session hasn't changed
+        if (isMounted && data.ok) {
+          setMessages(data.messages);
+        } else if (isMounted && !data.ok) {
+          console.error('Failed to load messages:', data.error);
+          toast.error('Error', 'No se pudieron cargar los mensajes');
+        }
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+        if (isMounted) {
+          toast.error('Error de conexión', 'No se pudieron cargar los mensajes');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingMessages(false);
+        }
+      }
+    };
+    
     joinSession(session.sessionId);
-    loadMessages();
+    loadSessionMessages();
     
     // Load survey for closed sessions
     if (session.status === 'closed') {
@@ -65,9 +128,10 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     }
 
     return () => {
+      isMounted = false;
       leaveSession(session.sessionId);
     };
-  }, [session.sessionId]);
+  }, [session.sessionId, session.status, setMessages, setLoadingMessages]);
   
   // Typing indicator listeners
   useEffect(() => {
@@ -97,25 +161,25 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const loadMessages = async () => {
-    setLoadingMessages(true);
-    try {
-      const res = await fetch(`/api/sessions/${session.sessionId}/messages`, {
-        headers: {
-          Authorization: `Bearer ${useAuthStore.getState().token}`,
-        },
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setMessages(data.messages);
+  // Scroll to specific message if URL has hash (e.g. #message-123)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#message-') && messages.length > 0) {
+      const messageId = hash.replace('#message-', '');
+      const element = document.getElementById(`message-${messageId}`);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Highlight effect
+          element.classList.add('ring-2', 'ring-primary', 'ring-opacity-50');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-primary', 'ring-opacity-50');
+          }, 2000);
+        }, 100);
       }
-    } catch (error) {
-      console.error('Failed to load messages:', error);
-    } finally {
-      setLoadingMessages(false);
     }
-  };
-  
+  }, [messages]);
+
   const loadSurvey = async () => {
     try {
       const res = await fetch(`/api/sessions/${session.sessionId}/survey`, {
@@ -131,6 +195,166 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
       console.error('Failed to load survey:', error);
     }
   };
+  
+  // Context menu handlers
+  const handleMessageClick = useCallback((message: Message, event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({
+      message,
+      position: { x: event.clientX, y: event.clientY }
+    });
+  }, []);
+  
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+  
+  // Message action handlers
+  const handleReply = useCallback((message: Message) => {
+    setReplyTo(message);
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleCancelReply = useCallback(() => {
+    setReplyTo(null);
+  }, []);
+  
+  const handleCopy = useCallback(async (message: Message) => {
+    await navigator.clipboard.writeText(message.content);
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleCopyLink = useCallback(async (message: Message) => {
+    const link = `${window.location.origin}/chat/${session.sessionId}#message-${message._id}`;
+    await navigator.clipboard.writeText(link);
+    closeContextMenu();
+  }, [session.sessionId, closeContextMenu]);
+  
+  const handlePin = useCallback((message: Message) => {
+    pinMessage(message._id, session.sessionId, (result) => {
+      if (result.ok) {
+        setPinnedMessage(session.sessionId, message);
+      }
+    });
+    closeContextMenu();
+  }, [session.sessionId, setPinnedMessage, closeContextMenu]);
+  
+  const handleUnpin = useCallback((message: Message) => {
+    unpinMessage(message._id, session.sessionId, (result) => {
+      if (result.ok) {
+        clearPinnedMessage(session.sessionId);
+      }
+    });
+    closeContextMenu();
+  }, [session.sessionId, clearPinnedMessage, closeContextMenu]);
+  
+  const handleEdit = useCallback((message: Message) => {
+    setEditModal({ message });
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleEditSave = useCallback((messageId: string, newContent: string) => {
+    editMessage(messageId, session.sessionId, newContent, (result) => {
+      if (result.ok) {
+        updateMessage(messageId, { content: newContent, isEdited: true });
+      }
+    });
+    setEditModal(null);
+  }, [session.sessionId, updateMessage]);
+  
+  const handleDelete = useCallback((message: Message) => {
+    setDeleteModal({ message });
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleDeleteConfirm = useCallback((messageId: string) => {
+    deleteMessage(messageId, session.sessionId, (result) => {
+      if (result.ok) {
+        removeMessage(messageId);
+      }
+    });
+    setDeleteModal(null);
+  }, [session.sessionId, removeMessage]);
+  
+  const handleSaveQuickReply = useCallback((message: Message) => {
+    setSaveQuickReplyModal({ message });
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleSaveQuickReplyConfirm = useCallback(async (data: { title: string; content: string; category?: string; shortcut?: string }) => {
+    try {
+      await fetch('/api/quick-replies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify(data),
+      });
+    } catch (error) {
+      console.error('Failed to save quick reply:', error);
+    }
+    setSaveQuickReplyModal(null);
+  }, []);
+  
+  const handleBlockUser = useCallback(() => {
+    setShowBlockModal(true);
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleAddTag = useCallback((message: Message) => {
+    setTagSelectorModal({ message });
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleTagSelect = useCallback(async (messageId: string, tags: string[]) => {
+    try {
+      await fetch(`/api/messages/${messageId}/tags`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify({ tags }),
+      });
+      updateMessage(messageId, { tags });
+    } catch (error) {
+      console.error('Failed to update tags:', error);
+    }
+    setTagSelectorModal(null);
+  }, [updateMessage]);
+  
+  const handleAddNote = useCallback((message: Message) => {
+    setAddNoteModal({ message });
+    closeContextMenu();
+  }, [closeContextMenu]);
+  
+  const handleNoteSave = useCallback(async (messageId: string, note: string) => {
+    try {
+      await fetch(`/api/messages/${messageId}/note`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify({ note }),
+      });
+      updateMessage(messageId, { internalNote: note });
+    } catch (error) {
+      console.error('Failed to save note:', error);
+    }
+    setAddNoteModal(null);
+  }, [updateMessage]);
+  
+  const handleReportSpam = useCallback((message: Message) => {
+    if (confirm('¿Reportar este mensaje como spam?')) {
+      reportSpam(message._id, session.sessionId);
+    }
+    closeContextMenu();
+  }, [session.sessionId, closeContextMenu]);
+  
+  // Get pinned message for this session
+  const pinnedMessage = pinnedMessages[session.sessionId];
 
   const handleAccept = () => {
     acceptSession(session.sessionId, (result) => {
@@ -307,6 +531,28 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-messages-scroll">
+        {/* Pinned Message Bar */}
+        {pinnedMessage && (
+          <div className="sticky top-0 z-10 mb-2">
+            <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 border border-primary/30 rounded-lg">
+              <Pin className="w-4 h-4 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white truncate">{pinnedMessage.content}</p>
+                <p className="text-xs text-gray-500">
+                  {pinnedMessage.senderAgent?.name || pinnedMessage.sender}
+                </p>
+              </div>
+              <button
+                onClick={() => handleUnpin(pinnedMessage)}
+                className="p-1 text-gray-500 hover:text-white transition-colors"
+                title="Desfijar mensaje"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+        
         {isLoadingMessages ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -317,7 +563,12 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           </div>
         ) : (
           messages.map((message) => (
-            <MessageBubble key={message._id} message={message} />
+            <MessageBubble 
+              key={message._id} 
+              message={message}
+              onContextMenu={(e) => handleMessageClick(message, e)}
+              isPinned={pinnedMessage?._id === message._id}
+            />
           ))
         )}
         
@@ -336,7 +587,11 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
 
       {/* Input */}
       {session.status === 'human' && isMySession ? (
-        <AgentComposer session={session} />
+        <AgentComposer 
+          session={session} 
+          replyTo={replyTo}
+          onCancelReply={handleCancelReply}
+        />
       ) : session.status === 'waiting' ? (
         <div className="p-4 border-t border-gray-800 bg-warning/10 text-center">
           <p className="text-warning text-sm">
@@ -388,12 +643,84 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         username={session.user.username}
         firstName={session.user.firstName}
       />
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <MessageContextMenu
+          message={contextMenu.message}
+          position={contextMenu.position}
+          isPinned={pinnedMessage?._id === contextMenu.message._id}
+          onClose={closeContextMenu}
+          onReply={handleReply}
+          onCopy={handleCopy}
+          onCopyLink={handleCopyLink}
+          onPin={handlePin}
+          onUnpin={handleUnpin}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onSaveQuickReply={handleSaveQuickReply}
+          onBlockUser={handleBlockUser}
+          onAddTag={handleAddTag}
+          onAddNote={handleAddNote}
+          onReportSpam={handleReportSpam}
+        />
+      )}
+      
+      {/* Message Action Modals */}
+      {editModal && (
+        <EditMessageModal
+          isOpen={true}
+          message={editModal.message}
+          onClose={() => setEditModal(null)}
+          onSave={handleEditSave}
+        />
+      )}
+      
+      {deleteModal && (
+        <DeleteMessageModal
+          isOpen={true}
+          message={deleteModal.message}
+          onClose={() => setDeleteModal(null)}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
+      
+      {saveQuickReplyModal && (
+        <SaveQuickReplyModal
+          isOpen={true}
+          message={saveQuickReplyModal.message}
+          onClose={() => setSaveQuickReplyModal(null)}
+          onSave={handleSaveQuickReplyConfirm}
+        />
+      )}
+      
+      {addNoteModal && (
+        <AddNoteModal
+          isOpen={true}
+          onClose={() => setAddNoteModal(null)}
+          onSave={(note) => handleNoteSave(addNoteModal.message._id, note)}
+        />
+      )}
+      
+      {tagSelectorModal && (
+        <TagSelectorModal
+          isOpen={true}
+          onClose={() => setTagSelectorModal(null)}
+          onSelect={(tag) => handleTagSelect(tagSelectorModal.message._id, [tag])}
+        />
+      )}
     </div>
   );
 }
 
 // Message Bubble component
-function MessageBubble({ message }: { message: Message }) {
+interface MessageBubbleProps {
+  message: Message;
+  onContextMenu?: (e: React.MouseEvent) => void;
+  isPinned?: boolean;
+}
+
+function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps) {
   const isAgent = message.sender === 'agent';
   const isBot = message.sender === 'bot';
   const isSystem = message.messageType === 'system';
@@ -408,12 +735,35 @@ function MessageBubble({ message }: { message: Message }) {
     );
   }
 
+  // Helper to convert media reference to proxy URL
+  const getProxyMediaUrl = (mediaRef: string | undefined): string | undefined => {
+    if (!mediaRef) return undefined;
+    
+    // If it's already a full URL path, return as-is
+    if (mediaRef.startsWith('/api/media/') || mediaRef.startsWith('/api/download/') || mediaRef.startsWith('/uploads/')) {
+      return mediaRef;
+    }
+    
+    // If it starts with http, it might be an old-style Telegram URL - convert it
+    if (mediaRef.startsWith('http')) {
+      const telegramMatch = mediaRef.match(/api\.telegram\.org\/file\/bot[^/]+\/(.+)$/);
+      if (telegramMatch) {
+        return `/api/media/${telegramMatch[1]}`;
+      }
+      return mediaRef;
+    }
+    
+    // Otherwise, treat it as a file_id from telegram-bot-api local mode
+    // The backend will resolve it via getFile() API
+    return `/api/media/${encodeURIComponent(mediaRef)}`;
+  };
+
   // Render media content based on type
   const renderMediaContent = () => {
-    const mediaUrl = message.mediaUrl;
+    const mediaUrl = getProxyMediaUrl(message.mediaUrl);
     
     if (!mediaUrl) {
-      return <p className="whitespace-pre-wrap">{message.content}</p>;
+      return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
     }
 
     switch (message.messageType) {
@@ -452,12 +802,15 @@ function MessageBubble({ message }: { message: Message }) {
         );
       
       default:
-        return <p className="whitespace-pre-wrap">{message.content}</p>;
+        return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
     }
   };
 
   return (
-    <div className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
+    <div 
+      id={`message-${message._id}`}
+      className={`flex ${isAgent ? 'justify-end' : 'justify-start'} group`}
+    >
       <div className={`flex items-end gap-2 max-w-[70%] ${isAgent ? 'flex-row-reverse' : ''}`}>
         {/* Avatar */}
         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -473,18 +826,56 @@ function MessageBubble({ message }: { message: Message }) {
         </div>
 
         {/* Bubble */}
-        <div className={`px-4 py-2.5 rounded-2xl ${
-          isAgent 
-            ? 'bg-primary text-white rounded-br-md' 
-            : 'bg-gray-800 text-white rounded-bl-md'
-        }`}>
+        <div 
+          onContextMenu={onContextMenu}
+          className={`px-4 py-2.5 rounded-2xl cursor-context-menu select-none transition-all ${
+            isAgent 
+              ? 'bg-primary text-white rounded-br-md hover:bg-primary/90' 
+              : 'bg-gray-800 text-white rounded-bl-md hover:bg-gray-700'
+          } ${isPinned ? 'ring-2 ring-primary/50' : ''}`}
+        >
+          {/* Reply Quote */}
+          {message.replyToMessage && (
+            <div className={`flex items-start gap-2 mb-2 pb-2 border-b ${
+              isAgent ? 'border-white/20' : 'border-gray-600'
+            }`}>
+              <div className={`w-0.5 h-full min-h-[24px] rounded-full flex-shrink-0 ${
+                isAgent ? 'bg-white/40' : 'bg-primary'
+              }`} />
+              <div className="min-w-0 flex-1">
+                <p className={`text-xs font-medium ${isAgent ? 'text-white/70' : 'text-primary'}`}>
+                  {message.replyToMessage.sender === 'user' 
+                    ? 'Usuario' 
+                    : message.replyToMessage.senderAgent?.name || 'Agente'}
+                </p>
+                <p className={`text-xs truncate ${isAgent ? 'text-white/50' : 'text-gray-500'}`}>
+                  {message.replyToMessage.content}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Pinned indicator */}
+          {isPinned && (
+            <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
+              <Pin className="w-3 h-3" />
+              <span>Fijado</span>
+            </div>
+          )}
+          
           {message.senderAgent && (
             <p className="text-xs opacity-70 mb-1">{message.senderAgent.name}</p>
           )}
           {renderMediaContent()}
-          <p className={`text-xs mt-1 ${isAgent ? 'text-white/60' : 'text-gray-500'}`}>
-            {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </p>
+          
+          <div className={`flex items-center gap-2 mt-1 ${isAgent ? 'text-white/60' : 'text-gray-500'}`}>
+            <span className="text-xs">
+              {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {(message as any).isEdited && (
+              <span className="text-xs italic">(editado)</span>
+            )}
+          </div>
         </div>
       </div>
     </div>

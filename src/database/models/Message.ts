@@ -20,6 +20,14 @@ export interface IMessage extends Document {
   metadata?: Record<string, unknown>;
   isRead: boolean;
   readAt?: Date;
+  // Edit tracking
+  isEdited?: boolean;
+  editedAt?: Date;
+  previousContent?: string;
+  // Delete tracking
+  isDeleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: Types.ObjectId;
   createdAt: Date;
 }
 
@@ -66,6 +74,23 @@ const MessageSchema = new Schema<IMessage>(
       default: false,
     },
     readAt: Date,
+    // Edit tracking
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: Date,
+    previousContent: String,
+    // Delete tracking
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: Date,
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agent',
+    },
   },
   {
     timestamps: true,

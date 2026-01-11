@@ -46,6 +46,7 @@ export async function sendMessage(
     replyMarkup?: ReplyMarkup;
     parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
     disablePreview?: boolean;
+    reply_to_message_id?: number;
   }
 ): Promise<boolean> {
   const body: SendMessageOptions = {
@@ -57,6 +58,10 @@ export async function sendMessage(
 
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
+  }
+  
+  if (options?.reply_to_message_id) {
+    (body as any).reply_to_message_id = options.reply_to_message_id;
   }
 
   const result = await apiRequest('sendMessage', body as unknown as Record<string, unknown>);
@@ -84,6 +89,7 @@ export async function editMessage(
   }
 
   const result = await apiRequest('editMessageText', body as unknown as Record<string, unknown>);
+  console.log('editMessage result', result);
   return result !== null;
 }
 
@@ -117,13 +123,69 @@ export async function sendChatAction(
   return result !== null;
 }
 
+// ============= POLLS =============
+
+export interface SendPollOptions {
+  type?: 'regular' | 'quiz';
+  is_anonymous?: boolean;
+  allows_multiple_answers?: boolean;
+  open_period?: number;
+  disable_notification?: boolean;
+  protect_content?: boolean;
+}
+
+export interface SendPollResult {
+  message_id: number;
+  poll: {
+    id: string;
+    question: string;
+    options: Array<{ text: string; voter_count: number }>;
+    total_voter_count: number;
+    is_closed: boolean;
+    is_anonymous: boolean;
+    type: string;
+    allows_multiple_answers: boolean;
+  };
+}
+
+export async function sendPoll(
+  chatId: number,
+  question: string,
+  options: string[],
+  pollOptions?: SendPollOptions
+): Promise<SendPollResult | null> {
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    question,
+    options: JSON.stringify(options),
+    type: pollOptions?.type ?? 'regular',
+    is_anonymous: pollOptions?.is_anonymous ?? false,
+    allows_multiple_answers: pollOptions?.allows_multiple_answers ?? false,
+  };
+
+  if (pollOptions?.open_period) {
+    body.open_period = pollOptions.open_period;
+  }
+
+  if (pollOptions?.disable_notification) {
+    body.disable_notification = true;
+  }
+
+  if (pollOptions?.protect_content) {
+    body.protect_content = true;
+  }
+
+  const result = await apiRequest<SendPollResult>('sendPoll', body);
+  return result;
+}
+
 // ============= WEBHOOK MANAGEMENT =============
 
 export async function setWebhook(url: string, secretToken: string): Promise<boolean> {
   const result = await apiRequest('setWebhook', {
     url,
     secret_token: secretToken,
-    allowed_updates: ['message', 'callback_query'],
+    allowed_updates: ['message', 'callback_query', 'poll_answer'],
     drop_pending_updates: true,
   });
   return result !== null;
@@ -355,23 +417,32 @@ interface TelegramFile {
  * Get file info from Telegram
  */
 export async function getFile(fileId: string): Promise<TelegramFile | null> {
-  return apiRequest<TelegramFile>('getFile', { file_id: fileId });
+  console.log('getFile', fileId);
+  const file = await apiRequest<TelegramFile>('getFile', { file_id: fileId });
+  console.log('getFile result', file);
+  return file;
 }
 
 /**
- * Get full URL for a file from Telegram servers
+ * Get full URL for a file from Telegram servers (remote API)
+ * @deprecated Use local file serving with getFile() for local bot-api
  */
 export function getFileUrl(filePath: string): string {
   return `https://api.telegram.org/file/bot${ENV.BOT_TOKEN}/${filePath}`;
 }
 
 /**
- * Resolve file_id to a downloadable URL
+ * Resolve file_id to a media URL for the dashboard
+ * Returns the file_id to be used with /api/media/:fileId endpoint
  */
 export async function resolveFileUrl(fileId: string): Promise<string | null> {
+  // Verify file exists by calling getFile
   const file = await getFile(fileId);
+  console.log('resolveFileUrl', fileId, file);
   if (!file || !file.file_path) {
     return null;
   }
-  return getFileUrl(file.file_path);
+  // Return the file_id as the media identifier
+  // The frontend will use /api/media/{fileId} to fetch the file
+  return fileId;
 }

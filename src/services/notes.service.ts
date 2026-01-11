@@ -3,12 +3,12 @@
  * CRUD operations for internal notes
  */
 
-import { Note, INote } from '../database/index.js';
+import { Note, INote, ChatSession } from '../database/index.js';
 import mongoose from 'mongoose';
 
 export interface CreateNoteInput {
   userId: string;
-  sessionId?: string; // Optional: tie to specific session
+  sessionId?: string; // Optional: can be MongoDB ObjectId or session UUID
   content: string;
   agentId: string;
 }
@@ -25,12 +25,31 @@ export interface NoteWithAgent {
 }
 
 /**
+ * Helper to resolve session ObjectId from sessionId (UUID) or ObjectId string
+ */
+async function resolveSessionId(sessionId?: string): Promise<mongoose.Types.ObjectId | undefined> {
+  if (!sessionId) return undefined;
+  
+  // Check if it's already a valid MongoDB ObjectId format (24 hex chars)
+  if (mongoose.Types.ObjectId.isValid(sessionId) && sessionId.length === 24) {
+    return new mongoose.Types.ObjectId(sessionId);
+  }
+  
+  // Otherwise, treat as session UUID and look up the session
+  const session = await ChatSession.findOne({ sessionId }).select('_id');
+  return session?._id;
+}
+
+/**
  * Create a new note
  */
 export async function createNote(input: CreateNoteInput): Promise<NoteWithAgent> {
+  // Resolve sessionId to MongoDB ObjectId
+  const sessionObjectId = await resolveSessionId(input.sessionId);
+  
   const note = await Note.create({
     user: new mongoose.Types.ObjectId(input.userId),
-    session: input.sessionId ? new mongoose.Types.ObjectId(input.sessionId) : undefined,
+    session: sessionObjectId,
     content: input.content,
     createdBy: new mongoose.Types.ObjectId(input.agentId),
   });

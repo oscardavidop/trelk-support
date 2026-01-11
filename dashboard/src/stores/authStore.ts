@@ -11,6 +11,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setAgent: (agent: Agent | null) => void;
+  updateAgentFields: (fields: Partial<Agent>) => void;
   setToken: (token: string | null) => void;
   checkAuth: () => Promise<void>;
 }
@@ -77,6 +78,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setAgent: (agent) => set({ agent, isAuthenticated: !!agent }),
+      updateAgentFields: (fields) => set((state) => ({
+        agent: state.agent ? { ...state.agent, ...fields } : null,
+      })),
       setToken: (token) => set({ token }),
 
       checkAuth: async () => {

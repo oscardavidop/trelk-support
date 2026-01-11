@@ -34,6 +34,7 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col min-w-0">
         {activeSession ? (
           <ChatWindow 
+            key={activeSession.sessionId}
             session={activeSession} 
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}

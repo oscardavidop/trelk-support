@@ -165,6 +165,7 @@ export async function removeTagFromUser(userId: string, tagId: string): Promise<
       method: 'DELETE',
       headers: getAuthHeaders(),
       credentials: 'include',
+      body: JSON.stringify({ tagId }),
     });
     const data = await res.json();
     return data.ok;

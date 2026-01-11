@@ -4,9 +4,10 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ChatSession, Message, type IChatSession, type IMessage, type SessionStatus, type MessageSender } from '../database/index.js';
+import { ChatSession, Message, type IChatSession, type IMessage, type SessionStatus, type MessageSender, type ClosedByType } from '../database/index.js';
 import type { IUser } from '../database/models/User.js';
 import { Types } from 'mongoose';
+import { sendPostChatSurvey } from './survey.service.js';
 
 /**
  * Get or create active session for a user
@@ -100,19 +101,36 @@ export async function assignAgent(sessionId: string, agentId: string): Promise<I
  */
 export async function closeSession(
   sessionId: string, 
-  agentId: string, 
-  reason?: string
+  agentId: string | null, 
+  reason?: string,
+  closedByType: ClosedByType = 'agent'
 ): Promise<IChatSession | null> {
-  return ChatSession.findOneAndUpdate(
+  const updateData: Record<string, unknown> = { 
+    status: 'closed',
+    closedAt: new Date(),
+    closureReason: reason,
+    closedByType,
+  };
+
+  if (agentId) {
+    updateData.closedBy = new Types.ObjectId(agentId);
+  }
+
+  const session = await ChatSession.findOneAndUpdate(
     { sessionId },
-    { 
-      status: 'closed',
-      closedAt: new Date(),
-      closedBy: new Types.ObjectId(agentId),
-      closureReason: reason,
-    },
+    updateData,
     { new: true }
   );
+
+  // Send post-chat satisfaction survey
+  if (session && (closedByType === 'agent' || closedByType === 'system')) {
+    // Delay slightly to allow close message to be sent first
+    setTimeout(async () => {
+      await sendPostChatSurvey(sessionId);
+    }, 2000);
+  }
+
+  return session;
 }
 
 /**
@@ -171,11 +189,256 @@ export async function getAgentSessions(agentId: string): Promise<IChatSession[]>
  */
 export async function getAllActiveSessions(): Promise<IChatSession[]> {
   return ChatSession.find({ 
-    status: { $in: ['bot', 'waiting', 'human'] },
+    status: { $in: ['bot', 'queued', 'waiting', 'human'] },
   })
     .populate('user')
     .populate('assignedAgent')
     .sort({ updatedAt: -1 });
+}
+
+// ============= AGENT-FILTERED SESSION QUERIES =============
+
+/**
+ * Get visible sessions for a specific agent
+ * An agent can only see:
+ * - Sessions assigned to them
+ * - Sessions in queue (waiting for assignment)
+ */
+export async function getVisibleSessionsForAgent(agentId: string, isAdmin = false): Promise<IChatSession[]> {
+  // Admins see everything
+  if (isAdmin) {
+    return ChatSession.find({ 
+      status: { $in: ['bot', 'queued', 'waiting', 'human'] },
+    })
+      .populate('user')
+      .populate('assignedAgent')
+      .sort({ updatedAt: -1 });
+  }
+  
+  // Regular agents see only their sessions + queue
+  return ChatSession.find({
+    $or: [
+      { assignedAgent: new Types.ObjectId(agentId), status: 'human' },
+      { status: { $in: ['queued', 'waiting'] } },
+    ],
+  })
+    .populate('user')
+    .populate('assignedAgent')
+    .sort({ updatedAt: -1 });
+}
+
+/**
+ * Get queue - sessions waiting for assignment
+ */
+export async function getQueuedSessions(): Promise<IChatSession[]> {
+  return ChatSession.find({ 
+    status: { $in: ['queued', 'waiting'] },
+    assignedAgent: { $exists: false },
+  })
+    .populate('user')
+    .sort({ createdAt: 1 }); // FIFO - oldest first
+}
+
+/**
+ * Get queue count
+ */
+export async function getQueueCount(): Promise<number> {
+  return ChatSession.countDocuments({ 
+    status: { $in: ['queued', 'waiting'] },
+    assignedAgent: { $exists: false },
+  });
+}
+
+/**
+ * Add session to queue
+ */
+export async function addToQueue(sessionId: string, category?: string): Promise<IChatSession | null> {
+  return ChatSession.findOneAndUpdate(
+    { sessionId },
+    { 
+      status: 'queued',
+      category,
+      assignedAgent: undefined, // Clear any previous assignment
+    },
+    { new: true }
+  ).populate('user');
+}
+
+/**
+ * Get next session from queue (FIFO)
+ */
+export async function getNextFromQueue(): Promise<IChatSession | null> {
+  return ChatSession.findOne({ 
+    status: { $in: ['queued', 'waiting'] },
+    assignedAgent: { $exists: false },
+  })
+    .sort({ createdAt: 1 }) // Oldest first
+    .populate('user');
+}
+
+/**
+ * Auto-assign next queued session to agent
+ */
+export async function autoAssignFromQueue(agentId: string): Promise<IChatSession | null> {
+  const nextSession = await getNextFromQueue();
+  
+  if (!nextSession) {
+    return null;
+  }
+  
+  return ChatSession.findOneAndUpdate(
+    { 
+      _id: nextSession._id,
+      status: { $in: ['queued', 'waiting'] }, // Double-check status
+      assignedAgent: { $exists: false }, // Ensure still unassigned
+    },
+    { 
+      status: 'human',
+      assignedAgent: new Types.ObjectId(agentId),
+    },
+    { new: true }
+  ).populate('user').populate('assignedAgent');
+}
+
+/**
+ * Get closed sessions visible to agent
+ * Regular agents only see sessions they closed
+ * Admins see all
+ */
+export async function getClosedSessionsForAgent(
+  agentId: string, 
+  isAdmin = false,
+  filters?: { page?: number; limit?: number; search?: string }
+): Promise<PaginatedSessions> {
+  const { page = 1, limit = 50, search } = filters || {};
+  
+  // Build query
+  const query: Record<string, unknown> = { status: 'closed' };
+  
+  // Non-admins only see their own closed sessions
+  if (!isAdmin) {
+    query.closedBy = new Types.ObjectId(agentId);
+  }
+  
+  let totalCount: number;
+  let sessions: IChatSession[];
+  
+  if (search) {
+    // Search with user lookup
+    const pipeline: any[] = [
+      { $match: query },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userDoc',
+        },
+      },
+      { $unwind: '$userDoc' },
+      {
+        $match: {
+          $or: [
+            { 'userDoc.username': { $regex: search, $options: 'i' } },
+            { 'userDoc.firstName': { $regex: search, $options: 'i' } },
+            { sessionId: { $regex: search, $options: 'i' } },
+          ],
+        },
+      },
+    ];
+    
+    const countResult = await ChatSession.aggregate([...pipeline, { $count: 'total' }]);
+    totalCount = countResult[0]?.total || 0;
+    
+    const dataPipeline = [
+      ...pipeline,
+      { $sort: { closedAt: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'agents',
+          localField: 'assignedAgent',
+          foreignField: '_id',
+          as: 'agentDoc',
+        },
+      },
+      {
+        $lookup: {
+          from: 'agents',
+          localField: 'closedBy',
+          foreignField: '_id',
+          as: 'closedByDoc',
+        },
+      },
+      {
+        $addFields: {
+          user: '$userDoc',
+          assignedAgent: { $arrayElemAt: ['$agentDoc', 0] },
+          closedBy: { $arrayElemAt: ['$closedByDoc', 0] },
+        },
+      },
+      { $project: { userDoc: 0, agentDoc: 0, closedByDoc: 0 } },
+    ];
+    
+    sessions = await ChatSession.aggregate(dataPipeline);
+  } else {
+    totalCount = await ChatSession.countDocuments(query);
+    sessions = await ChatSession.find(query)
+      .populate('user')
+      .populate('assignedAgent')
+      .populate('closedBy')
+      .sort({ closedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+  }
+  
+  const totalPages = Math.ceil(totalCount / limit);
+  
+  return {
+    sessions,
+    total: totalCount,
+    page,
+    totalPages,
+    hasMore: page < totalPages,
+  };
+}
+
+/**
+ * Check if agent can access a session
+ */
+export async function canAgentAccessSession(
+  sessionId: string, 
+  agentId: string, 
+  isAdmin = false
+): Promise<boolean> {
+  const session = await ChatSession.findOne({ sessionId });
+  
+  if (!session) {
+    return false;
+  }
+  
+  // Admins can access all sessions
+  if (isAdmin) {
+    return true;
+  }
+  
+  // Queued/waiting sessions are accessible to all agents
+  if (session.status === 'queued' || session.status === 'waiting') {
+    return true;
+  }
+  
+  // Active sessions only accessible to assigned agent
+  if (session.status === 'human') {
+    return session.assignedAgent?.toString() === agentId;
+  }
+  
+  // Closed sessions only accessible to the agent who closed them
+  if (session.status === 'closed') {
+    return session.closedBy?.toString() === agentId;
+  }
+  
+  return false;
 }
 
 /**
@@ -184,6 +447,7 @@ export async function getAllActiveSessions(): Promise<IChatSession[]> {
 export async function getSessionStats(): Promise<{
   total: number;
   bot: number;
+  queued: number;
   waiting: number;
   human: number;
   closed: number;
@@ -200,6 +464,7 @@ export async function getSessionStats(): Promise<{
   const result = {
     total: 0,
     bot: 0,
+    queued: 0,
     waiting: 0,
     human: 0,
     closed: 0,
@@ -227,6 +492,7 @@ export async function addMessage(
     telegramMessageId?: number;
     messageType?: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'system';
     mediaUrl?: string;
+    replyToMessageId?: string;
   }
 ): Promise<IMessage> {
   const session = await ChatSession.findOne({ sessionId });
@@ -242,6 +508,7 @@ export async function addMessage(
     mediaUrl: options?.mediaUrl,
     telegramMessageId: options?.telegramMessageId,
     senderAgent: options?.senderAgentId ? new Types.ObjectId(options.senderAgentId) : undefined,
+    replyTo: options?.replyToMessageId ? new Types.ObjectId(options.replyToMessageId) : undefined,
   });
   
   // Update session's updatedAt
@@ -269,6 +536,7 @@ export async function getSessionMessages(
   
   return Message.find(query)
     .populate('senderAgent', 'name avatar')
+    .populate('replyTo', 'sender content senderAgent')
     .sort({ createdAt: 1 })
     .limit(limit);
 }
@@ -313,7 +581,8 @@ export interface SessionFilters {
   status?: 'open' | 'closed';
   search?: string;
   dateFilter?: 'today' | 'week' | 'month' | 'all';
-  agentId?: string;
+  agentId?: string; // The requesting agent
+  isAdmin?: boolean; // Whether agent is admin
   page?: number;
   limit?: number;
 }
@@ -328,6 +597,7 @@ export interface PaginatedSessions {
 
 /**
  * Get sessions with filters and pagination
+ * IMPORTANT: Respects agent visibility rules
  */
 export async function getFilteredSessions(filters: SessionFilters): Promise<PaginatedSessions> {
   const { 
@@ -335,6 +605,7 @@ export async function getFilteredSessions(filters: SessionFilters): Promise<Pagi
     search, 
     dateFilter = 'all',
     agentId,
+    isAdmin = false,
     page = 1, 
     limit = 50 
   } = filters;
@@ -342,16 +613,30 @@ export async function getFilteredSessions(filters: SessionFilters): Promise<Pagi
   // Build base query
   const query: Record<string, unknown> = {};
 
-  // Status filter
+  // Status filter with visibility rules
   if (status === 'open') {
-    query.status = { $in: ['bot', 'waiting', 'human'] };
+    // Exclude 'bot' status - those are automated interactions that don't need human attention
+    query.status = { $in: ['queued', 'waiting', 'human'] };
+    
+    // Apply visibility rules for non-admins
+    if (!isAdmin && agentId) {
+      // Non-admin agents can only see:
+      // 1. Sessions assigned to them
+      // 2. Sessions in queue (not assigned)
+      query.$or = [
+        { assignedAgent: new Types.ObjectId(agentId) },
+        { status: { $in: ['queued', 'waiting'] }, assignedAgent: { $exists: false } },
+      ];
+      delete query.status; // Remove status filter, handled in $or
+    }
   } else {
+    // Closed sessions
     query.status = 'closed';
-  }
-
-  // Agent filter
-  if (agentId) {
-    query.assignedAgent = new Types.ObjectId(agentId);
+    
+    // Non-admin agents only see their own closed sessions
+    if (!isAdmin && agentId) {
+      query.closedBy = new Types.ObjectId(agentId);
+    }
   }
 
   // Date filter
@@ -455,15 +740,44 @@ export async function getFilteredSessions(filters: SessionFilters): Promise<Pagi
 }
 
 /**
- * Get session counts by status
+ * Get session counts by status (with optional agent filtering)
  */
-export async function getSessionCounts(): Promise<{ open: number; closed: number }> {
-  const [openCount, closedCount] = await Promise.all([
-    ChatSession.countDocuments({ status: { $in: ['bot', 'waiting', 'human'] } }),
-    ChatSession.countDocuments({ status: 'closed' }),
+export async function getSessionCounts(agentId?: string, isAdmin = false): Promise<{ 
+  open: number; 
+  closed: number; 
+  queue: number;
+  myActive: number;
+}> {
+  const openQuery: Record<string, unknown> = { status: { $in: ['bot', 'queued', 'waiting', 'human'] } };
+  const closedQuery: Record<string, unknown> = { status: 'closed' };
+  const queuedQuery: Record<string, unknown> = { 
+    status: { $in: ['queued', 'waiting'] },
+    assignedAgent: { $exists: false },
+  };
+  const myActiveQuery: Record<string, unknown> = { 
+    status: 'human',
+    assignedAgent: agentId ? new Types.ObjectId(agentId) : undefined,
+  };
+  
+  // Non-admin visibility restrictions
+  if (!isAdmin && agentId) {
+    closedQuery.closedBy = new Types.ObjectId(agentId);
+  }
+  
+  const [openCount, closedCount, queuedCount, myActiveCount] = await Promise.all([
+    isAdmin ? ChatSession.countDocuments(openQuery) : 
+      ChatSession.countDocuments({
+        $or: [
+          { assignedAgent: new Types.ObjectId(agentId!), status: 'human' },
+          { status: { $in: ['queued', 'waiting'] }, assignedAgent: { $exists: false } },
+        ],
+      }),
+    ChatSession.countDocuments(closedQuery),
+    ChatSession.countDocuments(queuedQuery),
+    agentId ? ChatSession.countDocuments(myActiveQuery) : 0,
   ]);
 
-  return { open: openCount, closed: closedCount };
+  return { open: openCount, closed: closedCount, queue: queuedCount, myActive: myActiveCount };
 }
 
 /**

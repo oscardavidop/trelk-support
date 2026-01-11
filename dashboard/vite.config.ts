@@ -6,19 +6,24 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    allowedHosts: ['trelk.site'],
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'https://localhost:8443',
         changeOrigin: true,
+        secure: false,
       },
       '/uploads': {
-        target: 'http://localhost:3001',
+        target: 'https://localhost:8443',
         changeOrigin: true,
+        secure: false,
       },
       '/socket.io': {
-        target: 'http://localhost:3001',
+        target: 'https://localhost:8443',
         ws: true,
+        changeOrigin: true,
+        secure: false,
       },
     },
   },

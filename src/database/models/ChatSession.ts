@@ -4,11 +4,29 @@
 
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
-export type SessionStatus = 'bot' | 'waiting' | 'human' | 'closed';
+export type SessionStatus = 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
 export type ClosedByType = 'user' | 'agent' | 'system';
 export type CloseReason = 'manual' | 'inactivity' | 'resolved' | 'spam';
+export type SatisfactionLevel = 'positive' | 'neutral' | 'negative';
 
 export type ChatCategory = 'support' | 'billing' | 'bug' | 'feedback' | 'other';
+
+export interface IPostChatSurveyAnswer {
+  optionIndex: number;
+  label: string;
+  receivedAt: Date;
+}
+
+export interface IPostChatSurvey {
+  sent: boolean;
+  pollId?: string;
+  messageId?: number;
+  sentAt?: Date;
+  answered: boolean;
+  answer?: IPostChatSurveyAnswer;
+  failed?: boolean;
+  failReason?: string;
+}
 
 export interface IChatSession extends Document {
   sessionId: string;
@@ -26,6 +44,9 @@ export interface IChatSession extends Document {
   closureReason?: string; // Legacy - detailed reason text
   rating?: number;
   feedback?: string;
+  // Post-chat satisfaction survey
+  postChatSurvey?: IPostChatSurvey;
+  satisfaction?: SatisfactionLevel;
   // Reopen tracking
   reopenedAt?: Date;
   reopenedBy?: Types.ObjectId;
@@ -58,7 +79,7 @@ const ChatSessionSchema = new Schema<IChatSession>(
     },
     status: {
       type: String,
-      enum: ['bot', 'waiting', 'human', 'closed'],
+      enum: ['bot', 'queued', 'waiting', 'human', 'closed'],
       default: 'bot',
       index: true,
     },
@@ -100,6 +121,26 @@ const ChatSessionSchema = new Schema<IChatSession>(
       max: 5,
     },
     feedback: String,
+    // Post-chat satisfaction survey
+    postChatSurvey: {
+      sent: { type: Boolean, default: false },
+      pollId: String,
+      messageId: Number,
+      sentAt: Date,
+      answered: { type: Boolean, default: false },
+      answer: {
+        optionIndex: Number,
+        label: String,
+        receivedAt: Date,
+      },
+      failed: Boolean,
+      failReason: String,
+    },
+    satisfaction: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      index: true,
+    },
     // Reopen tracking
     reopenedAt: Date,
     reopenedBy: {

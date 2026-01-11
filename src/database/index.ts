@@ -3,8 +3,8 @@
  */
 
 export { User, type IUser } from './models/User.js';
-export { Agent, type IAgent, type AgentRole, type OnlineStatus } from './models/Agent.js';
-export { ChatSession, type IChatSession, type SessionStatus } from './models/ChatSession.js';
+export { Agent, type IAgent, type AgentRole, type OnlineStatus, type IAgentMetrics } from './models/Agent.js';
+export { ChatSession, type IChatSession, type SessionStatus, type SatisfactionLevel, type IPostChatSurvey, type ClosedByType } from './models/ChatSession.js';
 export { Message, type IMessage, type MessageSender, type MessageType } from './models/Message.js';
 export { Settings, type ISettings, type IBotSettings, type IChatSettings, type IAgentRules, type ISecuritySettings } from './models/Settings.js';
 export { SavedReply, type ISavedReply } from './models/SavedReply.js';

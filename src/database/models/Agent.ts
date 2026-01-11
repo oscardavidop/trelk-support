@@ -1,12 +1,90 @@
 /**
  * Agent Model - Support agents who respond via dashboard
+ * 
+ * Roles:
+ * - admin: Full access, manage settings, rules, and agents
+ * - supervisor: Live monitoring, whisper, view all chats, intervene
+ * - support: Handle assigned chats, basic actions
+ * - junior: Limited access, supervised mode, cannot close chats without approval
  */
 
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export type AgentRole = 'admin' | 'support';
+export type AgentRole = 'admin' | 'supervisor' | 'support' | 'junior';
 export type OnlineStatus = 'online' | 'away' | 'offline';
+export type AvailabilityStatus = 'available' | 'busy' | 'offline';
+
+// Maximum concurrent chats per agent before becoming "busy"
+export const MAX_CONCURRENT_CHATS = 5;
+
+// Reconnection grace period in minutes
+export const RECONNECTION_GRACE_MINUTES = 5;
+
+// Role hierarchy (higher number = more permissions)
+export const ROLE_HIERARCHY: Record<AgentRole, number> = {
+  junior: 1,
+  support: 2,
+  supervisor: 3,
+  admin: 4,
+};
+
+// Role permissions
+export const ROLE_PERMISSIONS: Record<AgentRole, string[]> = {
+  junior: [
+    'chat:view',
+    'chat:respond',
+    'chat:transfer',
+    'note:create',
+    'note:view',
+  ],
+  support: [
+    'chat:view',
+    'chat:respond',
+    'chat:close',
+    'chat:transfer',
+    'chat:reopen',
+    'note:create',
+    'note:view',
+    'note:edit',
+    'tag:add',
+    'tag:remove',
+    'savedReply:use',
+  ],
+  supervisor: [
+    'chat:view',
+    'chat:viewAll',
+    'chat:respond',
+    'chat:close',
+    'chat:transfer',
+    'chat:reopen',
+    'chat:takeover',
+    'chat:monitor',
+    'whisper:send',
+    'note:create',
+    'note:view',
+    'note:edit',
+    'note:delete',
+    'tag:add',
+    'tag:remove',
+    'savedReply:use',
+    'savedReply:create',
+    'export:session',
+    'agent:viewStatus',
+    'analytics:view',
+  ],
+  admin: [
+    '*', // All permissions
+  ],
+};
+
+export interface IAgentMetrics {
+  averageRating?: number;
+  totalRatings?: number;
+  satisfactionPositive?: number;
+  satisfactionNeutral?: number;
+  satisfactionNegative?: number;
+}
 
 export interface IAgent extends Document {
   _id: Types.ObjectId;
@@ -20,11 +98,27 @@ export interface IAgent extends Document {
   telegramId?: number;
   lastLogin?: Date;
   lastActivity?: Date;
+  lastDisconnect?: Date;
+  socketId?: string;
   activeChats: number;
   totalChatsHandled: number;
+  
+  // Agent metrics
+  metrics?: IAgentMetrics;
+  
+  // Team membership
+  teamId?: Types.ObjectId;
+  
+  // Supervisor-specific
+  isSupervisingEnabled?: boolean;
+  watchingSessions?: string[];
+  
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  getAvailabilityStatus(): AvailabilityStatus;
+  hasPermission(permission: string): boolean;
+  canSupervise(): boolean;
 }
 
 const AgentSchema = new Schema<IAgent>(
@@ -49,7 +143,7 @@ const AgentSchema = new Schema<IAgent>(
     },
     role: {
       type: String,
-      enum: ['admin', 'support'],
+      enum: ['admin', 'supervisor', 'support', 'junior'],
       default: 'support',
     },
     onlineStatus: {
@@ -69,6 +163,11 @@ const AgentSchema = new Schema<IAgent>(
     },
     lastLogin: Date,
     lastActivity: Date,
+    lastDisconnect: Date,
+    socketId: {
+      type: String,
+      sparse: true,
+    },
     activeChats: {
       type: Number,
       default: 0,
@@ -76,6 +175,43 @@ const AgentSchema = new Schema<IAgent>(
     totalChatsHandled: {
       type: Number,
       default: 0,
+    },
+    // Team membership
+    teamId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Team',
+      index: true,
+    },
+    // Supervisor-specific
+    isSupervisingEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    watchingSessions: [{
+      type: String,
+    }],
+    // Survey metrics
+    metrics: {
+      averageRating: {
+        type: Number,
+        default: 0,
+      },
+      totalRatings: {
+        type: Number,
+        default: 0,
+      },
+      satisfactionPositive: {
+        type: Number,
+        default: 0,
+      },
+      satisfactionNeutral: {
+        type: Number,
+        default: 0,
+      },
+      satisfactionNegative: {
+        type: Number,
+        default: 0,
+      },
     },
   },
   {
@@ -95,6 +231,24 @@ AgentSchema.pre('save', async function (next) {
 // Compare password method
 AgentSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Get availability status based on active chats
+AgentSchema.methods.getAvailabilityStatus = function (): AvailabilityStatus {
+  if (this.onlineStatus === 'offline') return 'offline';
+  if (this.activeChats >= MAX_CONCURRENT_CHATS) return 'busy';
+  return 'available';
+};
+
+// Check if agent has a specific permission
+AgentSchema.methods.hasPermission = function (permission: string): boolean {
+  const rolePermissions = ROLE_PERMISSIONS[this.role as AgentRole] || [];
+  return rolePermissions.includes('*') || rolePermissions.includes(permission);
+};
+
+// Check if agent can supervise other agents
+AgentSchema.methods.canSupervise = function (): boolean {
+  return ROLE_HIERARCHY[this.role as AgentRole] >= ROLE_HIERARCHY.supervisor;
 };
 
 // Remove sensitive data when converting to JSON

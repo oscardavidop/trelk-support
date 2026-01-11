@@ -2,6 +2,8 @@
 import { create } from 'zustand';
 import type { Agent } from '../types';
 
+export type AvailabilityStatus = 'available' | 'busy' | 'offline';
+
 interface AgentsState {
   agents: Agent[];
   onlineAgents: string[];
@@ -13,6 +15,7 @@ interface AgentsState {
   setAgentOnline: (agentId: string) => void;
   setAgentOffline: (agentId: string) => void;
   updateAgentStatus: (agentId: string, status: Agent['onlineStatus']) => void;
+  updateAgentAvailability: (agentId: string, availability: AvailabilityStatus, activeChats: number) => void;
 }
 
 export const useAgentsStore = create<AgentsState>((set) => ({
@@ -53,6 +56,12 @@ export const useAgentsStore = create<AgentsState>((set) => ({
       : [...new Set([...state.onlineAgents, agentId])],
     agents: state.agents.map(a => 
       a._id === agentId ? { ...a, onlineStatus: status } : a
+    ),
+  })),
+  
+  updateAgentAvailability: (agentId, availability, activeChats) => set((state) => ({
+    agents: state.agents.map(a => 
+      a._id === agentId ? { ...a, availability, activeChats } : a
     ),
   })),
 }));

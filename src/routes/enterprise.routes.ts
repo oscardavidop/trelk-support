@@ -93,4 +93,59 @@ export async function registerEnterpriseRoutes(fastify: FastifyInstance): Promis
       return { ok: true, transfers };
     }
   );
+
+  // ============= MESSAGE NOTES =============
+  
+  /**
+   * Add internal note to a message
+   */
+  fastify.post<{ Params: { messageId: string }; Body: { note: string } }>(
+    '/api/messages/:messageId/note',
+    async (request, reply) => {
+      const { messageId } = request.params;
+      const { note } = request.body;
+      const agent = (request as any).agent;
+      
+      // Import Message model
+      const { Message } = await import('../database/models/Message.js');
+      
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return reply.status(404).send({ ok: false, error: 'Message not found' });
+      }
+      
+      // Add note to message metadata
+      (message as any).internalNote = note;
+      (message as any).noteAddedBy = agent._id;
+      (message as any).noteAddedAt = new Date();
+      await message.save();
+      
+      return { ok: true };
+    }
+  );
+
+  /**
+   * Add tags to a message
+   */
+  fastify.put<{ Params: { messageId: string }; Body: { tags: string[] } }>(
+    '/api/messages/:messageId/tags',
+    async (request, reply) => {
+      const { messageId } = request.params;
+      const { tags } = request.body;
+      
+      // Import Message model
+      const { Message } = await import('../database/models/Message.js');
+      
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return reply.status(404).send({ ok: false, error: 'Message not found' });
+      }
+      
+      // Update tags
+      (message as any).tags = tags;
+      await message.save();
+      
+      return { ok: true };
+    }
+  );
 }

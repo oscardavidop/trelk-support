@@ -60,6 +60,8 @@ interface AgentComposerProps {
   session: ChatSession;
   disabled?: boolean;
   placeholder?: string;
+  replyTo?: { _id: string; sender: string; senderAgent?: { name: string }; content: string } | null;
+  onCancelReply?: () => void;
 }
 
 // Placeholder definitions
@@ -103,7 +105,9 @@ function replacePlaceholders(
 export default function AgentComposer({ 
   session, 
   disabled = false,
-  placeholder = 'Escribe un mensaje o usa / para respuestas rápidas…'
+  placeholder = 'Escribe un mensaje o usa / para respuestas rápidas…',
+  replyTo,
+  onCancelReply
 }: AgentComposerProps) {
   const agent = useAuthStore((state) => state.agent);
   const token = useAuthStore((state) => state.token);
@@ -129,7 +133,7 @@ export default function AgentComposer({
   const containerRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
   // ============= EFFECTS =============
@@ -271,17 +275,23 @@ export default function AgentComposer({
     
     setSendStatus('sending');
     
-    sendMessage(session.sessionId, processedMessage, (result) => {
-      if (result.ok) {
-        setMessage('');
-        setSendStatus('sent');
-        if (closeAfter) {
-          closeSession(session.sessionId, 'Agent closed conversation');
+    sendMessage(
+      session.sessionId, 
+      processedMessage, 
+      { replyToMessageId: replyTo?._id },
+      (result) => {
+        if (result.ok) {
+          setMessage('');
+          setSendStatus('sent');
+          onCancelReply?.(); // Clear reply after sending
+          if (closeAfter) {
+            closeSession(session.sessionId, 'Agent closed conversation');
+          }
+        } else {
+          setSendStatus('error');
         }
-      } else {
-        setSendStatus('error');
       }
-    });
+    );
   };
 
   // Upload file to server
@@ -569,6 +579,25 @@ export default function AgentComposer({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Reply Preview */}
+      {replyTo && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+          <div className="w-1 h-8 bg-primary rounded-full flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-primary font-medium">
+              Respondiendo a {replyTo.sender === 'user' ? 'Usuario' : replyTo.senderAgent?.name || 'Agente'}
+            </p>
+            <p className="text-sm text-gray-400 truncate">{replyTo.content}</p>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="p-1 text-gray-500 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      
       {/* Hidden file inputs */}
       <input
         ref={imageInputRef}

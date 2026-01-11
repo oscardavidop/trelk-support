@@ -16,6 +16,7 @@ export interface IBotSettings {
 export interface IChatSettings {
   maxWaitTimeMinutes: number;
   autoCloseInactiveMinutes: number;
+  queuedTimeoutMinutes: number;
   autoResponseEnabled: boolean;
   defaultBotMessage: string;
 }
@@ -72,6 +73,7 @@ const SettingsSchema = new Schema<ISettings>(
     chat: {
       maxWaitTimeMinutes: { type: Number, default: 5 },
       autoCloseInactiveMinutes: { type: Number, default: 30 },
+      queuedTimeoutMinutes: { type: Number, default: 10 },
       autoResponseEnabled: { type: Boolean, default: true },
       defaultBotMessage: { 
         type: String, 

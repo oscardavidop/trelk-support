@@ -36,7 +36,9 @@ import { getSettings } from './settings.service.js';
 import { 
   startInactivityTimer, 
   resetInactivityTimer, 
-  closeByUser 
+  closeByUser,
+  startQueuedTimer,
+  resetQueuedTimer,
 } from './inactivity.service.js';
 import { isUserBlocked, submitSurvey } from './enterprise.service.js';
 import type { IUser } from '../database/index.js';
@@ -232,6 +234,8 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
       }
       
       if (activeSession.status === 'waiting') {
+        // Reset queued timer when user sends message
+        await resetQueuedTimer(activeSession.sessionId);
         await sendMessage(
           chat.id, 
           lang === 'en' 
@@ -253,6 +257,8 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
       }
       
       if (activeSession.status === 'waiting') {
+        // Reset queued timer when user sends message
+        await resetQueuedTimer(activeSession.sessionId);
         await sendMessage(
           chat.id, 
           lang === 'en' 
@@ -367,6 +373,9 @@ async function handleTicketDescription(
   
   // Transfer to waiting status with category
   await transferToHuman(session.sessionId, category);
+  
+  // Start inactivity timer for queued session
+  await startQueuedTimer(session.sessionId, chatId);
   
   // Add initial message
   await addMessage(session.sessionId, 'user', description);
@@ -609,6 +618,9 @@ async function handleHumanConfirm(chatId: number, user: IUser): Promise<void> {
   
   // Transfer to waiting
   await transferToHuman(session.sessionId);
+  
+  // Start inactivity timer for queued session
+  await startQueuedTimer(session.sessionId, chatId);
   
   // Add system message
   await addMessage(session.sessionId, 'bot', 'User requested human support', {

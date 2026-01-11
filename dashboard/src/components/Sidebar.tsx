@@ -1,6 +1,7 @@
 // Sidebar component
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { useConnectionStore } from '../stores/connectionStore';
 import { 
   MessageCircle, 
   LayoutDashboard, 
@@ -9,9 +10,15 @@ import {
   LogOut,
   Circle,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  Wifi,
+  WifiOff,
+  Loader2,
+  Eye,
+  Activity,
+  Download
 } from 'lucide-react';
-import type { Agent, DashboardStats } from '../types';
+import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState } from 'react';
 import { updateAgentStatus } from '../services/socket';
 
@@ -23,22 +30,55 @@ interface SidebarProps {
 export default function Sidebar({ agent, stats }: SidebarProps) {
   const location = useLocation();
   const logout = useAuthStore((state) => state.logout);
+  const { status: connectionStatus } = useConnectionStore();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   const isAdmin = agent?.role === 'admin';
+  const isSupervisor = agent?.role === 'supervisor';
+  const canSupervise = isAdmin || isSupervisor;
+
+  // Calculate availability status based on activeChats
+  const MAX_CONCURRENT_CHATS = 5;
+  const getAvailabilityStatus = (): AvailabilityStatus => {
+    if (!agent || agent.onlineStatus === 'offline') return 'offline';
+    if ((agent.activeChats || 0) >= MAX_CONCURRENT_CHATS) return 'busy';
+    return 'available';
+  };
+  
+  const availabilityStatus = agent?.availability || getAvailabilityStatus();
 
   const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', adminOnly: false },
-    { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', badge: stats?.sessions.waiting, adminOnly: false },
-    { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', adminOnly: true },
-    { path: '/dashboard/agents', icon: Users, label: 'Agents', adminOnly: true },
-    { path: '/dashboard/settings', icon: Settings, label: 'Settings', adminOnly: true },
-  ].filter(item => !item.adminOnly || isAdmin);
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', requireRole: null },
+    { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', badge: stats?.sessions.waiting, requireRole: null },
+    { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', requireRole: 'supervisor' as const },
+    { path: '/dashboard/audit', icon: Activity, label: 'Actividad', requireRole: 'supervisor' as const },
+    { path: '/dashboard/exports', icon: Download, label: 'Exportar', requireRole: 'supervisor' as const },
+    { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', requireRole: 'admin' as const },
+    { path: '/dashboard/agents', icon: Users, label: 'Agents', requireRole: 'admin' as const },
+    { path: '/dashboard/settings', icon: Settings, label: 'Settings', requireRole: 'admin' as const },
+  ].filter(item => {
+    if (item.requireRole === null) return true;
+    if (item.requireRole === 'admin') return isAdmin;
+    if (item.requireRole === 'supervisor') return canSupervise;
+    return false;
+  });
 
   const statusColors = {
     online: 'bg-secondary',
     away: 'bg-warning',
     offline: 'bg-gray-500',
+  };
+
+  const availabilityColors = {
+    available: 'text-secondary',
+    busy: 'text-warning',
+    offline: 'text-gray-500',
+  };
+
+  const availabilityLabels = {
+    available: 'Available',
+    busy: 'Busy',
+    offline: 'Offline',
   };
 
   const handleStatusChange = (status: 'online' | 'away' | 'offline') => {
@@ -58,6 +98,41 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
             <h1 className="font-bold text-white">Trelk Support</h1>
             <p className="text-xs text-gray-500">Agent Dashboard</p>
           </div>
+        </div>
+      </div>
+
+      {/* Connection & Availability Status */}
+      <div className="px-4 py-2 border-b border-gray-800">
+        <div className="flex items-center justify-between text-xs">
+          {/* Connection Status */}
+          <div className="flex items-center gap-1.5">
+            {connectionStatus === 'ready' ? (
+              <>
+                <Wifi className="w-3.5 h-3.5 text-secondary" />
+                <span className="text-secondary">Connected</span>
+              </>
+            ) : connectionStatus === 'reconnecting' ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 text-warning animate-spin" />
+                <span className="text-warning">Reconnecting...</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-3.5 h-3.5 text-danger" />
+                <span className="text-danger">Disconnected</span>
+              </>
+            )}
+          </div>
+          
+          {/* Availability Status */}
+          {agent && (
+            <div className={`flex items-center gap-1.5 ${availabilityColors[availabilityStatus]}`}>
+              <span className="font-medium">{availabilityLabels[availabilityStatus]}</span>
+              {availabilityStatus === 'busy' && (
+                <span className="text-gray-500">({agent.activeChats || 0}/{MAX_CONCURRENT_CHATS})</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

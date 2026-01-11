@@ -1,5 +1,5 @@
-// Session List component with Tabs (Open/Closed)
-import { useState, useEffect, useCallback } from 'react';
+// Session List component with Tabs (My Chats/Queue/Closed)
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { 
@@ -15,20 +15,26 @@ import {
   ChevronDown,
   Loader2,
   AlertCircle,
-  UserX
+  UserX,
+  Inbox,
+  Users,
+  Sparkles
 } from 'lucide-react';
 import type { ChatSession } from '../types';
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
+type TabType = 'open' | 'queue' | 'closed';
 
 export default function SessionList() {
   const { token } = useAuthStore();
   const { 
     sessions, 
+    queueSessions,
     closedSessions,
     activeSession, 
     setActiveSession,
     setSessions,
+    setQueueSessions,
     setClosedSessions,
     activeTab,
     setActiveTab,
@@ -44,10 +50,16 @@ export default function SessionList() {
     hasMore,
     setPagination,
     moveToClosedSessions,
+    removeFromQueue,
+    addSession,
   } = useChatStore();
 
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  
+  // Track new sessions for highlight animation
+  const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
+  const previousSessionIdsRef = useRef<Set<string>>(new Set());
 
   // Debounce search
   useEffect(() => {
@@ -56,6 +68,38 @@ export default function SessionList() {
     }, 300);
     return () => clearTimeout(timer);
   }, [localSearch, setSearchQuery]);
+
+  // Detect new sessions and animate them
+  useEffect(() => {
+    const currentSessionIds = new Set([
+      ...sessions.map(s => s.sessionId),
+      ...queueSessions.map(s => s.sessionId),
+    ]);
+    
+    const previousIds = previousSessionIdsRef.current;
+    const newIds = new Set<string>();
+    
+    currentSessionIds.forEach(id => {
+      if (!previousIds.has(id)) {
+        newIds.add(id);
+      }
+    });
+    
+    if (newIds.size > 0) {
+      setNewSessionIds(prev => new Set([...prev, ...newIds]));
+      
+      // Clear highlight after animation completes (3s)
+      setTimeout(() => {
+        setNewSessionIds(prev => {
+          const updated = new Set(prev);
+          newIds.forEach(id => updated.delete(id));
+          return updated;
+        });
+      }, 3000);
+    }
+    
+    previousSessionIdsRef.current = currentSessionIds;
+  }, [sessions, queueSessions]);
 
   // Fetch session counts
   const fetchCounts = useCallback(async () => {
@@ -72,10 +116,31 @@ export default function SessionList() {
     }
   }, [token, setSessionCounts]);
 
+  // Fetch queue sessions
+  const fetchQueue = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sessions/queue', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setQueueSessions(data.sessions);
+      }
+    } catch (error) {
+      console.error('Failed to fetch queue:', error);
+    }
+  }, [token, setQueueSessions]);
+
   // Fetch sessions based on tab and filters
   const fetchSessions = useCallback(async (page = 1) => {
     setLoadingSessions(true);
     try {
+      if (activeTab === 'queue') {
+        await fetchQueue();
+        setLoadingSessions(false);
+        return;
+      }
+      
       const params = new URLSearchParams({
         status: activeTab,
         page: page.toString(),
@@ -113,7 +178,10 @@ export default function SessionList() {
   useEffect(() => {
     fetchSessions();
     fetchCounts();
-  }, [fetchSessions, fetchCounts]);
+    if (activeTab === 'queue') {
+      fetchQueue();
+    }
+  }, [fetchSessions, fetchCounts, fetchQueue, activeTab]);
 
   // Listen for chat:closed events from socket
   useEffect(() => {
@@ -124,12 +192,30 @@ export default function SessionList() {
       }
       fetchCounts();
     };
+    
+    // Listen for session:assigned events (auto-assignment)
+    const handleSessionAssigned = (event: CustomEvent) => {
+      const { sessionId } = event.detail;
+      console.log('Session assigned to me:', sessionId);
+      // Remove from queue and refresh my sessions
+      removeFromQueue(sessionId);
+      fetchSessions();
+      fetchCounts();
+    };
 
     window.addEventListener('chat:closed' as never, handleChatClosed as never);
-    return () => window.removeEventListener('chat:closed' as never, handleChatClosed as never);
-  }, [moveToClosedSessions, fetchCounts]);
+    window.addEventListener('session:assigned' as never, handleSessionAssigned as never);
+    return () => {
+      window.removeEventListener('chat:closed' as never, handleChatClosed as never);
+      window.removeEventListener('session:assigned' as never, handleSessionAssigned as never);
+    };
+  }, [moveToClosedSessions, fetchCounts, removeFromQueue, fetchSessions]);
 
-  const currentSessions = activeTab === 'open' ? sessions : closedSessions;
+  const currentSessions = activeTab === 'open' 
+    ? sessions 
+    : activeTab === 'queue' 
+      ? queueSessions 
+      : closedSessions;
 
   // Sort sessions: waiting first, then by last update
   const sortedSessions = [...currentSessions].sort((a, b) => {
@@ -137,12 +223,17 @@ export default function SessionList() {
       if (a.status === 'waiting' && b.status !== 'waiting') return -1;
       if (b.status === 'waiting' && a.status !== 'waiting') return 1;
     }
+    if (activeTab === 'queue') {
+      // Queue is FIFO, oldest first
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'waiting': return 'bg-warning';
+      case 'queued': return 'bg-orange-500';
       case 'human': return 'bg-secondary';
       case 'bot': return 'bg-primary';
       case 'closed': return 'bg-gray-500';
@@ -153,6 +244,7 @@ export default function SessionList() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'waiting': return Clock;
+      case 'queued': return Inbox;
       case 'human': return User;
       case 'closed': return CheckCircle;
       default: return MessageSquare;
@@ -194,26 +286,45 @@ export default function SessionList() {
       <div className="flex border-b border-gray-800">
         <button
           onClick={() => setActiveTab('open')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-all ${
             activeTab === 'open'
               ? 'text-primary border-b-2 border-primary bg-primary/5'
               : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <MessageCircle className="w-4 h-4" />
-          <span>Abiertos</span>
-          {sessionCounts.open > 0 && (
+          <span>Mis Chats</span>
+          {sessionCounts.myActive > 0 && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
               activeTab === 'open' ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'
             }`}>
-              {sessionCounts.open}
+              {sessionCounts.myActive}
+            </span>
+          )}
+        </button>
+        
+        <button
+          onClick={() => setActiveTab('queue')}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-all ${
+            activeTab === 'queue'
+              ? 'text-orange-500 border-b-2 border-orange-500 bg-orange-500/5'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+          }`}
+        >
+          <Inbox className="w-4 h-4" />
+          <span>Cola</span>
+          {sessionCounts.queue > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              activeTab === 'queue' ? 'bg-orange-500 text-white' : 'bg-orange-900 text-orange-300'
+            }`}>
+              {sessionCounts.queue}
             </span>
           )}
         </button>
         
         <button
           onClick={() => setActiveTab('closed')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-all ${
             activeTab === 'closed'
               ? 'text-primary border-b-2 border-primary bg-primary/5'
               : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
@@ -324,15 +435,26 @@ export default function SessionList() {
             const StatusIcon = getStatusIcon(session.status);
             const isActive = activeSession?.sessionId === session.sessionId;
             const isClosed = session.status === 'closed';
+            const isNew = newSessionIds.has(session.sessionId);
             
             return (
               <button
                 key={session.sessionId}
                 onClick={() => setActiveSession(session)}
-                className={`w-full p-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors text-left ${
+                className={`w-full p-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors text-left relative ${
                   isActive ? 'bg-gray-800/70' : ''
-                } ${isClosed ? 'opacity-80' : ''}`}
+                } ${isClosed ? 'opacity-80' : ''} ${
+                  isNew ? 'animate-slide-up-fade bg-primary/10' : ''
+                }`}
               >
+                {/* New badge */}
+                {isNew && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-white text-xs font-bold animate-pulse-highlight">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Nuevo</span>
+                  </div>
+                )}
+                
                 <div className="flex items-start gap-3">
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">

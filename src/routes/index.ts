@@ -12,6 +12,13 @@ import { registerAdminRoutes } from './admin.routes.js';
 import { registerContactRoutes } from './contact.routes.js';
 import { registerUploadRoutes, registerStaticUploads } from './upload.routes.js';
 import { registerEnterpriseRoutes } from './enterprise.routes.js';
+import { registerMediaRoutes } from './media.routes.js';
+import { supervisorRoutes } from './supervisor.routes.js';
+import { copilotRoutes } from './copilot.routes.js';
+import { automationRoutes } from './automation.routes.js';
+import { exportRoutes } from './export.routes.js';
+import { activityRoutes, auditRoutes } from './activity.routes.js';
+import { surveyRoutes } from './survey.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -52,4 +59,30 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   await fastify.register(async (enterpriseRoutes) => {
     await registerEnterpriseRoutes(enterpriseRoutes);
   });
+  
+  // Media proxy routes (hide Telegram bot token)
+  await fastify.register(async (mediaRoutes) => {
+    await registerMediaRoutes(mediaRoutes);
+  });
+  
+  // Supervisor routes (supervisor/admin roles)
+  await fastify.register(supervisorRoutes, { prefix: '/api/supervisor' });
+  
+  // AI Copilot routes
+  await fastify.register(copilotRoutes, { prefix: '/api/copilot' });
+  
+  // Automation rules routes
+  await fastify.register(automationRoutes, { prefix: '/api/automation' });
+  
+  // Export routes
+  await fastify.register(exportRoutes, { prefix: '/api/exports' });
+  
+  // Activity log routes
+  await fastify.register(activityRoutes, { prefix: '/api/activity' });
+  
+  // Audit log routes
+  await fastify.register(auditRoutes, { prefix: '/api/audit' });
+  
+  // Survey statistics routes
+  await fastify.register(surveyRoutes, { prefix: '/api/surveys' });
 }

@@ -18,6 +18,10 @@ import {
   getFilteredSessions,
   getSessionCounts,
   closeSessionDetailed,
+  getVisibleSessionsForAgent,
+  getQueuedSessions,
+  getQueueCount,
+  canAgentAccessSession,
 } from '../services/chat.service.js';
 import {
   getAllSavedReplies,
@@ -56,23 +60,40 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   // ============= SESSION LIST =============
   
   /**
-   * Get all active sessions
+   * Get all active sessions (respects agent visibility)
    */
-  fastify.get('/api/sessions', async () => {
-    const sessions = await getAllActiveSessions();
+  fastify.get('/api/sessions', async (request) => {
+    const agent = (request as any).agent;
+    const isAdmin = agent.role === 'admin';
+    
+    const sessions = await getVisibleSessionsForAgent(agent._id.toString(), isAdmin);
     return { ok: true, sessions };
+  });
+  
+  /**
+   * Get queue - unassigned sessions waiting
+   */
+  fastify.get('/api/sessions/queue', async () => {
+    const sessions = await getQueuedSessions();
+    const count = await getQueueCount();
+    return { ok: true, sessions, count };
   });
 
   /**
    * Get filtered sessions with pagination (for tabs: open/closed)
+   * IMPORTANT: Respects agent visibility rules
    */
   fastify.get<{ Querystring: FilteredSessionsQuery }>('/api/sessions/filtered', async (request) => {
     const { status, search, dateFilter, page, limit } = request.query;
+    const agent = (request as any).agent;
+    const isAdmin = agent.role === 'admin';
     
     const result = await getFilteredSessions({
       status: status as 'open' | 'closed' | undefined,
       search,
       dateFilter: dateFilter as 'today' | 'week' | 'month' | 'all' | undefined,
+      agentId: agent._id.toString(),
+      isAdmin,
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 50,
     });
@@ -81,10 +102,12 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   });
 
   /**
-   * Get session counts for tabs
+   * Get session counts for tabs (respects agent visibility)
    */
-  fastify.get('/api/sessions/counts', async () => {
-    const counts = await getSessionCounts();
+  fastify.get('/api/sessions/counts', async (request) => {
+    const agent = (request as any).agent;
+    const isAdmin = agent.role === 'admin';
+    const counts = await getSessionCounts(agent._id.toString(), isAdmin);
     return { ok: true, counts };
   });
   
@@ -100,7 +123,8 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
    * Get agent's assigned sessions
    */
   fastify.get('/api/sessions/mine', async (request) => {
-    const sessions = await getAgentSessions(request.agent!._id.toString());
+    const agent = (request as any).agent;
+    const sessions = await getAgentSessions(agent._id.toString());
     return { ok: true, sessions };
   });
   
@@ -129,10 +153,18 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   // ============= SINGLE SESSION =============
   
   /**
-   * Get single session by ID
+   * Get single session by ID (with access control)
    */
   fastify.get<{ Params: SessionParams }>('/api/sessions/:sessionId', async (request, reply) => {
     const { sessionId } = request.params;
+    const agent = (request as any).agent;
+    const isAdmin = agent.role === 'admin';
+    
+    // Check access permission
+    const canAccess = await canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
+    if (!canAccess) {
+      return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
+    }
     
     const session = await getSessionById(sessionId);
     
@@ -144,13 +176,21 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   });
   
   /**
-   * Get session messages
+   * Get session messages (with access control)
    */
   fastify.get<{ Params: SessionParams; Querystring: MessagesQuery }>(
     '/api/sessions/:sessionId/messages', 
     async (request, reply) => {
       const { sessionId } = request.params;
       const { limit, before } = request.query;
+      const agent = (request as any).agent;
+      const isAdmin = agent.role === 'admin';
+      
+      // Check access permission
+      const canAccess = await canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
+      if (!canAccess) {
+        return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
+      }
       
       const messages = await getSessionMessages(
         sessionId, 
@@ -169,7 +209,15 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         mediaUrl: msg.mediaUrl,
         telegramMessageId: msg.telegramMessageId,
         isRead: msg.isRead,
+        isEdited: msg.isEdited || false,
+        editedAt: msg.editedAt,
         createdAt: msg.createdAt,
+        replyToMessage: (msg as any).replyTo ? {
+          _id: (msg as any).replyTo._id?.toString(),
+          sender: (msg as any).replyTo.sender,
+          senderAgent: (msg as any).replyTo.senderAgent,
+          content: (msg as any).replyTo.content,
+        } : undefined,
       }));
       
       return { ok: true, messages: transformedMessages };
