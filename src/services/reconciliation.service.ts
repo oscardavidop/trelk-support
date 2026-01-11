@@ -20,10 +20,14 @@ import {
   RECONNECTION_GRACE_MINUTES,
 } from './agent.service.js';
 import { addToQueue, getQueuedSessions, assignAgent } from './chat.service.js';
+import { getIO } from './socket.js';
 import { logger } from './logger.js';
 import type { IAgent } from '../database/models/Agent.js';
 import type { IChatSession } from '../database/models/ChatSession.js';
 import { Types } from 'mongoose';
+
+// Convert minutes to milliseconds for setTimeout
+const GRACE_PERIOD_MS = RECONNECTION_GRACE_MINUTES * 60 * 1000;
 
 /**
  * Full system reconciliation on server startup
@@ -92,7 +96,7 @@ export async function handleAgentDisconnection(agentId: string): Promise<{
     return { affectedSessions: [], action: 'queued' };
   }
   
-  // Mark agent as offline
+  // Mark agent as offline but keep lastDisconnect for grace period
   await Agent.updateOne(
     { _id: agentId },
     {
@@ -108,18 +112,56 @@ export async function handleAgentDisconnection(agentId: string): Promise<{
     assignedAgent: new Types.ObjectId(agentId),
   });
   
-  // Move sessions to queue immediately (no grace period for now)
-  for (const session of affectedSessions) {
-    await addToQueue(session.sessionId);
-  }
+  // Use grace period - don't move to queue immediately
+  // This gives the agent time to reconnect (page reload, network blip, etc.)
+  // If the agent doesn't reconnect within GRACE_PERIOD_MS, the sessions 
+  // will be handled by the periodic reconciliation or inactivity timers
   
   logger.info('api', { 
-    action: 'agent_disconnected_handled',
+    action: 'agent_disconnected_grace_period',
     agentId,
-    sessionsQueued: affectedSessions.length,
+    sessionsKeptAssigned: affectedSessions.length,
+    gracePeriodMs: GRACE_PERIOD_MS,
   });
   
-  return { affectedSessions, action: 'queued' };
+  // Schedule a check after grace period to move sessions to queue if agent hasn't reconnected
+  setTimeout(async () => {
+    const currentAgent = await Agent.findById(agentId);
+    if (currentAgent?.onlineStatus === 'offline') {
+      // Agent still offline, move sessions to queue
+      const stillAssigned = await ChatSession.find({
+        status: 'human',
+        assignedAgent: new Types.ObjectId(agentId),
+      }).populate('user');
+      
+      const io = getIO();
+      for (const session of stillAssigned) {
+        const queuedSession = await addToQueue(session.sessionId);
+        if (queuedSession) {
+          // Emit minimal session data for queued notification
+          io.emit('session:queued', {
+            sessionId: session.sessionId,
+            user: {
+              telegramId: (session.user as any).telegramId,
+              firstName: (session.user as any).firstName,
+              username: (session.user as any).username,
+            },
+            status: 'queued',
+            createdAt: session.createdAt,
+            updatedAt: new Date(),
+          });
+        }
+      }
+      
+      logger.info('api', { 
+        action: 'grace_period_expired_sessions_queued',
+        agentId,
+        sessionsQueued: stillAssigned.length,
+      });
+    }
+  }, GRACE_PERIOD_MS);
+  
+  return { affectedSessions, action: 'grace_period' };
 }
 
 /**
@@ -150,13 +192,21 @@ export async function handleAgentReconnection(agentId: string, socketId: string)
   
   let recoveredSessions: IChatSession[] = [];
   
-  if (withinGracePeriod) {
-    // Try to recover sessions that were recently queued
-    // Find sessions that were queued around the time of disconnect
+  // First, check for sessions still assigned to this agent (reconnected before timeout)
+  const stillAssigned = await ChatSession.find({
+    status: 'human',
+    assignedAgent: new Types.ObjectId(agentId),
+  }).populate('user').populate('assignedAgent');
+  
+  recoveredSessions = [...stillAssigned];
+  
+  if (withinGracePeriod && stillAssigned.length === 0) {
+    // Try to recover sessions that were recently queued or in waiting
+    // Find sessions that were queued/waiting around the time of disconnect
     const recentlyQueued = await ChatSession.find({
-      status: 'queued',
+      status: { $in: ['queued', 'waiting'] },
       updatedAt: { $gte: agent.lastDisconnect },
-    });
+    }).populate('user').populate('assignedAgent');
     
     // Re-assign these sessions to the reconnecting agent
     for (const session of recentlyQueued) {
@@ -175,6 +225,7 @@ export async function handleAgentReconnection(agentId: string, socketId: string)
     logger.info('api', { 
       action: 'agent_reconnected_fresh',
       agentId,
+      stillAssignedCount: stillAssigned.length,
     });
   }
   

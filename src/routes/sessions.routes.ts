@@ -28,6 +28,7 @@ import {
   searchSavedReplies,
   incrementUsageCount,
 } from '../services/savedReply.service.js';
+import { getSessionTimeline } from '../services/activity-log.service.js';
 
 interface SessionParams {
   sessionId: string;
@@ -221,6 +222,56 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
       }));
       
       return { ok: true, messages: transformedMessages };
+    }
+  );
+  
+  /**
+   * Get session activity timeline
+   * Available to agents (filtered) and supervisors/admins (full)
+   */
+  fastify.get<{ Params: SessionParams }>(
+    '/api/sessions/:sessionId/timeline',
+    async (request, reply) => {
+      const { sessionId } = request.params;
+      const agent = (request as any).agent;
+      const isAdmin = agent.role === 'admin' || agent.role === 'supervisor';
+
+      // Check access permission
+      const canAccess = await canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
+      if (!canAccess) {
+        return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
+      }
+
+      try {
+        const timeline = await getSessionTimeline(sessionId);
+        
+        // For regular agents, filter out sensitive activities
+        if (!isAdmin) {
+          const agentSafeActions = [
+            'session_created',
+            'session_assigned',
+            'message_sent',
+            'message_received',
+            'session_transferred',
+            'session_closed',
+            'category_changed',
+            'note_added',
+            'tag_added',
+            'tag_removed',
+          ];
+          const filteredTimeline = timeline.filter(
+            (item: { action: string }) => agentSafeActions.includes(item.action)
+          );
+          return { success: true, data: filteredTimeline };
+        }
+
+        return { success: true, data: timeline };
+      } catch (error) {
+        return reply.code(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get timeline',
+        });
+      }
     }
   );
   

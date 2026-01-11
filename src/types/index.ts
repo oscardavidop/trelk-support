@@ -230,7 +230,7 @@ export interface AnswerCallbackQueryOptions {
 
 export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error';
-  type: 'command' | 'callback' | 'message' | 'api' | 'error' | 'ticket' | 'chat' | 'inactivity' | 'saved_reply' | 'upload' | 'survey' | 'enterprise' | 'transfer' | 'block';
+  type: 'command' | 'callback' | 'message' | 'api' | 'error' | 'ticket' | 'chat' | 'inactivity' | 'saved_reply' | 'upload' | 'survey' | 'enterprise' | 'transfer' | 'block' | 'flow';
   userId?: number;
   chatId?: number;
   data: Record<string, unknown>;

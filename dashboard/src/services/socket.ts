@@ -69,6 +69,9 @@ export function initializeSocket(): Socket {
     reconnectAttempt = 0;
     useConnectionStore.getState().setConnected();
     
+    // Re-fetch sessions after reconnection
+    requestSessions();
+    
     // Toast for successful reconnection
     toast.success('Reconectado', 'La conexión se ha restablecido.', { 
       groupKey: 'connection:restored',
@@ -771,6 +774,15 @@ export function returnToQueue(
   callback?: (result: { ok: boolean; error?: string }) => void
 ): void {
   socket?.emit('session:returnToQueue', { sessionId, reason }, callback || (() => {}));
+}
+
+// ============= WHISPER ACTIONS =============
+
+export function markWhisperAsRead(
+  whisperId: string,
+  callback?: (result: { ok: boolean; error?: string }) => void
+): void {
+  socket?.emit('whisper:markRead', { whisperId }, callback || (() => {}));
 }
 
 // ============= HELPERS =============

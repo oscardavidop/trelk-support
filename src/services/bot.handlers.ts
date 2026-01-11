@@ -208,9 +208,7 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
     if (text === CLOSE_CHAT_BUTTON) {
       await closeByUser(activeSession.sessionId, chat.id);
       
-      const closeMessage = lang === 'es'
-        ? '✅ El chat ha sido cerrado. Gracias por contactar con Trelk Support.'
-        : '✅ Chat closed. Thank you for contacting Trelk Support.';
+      const closeMessage = '✅ El chat ha sido cerrado. Gracias por contactar con Trelk Support.'
       
       await sendMessage(chat.id, closeMessage, {
         replyMarkup: { remove_keyboard: true },

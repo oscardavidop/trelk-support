@@ -19,6 +19,8 @@ import { automationRoutes } from './automation.routes.js';
 import { exportRoutes } from './export.routes.js';
 import { activityRoutes, auditRoutes } from './activity.routes.js';
 import { surveyRoutes } from './survey.routes.js';
+import { scheduledMessageRoutes } from './scheduledMessage.routes.js';
+import { flowRoutes } from './flow.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -85,4 +87,10 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   
   // Survey statistics routes
   await fastify.register(surveyRoutes, { prefix: '/api/surveys' });
+  
+  // Scheduled messages routes
+  await fastify.register(scheduledMessageRoutes);
+  
+  // Flow Builder routes
+  await fastify.register(flowRoutes, { prefix: '/api' });
 }

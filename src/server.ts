@@ -11,6 +11,7 @@ import { connectDatabase, disconnectDatabase } from './database/index.js';
 import { handleMessage, handleCallbackQuery } from './services/bot.handlers.js';
 import { handlePollAnswer, restorePendingPolls } from './services/survey.service.js';
 import { restoreQueuedTimers } from './services/inactivity.service.js';
+import { startScheduledMessagesWorker, stopScheduledMessagesWorker } from './services/scheduledMessage.worker.js';
 import { setWebhook, deleteWebhook, getMe, getWebhookInfo } from './services/telegram.js';
 import { initializeSocketIO } from './services/socket.js';
 import { performFullReconciliation } from './services/reconciliation.service.js';
@@ -204,6 +205,9 @@ async function start(): Promise<void> {
     
     // Restore queued session timers
     await restoreQueuedTimers();
+    
+    // Start scheduled messages worker
+    startScheduledMessagesWorker();
 
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
@@ -245,6 +249,9 @@ async function shutdown(): Promise<void> {
   console.log('\n🛑 Shutting down gracefully...');
 
   try {
+    // Stop scheduled messages worker first
+    stopScheduledMessagesWorker();
+    
     await fastify.close();
     await disconnectDatabase();
     console.log('✅ Server closed successfully');

@@ -46,6 +46,9 @@ import AgentComposer from './AgentComposer';
 import { TypingIndicator, TransferModal, BlockUserModal, CategorySelector, ReopenChatButton, SurveyDisplay } from './enterprise';
 import MessageContextMenu from './MessageContextMenu';
 import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal, TagSelectorModal } from './MessageActionModals';
+import { WhisperDisplay } from './chat/WhisperDisplay';
+import { useSupervisorStore } from '../stores/supervisorStore';
+import { markWhisperAsRead as markWhisperReadApi } from '../services/socket';
 
 interface ChatWindowProps {
   session: ChatSession;
@@ -77,6 +80,16 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
   const [addNoteModal, setAddNoteModal] = useState<{ message: Message } | null>(null);
   const [tagSelectorModal, setTagSelectorModal] = useState<{ message: Message } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  
+  // Whispers from supervisor
+  const { whispers, markWhisperAsRead: markWhisperReadStore } = useSupervisorStore();
+  const sessionWhispers = whispers.filter(w => w.sessionId === session.sessionId);
+  
+  // Handle whisper read
+  const handleWhisperRead = useCallback((whisperId: string) => {
+    markWhisperReadApi(whisperId);
+    markWhisperReadStore(whisperId);
+  }, [markWhisperReadStore]);
 
   // Join session room and load messages
   useEffect(() => {
@@ -551,6 +564,25 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
               </button>
             </div>
           </div>
+        )}
+        
+        {/* Whispers from Supervisor */}
+        {sessionWhispers.length > 0 && (
+          <WhisperDisplay
+            sessionId={session.sessionId}
+            whispers={sessionWhispers.map(w => ({
+              _id: w.id,
+              sessionId: w.sessionId,
+              fromSupervisor: {
+                _id: w.supervisorId,
+                name: w.supervisorName,
+              },
+              message: w.content,
+              isRead: w.isRead,
+              createdAt: w.createdAt.toString(),
+            }))}
+            onMarkAsRead={handleWhisperRead}
+          />
         )}
         
         {isLoadingMessages ? (

@@ -123,7 +123,7 @@ export async function closeSession(
   );
 
   // Send post-chat satisfaction survey
-  if (session && (closedByType === 'agent' || closedByType === 'system')) {
+  if (session && (closedByType === 'agent' || closedByType === 'system' || closedByType == 'user')) {
     // Delay slightly to allow close message to be sent first
     setTimeout(async () => {
       await sendPostChatSurvey(sessionId);
@@ -410,7 +410,8 @@ export async function getClosedSessionsForAgent(
 export async function canAgentAccessSession(
   sessionId: string, 
   agentId: string, 
-  isAdmin = false
+  isAdmin = false,
+  isSupervisor = false
 ): Promise<boolean> {
   const session = await ChatSession.findOne({ sessionId });
   
@@ -418,8 +419,8 @@ export async function canAgentAccessSession(
     return false;
   }
   
-  // Admins can access all sessions
-  if (isAdmin) {
+  // Admins and supervisors can access all sessions
+  if (isAdmin || isSupervisor) {
     return true;
   }
   

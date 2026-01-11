@@ -140,15 +140,14 @@ export async function sendWhisper(
   // Get agent's socket to send real-time notification
   const agent = await Agent.findById(session.assignedAgent).select('socketId');
   if (agent?.socketId) {
-    io.to(agent.socketId).emit('whisper:received', {
+    io.to(agent.socketId).emit('whisper:new', {
       id: whisper._id.toString(),
       sessionId,
-      fromSupervisor: {
-        id: supervisor._id.toString(),
-        name: supervisor.name,
-      },
+      supervisorId: supervisor._id.toString(),
+      supervisorName: supervisor.name,
       content,
       createdAt: whisper.createdAt,
+      isRead: false,
     });
   }
 

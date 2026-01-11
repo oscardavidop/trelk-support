@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
   X, User, MessageSquare, Clock, Tag, StickyNote, Settings, History,
-  Zap, ChevronDown, ChevronRight, Loader2, AlertCircle
+  Zap, ChevronDown, ChevronRight, Loader2, AlertCircle, Activity, Sparkles,
+  RefreshCw, Copy, Check, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import type { ContactInfo, Tag as TagType } from '../types';
 import { getContactInfo } from '../services/contactApi';
@@ -14,6 +15,9 @@ import { SidebarHistory } from './sidebar/History';
 import { SidebarCustomFields } from './sidebar/CustomFields';
 import { SidebarSystemFields } from './sidebar/SystemFields';
 import { LiveContactTimer } from './sidebar/LiveContactTimer';
+import { ActivityTimeline } from './sidebar/ActivityTimeline';
+import { useCopilotStore, type CopilotSuggestion, type SuggestionType } from '../stores/copilotStore';
+import { copilotService } from '../services/copilot.service';
 
 interface ChatInfoSidebarProps {
   sessionId: string | null;
@@ -312,24 +316,24 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
                 onFieldUpdated={fetchContactInfo}
               />
             </SidebarSection>
-
-            {/* Entry Source */}
+            {/* Activity Timeline */}
             <SidebarSection
-              title="Origen del ingreso"
-              icon={<MessageSquare className="w-4 h-4" />}
-              isExpanded={expandedSections.has('source')}
-              onToggle={() => toggleSection('source')}
+              title="Línea de tiempo"
+              icon={<Activity className="w-4 h-4" />}
+              isExpanded={expandedSections.has('activity')}
+              onToggle={() => toggleSection('activity')}
             >
-              <div className="px-4 py-2">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Aceptación de ingreso a través de
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium">
-                    📱 {contactInfo.user.platform === 'telegram' ? 'Telegram' : contactInfo.user.platform}
-                  </span>
-                </div>
-              </div>
+              {sessionId && <ActivityTimeline sessionId={sessionId} />}
+            </SidebarSection>
+
+            {/* AI Copilot */}
+            <SidebarSection
+              title="AI Copilot"
+              icon={<Sparkles className="w-4 h-4" />}
+              isExpanded={expandedSections.has('copilot')}
+              onToggle={() => toggleSection('copilot')}
+            >
+              {sessionId && <CopilotSection sessionId={sessionId} />}
             </SidebarSection>
           </div>
         )}
@@ -371,6 +375,276 @@ function SidebarSection({ title, icon, isExpanded, onToggle, badge, children }: 
         )}
       </button>
       {isExpanded && children}
+    </div>
+  );
+}
+// AI Copilot Section Component
+interface CopilotSectionProps {
+  sessionId: string;
+}
+
+function CopilotSection({ sessionId }: CopilotSectionProps) {
+  const {
+    suggestions,
+    isGenerating,
+    isEnabled,
+    addSuggestion,
+    setGenerating,
+  } = useCopilotStore();
+  
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  const sessionSuggestions = suggestions[sessionId] || [];
+  
+  // Generate suggestion
+  const generateSuggestion = useCallback(async (type: SuggestionType) => {
+    if (!isEnabled || isGenerating[type]) return;
+    
+    setGenerating(type, true);
+    try {
+      let result;
+      switch (type) {
+        case 'response':
+          result = await copilotService.suggestResponse(sessionId);
+          break;
+        case 'summary':
+          result = await copilotService.summarize(sessionId);
+          break;
+        case 'category':
+          result = await copilotService.categorize(sessionId);
+          break;
+        case 'close_ready':
+          result = await copilotService.checkCloseReady(sessionId);
+          break;
+        case 'sentiment':
+          result = await copilotService.getSentiment(sessionId);
+          break;
+      }
+      
+      if (result.success && result.data) {
+        addSuggestion({
+          id: result.data.id || Date.now().toString(),
+          sessionId,
+          type,
+          content: result.data.content || result.data.summary || '',
+          confidence: result.data.confidence || 0.8,
+          categories: result.data.categories,
+          sentiment: result.data.sentiment,
+          closeReady: result.data.closeReady,
+          createdAt: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to generate ${type} suggestion:`, error);
+    } finally {
+      setGenerating(type, false);
+    }
+  }, [sessionId, isEnabled, isGenerating, addSuggestion, setGenerating]);
+  
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+  
+  // Find latest suggestions by type
+  const latestSummary = sessionSuggestions.find(s => s.type === 'summary');
+  const latestCategory = sessionSuggestions.find(s => s.type === 'category');
+  const latestResponse = sessionSuggestions.find(s => s.type === 'response');
+  const latestCloseReady = sessionSuggestions.find(s => s.type === 'close_ready');
+  
+  return (
+    <div className="px-3 py-2 space-y-3">
+      {/* Conversation Summary */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
+            📝 Resumen de conversación
+          </h4>
+          <button
+            onClick={() => generateSuggestion('summary')}
+            disabled={isGenerating['summary']}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Generar resumen"
+          >
+            <RefreshCw className={`w-3 h-3 text-gray-500 ${isGenerating['summary'] ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        {latestSummary ? (
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">
+              {latestSummary.content}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => handleCopy(latestSummary.content, latestSummary.id)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              >
+                {copiedId === latestSummary.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copiedId === latestSummary.id ? 'Copiado' : 'Copiar'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 italic">
+            Haz clic en actualizar para generar un resumen
+          </p>
+        )}
+      </div>
+      
+      {/* Suggested Category */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
+            🏷️ Categoría sugerida
+          </h4>
+          <button
+            onClick={() => generateSuggestion('category')}
+            disabled={isGenerating['category']}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Analizar categoría"
+          >
+            <RefreshCw className={`w-3 h-3 text-gray-500 ${isGenerating['category'] ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        {latestCategory?.categories && latestCategory.categories.length > 0 ? (
+          <div className="space-y-1">
+            {latestCategory.categories.slice(0, 3).map((cat, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <span className={`text-sm ${i === 0 ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-500'}`}>
+                  {i === 0 ? '🔹' : '🔸'} {cat}
+                </span>
+                {i === 0 && (
+                  <span className="text-xs text-gray-500">
+                    {Math.round((latestCategory.confidence || 0.85) * 100)}%
+                  </span>
+                )}
+              </div>
+            ))}
+            <button className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+              Aplicar
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 italic">
+            Haz clic en actualizar para analizar categoría
+          </p>
+        )}
+      </div>
+      
+      {/* Suggested Response */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
+            ✍️ Respuesta sugerida
+          </h4>
+          <button
+            onClick={() => generateSuggestion('response')}
+            disabled={isGenerating['response']}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Generar respuesta"
+          >
+            <RefreshCw className={`w-3 h-3 text-gray-500 ${isGenerating['response'] ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        {latestResponse ? (
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 italic">
+              "{latestResponse.content}"
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <button className="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors">
+                Insertar
+              </button>
+              <button className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                Editar
+              </button>
+              <button className="px-2 py-1 text-gray-500 text-xs hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                Omitir
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 italic">
+            Haz clic en actualizar para generar una respuesta
+          </p>
+        )}
+      </div>
+      
+      {/* Resolution Readiness */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
+            ✅ Preparación para cerrar
+          </h4>
+          <button
+            onClick={() => generateSuggestion('close_ready')}
+            disabled={isGenerating['close_ready']}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Verificar si está listo"
+          >
+            <RefreshCw className={`w-3 h-3 text-gray-500 ${isGenerating['close_ready'] ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        {latestCloseReady ? (
+          <div>
+            <div className={`flex items-center gap-2 mb-2 ${
+              latestCloseReady.closeReady?.ready 
+                ? 'text-green-600 dark:text-green-400' 
+                : 'text-yellow-600 dark:text-yellow-400'
+            }`}>
+              <span className="text-lg">
+                {latestCloseReady.closeReady?.ready ? '🟢' : '🟡'}
+              </span>
+              <span className="text-sm font-medium">
+                {latestCloseReady.closeReady?.ready 
+                  ? 'Chat listo para cerrar' 
+                  : 'Aún hay cosas pendientes'}
+              </span>
+            </div>
+            {latestCloseReady.closeReady?.reasons && latestCloseReady.closeReady.reasons.length > 0 && (
+              <ul className="text-xs text-gray-500 space-y-1 ml-6">
+                {latestCloseReady.closeReady.reasons.map((reason: string, i: number) => (
+                  <li key={i} className="flex items-center gap-1">
+                    <span>{latestCloseReady.closeReady?.ready ? '✓' : '○'}</span>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {latestCloseReady.closeReady?.ready && (
+              <button className="mt-3 w-full px-3 py-2 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors">
+                Cerrar chat con resumen
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 italic">
+            Haz clic en actualizar para verificar
+          </p>
+        )}
+      </div>
+      
+      {/* Copilot Settings */}
+      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+        <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+          ⚙️ Configuración Copilot
+        </h4>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" defaultChecked className="rounded border-gray-300 dark:border-gray-600" />
+            Auto-sugerir respuestas
+          </label>
+          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" defaultChecked className="rounded border-gray-300 dark:border-gray-600" />
+            Mostrar sugerencias de categoría
+          </label>
+          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600" />
+            Auto-resumir al asignar
+          </label>
+        </div>
+      </div>
     </div>
   );
 }

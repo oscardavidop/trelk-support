@@ -72,9 +72,12 @@ export interface Message {
   content: string;
   messageType: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'system';
   mediaUrl?: string;
+  mediaType?: 'photo' | 'video' | 'audio' | 'voice' | 'document' | 'sticker' | 'animation';
   fileName?: string;
   telegramMessageId?: number;
   isRead: boolean;
+  isDeleted?: boolean;
+  deletedAt?: string;
   createdAt: string;
   // Reply support
   replyToMessage?: {

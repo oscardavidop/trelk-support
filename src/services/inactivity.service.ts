@@ -376,12 +376,12 @@ export async function closeByUser(sessionId: string, telegramChatId: number): Pr
     return;
   }
   
-  // Close the session
+  // Close the session - survey will be sent automatically by closeSession
   const agentId = session.assignedAgent 
-    ? session.assignedAgent._id?.toString() || 'system'
-    : 'system';
+    ? session.assignedAgent._id?.toString() || null
+    : null;
   
-  await closeSession(sessionId, agentId, 'Closed by user');
+  await closeSession(sessionId, agentId, 'Closed by user', 'user');
   
   // Send close confirmation - Hide keyboard
   const closeMessage = `✅ El chat ha sido cerrado. Gracias por contactar con Trelk Support.\n\n✅ Chat closed. Thank you for contacting Trelk Support.`;
@@ -390,11 +390,8 @@ export async function closeByUser(sessionId: string, telegramChatId: number): Pr
     replyMarkup: { remove_keyboard: true },
   });
   
-  // Send survey request
-  const surveyMessage = `📊 ¿Cómo calificarías tu experiencia?\n📊 How would you rate your experience?`;
-  await sendTelegramMessage(telegramChatId, surveyMessage, {
-    replyMarkup: getSurveyKeyboard(),
-  });
+  // Note: Survey is now sent automatically by closeSession via survey.service
+  // No need to send inline keyboard survey here
   
   // Emit Socket.IO event
   emitChatClosed(sessionId, 'Closed by user', 'user');

@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useSupervisorStore, type AgentOverview } from '../stores/supervisorStore';
 import { supervisorService } from '../services/supervisor.service';
 import { Navigate } from 'react-router-dom';
+import { ChatPreview } from '../components/supervisor/ChatPreview';
 import { 
   Eye, 
   Users, 
@@ -267,20 +268,12 @@ export default function SupervisorPage() {
               </div>
 
               {/* Chat Preview (Read-only) */}
-              <div className="flex-1 overflow-auto p-4 bg-gray-900/50">
-                <div className="text-center py-8 text-gray-500">
-                  <Eye className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Vista previa del chat en vivo</p>
-                  <p className="text-xs mt-1">Los mensajes aparecerán aquí en tiempo real</p>
-                  
-                  {/* Last message preview */}
-                  {selectedChat.lastMessage && (
-                    <div className="mt-6 p-3 bg-gray-800 rounded-lg text-left">
-                      <p className="text-xs text-gray-400 mb-1">Último mensaje:</p>
-                      <p className="text-sm text-gray-300">{selectedChat.lastMessage}</p>
-                    </div>
-                  )}
-                </div>
+              <div className="flex-1 overflow-hidden flex flex-col bg-gray-900/50">
+                <ChatPreview
+                  sessionId={selectedChat.sessionId}
+                  userName={selectedChat.userName}
+                  agentName={selectedChat.agentName}
+                />
               </div>
 
               {/* Whisper Box */}

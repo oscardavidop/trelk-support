@@ -1,5 +1,5 @@
 // Agent Composer - Full-featured message composer for support agents
-// Features: Text, Images, Files, Audio recording, Quick replies, Save as reply
+// Features: Text, Images, Files, Audio recording, Quick replies, Save as reply, Schedule messages
 import { 
   useState, 
   useEffect, 
@@ -28,7 +28,8 @@ import {
   Play,
   Pause,
   Square,
-  Upload
+  Upload,
+  Clock
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { 
@@ -44,6 +45,7 @@ import type { SavedReply, ChatSession } from '../types';
 import EmojiPicker from './EmojiPicker';
 import SaveReplyModal from './SaveReplyModal';
 import AudioRecorder from './AudioRecorder';
+import { ScheduleMessageModal } from './scheduled';
 
 // Types
 type SendStatus = 'idle' | 'sending' | 'sent' | 'error';
@@ -118,6 +120,7 @@ export default function AgentComposer({
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [savedReplies, setSavedReplies] = useState<SavedReply[]>([]);
   const [filteredReplies, setFilteredReplies] = useState<SavedReply[]>([]);
@@ -652,6 +655,17 @@ export default function AgentComposer({
         />
       )}
 
+      {/* Schedule Message Modal */}
+      <ScheduleMessageModal
+        sessionId={session.sessionId}
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        onCreated={() => {
+          // Could refresh a scheduled messages list here
+        }}
+        defaultText={message}
+      />
+
       {/* Upload Progress */}
       {uploadProgress && (
         <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex items-center gap-3">
@@ -784,6 +798,12 @@ export default function AgentComposer({
               label="Audio"
               onClick={() => setShowAudioRecorder(true)}
               active={showAudioRecorder}
+            />
+            <ActionButton 
+              icon={<Clock className="w-4 h-4" />} 
+              label="Programar mensaje"
+              onClick={() => setShowScheduleModal(true)}
+              active={showScheduleModal}
             />
             
             <div className="flex-1" />

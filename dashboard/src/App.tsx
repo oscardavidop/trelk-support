@@ -10,6 +10,7 @@ import SavedRepliesPage from './pages/SavedRepliesPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AuditPage from './pages/AuditPage';
 import ExportsPage from './pages/ExportsPage';
+import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
 import './index.css';
 
@@ -27,6 +28,8 @@ export default function App() {
           <Route path="saved-replies" element={<SavedRepliesPage />} />
           <Route path="agents" element={<AgentsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="flows" element={<FlowsPage />} />
+          <Route path="flows/:flowId" element={<FlowsPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -16,7 +16,7 @@ export default function ChatPage() {
   return (
     <div className="h-screen flex">
       {/* Session List */}
-      <div className="w-80 border-r border-gray-800 flex flex-col">
+      <div className="border-r border-gray-800 flex flex-col" style={{ width: isSidebarOpen ? 450 : 450 }}>
         <div className="p-4 border-b border-gray-800">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             Conversations

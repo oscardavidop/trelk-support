@@ -134,7 +134,8 @@ export interface ServerToClientEvents {
     supervisorId: string; 
     supervisorName: string; 
     content: string; 
-    createdAt: Date; 
+    createdAt: Date;
+    isRead: boolean;
   }) => void;
   'whisper:received': (whisper: { 
     id: string; 
@@ -197,6 +198,34 @@ export interface ServerToClientEvents {
     name: string; 
     action: string; 
     result: 'success' | 'failure'; 
+  }) => void;
+  
+  // Scheduled message events
+  'scheduled_message_created': (data: { 
+    id: string; 
+    sessionId: string; 
+    type: string; 
+    status: string; 
+    scheduledAt?: Date; 
+    delayMinutes?: number;
+    triggerEvent?: string;
+    message: { text?: string; hasMedia: boolean };
+    createdBy: string;
+    createdByName?: string;
+    sentAt?: Date;
+    createdAt: Date;
+  }) => void;
+  'scheduled_message_cancelled': (data: { 
+    id: string; 
+    sessionId: string; 
+    status: string; 
+  }) => void;
+  'scheduled_message_sent': (data: { 
+    id: string; 
+    sessionId: string; 
+    type: string; 
+    status: string; 
+    sentAt?: Date;
   }) => void;
   
   // Escalation events
@@ -727,7 +756,8 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Join session room (for viewing) - with access control
   socket.on('session:join', async (sessionId) => {
     const isAdmin = socket.data.role === 'admin';
-    const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin);
+    const isSupervisor = socket.data.role === 'supervisor';
+    const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin, isSupervisor);
     
     if (!canAccess) {
       socket.emit('session:accessDenied', { 
@@ -859,7 +889,8 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       
       // Verify agent has access to this session
       const isAdmin = socket.data.role === 'admin';
-      const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin);
+      const isSupervisor = socket.data.role === 'supervisor';
+      const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin, isSupervisor);
       if (!canAccess) {
         return callback({ ok: false, error: 'Access denied to this session' });
       }

@@ -678,7 +678,7 @@ function DeleteModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 black/6bg-0 backdrop-blur-sm" onClick={onClose} />
       
       <div className="relative w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 p-6">
         <div className="text-center">

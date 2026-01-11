@@ -134,7 +134,7 @@ export function ConnectionBanner() {
   const config = statusConfig[status];
   
   return (
-    <div className={`fixed top-0 left-0 right-0 z-50 ${config.bgColor} border-b border-current/20`}>
+    <div className={`top-0 left-0 right-0 z-50 ${config.bgColor} border-b border-current/20`}>
       <div className="flex items-center justify-center gap-3 px-4 py-2">
         <span className="relative flex h-2 w-2">
           <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${config.pulseColor} opacity-75`} />

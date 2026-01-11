@@ -16,7 +16,8 @@ import {
   Loader2,
   Eye,
   Activity,
-  Download
+  Download,
+  GitBranch
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState } from 'react';
@@ -54,6 +55,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
     { path: '/dashboard/audit', icon: Activity, label: 'Actividad', requireRole: 'supervisor' as const },
     { path: '/dashboard/exports', icon: Download, label: 'Exportar', requireRole: 'supervisor' as const },
     { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', requireRole: 'admin' as const },
+    { path: '/dashboard/flows', icon: GitBranch, label: 'Flows', requireRole: 'admin' as const },
     { path: '/dashboard/agents', icon: Users, label: 'Agents', requireRole: 'admin' as const },
     { path: '/dashboard/settings', icon: Settings, label: 'Settings', requireRole: 'admin' as const },
   ].filter(item => {

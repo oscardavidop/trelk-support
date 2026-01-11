@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSupervisorStore, type ActivityItem } from '../../stores/supervisorStore';
-import { supervisorService } from '../../services/supervisor.service';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Props {
   sessionId: string;
@@ -74,8 +74,25 @@ function formatDate(date: Date) {
   return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 }
 
+function formatActivityDescription(action: string, metadata?: Record<string, unknown>): string {
+  const descriptions: Record<string, string> = {
+    session_created: 'Sesión iniciada',
+    session_assigned: `Asignado a ${metadata?.agentName || 'agente'}`,
+    session_transferred: `Transferido a ${metadata?.toAgentName || 'otro agente'}`,
+    session_closed: 'Sesión cerrada',
+    message_sent: 'Mensaje enviado',
+    message_received: 'Mensaje recibido',
+    category_changed: `Categoría cambiada a ${metadata?.category || 'nueva'}`,
+    note_added: 'Nota añadida',
+    tag_added: `Etiqueta "${metadata?.tag || ''}" añadida`,
+    tag_removed: `Etiqueta "${metadata?.tag || ''}" removida`,
+  };
+  return descriptions[action] || action.replace(/_/g, ' ');
+}
+
 export function ActivityTimeline({ sessionId }: Props) {
   const { sessionActivities, setSessionActivities } = useSupervisorStore();
+  const token = useAuthStore((s) => s.token);
   const [loading, setLoading] = useState(false);
   
   const activities = sessionActivities[sessionId] || [];
@@ -86,9 +103,27 @@ export function ActivityTimeline({ sessionId }: Props) {
       
       setLoading(true);
       try {
-        const res = await supervisorService.getSessionTimeline(sessionId);
-        if (res.success) {
-          setSessionActivities(sessionId, res.data);
+        // Use the sessions API endpoint that's accessible to all agents
+        const res = await fetch(`/api/sessions/${sessionId}/timeline`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.success) {
+          // Transform data to ActivityItem format
+          const transformed = (data.data || []).map((item: any) => ({
+            id: item._id || item.id,
+            sessionId: item.sessionId,
+            type: item.action || item.type,
+            description: item.description || formatActivityDescription(item.action, item.metadata),
+            agentId: item.actor?.id,
+            agentName: item.actor?.name,
+            metadata: item.metadata,
+            createdAt: new Date(item.createdAt),
+          }));
+          setSessionActivities(sessionId, transformed);
         }
       } catch (error) {
         console.error('Failed to load activities:', error);
@@ -98,7 +133,7 @@ export function ActivityTimeline({ sessionId }: Props) {
     };
     
     loadActivities();
-  }, [sessionId, setSessionActivities]);
+  }, [sessionId, token, setSessionActivities]);
   
   // Group activities by date
   const groupedActivities = activities.reduce((groups, activity) => {
