@@ -19,6 +19,16 @@ import {
 } from './chat.service.js';
 import { notifyNewSession, notifyNewMessage, notifyNewMediaMessage } from './socket.js';
 import {
+  triggerChatCreated,
+  triggerMessageReceived,
+  triggerKeywordDetected,
+  triggerFileReceived,
+  triggerMessageReceivedNoSession,
+  triggerKeywordDetectedNoSession,
+  triggerCommandReceivedNoSession,
+  handleFlowButtonCallback,
+} from './flowTriggers.service.js';
+import {
   MESSAGES,
   getMessage,
   getMainMenuKeyboard,
@@ -36,7 +46,7 @@ import { getSettings } from './settings.service.js';
 import { 
   startInactivityTimer, 
   resetInactivityTimer, 
-  closeByUser,
+  closeByUserRequest,
   startQueuedTimer,
   resetQueuedTimer,
 } from './inactivity.service.js';
@@ -206,7 +216,7 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
     
     // Check if user clicked "Close chat" button
     if (text === CLOSE_CHAT_BUTTON) {
-      await closeByUser(activeSession.sessionId, chat.id);
+      await closeByUserRequest(activeSession.sessionId, chat.id);
       
       const closeMessage = '✅ El chat ha sido cerrado. Gracias por contactar con Trelk Support.'
       
@@ -225,6 +235,13 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
         message,
         lang
       );
+      
+      // Trigger flow: file received
+      const fileType = photo ? 'photo' : document ? 'document' : voice ? 'voice' : audio ? 'audio' : 'sticker';
+      await triggerFileReceived(activeSession, { 
+        type: fileType, 
+        caption: caption || undefined,
+      });
       
       // Reset inactivity timer
       if (activeSession.status === 'human') {
@@ -248,6 +265,16 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
     if (text) {
       // Forward message to dashboard via Socket.IO
       await notifyNewMessage(activeSession.sessionId, text, message.message_id);
+      
+      // Trigger flow: message received
+      await triggerMessageReceived(activeSession, { 
+        content: text, 
+        messageType: 'text',
+        messageId: message.message_id,
+      });
+      
+      // Trigger flow: keyword detected (flows will filter by keywords)
+      await triggerKeywordDetected(activeSession, { content: text, messageType: 'text' });
       
       // Reset inactivity timer when user responds
       if (activeSession.status === 'human') {
@@ -293,19 +320,49 @@ async function handleConversationMessage(message: TelegramMessage, user: IUser):
   const lang = user.language;
   const ctx = getContext(chat.id);
   
-  switch (ctx.state) {
-    case ConversationState.TICKET_DESCRIPTION:
-      if (text && ctx.ticketCategory) {
-        await handleTicketDescription(chat.id, user, ctx.ticketCategory, text);
-      }
-      break;
+  // Trigger flows for messages without active session
+  if (text) {
+    // 1. First check for command triggers (higher priority)
+    // Commands are /command or /command param (for deep links like t.me/bot?start=param)
+    if (text.startsWith('/')) {
+      const parts = text.split(' ');
+      const commandWithSlash = parts[0]; // e.g., "/start"
+      const commandName = commandWithSlash.substring(1).split('@')[0]; // Remove / and @botname
+      const param = parts.slice(1).join(' '); // Everything after the command
       
-    default:
-      // Show main menu for unrecognized messages
-      await sendMessage(chat.id, getMessage('invalidInput', lang), {
-        replyMarkup: getMainMenuKeyboard(lang),
+      await triggerCommandReceivedNoSession(user, chat.id, {
+        name: commandName,
+        param: param || undefined,
+        fullText: text,
+        messageId: message.message_id,
       });
+    }
+    
+    // 2. Then trigger message received and keyword detected
+    await triggerMessageReceivedNoSession(user, chat.id, {
+      content: text,
+      messageType: 'text',
+      messageId: message.message_id,
+    });
+    await triggerKeywordDetectedNoSession(user, chat.id, {
+      content: text,
+      messageType: 'text',
+    });
   }
+  
+  // switch (ctx.state) {
+  //   case ConversationState.TICKET_DESCRIPTION:
+  //     if (text && ctx.ticketCategory) {
+  //       await handleTicketDescription(chat.id, user, ctx.ticketCategory, text);
+  //     }
+  //     break;
+      
+  //   default:
+  //     // Show main menu for unrecognized messages
+  //     // await sendMessage(chat.id, getMessage('invalidInput', lang), {
+  //     //   replyMarkup: getMainMenuKeyboard(lang),
+  //     // });
+  // }
 }
 
 // ============= COMMAND IMPLEMENTATIONS =============
@@ -387,6 +444,9 @@ async function handleTicketDescription(
   const updatedSession = await getActiveSessionByTelegramChatId(chatId);
   if (updatedSession) {
     await notifyNewSession(updatedSession);
+    
+    // Trigger flow: chat created
+    await triggerChatCreated(updatedSession);
   }
   
   // Send confirmation to user with ReplyKeyboard (no inline menu)
@@ -413,6 +473,18 @@ export async function handleCallbackQuery(query: TelegramCallbackQuery): Promise
   }
   
   const chatId = message.chat.id;
+  
+  // Check if this is a flow button callback first
+  if (data.startsWith('flow:')) {
+    const user = await getOrCreateUser(from, message.chat.id);
+    await answerCallbackQuery(id);
+    
+    const result = await handleFlowButtonCallback(data, user, chatId, message.message_id);
+    if (result.handled) {
+      logger.info('callback', { action: 'flow_button_handled', data: data.substring(0, 50) });
+      return;
+    }
+  }
   
   // Check if user has active human support session - block callbacks
   const activeSession = await getActiveSessionByTelegramChatId(chatId);

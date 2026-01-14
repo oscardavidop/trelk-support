@@ -1,5 +1,5 @@
-// Session List component with Tabs (My Chats/Queue/Closed)
-import { useState, useEffect, useCallback, useRef } from 'react';
+// Session List component with Tabs (My Chats/All/Queue/Closed)
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { 
@@ -18,15 +18,15 @@ import {
   UserX,
   Inbox,
   Users,
-  Sparkles
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import type { ChatSession } from '../types';
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
-type TabType = 'open' | 'queue' | 'closed';
 
 export default function SessionList() {
-  const { token } = useAuthStore();
+  const { token, agent: currentAgent } = useAuthStore();
   const { 
     sessions, 
     queueSessions,
@@ -60,6 +60,24 @@ export default function SessionList() {
   // Track new sessions for highlight animation
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
   const previousSessionIdsRef = useRef<Set<string>>(new Set());
+
+  // Admin/Supervisor check and filtered sessions
+  const isAdminOrSupervisor = currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
+  
+  // My sessions - only OPEN sessions assigned to me (exclude closed)
+  const mySessions = useMemo(() => 
+    sessions.filter(s => 
+      s.assignedAgent?._id === currentAgent?._id && 
+      s.status !== 'closed'
+    ),
+    [sessions, currentAgent?._id]
+  );
+  
+  // All active sessions (for admin/supervisor view) - exclude closed
+  const allActiveSessions = useMemo(() => 
+    sessions.filter(s => s.status !== 'closed'), 
+    [sessions]
+  );
 
   // Debounce search
   useEffect(() => {
@@ -141,8 +159,11 @@ export default function SessionList() {
         return;
       }
       
+      // Map 'all' tab to 'open' status for API
+      const apiStatus = activeTab === 'all' ? 'open' : activeTab;
+      
       const params = new URLSearchParams({
-        status: activeTab,
+        status: apiStatus,
         page: page.toString(),
         limit: '50',
       });
@@ -156,9 +177,9 @@ export default function SessionList() {
       const data = await res.json();
       
       if (data.ok) {
-        if (activeTab === 'open') {
+        if (activeTab === 'open' || activeTab === 'all') {
           setSessions(data.sessions);
-        } else {
+        } else if (activeTab === 'closed') {
           setClosedSessions(data.sessions);
         }
         setPagination({
@@ -203,23 +224,52 @@ export default function SessionList() {
       fetchCounts();
     };
 
+    // Listen for session:reopened events (move to open tab)
+    const handleSessionReopened = (event: CustomEvent) => {
+      const { sessionId, session } = event.detail;
+      console.log('Session reopened:', sessionId);
+      // Remove from closed sessions
+      setClosedSessions(closedSessions.filter(s => s.sessionId !== sessionId));
+      // Add to open sessions if we have the session data
+      if (session) {
+        addSession(session);
+      }
+      // Switch to open tab automatically
+      setActiveTab('open');
+      // Refresh sessions and counts
+      fetchSessions();
+      fetchCounts();
+    };
+
     window.addEventListener('chat:closed' as never, handleChatClosed as never);
     window.addEventListener('session:assigned' as never, handleSessionAssigned as never);
+    window.addEventListener('session:reopened' as never, handleSessionReopened as never);
     return () => {
       window.removeEventListener('chat:closed' as never, handleChatClosed as never);
       window.removeEventListener('session:assigned' as never, handleSessionAssigned as never);
+      window.removeEventListener('session:reopened' as never, handleSessionReopened as never);
     };
-  }, [moveToClosedSessions, fetchCounts, removeFromQueue, fetchSessions]);
+  }, [moveToClosedSessions, fetchCounts, removeFromQueue, fetchSessions, setActiveTab, addSession, setClosedSessions, closedSessions]);
 
-  const currentSessions = activeTab === 'open' 
-    ? sessions 
-    : activeTab === 'queue' 
-      ? queueSessions 
-      : closedSessions;
+  // Determine which sessions to show based on tab
+  const currentSessions = useMemo(() => {
+    switch (activeTab) {
+      case 'open':
+        return mySessions; // Only my assigned sessions
+      case 'all':
+        return allActiveSessions; // All active sessions (admin/supervisor)
+      case 'queue':
+        return queueSessions;
+      case 'closed':
+        return closedSessions;
+      default:
+        return [];
+    }
+  }, [activeTab, mySessions, allActiveSessions, queueSessions, closedSessions]);
 
   // Sort sessions: waiting first, then by last update
   const sortedSessions = [...currentSessions].sort((a, b) => {
-    if (activeTab === 'open') {
+    if (activeTab === 'open' || activeTab === 'all') {
       if (a.status === 'waiting' && b.status !== 'waiting') return -1;
       if (b.status === 'waiting' && a.status !== 'waiting') return 1;
     }
@@ -281,38 +331,60 @@ export default function SessionList() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Tabs */}
       <div className="flex border-b border-gray-800">
         <button
           onClick={() => setActiveTab('open')}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 px-2 py-3 text-sm font-medium transition-all ${
             activeTab === 'open'
               ? 'text-primary border-b-2 border-primary bg-primary/5'
               : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <MessageCircle className="w-4 h-4" />
-          <span>Mis Chats</span>
-          {sessionCounts.myActive > 0 && (
+          <span className="hidden sm:inline">Mis Chats</span>
+          {mySessions.length > 0 && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
               activeTab === 'open' ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'
             }`}>
-              {sessionCounts.myActive}
+              {mySessions.length}
             </span>
           )}
         </button>
+
+        {/* All Chats Tab - Only for Admin/Supervisor */}
+        {isAdminOrSupervisor && (
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`flex-1 flex items-center justify-center gap-2 px-2 py-3 text-sm font-medium transition-all ${
+              activeTab === 'all'
+                ? 'text-purple-500 border-b-2 border-purple-500 bg-purple-500/5'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+            }`}
+          >
+            <Eye className="w-4 h-4" />
+            <span className="hidden sm:inline">Todos</span>
+            {allActiveSessions.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                activeTab === 'all' ? 'bg-purple-500 text-white' : 'bg-purple-900 text-purple-300'
+              }`}>
+                {allActiveSessions.length}
+              </span>
+            )}
+          </button>
+        )}
         
         <button
           onClick={() => setActiveTab('queue')}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 px-2 py-3 text-sm font-medium transition-all ${
             activeTab === 'queue'
               ? 'text-orange-500 border-b-2 border-orange-500 bg-orange-500/5'
               : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <Inbox className="w-4 h-4" />
-          <span>Cola</span>
+          <span className="hidden sm:inline">Cola</span>
           {sessionCounts.queue > 0 && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
               activeTab === 'queue' ? 'bg-orange-500 text-white' : 'bg-orange-900 text-orange-300'
@@ -324,14 +396,14 @@ export default function SessionList() {
         
         <button
           onClick={() => setActiveTab('closed')}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 px-2 py-3 text-sm font-medium transition-all ${
             activeTab === 'closed'
               ? 'text-primary border-b-2 border-primary bg-primary/5'
               : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <Archive className="w-4 h-4" />
-          <span>Cerrados</span>
+          <span className="hidden sm:inline">Cerrados</span>
           {sessionCounts.closed > 0 && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
               activeTab === 'closed' ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'
@@ -461,7 +533,7 @@ export default function SessionList() {
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${
                       isClosed ? 'bg-gray-600' : 'bg-gray-700'
                     }`}>
-                      {session.user.firstName.charAt(0).toUpperCase()}
+                      {session.user?.firstName?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                     <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 ${getStatusColor(session.status)}`} />
                   </div>
@@ -470,8 +542,8 @@ export default function SessionList() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium text-white truncate">
-                        {session.user.firstName}
-                        {session.user.username && (
+                        {session.user?.firstName || 'Usuario desconocido'}
+                        {session.user?.username && (
                           <span className="text-gray-500 font-normal ml-1">@{session.user.username}</span>
                         )}
                       </span>
@@ -520,10 +592,18 @@ export default function SessionList() {
                           {session.unreadCount}
                         </span>
                       )}
+                      
+                      {/* Show agent badge in "All" tab for sessions not assigned to me */}
+                      {activeTab === 'all' && session.assignedAgent && session.assignedAgent._id !== currentAgent?._id && (
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">
+                          <Eye className="w-3 h-3" />
+                          <span>{session.assignedAgent.name}</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Assigned Agent */}
-                    {session.assignedAgent && !isClosed && (
+                    {/* Assigned Agent - only show in non-All tabs */}
+                    {session.assignedAgent && !isClosed && activeTab !== 'all' && (
                       <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
                         <User className="w-3 h-3" />
                         <span>{session.assignedAgent.name}</span>

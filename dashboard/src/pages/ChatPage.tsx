@@ -16,8 +16,8 @@ export default function ChatPage() {
   return (
     <div className="h-screen flex">
       {/* Session List */}
-      <div className="border-r border-gray-800 flex flex-col" style={{ width: isSidebarOpen ? 450 : 450 }}>
-        <div className="p-4 border-b border-gray-800">
+      <div className="border-r border-gray-800 flex flex-col" style={{ width: isSidebarOpen ? 370 : 370 }}>
+        <div className="p-4 border-b border-gray-800 h-[56px] flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             Conversations
             {waitingCount > 0 && (

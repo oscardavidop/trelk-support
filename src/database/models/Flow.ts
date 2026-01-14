@@ -10,6 +10,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 export type TriggerType = 
   | 'chat_created'
   | 'message_received'
+  | 'command_received'
   | 'chat_assigned'
   | 'chat_closed'
   | 'user_inactive'
@@ -20,7 +21,10 @@ export type TriggerType =
   | 'keyword_detected'
   | 'chat_reopened'
   | 'agent_online'
-  | 'sla_warning';
+  | 'agent_message_sent'
+  | 'first_response'
+  | 'sla_warning'
+  | 'button_clicked';  // Flow button pressed
 
 export type ConditionOperator = 
   | 'equals'
@@ -50,13 +54,31 @@ export type ActionType =
   | 'create_note'
   | 'block_user'
   | 'call_webhook'
+  | 'api_call'
   | 'set_custom_field'
   | 'close_chat'
   | 'reopen_chat'
   | 'send_survey'
   | 'escalate'
   | 'wait_for_response'
-  | 'add_to_queue';
+  | 'add_to_queue'
+  // === NEW TELEGRAM ACTIONS ===
+  | 'edit_message'        // editMessageText
+  | 'delete_message'      // deleteMessage
+  | 'edit_keyboard'       // editMessageReplyMarkup
+  | 'remove_keyboard'     // remove inline keyboard
+  | 'send_reply_keyboard' // ReplyKeyboardMarkup
+  | 'remove_reply_keyboard' // ReplyKeyboardRemove
+  | 'send_chat_action'    // sendChatAction (typing, upload_photo, etc.)
+  | 'pin_message'         // pinChatMessage
+  | 'unpin_message'       // unpinChatMessage
+  | 'save_message_id'     // Save last bot message ID to variable
+  | 'delay_action'        // Wait X seconds without pausing flow execution
+  | 'send_location'       // sendLocation
+  | 'send_contact'        // sendContact
+  | 'send_sticker'        // sendSticker
+  | 'copy_message'        // copyMessage
+  | 'run_subflow';        // Execute another flow
 
 export type DelayType = 
   | 'fixed_time'
@@ -73,6 +95,12 @@ export type ExecutionStatus = 'pending' | 'running' | 'paused' | 'completed' | '
 
 export interface TriggerConfig {
   triggerType: TriggerType;
+  // Command trigger (e.g., /start, /help)
+  command?: string;  // e.g., 'start', 'help' (without /)
+  commandParamMatch?: 'any' | 'exact' | 'contains' | 'regex';  // How to match deep link param
+  commandParam?: string;  // Expected param value (for t.me/bot?start=PARAM)
+  saveCommandTo?: string;  // Variable name to save the command name to
+  saveParamTo?: string;  // Variable name to save the param to
   // Keyword trigger
   keywords?: string[];
   keywordMatchType?: 'exact' | 'contains' | 'regex';
@@ -106,12 +134,101 @@ export interface ConditionConfig {
   groupOperator: 'AND' | 'OR';
 }
 
+// ============= KEYBOARD CONFIG =============
+
+export type KeyboardType = 'inline' | 'reply' | 'remove';
+
+// Button action modes for flow routing
+export type ButtonActionMode = 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none';
+
+export interface ButtonOnClick {
+  mode: ButtonActionMode;
+  targetNodeId?: string;  // For 'goto_node'
+  targetFlowId?: string;  // For 'goto_flow'
+  url?: string;           // For 'url' mode
+}
+
+export interface KeyboardButton {
+  id: string;
+  text: string;
+  callbackData?: string;
+  url?: string;
+  // Button action configuration
+  onClick?: ButtonOnClick;
+  // Legacy (deprecated)
+  targetNodeId?: string;
+  targetFlowId?: string;
+}
+
+export interface KeyboardRow {
+  id: string;
+  buttons: KeyboardButton[];
+}
+
+export interface KeyboardConfig {
+  type: KeyboardType;
+  rows: KeyboardRow[];
+  oneTimeKeyboard?: boolean;
+  resizeKeyboard?: boolean;
+  placeholder?: string;
+}
+
+// ============= MESSAGE CONTENT BLOCKS =============
+
+export type MessageBlockType = 'text' | 'image' | 'document' | 'audio' | 'video' | 'delay';
+
+export interface MessageBlock {
+  id: string;
+  type: MessageBlockType;
+  content?: string; // For text
+  url?: string; // For media
+  caption?: string; // For media
+  filename?: string; // For document
+  isVoiceNote?: boolean; // For audio
+  seconds?: number; // For delay
+  keyboard?: KeyboardConfig; // Each block can have its own keyboard
+}
+
+// ============= DATA COLLECTION =============
+
+export type DataCollectionType = 'text' | 'email' | 'phone' | 'number' | 'url' | 'date' | 'choice';
+
+export interface DataCollectionChoice {
+  id: string;
+  label: string;
+  value: string;
+}
+
+export interface DataCollectionConfig {
+  question: string;
+  variableName: string;
+  validationType: DataCollectionType;
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  choices?: DataCollectionChoice[];
+  expiresInMinutes?: number;
+  maxRetries?: number;
+  onExpireAction?: 'continue' | 'goto_node' | 'end_flow';
+  onExpireNodeId?: string;
+  errorMessage?: string;
+}
+
+// ============= ACTION CONFIG =============
+
 export interface ActionConfig {
   actionType: ActionType;
-  // Send message
+  // Legacy text content (backward compatible)
   messageContent?: string;
   messageType?: 'text' | 'image' | 'document';
   mediaUrl?: string;
+  // New: Message blocks (ordered content)
+  messageBlocks?: MessageBlock[];
+  // New: Keyboard
+  keyboard?: KeyboardConfig;
+  // New: Data collection
+  dataCollection?: DataCollectionConfig;
   // Schedule message
   scheduleDelay?: number;
   scheduleType?: 'fixed_time' | 'after_inactivity';
@@ -133,6 +250,34 @@ export interface ActionConfig {
   webhookMethod?: 'GET' | 'POST' | 'PUT';
   webhookHeaders?: Record<string, string>;
   webhookBody?: string;
+  // API Call (advanced HTTP)
+  apiCallConfig?: {
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    url?: string;
+    headers?: Array<{ id: string; key: string; value: string; enabled: boolean }>;
+    queryParams?: Array<{ id: string; key: string; value: string; enabled: boolean }>;
+    bodyType?: 'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw';
+    body?: string;
+    authType?: 'none' | 'bearer' | 'basic' | 'api-key';
+    authConfig?: {
+      bearerToken?: string;
+      basicUsername?: string;
+      basicPassword?: string;
+      apiKeyName?: string;
+      apiKeyValue?: string;
+      apiKeyLocation?: 'header' | 'query';
+    };
+    timeout?: number;
+    retryCount?: number;
+    retryDelay?: number;
+    successCodes?: number[];
+    extractVariables?: Array<{ id: string; variableName: string; jsonPath: string; defaultValue?: string }>;
+    onError?: 'continue' | 'stop' | 'goto_node';
+    errorNodeId?: string;
+    saveErrorTo?: string;
+    saveResponseTo?: string;
+    saveStatusCodeTo?: string;
+  };
   // Custom field
   customFieldName?: string;
   customFieldValue?: string;
@@ -140,6 +285,19 @@ export interface ActionConfig {
   surveyType?: 'csat' | 'nps';
   // Queue
   queuePriority?: 'low' | 'normal' | 'high' | 'urgent';
+  // Schedule message config (enhanced)
+  scheduleMessageConfig?: {
+    type: 'fixed_time' | 'after_inactivity' | 'on_event';
+    scheduledAt?: string;
+    delayMinutes?: number;
+    triggerEvent?: 'agent_online' | 'chat_assigned' | 'chat_reopened' | 'sla_warning' | 'chat_transferred';
+    messageContent?: string;
+    messageBlocks?: MessageBlock[];
+    keyboard?: KeyboardConfig;
+    cancelOnUserResponse?: boolean;
+    cancelOnChatClose?: boolean;
+    expiresInHours?: number;
+  };
 }
 
 export interface DelayConfig {
@@ -298,9 +456,10 @@ const FlowSchema = new Schema<IFlow>({
   triggers: [{
     type: String,
     enum: [
-      'chat_created', 'message_received', 'chat_assigned', 'chat_closed',
+      'chat_created', 'message_received', 'command_received', 'chat_assigned', 'chat_closed',
       'user_inactive', 'survey_answered', 'category_changed', 'tag_added',
-      'file_received', 'keyword_detected', 'chat_reopened', 'agent_online', 'sla_warning'
+      'file_received', 'keyword_detected', 'chat_reopened', 'agent_online', 'sla_warning',
+      'button_clicked'
     ],
   }],
   executionCount: { type: Number, default: 0 },

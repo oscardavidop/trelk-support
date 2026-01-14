@@ -12,6 +12,7 @@ import { User } from '../database/models/User.js';
 import { Message } from '../database/models/Message.js';
 import { Agent } from '../database/models/Agent.js';
 import { logger } from './logger.js';
+import { logActivity } from './activity-log.service.js';
 
 // ============= TRANSFER SERVICE =============
 
@@ -69,6 +70,23 @@ export async function transferSession(data: TransferData): Promise<{
     sessionId: data.sessionId,
     from: data.fromAgentId,
     to: data.toAgentId,
+  });
+
+  // Log activity for timeline
+  await logActivity({
+    sessionId: data.sessionId,
+    action: 'session_transferred',
+    actorType: 'agent',
+    actorId: data.fromAgentId,
+    actorName: fromAgent?.name || 'Agent',
+    metadata: { 
+      fromAgentId: data.fromAgentId, 
+      toAgentId: data.toAgentId,
+      fromAgentName: fromAgent?.name,
+      toAgentName: toAgent?.name,
+      reason: data.reason,
+    },
+    description: `Transferred to ${toAgent?.name || 'agent'}: ${data.reason}`,
   });
 
   // Return populated session

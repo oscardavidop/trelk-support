@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   X, User, MessageSquare, Clock, Tag, StickyNote, Settings, History,
   Zap, ChevronDown, ChevronRight, Loader2, AlertCircle, Activity, Sparkles,
-  RefreshCw, Copy, Check, ThumbsUp, ThumbsDown
+  RefreshCw, Copy, Check, ThumbsUp, ThumbsDown, Timer
 } from 'lucide-react';
 import type { ContactInfo, Tag as TagType } from '../types';
 import { getContactInfo } from '../services/contactApi';
@@ -16,6 +16,7 @@ import { SidebarCustomFields } from './sidebar/CustomFields';
 import { SidebarSystemFields } from './sidebar/SystemFields';
 import { LiveContactTimer } from './sidebar/LiveContactTimer';
 import { ActivityTimeline } from './sidebar/ActivityTimeline';
+import { ScheduledMessagesList } from './scheduled/ScheduledMessagesList';
 import { useCopilotStore, type CopilotSuggestion, type SuggestionType } from '../stores/copilotStore';
 import { copilotService } from '../services/copilot.service';
 
@@ -29,6 +30,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scheduledCount, setScheduledCount] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['status', 'identity', 'notes', 'tags'])
   );
@@ -95,7 +97,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   return (
     <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 h-[56px]">
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <User className="w-4 h-4" />
           Información del Contacto
@@ -259,6 +261,20 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
                   </span>
                 </div>
               </div>
+            </SidebarSection>
+
+            {/* Scheduled Messages */}
+            <SidebarSection
+              title="Mensajes programados"
+              icon={<Timer className="w-4 h-4" />}
+              isExpanded={expandedSections.has('scheduled')}
+              onToggle={() => toggleSection('scheduled')}
+              badge={scheduledCount > 0 ? scheduledCount : undefined}
+            >
+              <ScheduledMessagesList
+                sessionId={sessionId || ''}
+                onCountChange={setScheduledCount}
+              />
             </SidebarSection>
 
             {/* Notes */}

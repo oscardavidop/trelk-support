@@ -10,8 +10,9 @@ import { ENV, WEBHOOK_CONFIG, validateConfig } from './config/index.js';
 import { connectDatabase, disconnectDatabase } from './database/index.js';
 import { handleMessage, handleCallbackQuery } from './services/bot.handlers.js';
 import { handlePollAnswer, restorePendingPolls } from './services/survey.service.js';
-import { restoreQueuedTimers } from './services/inactivity.service.js';
-import { startScheduledMessagesWorker, stopScheduledMessagesWorker } from './services/scheduledMessage.worker.js';
+// Legacy cron worker removed - now using BullMQ workers
+// import { startScheduledMessagesWorker, stopScheduledMessagesWorker } from './services/scheduledMessage.worker.js';
+import { flowEngine } from './services/flowEngine.service.js';
 import { setWebhook, deleteWebhook, getMe, getWebhookInfo } from './services/telegram.js';
 import { initializeSocketIO } from './services/socket.js';
 import { performFullReconciliation } from './services/reconciliation.service.js';
@@ -19,6 +20,11 @@ import { registerAPIRoutes } from './routes/index.js';
 import { logger } from './services/logger.js';
 import type { TelegramUpdate } from './types/index.js';
 import fs from 'fs';
+// Redis & BullMQ
+import { initializeRedis, closeRedis, getRedisHealth, isRedisConnected } from './services/redis.js';
+import { initializeWorkers, shutdownWorkers, getAllQueueStats, areWorkersInitialized } from './workers/index.js';
+// Write-behind cache sync
+import { startCacheSync, stopCacheSync, flushPendingWrites } from './services/cache-models.service.js';
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -97,11 +103,22 @@ fastify.post(WEBHOOK_CONFIG.path, async (request, reply) => {
 // ============= HEALTH & STATUS ENDPOINTS =============
 
 fastify.get('/health', async () => {
+  const redisHealth = getRedisHealth();
+  const queuesInitialized = areWorkersInitialized();
+  
   return {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     version: '2.0.0',
+    redis: {
+      connected: isRedisConnected(),
+      hitRate: redisHealth.hitRate,
+      errors: redisHealth.errorCount,
+    },
+    queues: {
+      initialized: queuesInitialized,
+    },
   };
 });
 
@@ -158,6 +175,33 @@ fastify.get('/webhook/info', async (request, reply) => {
   return { ok: true, webhook: info };
 });
 
+// ============= QUEUE STATS ENDPOINT =============
+
+fastify.get('/queues/stats', async (request, reply) => {
+  const authHeader = request.headers.authorization;
+  if (authHeader !== `Bearer ${ENV.WEBHOOK_SECRET}`) {
+    return reply.code(401).send({ ok: false });
+  }
+
+  try {
+    const stats = await getAllQueueStats();
+    const redisHealth = getRedisHealth();
+    
+    return {
+      ok: true,
+      queues: stats,
+      redis: {
+        connected: isRedisConnected(),
+        hitRate: redisHealth.hitRate,
+        misses: redisHealth.cacheMisses,
+        errors: redisHealth.errorCount,
+      },
+    };
+  } catch (error) {
+    return reply.code(500).send({ ok: false, error: String(error) });
+  }
+});
+
 // ============= SERVER STARTUP =============
 
 async function start(): Promise<void> {
@@ -167,6 +211,24 @@ async function start(): Promise<void> {
 
     // Connect to MongoDB
     await connectDatabase();
+
+    // Initialize Redis (optional - will fallback to DB if unavailable)
+    const redisConnected = await initializeRedis();
+    if (redisConnected) {
+      console.log('   ✅ Redis Connected');
+      
+      // Start write-behind cache sync jobs
+      startCacheSync();
+      console.log('   ✅ Cache Sync Started');
+      
+      // Initialize BullMQ workers
+      const workersStarted = await initializeWorkers();
+      if (workersStarted) {
+        console.log('   ✅ BullMQ Workers Started');
+      }
+    } else {
+      console.log('   ⚠️  Redis unavailable - using DB fallback');
+    }
 
     // Register plugins
     await registerPlugins();
@@ -203,11 +265,14 @@ async function start(): Promise<void> {
     // Restore pending survey polls from database
     await restorePendingPolls();
     
-    // Restore queued session timers
-    await restoreQueuedTimers();
+    // Queued session timers are now persisted in Redis via BullMQ
+    // No need to restore - jobs survive server restarts
     
-    // Start scheduled messages worker
-    startScheduledMessagesWorker();
+    // BullMQ workers are started in initializeWorkers() above
+    // The old cron-based worker is replaced by BullMQ scheduled-messages queue
+    
+    // Start Flow Engine (processes waiting/paused flow executions)
+    flowEngine.start(5000); // Check every 5 seconds
 
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
@@ -222,6 +287,8 @@ async function start(): Promise<void> {
 ║   ✅ MongoDB Connected                                       ║
 ║   ✅ Socket.IO Ready                                         ║
 ║   ✅ API Routes Registered                                   ║
+║   ✅ Flow Engine Started                                     ║
+║   ✅ Redis & BullMQ Ready                                    ║
 ║                                                              ║
 ║   Ready for support operations!                              ║
 ║                                                              ║
@@ -249,8 +316,20 @@ async function shutdown(): Promise<void> {
   console.log('\n🛑 Shutting down gracefully...');
 
   try {
-    // Stop scheduled messages worker first
-    stopScheduledMessagesWorker();
+    // Stop Flow Engine
+    flowEngine.stop();
+    
+    // Stop cache sync and flush pending writes to MongoDB
+    stopCacheSync();
+    console.log('   ⏳ Flushing pending cache writes...');
+    const flushed = await flushPendingWrites();
+    console.log(`   ✅ Flushed ${flushed.executions} executions, ${flushed.userFields} user fields`);
+    
+    // Shutdown BullMQ workers (handles scheduled messages now)
+    await shutdownWorkers();
+    
+    // Close Redis connection
+    await closeRedis();
     
     await fastify.close();
     await disconnectDatabase();

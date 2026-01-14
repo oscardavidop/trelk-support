@@ -1,5 +1,6 @@
 // Custom Fields Section
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Settings, Edit2, Check, X, Loader2 } from 'lucide-react';
 import type { CustomFieldValue } from '../../types';
 import { setUserFieldValue } from '../../services/contactApi';
@@ -11,6 +12,7 @@ interface CustomFieldsProps {
 }
 
 export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFieldsProps) {
+  const navigate = useNavigate();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -115,6 +117,7 @@ export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFi
           Sin campos personalizados
         </p>
         <button
+          onClick={() => navigate('/dashboard/custom-fields')}
           className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700"
         >
           <Settings className="w-3 h-3" />
@@ -167,6 +170,7 @@ export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFi
       ))}
 
       <button
+        onClick={() => navigate('/dashboard/custom-fields')}
         className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 mt-2"
       >
         <Settings className="w-3 h-3" />

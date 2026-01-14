@@ -83,7 +83,9 @@ const ActivityLogSchema = new Schema<IActivityLog>(
         'tag_added', 'tag_removed', 'category_changed', 'priority_changed',
         'whisper_sent', 'whisper_read', 'supervisor_viewing', 'supervisor_stopped',
         'rating_received', 'rule_triggered', 'user_blocked', 'user_unblocked',
-        'first_response', 'sla_warning', 'sla_breached'
+        'first_response', 'sla_warning', 'sla_breached',
+        'scheduled_message_created', 'scheduled_message_sent', 'scheduled_message_cancelled',
+        'scheduled_message_expired', 'scheduled_message_failed'
       ],
       required: true,
       index: true,

@@ -89,9 +89,22 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
     }, [isOpen, defaultText]);
 
     const formatDateTimeLocal = (date: Date): string => {
-        const offset = date.getTimezoneOffset() * 60000;
-        const localDate = new Date(date.getTime() - offset);
-        return localDate.toISOString().slice(0, 16);
+        // Format date for datetime-local input (needs local time string without timezone)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const parseDateTimeLocal = (dateTimeLocalString: string): Date => {
+        // Parse datetime-local string as local time and return correct Date object
+        // datetime-local format: "YYYY-MM-DDTHH:MM"
+        const [datePart, timePart] = dateTimeLocalString.split('T');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours, minutes] = timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hours, minutes);
     };
 
     const handleSubmit = async () => {
@@ -102,7 +115,7 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
         }
 
         if (type === 'fixed_time') {
-            const selectedDate = new Date(scheduledAt);
+            const selectedDate = parseDateTimeLocal(scheduledAt);
             if (selectedDate <= new Date()) {
                 setError('La fecha debe ser en el futuro');
                 return;
@@ -127,7 +140,9 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
             };
 
             if (type === 'fixed_time') {
-                input.scheduledAt = new Date(scheduledAt).toISOString();
+                // Parse local time correctly and convert to ISO
+                const localDate = parseDateTimeLocal(scheduledAt);
+                input.scheduledAt = localDate.toISOString();
             } else if (type === 'after_inactivity') {
                 input.delayMinutes = delayMinutes;
             } else if (type === 'on_event') {

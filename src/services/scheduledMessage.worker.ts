@@ -32,9 +32,11 @@ export function startScheduledMessagesWorker(): void {
   isRunning = true;
   consecutiveErrors = 0;
 
+  console.log('✅ [Scheduler] Worker started - checking every 30s');
   logger.info('api', {
     action: 'scheduled_worker_started',
     intervalMs: PROCESSING_INTERVAL_MS,
+    message: 'Scheduled messages worker is now running',
   });
 
   // Run immediately on start
@@ -74,8 +76,9 @@ async function runProcessingCycle(): Promise<void> {
     lastRunAt = new Date();
     consecutiveErrors = 0;
 
-    // Only log if there was activity
-    if (stats.processed > 0 || stats.expired > 0) {
+    // Log activity 
+    if (stats.processed > 0 || stats.expired > 0 || stats.sent > 0) {
+      console.log(`📤 [Scheduler] Cycle complete: ${stats.sent} sent, ${stats.processed} processed, ${stats.expired} expired, ${stats.failed} failed`);
       logger.info('api', {
         action: 'scheduled_worker_cycle_complete',
         ...stats,
@@ -85,6 +88,7 @@ async function runProcessingCycle(): Promise<void> {
   } catch (error) {
     consecutiveErrors++;
     
+    console.error(`❌ [Scheduler] Cycle error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`, error);
     logger.error('api', {
       action: 'scheduled_worker_cycle_error',
       error: error instanceof Error ? error.message : String(error),

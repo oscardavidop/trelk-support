@@ -145,10 +145,10 @@ export default function DashboardLayout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading...</p>
+          <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
         </div>
       </div>
     );
@@ -159,7 +159,7 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Connection status banner (shows when disconnected/reconnecting) */}
       <ConnectionBanner />
       

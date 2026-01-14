@@ -100,9 +100,8 @@ export default function ExportsPage() {
     setLoadingJobs(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
-      const res = await fetch(`${baseUrl}/api/exports`, {
+      const res = await fetch(`/api/exports`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -121,12 +120,11 @@ export default function ExportsPage() {
     if (!canAccess) return;
     
     try {
-      const token = localStorage.getItem('auth_token');
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
       
       const [agentsRes, categoriesRes] = await Promise.all([
-        fetch(`${baseUrl}/api/agents`, { headers: { Authorization: `Bearer ${token}` }}),
-        fetch(`${baseUrl}/api/categories`, { headers: { Authorization: `Bearer ${token}` }})
+        fetch(`/api/agents`, { headers: { Authorization: `Bearer ${token}` }}),
+        fetch(`/api/categories`, { headers: { Authorization: `Bearer ${token}` }})
       ]);
       
       if (agentsRes.ok) {
@@ -158,7 +156,7 @@ export default function ExportsPage() {
       const token = localStorage.getItem('auth_token');
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
-      const res = await fetch(`${baseUrl}/api/exports`, {
+      const res = await fetch(`/api/exports`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -215,7 +213,7 @@ export default function ExportsPage() {
       const token = localStorage.getItem('auth_token');
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
-      await fetch(`${baseUrl}/api/exports/${jobId}`, {
+      await fetch(`/api/exports/${jobId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

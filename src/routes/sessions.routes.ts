@@ -87,14 +87,14 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   fastify.get<{ Querystring: FilteredSessionsQuery }>('/api/sessions/filtered', async (request) => {
     const { status, search, dateFilter, page, limit } = request.query;
     const agent = (request as any).agent;
-    const isAdmin = agent.role === 'admin';
+    const isAdminOrSupervisor = agent.role === 'admin' || agent.role === 'supervisor';
     
     const result = await getFilteredSessions({
       status: status as 'open' | 'closed' | undefined,
       search,
       dateFilter: dateFilter as 'today' | 'week' | 'month' | 'all' | undefined,
       agentId: agent._id.toString(),
-      isAdmin,
+      isAdmin: isAdminOrSupervisor,
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 50,
     });
@@ -107,8 +107,8 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.get('/api/sessions/counts', async (request) => {
     const agent = (request as any).agent;
-    const isAdmin = agent.role === 'admin';
-    const counts = await getSessionCounts(agent._id.toString(), isAdmin);
+    const isAdminOrSupervisor = agent.role === 'admin' || agent.role === 'supervisor';
+    const counts = await getSessionCounts(agent._id.toString(), isAdminOrSupervisor);
     return { ok: true, counts };
   });
   

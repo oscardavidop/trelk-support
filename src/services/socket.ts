@@ -7,6 +7,7 @@ import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { ENV } from '../config/index.js';
 import { verifyToken } from './auth.service.js';
+import { Agent } from '../database/models/Agent.js';
 import { 
   updateAgentStatus, 
   getOnlineAgents, 
@@ -41,6 +42,12 @@ import { logger } from './logger.js';
 import { startInactivityTimer, closeByAgent, clearQueuedTimer } from './inactivity.service.js';
 import { getAbsolutePath } from './upload.service.js';
 import { 
+  triggerChatClosed,
+  triggerChatAssigned,
+  triggerAgentMessageSent,
+  triggerFirstResponse,
+} from './flowTriggers.service.js';
+import { 
   transferSession, 
   blockUser, 
   unblockUser, 
@@ -54,6 +61,7 @@ import {
   getAgentSyncState,
   tryAssignSession,
 } from './reconciliation.service.js';
+import { triggerEventMessages } from './scheduledMessage.service.js';
 import type { ChatCategory } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
@@ -265,6 +273,56 @@ export interface ServerToClientEvents {
     satisfaction: string; 
     label: string; 
     answeredAt: Date; 
+  }) => void;
+  
+  // Flow events
+  'flow:updated': (data: { 
+    flowId: string; 
+    action: 'published' | 'unpublished' | 'updated' | 'deleted'; 
+    version?: number;
+    flowName?: string;
+  }) => void;
+  
+  // System monitoring events (admin only)
+  'system:queue:update': (data: {
+    queue: string;
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+    paused: boolean;
+  }) => void;
+  'system:job:added': (data: {
+    queue: string;
+    jobId: string;
+    jobName: string;
+    delay?: number;
+  }) => void;
+  'system:job:completed': (data: {
+    queue: string;
+    jobId: string;
+    jobName: string;
+    durationMs: number;
+  }) => void;
+  'system:job:failed': (data: {
+    queue: string;
+    jobId: string;
+    jobName: string;
+    error: string;
+    attempt: number;
+  }) => void;
+  'system:worker:online': (data: {
+    workerId: string;
+    queue: string;
+  }) => void;
+  'system:worker:offline': (data: {
+    workerId: string;
+    queue: string;
+  }) => void;
+  'system:redis:status': (data: {
+    connected: boolean;
+    latencyMs?: number;
   }) => void;
   
   // Errors
@@ -568,6 +626,23 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Broadcast updated stats
   await broadcastStats();
   
+  // 🔔 Trigger scheduled messages for agent_online event
+  triggerEventMessages('agent_online', undefined, { agentId: agent._id.toString() })
+    .then(count => {
+      if (count > 0) {
+        logger.info('api', { 
+          action: 'scheduled_messages_triggered_on_agent_online', 
+          agentId: agent._id.toString(),
+          count 
+        });
+      }
+    })
+    .catch(err => logger.error('api', { 
+      action: 'scheduled_messages_trigger_error', 
+      event: 'agent_online',
+      error: String(err) 
+    }));
+  
   // ============= SESSION HANDLERS =============
   
   // Accept waiting session (from queue or waiting list)
@@ -597,6 +672,18 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (!assignedSession) {
         return callback({ ok: false, error: 'Failed to assign session' });
       }
+      
+      // Trigger flow: chat assigned
+      await triggerChatAssigned(assignedSession, agentId, agent?.name || 'Agent');
+      
+      // 🔔 Trigger scheduled messages for chat_assigned event
+      triggerEventMessages('chat_assigned', sessionId, { agentId })
+        .catch(err => logger.error('api', { 
+          action: 'scheduled_messages_trigger_error', 
+          event: 'chat_assigned',
+          sessionId,
+          error: String(err) 
+        }));
       
       // Clear queued timer and start regular inactivity timer
       clearQueuedTimer(sessionId);
@@ -667,6 +754,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (!session) {
         return callback({ ok: false, error: 'Session not found' });
       }
+      
+      // Trigger flow: chat closed
+      await triggerChatClosed(session, 'agent', reason);
       
       // Clear inactivity timer
       closeByAgent(sessionId);
@@ -757,9 +847,23 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   socket.on('session:join', async (sessionId) => {
     const isAdmin = socket.data.role === 'admin';
     const isSupervisor = socket.data.role === 'supervisor';
+    
+    logger.info('api', { 
+      action: 'session_join_request', 
+      sessionId, 
+      agentId, 
+      isAdmin, 
+      isSupervisor 
+    });
+    
     const canAccess = await canAgentAccessSession(sessionId, agentId, isAdmin, isSupervisor);
     
     if (!canAccess) {
+      logger.warn('api', { 
+        action: 'session_join_denied', 
+        sessionId, 
+        agentId 
+      });
       socket.emit('session:accessDenied', { 
         sessionId, 
         reason: 'You do not have access to this session' 
@@ -768,6 +872,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     }
     
     socket.join(`session:${sessionId}`);
+    
+    logger.info('api', { 
+      action: 'session_joined', 
+      sessionId, 
+      agentId,
+      rooms: Array.from(socket.rooms)
+    });
     
     // Track which agents are viewing this session
     if (!sessionRooms.has(sessionId)) {
@@ -922,6 +1033,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         reply_to_message_id: telegramReplyToMessageId,
       });
       
+      // Trigger flow: agent message sent
+      await triggerAgentMessageSent(session, {
+        content,
+        agentId,
+        agentName: agent?.name || 'Agent',
+      });
+      
       // Start/restart inactivity timer - agent sent message, waiting for user response
       await startInactivityTimer(sessionId, session.telegramChatId);
       
@@ -964,7 +1082,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       const imagePath = getAbsolutePath(url);
       
       // Send to Telegram
-      const sent = await sendPhoto(session.telegramChatId, imagePath, caption);
+      const sent = await sendPhoto(session.telegramChatId, imagePath, { caption });
       
       if (!sent) {
         return callback({ ok: false, error: 'Failed to send image to Telegram' });
@@ -1012,7 +1130,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       const filePath = getAbsolutePath(url);
       
       // Send to Telegram
-      const sent = await sendDocument(session.telegramChatId, filePath, caption, filename);
+      const sent = await sendDocument(session.telegramChatId, filePath, { caption, fileName: filename });
       
       if (!sent) {
         return callback({ ok: false, error: 'Failed to send file to Telegram' });
@@ -1371,6 +1489,17 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Update session for all
       io.emit('session:updated', formatSessionData(result.session));
       
+      // 🔔 Trigger scheduled messages for chat_transferred event
+      triggerEventMessages('chat_transferred', sessionId, { 
+        fromAgentId: agentId, 
+        toAgentId 
+      }).catch(err => logger.error('api', { 
+        action: 'scheduled_messages_trigger_error', 
+        event: 'chat_transferred',
+        sessionId,
+        error: String(err) 
+      }));
+      
       callback?.({ ok: true, data: result });
     } catch (error) {
       logger.error('api', { action: 'transfer_error', error: String(error) });
@@ -1393,6 +1522,16 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Notify all agents
       io.emit('session:reopened', { sessionId, reopenedBy: agent?.name || 'Admin' });
       io.emit('session:new', formatSessionData(session));
+      
+      // 🔔 Trigger scheduled messages for chat_reopened event
+      triggerEventMessages('chat_reopened', sessionId, { 
+        reopenedBy: agentId 
+      }).catch(err => logger.error('api', { 
+        action: 'scheduled_messages_trigger_error', 
+        event: 'chat_reopened',
+        sessionId,
+        error: String(err) 
+      }));
       
       await broadcastStats();
       
@@ -1471,9 +1610,20 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // ============= AGENT STATUS =============
   
   socket.on('agent:status', async (status) => {
+    const oldAgent = await Agent.findById(agentId);
+    const oldStatus = oldAgent?.onlineStatus;
+    
     await updateAgentStatus(agentId, status);
     io.emit('agent:status', { agentId, status });
     await broadcastStats();
+    
+    // Log status change activity
+    if (oldStatus !== status) {
+      const { logActivity } = await import('../database/models/AgentActivity.js');
+      await logActivity(agentId, 'status_change', `Changed status from ${oldStatus} to ${status}`, {
+        metadata: { from: oldStatus, to: status }
+      });
+    }
   });
   
   // Request full sync (for manual refresh)
@@ -1641,7 +1791,16 @@ export async function notifyNewMessage(sessionId: string, content: string, teleg
   
   // Emit to session room if assigned, or to all agents if in queue (waiting/queued)
   if (session.status === 'human') {
-    io.to(`session:${sessionId}`).emit('message:new', messageData);
+    const room = `session:${sessionId}`;
+    const socketsInRoom = await io.in(room).fetchSockets();
+    logger.info('api', { 
+      action: 'emit_message_to_room', 
+      sessionId, 
+      room, 
+      socketsCount: socketsInRoom.length,
+      socketIds: socketsInRoom.map(s => s.id)
+    });
+    io.to(room).emit('message:new', messageData);
   } else if (session.status === 'waiting' || session.status === 'queued') {
     io.emit('message:new', messageData);
   }
@@ -1933,4 +2092,116 @@ export function emitRuleTriggered(
     sessionId,
     ...rule,
   });
+}
+
+/**
+ * Emit flow updated event (for hot-reload)
+ * Notifies all connected admins/supervisors when a flow is published/updated
+ */
+export function emitFlowUpdated(
+  flowId: string,
+  action: 'published' | 'unpublished' | 'updated' | 'deleted',
+  version?: number,
+  flowName?: string
+): void {
+  if (!io) return;
+  
+  // Emit to all connected clients (admins/supervisors will handle it)
+  io.emit('flow:updated', {
+    flowId,
+    action,
+    version,
+    flowName,
+  });
+  
+  logger.info('flow', { 
+    event: 'flow:updated', 
+    flowId, 
+    action, 
+    version 
+  });
+}
+
+// ============= SYSTEM MONITORING EVENTS =============
+
+/**
+ * Emit queue stats update (for admin monitoring dashboard)
+ */
+export function emitSystemQueueUpdate(data: {
+  queue: string;
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+  paused: boolean;
+}): void {
+  if (!io) return;
+  
+  // Only emit to admin/supervisor sockets
+  io.emit('system:queue:update', data);
+}
+
+/**
+ * Emit job added event
+ */
+export function emitSystemJobAdded(data: {
+  queue: string;
+  jobId: string;
+  jobName: string;
+  delay?: number;
+}): void {
+  if (!io) return;
+  io.emit('system:job:added', data);
+}
+
+/**
+ * Emit job completed event
+ */
+export function emitSystemJobCompleted(data: {
+  queue: string;
+  jobId: string;
+  jobName: string;
+  durationMs: number;
+}): void {
+  if (!io) return;
+  io.emit('system:job:completed', data);
+}
+
+/**
+ * Emit job failed event
+ */
+export function emitSystemJobFailed(data: {
+  queue: string;
+  jobId: string;
+  jobName: string;
+  error: string;
+  attempt: number;
+}): void {
+  if (!io) return;
+  io.emit('system:job:failed', data);
+}
+
+/**
+ * Emit worker online event
+ */
+export function emitSystemWorkerOnline(workerId: string, queue: string): void {
+  if (!io) return;
+  io.emit('system:worker:online', { workerId, queue });
+}
+
+/**
+ * Emit worker offline event
+ */
+export function emitSystemWorkerOffline(workerId: string, queue: string): void {
+  if (!io) return;
+  io.emit('system:worker:offline', { workerId, queue });
+}
+
+/**
+ * Emit Redis status change
+ */
+export function emitSystemRedisStatus(connected: boolean, latencyMs?: number): void {
+  if (!io) return;
+  io.emit('system:redis:status', { connected, latencyMs });
 }

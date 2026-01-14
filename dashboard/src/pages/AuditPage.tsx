@@ -78,11 +78,10 @@ export default function AuditPage() {
     
     setLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
       
       // Fetch activity logs
-      const activityRes = await fetch(`${baseUrl}/api/activity?timeFilter=${timeFilter}`, {
+      const activityRes = await fetch(`/api/activity?timeFilter=${timeFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (activityRes.ok) {
@@ -91,7 +90,7 @@ export default function AuditPage() {
       }
       
       // Fetch audit logs
-      const auditRes = await fetch(`${baseUrl}/api/audit?timeFilter=${timeFilter}`, {
+      const auditRes = await fetch(`/api/audit?timeFilter=${timeFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (auditRes.ok) {

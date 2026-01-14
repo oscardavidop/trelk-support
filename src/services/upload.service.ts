@@ -44,6 +44,16 @@ const ALLOWED_AUDIO_TYPES = [
   'audio/opus',
 ];
 
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime', // .mov
+  'video/x-msvideo', // .avi
+  'video/x-matroska', // .mkv
+];
+
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
 // ============= TYPES =============
 
 export interface UploadResult {
@@ -277,6 +287,65 @@ export async function uploadAudio(
 }
 
 /**
+ * Upload video
+ */
+export async function uploadVideo(
+  buffer: Buffer,
+  originalName: string,
+  mimeType: string
+): Promise<UploadResult> {
+  try {
+    // Validate type
+    const isValidVideo = ALLOWED_VIDEO_TYPES.some(type => 
+      mimeType === type || mimeType.startsWith('video/')
+    );
+    
+    if (!isValidVideo) {
+      return {
+        ok: false,
+        error: `Invalid video type: ${mimeType}. Allowed: MP4, WebM, MOV, AVI, MKV`,
+      };
+    }
+
+    // Validate size
+    if (!validateFileSize(buffer.length, MAX_VIDEO_SIZE)) {
+      return {
+        ok: false,
+        error: `Video too large. Max size: ${MAX_VIDEO_SIZE / 1024 / 1024}MB`,
+      };
+    }
+
+    // Ensure directory exists
+    const dir = await ensureUploadDir('videos');
+    
+    // Generate filename
+    const filename = generateFilename(originalName);
+    const filepath = join(dir, filename);
+    await writeFile(filepath, buffer);
+
+    // Build public URL
+    const url = `/uploads/videos/${filename}`;
+
+    logger.info('upload', { type: 'video', filename, size: buffer.length, mimeType });
+
+    return {
+      ok: true,
+      url,
+      filename,
+      originalName,
+      mimeType,
+      size: buffer.length,
+    };
+  } catch (error) {
+    logger.error('upload', { type: 'video', error: String(error) });
+    return {
+      ok: false,
+      error: 'Failed to upload video',
+    };
+  }
+}
+
+/**
  * Delete uploaded file
  */
 export async function deleteUpload(url: string): Promise<boolean> {
@@ -314,7 +383,9 @@ export const UPLOAD_CONFIG = {
   MAX_IMAGE_SIZE,
   MAX_FILE_SIZE,
   MAX_AUDIO_SIZE,
+  MAX_VIDEO_SIZE,
   ALLOWED_IMAGE_TYPES,
   ALLOWED_FILE_TYPES,
   ALLOWED_AUDIO_TYPES,
+  ALLOWED_VIDEO_TYPES,
 };

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import mongoose from 'mongoose';
 
 /**
  * Trelk Support Platform Configuration
@@ -123,3 +124,9 @@ export function validateConfig(): void {
     throw new Error('WEBHOOK_URL is required in production');
   }
 }
+
+// ============= SYSTEM USERS =============
+
+export const SYSTEM_USERS = {
+  FLOW_USER_ID: new mongoose.Types.ObjectId('69657bbb7d0c78d9521ef874'),
+} as const;

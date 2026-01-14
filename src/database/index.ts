@@ -4,6 +4,9 @@
 
 export { User, type IUser } from './models/User.js';
 export { Agent, type IAgent, type AgentRole, type OnlineStatus, type IAgentMetrics } from './models/Agent.js';
+export { AgentPreferences, type IAgentPreferences, getOrCreatePreferences } from './models/AgentPreferences.js';
+export { AgentSession, type IAgentSession, createSession, getActiveSessions, invalidateSession, invalidateAllSessionsExcept } from './models/AgentSession.js';
+export { AgentActivity, type IAgentActivity, type ActivityType, logActivity, getRecentActivities } from './models/AgentActivity.js';
 export { ChatSession, type IChatSession, type SessionStatus, type SatisfactionLevel, type IPostChatSurvey, type ClosedByType } from './models/ChatSession.js';
 export { Message, type IMessage, type MessageSender, type MessageType } from './models/Message.js';
 export { Settings, type ISettings, type IBotSettings, type IChatSettings, type IAgentRules, type ISecuritySettings } from './models/Settings.js';

@@ -8,6 +8,7 @@ import { ChatSession, Message, type IChatSession, type IMessage, type SessionSta
 import type { IUser } from '../database/models/User.js';
 import { Types } from 'mongoose';
 import { sendPostChatSurvey } from './survey.service.js';
+import { logActivity } from './activity-log.service.js';
 
 /**
  * Get or create active session for a user
@@ -29,6 +30,17 @@ export async function getOrCreateSession(user: IUser, telegramChatId: number): P
     user: user._id,
     telegramChatId,
     status: 'bot',
+  });
+
+  // Log session creation
+  await logActivity({
+    sessionId: session.sessionId,
+    action: 'session_created',
+    actorType: 'user',
+    actorId: user._id.toString(),
+    actorName: user.firstName || 'User',
+    metadata: { userId: user._id.toString(), telegramChatId },
+    description: `Session started by ${user.firstName || 'user'}`,
   });
   
   return session;
@@ -85,8 +97,8 @@ export async function transferToHuman(sessionId: string, category?: string): Pro
 /**
  * Assign agent to session
  */
-export async function assignAgent(sessionId: string, agentId: string): Promise<IChatSession | null> {
-  return ChatSession.findOneAndUpdate(
+export async function assignAgent(sessionId: string, agentId: string, agentName?: string): Promise<IChatSession | null> {
+  const session = await ChatSession.findOneAndUpdate(
     { sessionId },
     { 
       status: 'human',
@@ -94,6 +106,22 @@ export async function assignAgent(sessionId: string, agentId: string): Promise<I
     },
     { new: true }
   ).populate('user').populate('assignedAgent');
+
+  // Log the assignment activity
+  if (session) {
+    const agent = session.assignedAgent as any;
+    await logActivity({
+      sessionId,
+      action: 'session_assigned',
+      actorType: 'agent',
+      actorId: agentId,
+      actorName: agentName || agent?.name || 'Agent',
+      metadata: { agentId, agentName: agentName || agent?.name },
+      description: `Assigned to ${agentName || agent?.name || 'agent'}`,
+    });
+  }
+
+  return session;
 }
 
 /**
@@ -103,7 +131,8 @@ export async function closeSession(
   sessionId: string, 
   agentId: string | null, 
   reason?: string,
-  closedByType: ClosedByType = 'agent'
+  closedByType: ClosedByType = 'agent',
+  agentName?: string
 ): Promise<IChatSession | null> {
   const updateData: Record<string, unknown> = { 
     status: 'closed',
@@ -121,6 +150,19 @@ export async function closeSession(
     updateData,
     { new: true }
   );
+
+  // Log the close activity
+  if (session) {
+    await logActivity({
+      sessionId,
+      action: 'session_closed',
+      actorType: closedByType === 'system' ? 'system' : closedByType === 'user' ? 'user' : 'agent',
+      actorId: agentId || undefined,
+      actorName: agentName || (closedByType === 'system' ? 'System' : closedByType === 'user' ? 'User' : 'Agent'),
+      metadata: { reason, closedByType },
+      description: `Session closed${reason ? `: ${reason}` : ''}`,
+    });
+  }
 
   // Send post-chat satisfaction survey
   if (session && (closedByType === 'agent' || closedByType === 'system' || closedByType == 'user')) {

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+
 import ReactFlow, {
   Controls,
   Background,
@@ -33,9 +34,11 @@ import ConditionNode from './nodes/ConditionNode';
 import ActionNode from './nodes/ActionNode';
 import DelayNode from './nodes/DelayNode';
 import EndNode from './nodes/EndNode';
+import DeletableEdge from './edges/DeletableEdge';
 import NodePalette from './NodePalette';
 import NodeConfigPanel from './NodeConfigPanel';
 import FlowToolbar from './FlowToolbar';
+import { getFlows } from '../../services/flow.service';
 
 // Custom node types
 const nodeTypes: NodeTypes = {
@@ -47,9 +50,14 @@ const nodeTypes: NodeTypes = {
   branch: ConditionNode, // Use condition node for branches too
 };
 
+// Custom edge types
+const edgeTypes: EdgeTypes = {
+  deletable: DeletableEdge,
+};
+
 // Custom edge style
 const defaultEdgeOptions = {
-  type: 'smoothstep',
+  type: 'deletable',
   animated: false,
   style: { strokeWidth: 2, stroke: '#94A3B8' },
   markerEnd: {
@@ -61,12 +69,25 @@ const defaultEdgeOptions = {
 interface FlowBuilderProps {
   flow: Flow | null;
   onSave: (nodes: FlowNode[], edges: FlowEdge[]) => void;
+  onAutoSave?: (nodes: FlowNode[], edges: FlowEdge[]) => void;
   onPublish: () => void;
+  onUnpublish: () => void;
   onSimulate: () => void;
   onClose: () => void;
+  onDelete: () => void;
+  onVersionHistory: () => void;
   isLoading?: boolean;
   readOnly?: boolean;
+  lastSaved?: Date | null;
 }
+
+// History state for Undo/Redo
+interface HistoryState {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+const MAX_HISTORY_LENGTH = 50;
 
 // Convert our FlowNode to ReactFlow Node
 const toReactFlowNodes = (flowNodes: FlowNode[] | undefined): Node[] => {
@@ -126,11 +147,16 @@ const toFlowEdges = (reactFlowEdges: Edge[]): FlowEdge[] => {
 function FlowBuilderInner({
   flow,
   onSave,
+  onAutoSave,
   onPublish,
+  onUnpublish,
   onSimulate,
   onClose,
+  onDelete,
+  onVersionHistory,
   isLoading = false,
   readOnly = false,
+  lastSaved,
 }: FlowBuilderProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project, getNodes, getEdges, setCenter } = useReactFlow();
@@ -147,16 +173,166 @@ function FlowBuilderInner({
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Track changes
+  // Available flows for button actions (cached list)
+  const [availableFlows, setAvailableFlows] = useState<{ id: string; name: string }[]>([]);
+
+  // Load available flows for dropdown selectors
+  useEffect(() => {
+    const loadFlows = async () => {
+      try {
+        const result = await getFlows({ limit: 100 });
+        setAvailableFlows(
+          result.flows.map((f) => ({ id: f._id, name: f.name }))
+        );
+      } catch (error) {
+        console.error('Error loading flows:', error);
+      }
+    };
+    loadFlows();
+  }, []);
+
+  // Convert current nodes to NodeOption format for dropdowns
+  const nodeOptions = useMemo(() => 
+    nodes.map((n) => ({ 
+      id: n.id, 
+      label: (n.data?.label as string) || n.id 
+    }))
+  , [nodes]);
+
+  // Undo/Redo history
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoingRef = useRef(false);
+  
+  // Track if we can undo/redo
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Save current state to history
+  const saveToHistory = useCallback(() => {
+    if (isUndoingRef.current) return;
+    
+    const currentState: HistoryState = {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      edges: JSON.parse(JSON.stringify(edges)),
+    };
+    
+    setHistory(prev => {
+      // If we're not at the end, cut off future history
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(currentState);
+      
+      // Limit history length
+      if (newHistory.length > MAX_HISTORY_LENGTH) {
+        newHistory.shift();
+      }
+      
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY_LENGTH - 1));
+  }, [nodes, edges, historyIndex]);
+
+  // Initialize history on mount
+  useEffect(() => {
+    if (flow && history.length === 0) {
+      const initialState: HistoryState = {
+        nodes: toReactFlowNodes(flow.nodes),
+        edges: toReactFlowEdges(flow.edges),
+      };
+      setHistory([initialState]);
+      setHistoryIndex(0);
+    }
+  }, [flow]);
+
+  // Debounced history save on changes
+  const saveHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (isUndoingRef.current || !flow) return;
+    
+    if (saveHistoryTimeoutRef.current) {
+      clearTimeout(saveHistoryTimeoutRef.current);
+    }
+    
+    saveHistoryTimeoutRef.current = setTimeout(() => {
+      saveToHistory();
+    }, 500);
+    
+    return () => {
+      if (saveHistoryTimeoutRef.current) {
+        clearTimeout(saveHistoryTimeoutRef.current);
+      }
+    };
+  }, [nodes, edges]);
+
+  // Undo function
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    
+    isUndoingRef.current = true;
+    const prevState = history[historyIndex - 1];
+    setNodes(prevState.nodes);
+    setEdges(prevState.edges);
+    setHistoryIndex(prev => prev - 1);
+    
+    setTimeout(() => {
+      isUndoingRef.current = false;
+    }, 100);
+  }, [canUndo, history, historyIndex, setNodes, setEdges]);
+
+  // Redo function
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return;
+    
+    isUndoingRef.current = true;
+    const nextState = history[historyIndex + 1];
+    setNodes(nextState.nodes);
+    setEdges(nextState.edges);
+    setHistoryIndex(prev => prev + 1);
+    
+    setTimeout(() => {
+      isUndoingRef.current = false;
+    }, 100);
+  }, [canRedo, history, historyIndex, setNodes, setEdges]);
+
+  // Keyboard shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (readOnly) return;
+      
+      // Undo: Ctrl+Z or Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      
+      // Redo: Ctrl+Shift+Z or Cmd+Shift+Z or Ctrl+Y
+      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') ||
+          ((e.ctrlKey || e.metaKey) && e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo, readOnly]);
+
+  // Track changes and trigger auto-save
   useEffect(() => {
     if (flow) {
       const currentNodes = JSON.stringify(toFlowNodes(nodes));
       const currentEdges = JSON.stringify(toFlowEdges(edges));
       const originalNodes = JSON.stringify(flow.nodes);
       const originalEdges = JSON.stringify(flow.edges);
-      setHasChanges(currentNodes !== originalNodes || currentEdges !== originalEdges);
+      const changed = currentNodes !== originalNodes || currentEdges !== originalEdges;
+      setHasChanges(changed);
+      
+      // Trigger auto-save if there are changes and not undoing
+      if (changed && !isUndoingRef.current && onAutoSave) {
+        onAutoSave(toFlowNodes(nodes), toFlowEdges(edges));
+      }
     }
-  }, [nodes, edges, flow]);
+  }, [nodes, edges, flow, onAutoSave]);
 
   // Handle connection (edge creation)
   const onConnect = useCallback(
@@ -337,12 +513,20 @@ function FlowBuilderInner({
         isLoading={isLoading}
         onSave={handleSave}
         onPublish={onPublish}
+        onUnpublish={onUnpublish}
         onSimulate={onSimulate}
         onClose={onClose}
         onCenterView={handleCenterView}
         onTogglePalette={() => setIsPaletteOpen(!isPaletteOpen)}
+        onVersionHistory={onVersionHistory}
+        onDelete={onDelete}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         isPaletteOpen={isPaletteOpen}
         readOnly={readOnly}
+        lastSaved={lastSaved}
       />
 
       <div className="flex-1 flex relative overflow-hidden">
@@ -365,6 +549,7 @@ function FlowBuilderInner({
             onDragOver={onDragOver}
             onDrop={onDrop}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             fitView
             snapToGrid
@@ -435,6 +620,8 @@ function FlowBuilderInner({
             }}
             onChange={onNodeConfigChange}
             readOnly={readOnly}
+            nodes={nodeOptions}
+            flows={availableFlows}
           />
         )}
       </div>

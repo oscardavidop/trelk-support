@@ -111,6 +111,19 @@ export interface TelegramCallbackQuery {
   data?: string;
 }
 
+// Chat actions for sendChatAction
+export type ChatAction = 
+  | 'typing' 
+  | 'upload_photo' 
+  | 'record_video' 
+  | 'upload_video' 
+  | 'record_voice' 
+  | 'upload_voice' 
+  | 'upload_document' 
+  | 'find_location' 
+  | 'record_video_note' 
+  | 'upload_video_note';
+
 export interface TelegramPollAnswer {
   poll_id: string;
   user: TelegramUser;
@@ -230,7 +243,7 @@ export interface AnswerCallbackQueryOptions {
 
 export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error';
-  type: 'command' | 'callback' | 'message' | 'api' | 'error' | 'ticket' | 'chat' | 'inactivity' | 'saved_reply' | 'upload' | 'survey' | 'enterprise' | 'transfer' | 'block' | 'flow';
+  type: 'command' | 'callback' | 'message' | 'api' | 'error' | 'ticket' | 'chat' | 'inactivity' | 'saved_reply' | 'upload' | 'survey' | 'enterprise' | 'transfer' | 'block' | 'flow' | 'settings' | 'redis' | 'cache' | 'queue' | 'workers' | 'worker:scheduled' | 'worker:flow' | 'worker:cleanup' | 'worker:inactivity' | 'worker:notifications' | 'cache-models';
   userId?: number;
   chatId?: number;
   data: Record<string, unknown>;

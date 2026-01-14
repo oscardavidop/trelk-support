@@ -90,6 +90,7 @@ export async function deleteNote(noteId: string): Promise<boolean> {
       method: 'DELETE',
       headers: getAuthHeaders(),
       credentials: 'include',
+      body: JSON.stringify({ noteId }),
     });
     const data = await res.json();
     return data.ok;

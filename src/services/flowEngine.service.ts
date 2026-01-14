@@ -1,13 +1,15 @@
 /**
  * Flow Engine Service - Executes automation flows
  * Deterministic, crash-tolerant, and scalable
+ * 
+ * Now with Redis caching for improved performance
  */
 
 import { Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import Flow, { 
-  IFlow, 
-  IFlowNode, 
+import Flow, {
+  IFlow,
+  IFlowNode,
   IFlowEdge,
   TriggerType,
   TriggerConfig,
@@ -15,8 +17,11 @@ import Flow, {
   ActionConfig,
   DelayConfig,
   ConditionOperator,
+  MessageBlock,
+  KeyboardConfig,
+  DataCollectionConfig,
 } from '../database/models/Flow.js';
-import FlowExecution, { 
+import FlowExecution, {
   IFlowExecution,
   ExecutionContext,
   ExecutionStep,
@@ -24,9 +29,52 @@ import FlowExecution, {
 import { ChatSession } from '../database/models/ChatSession.js';
 import { User } from '../database/models/User.js';
 import { Agent } from '../database/models/Agent.js';
-import { sendMessage, sendPhoto, sendDocument } from './telegram.js';
+import { Tag, UserTag, Note } from '../database/index.js';
+import {
+  sendMessage,
+  sendMessageWithId,
+  sendPhoto,
+  sendPhotoWithId,
+  sendDocument,
+  sendDocumentWithId,
+  sendVoice,
+  sendAudio,
+  sendVideo,
+  sendVideoWithId,
+  editMessage,
+  // New Telegram functions
+  deleteMessage,
+  editMessageReplyMarkup,
+  pinChatMessage,
+  unpinChatMessage,
+  sendChatAction,
+  sendLocation,
+  sendContact,
+  sendSticker,
+  copyMessage,
+  simulateTyping,
+  buildReplyKeyboard,
+  buildReplyKeyboardRemove,
+  buildInlineKeyboard,
+} from './telegram.js';
+import type { InlineKeyboardMarkup, ReplyKeyboardMarkup, ChatAction } from '../types/index.js';
 import { logger } from './logger.js';
 import { createScheduledMessage } from './scheduledMessage.service.js';
+import { notifyNewSession } from './socket.js';
+import {
+  getOrCreateSession,
+  transferToHuman,
+  addMessage,
+  getActiveSessionByTelegramChatId,
+} from './chat.service.js';
+import { startQueuedTimer } from './inactivity.service.js';
+import { SYSTEM_USERS } from '../config/index.js';
+import { setUserFieldByKey, getUserFieldByKey } from './customFields.service.js';
+// Redis caching
+import { FlowCache, CacheKeys, CacheTTL, getOrFetch } from './cache.js';
+import { isRedisConnected } from './redis.js';
+// Write-behind cache for FlowExecutions
+import { FlowExecutionCache } from './cache-models.service.js';
 
 // ============= TYPES =============
 
@@ -36,6 +84,7 @@ export interface TriggerEvent {
   chatId: number;
   userId: number;
   data: Record<string, any>;
+  force?: boolean; // Si es true, ejecuta el flow aunque haya un agente activo
 }
 
 interface ExecutionResult {
@@ -55,7 +104,7 @@ export class FlowEngine {
   private isRunning = false;
   private processingInterval: ReturnType<typeof setInterval> | null = null;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): FlowEngine {
     if (!FlowEngine.instance) {
@@ -68,7 +117,7 @@ export class FlowEngine {
 
   start(intervalMs: number = 5000): void {
     if (this.isRunning) return;
-    
+
     this.isRunning = true;
     logger.info('flow', { action: 'engine_started', interval: intervalMs });
 
@@ -89,23 +138,95 @@ export class FlowEngine {
     logger.info('flow', { action: 'engine_stopped' });
   }
 
+  // ============= FLOW CACHING =============
+
+  /**
+   * Get flows by trigger type with Redis caching
+   * Note: Excludes 'versions' field to reduce cache size
+   */
+  private async getFlowsByTrigger(triggerType: TriggerType): Promise<IFlow[]> {
+    const cacheKey = CacheKeys.flowByTrigger(triggerType);
+    
+    if (isRedisConnected()) {
+      const flows = await getOrFetch<IFlow[]>(
+        cacheKey,
+        async () => {
+          const flowDocs = await Flow.find({
+            enabled: true,
+            status: 'published',
+            triggers: triggerType,
+          })
+            .select('-versions') // Exclude versions to save space
+            .sort({ priority: -1 })
+            .lean();
+          return flowDocs as unknown as IFlow[];
+        },
+        { ttl: CacheTTL.FLOW }
+      );
+      return flows;
+    }
+
+    // Fallback to direct DB query
+    return Flow.find({
+      enabled: true,
+      status: 'published',
+      triggers: triggerType,
+    })
+      .select('-versions')
+      .sort({ priority: -1 });
+  }
+
+  /**
+   * Get a single flow by ID with caching
+   * Note: Excludes 'versions' field to reduce cache size
+   */
+  private async getFlowById(flowId: string): Promise<IFlow | null> {
+    const cacheKey = CacheKeys.flow(flowId);
+    
+    if (isRedisConnected()) {
+      const flow = await getOrFetch<IFlow | null>(
+        cacheKey,
+        async () => {
+          const flowDoc = await Flow.findById(flowId)
+            .select('-versions') // Exclude versions to save space
+            .lean();
+          return flowDoc as unknown as IFlow | null;
+        },
+        { ttl: CacheTTL.FLOW }
+      );
+      return flow;
+    }
+
+    // Fallback to direct DB query
+    return Flow.findById(flowId).select('-versions');
+  }
+
   // ============= TRIGGER HANDLING =============
 
   /**
    * Handle an incoming trigger event
    */
   async handleTrigger(event: TriggerEvent): Promise<void> {
-    logger.debug('flow', { action: 'trigger_received', type: event.type, sessionId: event.sessionId });
+    // Always log trigger events to track flow engine activity
+    logger.info('flow', {
+      action: 'trigger_received',
+      type: event.type,
+      sessionId: event.sessionId,
+      chatId: event.chatId,
+    });
 
-    // Find all enabled flows that match this trigger
-    const flows = await Flow.find({
-      enabled: true,
-      status: 'published',
-      triggers: event.type,
-    }).sort({ priority: -1 });
+    // Find all enabled flows that match this trigger (with caching)
+    const flows = await this.getFlowsByTrigger(event.type);
+
+    logger.info('flow', {
+      action: 'flows_matched',
+      type: event.type,
+      matchedCount: flows.length,
+      flowIds: flows.map(f => f._id.toString()),
+    });
 
     if (flows.length === 0) {
-      logger.debug('flow', { action: 'no_matching_flows', type: event.type });
+      logger.info('flow', { action: 'no_matching_flows', type: event.type });
       return;
     }
 
@@ -116,12 +237,37 @@ export class FlowEngine {
     });
 
     // Get session and user data for context
-    const session = await ChatSession.findOne({ sessionId: event.sessionId });
+    const isNoSession = event.sessionId.startsWith('nosession-');
+    const session = isNoSession ? null : await ChatSession.findOne({ sessionId: event.sessionId });
     const user = await User.findOne({ telegramId: event.userId });
-    
-    if (!session || !user) {
-      logger.warn('flow', { action: 'missing_context', sessionId: event.sessionId });
+
+    // For no-session triggers, we only need the user
+    if (!user) {
+      logger.warn('flow', { action: 'missing_user', sessionId: event.sessionId, userId: event.userId });
       return;
+    }
+
+    // For session-based triggers, we need both session and user
+    if (!isNoSession && !session) {
+      logger.warn('flow', { action: 'missing_session', sessionId: event.sessionId });
+      return;
+    }
+
+    // ============= BLOCK FLOWS WHEN AGENT IS ACTIVE =============
+    // Si hay una sesión activa con agente (status 'human' o 'waiting'), 
+    // no ejecutar flows automáticos a menos que sea forzado desde el dashboard
+    if (!event.force && session) {
+      const blockedStatuses = ['human', 'waiting'];
+      if (blockedStatuses.includes(session.status)) {
+        logger.info('flow', {
+          action: 'flow_blocked_agent_active',
+          sessionId: event.sessionId,
+          sessionStatus: session.status,
+          hasAssignedAgent: !!session.assignedAgent,
+          message: 'Flow execution blocked while chat is with agent. Use force=true to override.',
+        });
+        return;
+      }
     }
 
     // Build execution context
@@ -143,8 +289,8 @@ export class FlowEngine {
       lastActiveAt: new Date(),
     };
 
-    // Add agent data if assigned
-    if (session.assignedAgent) {
+    // Add agent data if assigned (only for session-based)
+    if (session?.assignedAgent) {
       const agent = await Agent.findById(session.assignedAgent);
       if (agent) {
         context.agent = {
@@ -157,10 +303,22 @@ export class FlowEngine {
     // Add message data if message trigger
     if (event.data.message) {
       context.message = {
-        id: event.data.message._id?.toString() || '',
+        id: event.data.message._id?.toString() || event.data.message.messageId?.toString() || '',
         content: event.data.message.content || '',
         type: event.data.message.messageType || 'text',
-        mediaUrl: event.data.message.mediaUrl,
+      };
+      // Only add mediaUrl if it exists
+      if (event.data.message.mediaUrl) {
+        context.message.mediaUrl = event.data.message.mediaUrl;
+      }
+    }
+
+    // Add command data if command trigger
+    if (event.type === 'command_received' && event.data.command) {
+      (context as any).command = {
+        name: event.data.command.name,
+        param: event.data.command.param || '',
+        fullText: event.data.command.fullText || '',
       };
     }
 
@@ -168,9 +326,10 @@ export class FlowEngine {
     for (const flow of flows) {
       // Skip if flow is already running for this session
       if (activeExecutions.some(e => e.flowId.toString() === flow._id.toString())) {
-        logger.debug('flow', { 
-          action: 'flow_already_running', 
+        logger.info('flow', {
+          action: 'flow_already_running',
           flowId: flow._id.toString(),
+          flowName: flow.name,
           sessionId: event.sessionId,
         });
         continue;
@@ -178,13 +337,61 @@ export class FlowEngine {
 
       // Check if trigger node matches conditions
       const triggerNode = flow.nodes.find(n => n.type === 'trigger');
-      if (!triggerNode) continue;
-
-      if (!this.matchesTriggerConfig(triggerNode.config as TriggerConfig, event)) {
+      if (!triggerNode) {
+        logger.warn('flow', {
+          action: 'no_trigger_node',
+          flowId: flow._id.toString(),
+          flowName: flow.name,
+        });
         continue;
       }
 
+      const configMatches = this.matchesTriggerConfig(triggerNode.config as TriggerConfig, event);
+      logger.info('flow', {
+        action: 'trigger_config_check',
+        flowId: flow._id.toString(),
+        flowName: flow.name,
+        triggerType: (triggerNode.config as TriggerConfig).triggerType,
+        matches: configMatches,
+        triggerConfig: JSON.stringify(triggerNode.config),
+      });
+
+      if (!configMatches) {
+        continue;
+      }
+
+      // For command triggers, save command and param to variables if configured
+      const triggerConf = triggerNode.config as TriggerConfig;
+      if (event.type === 'command_received') {
+        // Save command name
+        if (triggerConf.saveCommandTo && event.data.command?.name) {
+          context.variables[triggerConf.saveCommandTo] = event.data.command.name;
+          logger.info('flow', {
+            action: 'command_name_saved',
+            variableName: triggerConf.saveCommandTo,
+            value: event.data.command.name,
+          });
+        }
+        // Save param
+        if (triggerConf.saveParamTo && event.data.command?.param) {
+          context.variables[triggerConf.saveParamTo] = event.data.command.param;
+          logger.info('flow', {
+            action: 'command_param_saved',
+            variableName: triggerConf.saveParamTo,
+            value: event.data.command.param,
+          });
+        }
+      }
+
       // Create execution
+      logger.info('flow', {
+        action: 'starting_execution',
+        flowId: flow._id.toString(),
+        flowName: flow.name,
+        triggerNodeId: triggerNode.id,
+        nodesCount: flow.nodes.length,
+        edgesCount: flow.edges.length,
+      });
       await this.startExecution(flow, context, triggerNode.id);
     }
   }
@@ -196,11 +403,36 @@ export class FlowEngine {
     if (config.triggerType !== event.type) return false;
 
     switch (event.type) {
+      case 'command_received':
+        // Command must match
+        if (!config.command) return false;
+        const cmdName = event.data.command?.name?.toLowerCase() || '';
+        if (cmdName !== config.command.toLowerCase()) return false;
+        
+        // Check param matching if configured
+        if (config.commandParamMatch && config.commandParamMatch !== 'any') {
+          const param = event.data.command?.param || '';
+          const expectedParam = config.commandParam || '';
+          
+          switch (config.commandParamMatch) {
+            case 'exact':
+              if (param !== expectedParam) return false;
+              break;
+            case 'contains':
+              if (expectedParam && !param.includes(expectedParam)) return false;
+              break;
+            case 'regex':
+              if (expectedParam && !new RegExp(expectedParam, 'i').test(param)) return false;
+              break;
+          }
+        }
+        break;
+
       case 'keyword_detected':
         if (config.keywords && config.keywords.length > 0) {
           const content = event.data.message?.content?.toLowerCase() || '';
           const matchType = config.keywordMatchType || 'contains';
-          
+
           return config.keywords.some(keyword => {
             const kw = keyword.toLowerCase();
             switch (matchType) {
@@ -253,11 +485,12 @@ export class FlowEngine {
    * Start a new flow execution
    */
   async startExecution(
-    flow: IFlow, 
-    context: ExecutionContext, 
+    flow: IFlow,
+    context: ExecutionContext,
     startNodeId: string
   ): Promise<IFlowExecution> {
-    const execution = new FlowExecution({
+    // Create via cache (writes to DB and caches in Redis)
+    const execution = await FlowExecutionCache.create({
       flowId: flow._id,
       flowVersion: flow.currentVersion,
       sessionId: context.sessionId,
@@ -271,9 +504,7 @@ export class FlowEngine {
       startedAt: new Date(),
     });
 
-    await execution.save();
-
-    logger.info('flow', { 
+    logger.info('flow', {
       action: 'execution_started',
       executionId: execution._id.toString(),
       flowId: flow._id.toString(),
@@ -284,7 +515,7 @@ export class FlowEngine {
     // Update flow stats
     await Flow.updateOne(
       { _id: flow._id },
-      { 
+      {
         $inc: { executionCount: 1 },
         $set: { lastExecutedAt: new Date() },
       }
@@ -305,12 +536,19 @@ export class FlowEngine {
     nodeId: string
   ): Promise<void> {
     const lockId = uuidv4();
-    
+
+    logger.info('flow', {
+      action: 'executeFromNode_start',
+      executionId: execution._id.toString(),
+      nodeId,
+      variables: JSON.stringify(execution.context.variables),
+    });
+
     // Acquire lock
     const gotLock = await execution.acquireLock(lockId, 60000);
     if (!gotLock) {
-      logger.warn('flow', { 
-        action: 'lock_failed', 
+      logger.warn('flow', {
+        action: 'lock_failed',
         executionId: execution._id.toString(),
       });
       return;
@@ -331,8 +569,8 @@ export class FlowEngine {
 
         const node = flow.nodes.find(n => n.id === currentNodeId);
         if (!node) {
-          logger.error('flow', { 
-            action: 'node_not_found', 
+          logger.error('flow', {
+            action: 'node_not_found',
             nodeId: currentNodeId,
             executionId: execution._id.toString(),
           });
@@ -367,7 +605,7 @@ export class FlowEngine {
           execution.steps[stepIndex].output = result.output;
           execution.steps[stepIndex].error = result.error;
           if (execution.steps[stepIndex].startedAt) {
-            execution.steps[stepIndex].duration = 
+            execution.steps[stepIndex].duration =
               new Date().getTime() - execution.steps[stepIndex].startedAt!.getTime();
           }
         }
@@ -375,12 +613,15 @@ export class FlowEngine {
         // Handle pause
         if (result.shouldPause) {
           execution.pause(result.pauseFor || 'fixed_time', result.pauseUntil);
-          execution.nextNodeId = result.nextNodeId || null;
+          // Calculate next node if not provided (for wait_for_response, delays, etc.)
+          const nextNode = result.nextNodeId || this.getNextNode(flow, node.id, result.output);
+          execution.nextNodeId = nextNode || null;
           await execution.save();
-          logger.info('flow', { 
+          logger.info('flow', {
             action: 'execution_paused',
             executionId: execution._id.toString(),
             pauseFor: result.pauseFor,
+            nextNodeId: execution.nextNodeId,
           });
           break;
         }
@@ -389,7 +630,7 @@ export class FlowEngine {
         if (!result.success) {
           execution.fail(result.error || 'Unknown error');
           await execution.save();
-          
+
           // Update flow error count
           await Flow.updateOne({ _id: flow._id }, { $inc: { errorCount: 1 } });
           break;
@@ -398,23 +639,43 @@ export class FlowEngine {
         // Get next node
         currentNodeId = result.nextNodeId || this.getNextNode(flow, node.id, result.output);
 
-        // Check if we've reached the end
+        // Check if we've reached the end or need to wait for button click
         if (!currentNodeId) {
-          execution.complete();
-          await execution.save();
+          // Check if there are button edges - if so, pause instead of completing
+          const buttonEdges = flow.edges.filter(e =>
+            e.source === node.id && e.sourceHandle?.startsWith('btn-')
+          );
 
-          // Update flow average execution time
-          if (execution.totalDuration) {
-            const avgTime = flow.avgExecutionTime || execution.totalDuration;
-            const newAvg = (avgTime + execution.totalDuration) / 2;
-            await Flow.updateOne({ _id: flow._id }, { $set: { avgExecutionTime: newAvg } });
+          if (buttonEdges.length > 0) {
+            // Pause execution waiting for button click
+            execution.pause('button_click');
+            execution.currentNodeId = node.id; // Store the node with buttons
+            await execution.save();
+
+            logger.info('flow', {
+              action: 'execution_paused_for_buttons',
+              executionId: execution._id.toString(),
+              nodeId: node.id,
+              buttonEdgesCount: buttonEdges.length,
+            });
+          } else {
+            // No more nodes and no button edges - complete
+            execution.complete();
+            await execution.save();
+
+            // Update flow average execution time
+            if (execution.totalDuration) {
+              const avgTime = flow.avgExecutionTime || execution.totalDuration;
+              const newAvg = (avgTime + execution.totalDuration) / 2;
+              await Flow.updateOne({ _id: flow._id }, { $set: { avgExecutionTime: newAvg } });
+            }
+
+            logger.info('flow', {
+              action: 'execution_completed',
+              executionId: execution._id.toString(),
+              duration: execution.totalDuration,
+            });
           }
-
-          logger.info('flow', { 
-            action: 'execution_completed',
-            executionId: execution._id.toString(),
-            duration: execution.totalDuration,
-          });
           break;
         }
 
@@ -424,7 +685,7 @@ export class FlowEngine {
       if (iterations >= maxIterations) {
         execution.fail('Maximum iterations exceeded - possible infinite loop');
         await execution.save();
-        logger.error('flow', { 
+        logger.error('flow', {
           action: 'max_iterations',
           executionId: execution._id.toString(),
         });
@@ -464,7 +725,7 @@ export class FlowEngine {
           return { success: false, error: `Unknown node type: ${node.type}` };
       }
     } catch (error) {
-      logger.error('flow', { 
+      logger.error('flow', {
         action: 'node_execution_error',
         nodeId: node.id,
         nodeType: node.type,
@@ -484,8 +745,8 @@ export class FlowEngine {
     const config = node.config as ConditionConfig;
     const result = this.evaluateConditions(config, execution.context);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       output: { conditionResult: result },
     };
   }
@@ -499,11 +760,11 @@ export class FlowEngine {
     const groupResults = config.groups.map(group => {
       if (!group.rules || group.rules.length === 0) return true;
 
-      const ruleResults = group.rules.map(rule => 
+      const ruleResults = group.rules.map(rule =>
         this.evaluateRule(rule.field, rule.operator, rule.value, context)
       );
 
-      return group.operator === 'AND' 
+      return group.operator === 'AND'
         ? ruleResults.every(r => r)
         : ruleResults.some(r => r);
     });
@@ -584,57 +845,185 @@ export class FlowEngine {
   ): Promise<ExecutionResult> {
     const config = node.config as ActionConfig;
     const ctx = execution.context;
+    const userFlowId = SYSTEM_USERS.FLOW_USER_ID;
+
+    logger.info('flow', {
+      action: 'executing_action',
+      nodeId: node.id,
+      nodeLabel: node.label,
+      actionType: config.actionType,
+      executionId: execution._id.toString(),
+      chatId: ctx.chatId,
+      sessionId: ctx.sessionId,
+      isTemporarySession: ctx.sessionId?.startsWith('nosession-'),
+    });
 
     switch (config.actionType) {
       case 'send_message': {
-        const content = this.resolvePlaceholders(config.messageContent || '', ctx);
-        const success = await sendMessage(ctx.chatId, content);
-        return { success, output: { messageSent: success } };
+        return await this.executeSendMessage(config, ctx, execution, node.id);
       }
 
       case 'schedule_message': {
-        const result = await createScheduledMessage({
-          sessionId: ctx.sessionId,
-          chatId: ctx.chatId,
-          type: config.scheduleType === 'after_inactivity' ? 'after_inactivity' : 'fixed_time',
-          delayMinutes: config.scheduleDelay,
-          message: { text: this.resolvePlaceholders(config.messageContent || '', ctx) },
-          createdBy: 'system',
-        });
-        return { success: !!result, output: { scheduledMessageId: result?._id?.toString() } };
+        return await this.executeScheduleMessage(config, ctx);
       }
 
       case 'transfer_chat': {
-        if (config.targetAgentId) {
-          await ChatSession.updateOne(
-            { sessionId: ctx.sessionId },
-            { 
-              $set: { 
-                assignedAgent: new Types.ObjectId(config.targetAgentId),
-                status: 'human',
-              },
-            }
-          );
+        // Si es una sesión temporal (nosession-*), crear sesión real
+        let session: any = null;
+
+        if (ctx.sessionId.startsWith('nosession-')) {
+          // Buscar o crear usuario (User usa telegramId, no telegramChatId)
+          let user = await User.findOne({ telegramId: ctx.userId });
+          if (!user) {
+            user = await User.create({
+              telegramId: ctx.userId,
+              firstName: ctx.user?.firstName || 'Usuario',
+              username: ctx.user?.username,
+              language: ctx.user?.language || 'es',
+            });
+          }
+          // Crear sesión real
+          session = await getOrCreateSession(user, ctx.chatId);
+          // Actualizar contexto con sessionId real
+          ctx.sessionId = session.sessionId;
         }
+
+        // Poner en cola (status: 'waiting') - el agente debe aceptar
+        // Si hay targetAgentId, asignamos pero sigue en 'waiting' para que pueda aceptar
+        const updateData: any = {
+          status: 'waiting', // Siempre 'waiting' para que entre en cola
+          escalatedAt: new Date(),
+        };
+
+        if (config.targetAgentId) {
+          // Asignar al agente específico, pero sigue en cola hasta que acepte
+          updateData.assignedAgent = new Types.ObjectId(config.targetAgentId);
+        }
+
+        await ChatSession.updateOne(
+          { sessionId: ctx.sessionId },
+          { $set: updateData }
+        );
+
+        // Start inactivity timer for queued session
+        await startQueuedTimer(ctx.sessionId, ctx.chatId);
+
+        // Notificar al dashboard
+        const transferredSession = await ChatSession.findOne({ sessionId: ctx.sessionId }).populate('user');
+        if (transferredSession) {
+          await notifyNewSession(transferredSession);
+        }
+
+        logger.info('flow', {
+          action: 'chat_transferred',
+          sessionId: ctx.sessionId,
+          targetAgentId: config.targetAgentId || 'queue',
+          status: 'waiting',
+        });
+
         return { success: true };
       }
 
       case 'assign_agent': {
+        // Si es una sesión temporal (nosession-*), crear sesión real
+        // Replicamos exactamente el flujo de handleHumanConfirm
+
+        if (ctx.sessionId.startsWith('nosession-')) {
+          // Buscar o crear usuario (User usa telegramId, no telegramChatId)
+          let user = await User.findOne({ telegramId: ctx.userId });
+          if (!user) {
+            user = await User.create({
+              telegramId: ctx.userId,
+              firstName: ctx.user?.firstName || 'Usuario',
+              username: ctx.user?.username,
+              language: ctx.user?.language || 'es',
+            });
+          }
+
+          // 1. Crear sesión real (igual que handleHumanConfirm)
+          const session = await getOrCreateSession(user, ctx.chatId);
+          ctx.sessionId = session.sessionId;
+
+          logger.info('flow', {
+            action: 'session_created_for_escalation',
+            oldSessionId: `nosession-${ctx.chatId}`,
+            newSessionId: session.sessionId,
+            chatId: ctx.chatId,
+          });
+
+          // 2. Transfer to waiting (igual que handleHumanConfirm)
+          await transferToHuman(session.sessionId);
+
+          // 3. Start inactivity timer
+          await startQueuedTimer(session.sessionId, ctx.chatId);
+
+          // 4. Add system message
+          await addMessage(session.sessionId, 'bot', 'User requested human support via flow automation', {
+            messageType: 'system',
+          });
+
+          // 5. Notify dashboard (usando getActiveSessionByTelegramChatId como handleHumanConfirm)
+          const updatedSession = await getActiveSessionByTelegramChatId(ctx.chatId);
+          if (updatedSession) {
+            await notifyNewSession(updatedSession);
+          }
+
+          logger.info('flow', {
+            action: 'agent_assigned',
+            sessionId: ctx.sessionId,
+            targetAgentId: config.targetAgentId || 'queue',
+          });
+
+          return { success: true };
+        }
+
+        // Si ya tiene sesión real, usar el flujo normal
         if (config.targetAgentId) {
           await ChatSession.updateOne(
             { sessionId: ctx.sessionId },
-            { 
-              $set: { 
+            {
+              $set: {
                 assignedAgent: new Types.ObjectId(config.targetAgentId),
                 status: 'human',
               },
             }
           );
+        } else {
+          // Sin agente específico: transfer to waiting
+          await transferToHuman(ctx.sessionId);
         }
+
+        // Notificar al dashboard
+        const assignedSession = await getActiveSessionByTelegramChatId(ctx.chatId);
+        if (assignedSession) {
+          await notifyNewSession(assignedSession);
+        }
+
+        logger.info('flow', {
+          action: 'agent_assigned',
+          sessionId: ctx.sessionId,
+          targetAgentId: config.targetAgentId || 'queue',
+        });
+
         return { success: true };
       }
 
       case 'change_category': {
+        // Si es una sesión temporal (nosession-*), crear sesión real primero
+        if (ctx.sessionId.startsWith('nosession-')) {
+          let user = await User.findOne({ telegramId: ctx.userId });
+          if (!user) {
+            user = await User.create({
+              telegramId: ctx.userId,
+              firstName: ctx.user?.firstName || 'Usuario',
+              username: ctx.user?.username,
+              language: ctx.user?.language || 'es',
+            });
+          }
+          const session = await getOrCreateSession(user, ctx.chatId);
+          ctx.sessionId = session.sessionId;
+        }
+
         await ChatSession.updateOne(
           { sessionId: ctx.sessionId },
           { $set: { category: config.categoryName } }
@@ -643,47 +1032,189 @@ export class FlowEngine {
       }
 
       case 'add_tag': {
-        await ChatSession.updateOne(
-          { sessionId: ctx.sessionId },
-          { $addToSet: { tags: config.tagName } }
-        );
+        // Obtener o crear el usuario primero
+        let user = await User.findOne({ telegramId: ctx.userId });
+        if (!user) {
+          user = await User.create({
+            telegramId: ctx.userId,
+            firstName: ctx.user?.firstName || 'Usuario',
+            username: ctx.user?.username,
+            language: ctx.user?.language || 'es',
+          });
+        }
+
+        // Si es una sesión temporal (nosession-*), crear sesión real
+        if (ctx.sessionId.startsWith('nosession-')) {
+          const session = await getOrCreateSession(user, ctx.chatId);
+          const oldSessionId = ctx.sessionId;
+          ctx.sessionId = session.sessionId;
+          execution.context.sessionId = session.sessionId;
+          execution.markModified('context');
+
+          logger.info('flow', {
+            action: 'session_created_for_tag',
+            oldSessionId,
+            newSessionId: session.sessionId,
+            tag: config.tagName,
+            userId: ctx.userId,
+          });
+        }
+
+        // Buscar o crear el tag por nombre
+        let tag = await Tag.findOne({ name: config.tagName });
+        if (!tag) {
+          // Buscar un agente para usarlo como creador (preferir admin)
+
+          if (!userFlowId) {
+            logger.error('flow', {
+              action: 'add_tag_no_agent',
+              message: 'No agents found in system to create tag',
+            });
+            return { success: false, error: 'No agents available to create tag' };
+          }
+
+          // Crear el tag con el color configurado o un color por defecto
+          tag = await Tag.create({
+            name: config.tagName,
+            color: config.tagColor || '#3B82F6',
+            description: `Created by flow automation`,
+            createdBy: userFlowId,
+          });
+
+          logger.info('flow', {
+            action: 'tag_created',
+            tagName: config.tagName,
+            tagId: tag._id?.toString(),
+            createdBy: userFlowId,
+          });
+        }
+
+      
+        // Crear la relación UserTag (ignorar si ya existe)
+        try {
+          await UserTag.create({
+            user: user._id,
+            tag: tag._id,
+            addedBy: userFlowId,
+            createdBy: userFlowId,
+          });
+
+          // Incrementar contador de uso
+          await Tag.findByIdAndUpdate(tag._id, { $inc: { usageCount: 1 } });
+
+          logger.info('flow', {
+            action: 'add_tag_success',
+            userId: user._id?.toString(),
+            tagId: tag._id?.toString(),
+            tagName: config.tagName,
+          });
+        } catch (err: any) {
+          // Error 11000 = duplicado, el tag ya existe para este usuario
+          if (err.code === 11000) {
+            logger.info('flow', {
+              action: 'add_tag_already_exists',
+              userId: user._id?.toString(),
+              tagName: config.tagName,
+            });
+          } else {
+            throw err;
+          }
+        }
+
         return { success: true };
       }
 
       case 'remove_tag': {
-        await ChatSession.updateOne(
-          { sessionId: ctx.sessionId },
-          { $pull: { tags: config.tagName } }
-        );
+        // Obtener usuario
+        const userForRemove = await User.findOne({ telegramId: ctx.userId });
+        if (!userForRemove) {
+          return { success: true }; // No hay usuario, nada que remover
+        }
+
+        // Buscar el tag
+        const tagToRemove = await Tag.findOne({ name: config.tagName });
+        if (!tagToRemove) {
+          return { success: true }; // No existe el tag
+        }
+
+        // Eliminar la relación
+        const removeResult = await UserTag.deleteOne({
+          user: userForRemove._id,
+          tag: tagToRemove._id,
+        });
+
+        if (removeResult.deletedCount > 0) {
+          await Tag.findByIdAndUpdate(tagToRemove._id, { $inc: { usageCount: -1 } });
+        }
+
         return { success: true };
       }
 
       case 'create_note': {
-        const note = this.resolvePlaceholders(config.noteContent || '', ctx);
-        await ChatSession.updateOne(
-          { sessionId: ctx.sessionId },
-          { 
-            $push: { 
-              notes: { 
-                content: note,
-                createdAt: new Date(),
-                createdBy: 'automation',
-              },
-            },
-          }
-        );
+        // Obtener o crear el usuario primero
+        let user = await User.findOne({ telegramId: ctx.userId });
+        if (!user) {
+          user = await User.create({
+            telegramId: ctx.userId,
+            firstName: ctx.user?.firstName || 'Usuario',
+            username: ctx.user?.username,
+            language: ctx.user?.language || 'es',
+          });
+        }
+
+        // Si es una sesión temporal (nosession-*), crear sesión real
+        let sessionObjectId: Types.ObjectId | undefined;
+        if (ctx.sessionId.startsWith('nosession-')) {
+          const session = await getOrCreateSession(user, ctx.chatId);
+          const oldSessionId = ctx.sessionId;
+          ctx.sessionId = session.sessionId;
+          execution.context.sessionId = session.sessionId;
+          execution.markModified('context');
+          sessionObjectId = session._id as Types.ObjectId;
+
+          logger.info('flow', {
+            action: 'session_created_for_note',
+            oldSessionId,
+            newSessionId: session.sessionId,
+            userId: ctx.userId,
+          });
+        } else {
+          // Obtener el ObjectId de la sesión existente
+          const existingSession = await ChatSession.findOne({ sessionId: ctx.sessionId }).select('_id');
+          sessionObjectId = existingSession?._id as Types.ObjectId | undefined;
+        }
+
+        const noteContent = this.resolvePlaceholders(config.noteContent || '', ctx);
+       
+        // Crear la nota en la colección Note
+        const note = await Note.create({
+          user: user._id,
+          session: sessionObjectId,
+          content: noteContent,
+          createdBy: userFlowId,
+          // No hay agente en automatización, dejamos createdBy vacío o usamos un sistema
+        });
+
+        logger.info('flow', {
+          action: 'create_note_success',
+          noteId: note._id?.toString(),
+          userId: user._id?.toString(),
+          sessionId: ctx.sessionId,
+          content: noteContent,
+        });
+
         return { success: true };
       }
 
       case 'block_user': {
         await User.updateOne(
           { telegramId: ctx.userId },
-          { 
-            $set: { 
+          {
+            $set: {
               isBlocked: true,
               blockReason: config.blockReason,
               blockedAt: new Date(),
-              blockExpiresAt: config.blockDurationHours 
+              blockExpiresAt: config.blockDurationHours
                 ? new Date(Date.now() + config.blockDurationHours * 60 * 60 * 1000)
                 : undefined,
             },
@@ -694,10 +1225,10 @@ export class FlowEngine {
 
       case 'call_webhook': {
         try {
-          const body = config.webhookBody 
+          const body = config.webhookBody
             ? this.resolvePlaceholders(config.webhookBody, ctx)
             : JSON.stringify(ctx);
-          
+
           const response = await fetch(config.webhookUrl!, {
             method: config.webhookMethod || 'POST',
             headers: {
@@ -708,12 +1239,12 @@ export class FlowEngine {
           });
 
           const responseData = await response.json().catch(() => null);
-          
+
           // Store response in variables
           execution.context.variables.webhookResponse = responseData;
-          
-          return { 
-            success: response.ok, 
+
+          return {
+            success: response.ok,
             output: { status: response.status, data: responseData },
           };
         } catch (error) {
@@ -721,23 +1252,37 @@ export class FlowEngine {
         }
       }
 
+      case 'api_call': {
+        return await this.executeApiCall(config, ctx, execution);
+      }
+
       case 'set_custom_field': {
-        execution.context.variables[config.customFieldName!] = 
-          this.resolvePlaceholders(config.customFieldValue || '', ctx);
+        const fieldKey = config.customFieldName || '';
+        const resolvedValue = this.resolvePlaceholders(config.customFieldValue || '', ctx);
         
-        // Also update user custom fields
-        await User.updateOne(
-          { telegramId: ctx.userId },
-          { $set: { [`customFields.${config.customFieldName}`]: config.customFieldValue } }
-        );
+        // Store in execution context variables
+        execution.context.variables[fieldKey] = resolvedValue;
+
+        // Find user by telegramId and set the custom field using the new service
+        const user = await User.findOne({ telegramId: ctx.userId });
+        if (user) {
+          // Convert value type based on content
+          let typedValue: string | number | boolean = resolvedValue;
+          if (resolvedValue === 'true') typedValue = true;
+          else if (resolvedValue === 'false') typedValue = false;
+          else if (!isNaN(Number(resolvedValue)) && resolvedValue !== '') typedValue = Number(resolvedValue);
+          
+          await setUserFieldByKey(user._id!.toString(), fieldKey, typedValue);
+        }
+        
         return { success: true };
       }
 
       case 'close_chat': {
         await ChatSession.updateOne(
           { sessionId: ctx.sessionId },
-          { 
-            $set: { 
+          {
+            $set: {
               status: 'closed',
               closedAt: new Date(),
               closedByType: 'system',
@@ -751,20 +1296,526 @@ export class FlowEngine {
       case 'add_to_queue': {
         await ChatSession.updateOne(
           { sessionId: ctx.sessionId },
-          { 
-            $set: { 
+          {
+            $set: {
               status: 'queued',
               queuePriority: config.queuePriority || 'normal',
               queuedAt: new Date(),
             },
           }
         );
+
+        // Notificar al dashboard
+        const queuedSession = await ChatSession.findOne({ sessionId: ctx.sessionId }).populate('user');
+        if (queuedSession) {
+          await notifyNewSession(queuedSession);
+        }
+
+        logger.info('flow', {
+          action: 'added_to_queue',
+          sessionId: ctx.sessionId,
+          priority: config.queuePriority || 'normal',
+        });
+
         return { success: true };
+      }
+
+      case 'wait_for_response': {
+        // Data collection: send question, pause flow, wait for user response
+        return await this.executeWaitForResponse(config, ctx, execution);
+      }
+
+      // ============= NEW TELEGRAM ACTIONS =============
+
+      case 'edit_message': {
+        return await this.executeEditMessage(config, ctx, execution);
+      }
+
+      case 'delete_message': {
+        return await this.executeDeleteMessage(config, ctx, execution);
+      }
+
+      case 'edit_keyboard': {
+        return await this.executeEditKeyboard(config, ctx, execution);
+      }
+
+      case 'remove_keyboard': {
+        return await this.executeRemoveKeyboard(config, ctx, execution);
+      }
+
+      case 'send_reply_keyboard': {
+        return await this.executeSendReplyKeyboard(config, ctx, execution);
+      }
+
+      case 'remove_reply_keyboard': {
+        return await this.executeRemoveReplyKeyboard(config, ctx, execution);
+      }
+
+      case 'send_chat_action': {
+        return await this.executeSendChatAction(config, ctx, execution);
+      }
+
+      case 'pin_message': {
+        return await this.executePinMessage(config, ctx, execution);
+      }
+
+      case 'unpin_message': {
+        return await this.executeUnpinMessage(config, ctx, execution);
+      }
+
+      case 'save_message_id': {
+        return this.executeSaveMessageId(config, ctx, execution);
+      }
+
+      case 'delay_action': {
+        return await this.executeDelayAction(config, ctx, execution);
+      }
+
+      case 'send_location': {
+        return await this.executeSendLocation(config, ctx, execution);
+      }
+
+      case 'send_contact': {
+        return await this.executeSendContact(config, ctx, execution);
+      }
+
+      case 'send_sticker': {
+        return await this.executeSendSticker(config, ctx, execution);
+      }
+
+      case 'copy_message': {
+        return await this.executeCopyMessage(config, ctx, execution);
+      }
+
+      case 'run_subflow': {
+        return await this.executeRunSubflow(config, ctx, execution);
       }
 
       default:
         return { success: false, error: `Unknown action type: ${config.actionType}` };
     }
+  }
+
+  /**
+   * Execute wait_for_response action (Data Collection)
+   */
+  private async executeWaitForResponse(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const dc = config.dataCollection;
+    if (!dc) {
+      return { success: false, error: 'No data collection config' };
+    }
+
+    // Send the question
+    const question = this.resolvePlaceholders(dc.question, ctx);
+    await sendMessage(ctx.chatId, question);
+
+    logger.info('flow', {
+      action: 'wait_for_response_started',
+      variableName: dc.variableName,
+      validationType: dc.validationType,
+      expiresInMinutes: dc.expiresInMinutes,
+    });
+
+    // Store data collection context for validation
+    execution.context.variables._dataCollection = {
+      variableName: dc.variableName,
+      validationType: dc.validationType,
+      required: dc.required,
+      minLength: dc.minLength,
+      maxLength: dc.maxLength,
+      pattern: dc.pattern,
+      choices: dc.choices,
+      retryCount: 0,
+      maxRetries: dc.maxRetries || 3,
+      errorMessage: dc.errorMessage,
+    };
+
+    // Mark as modified so Mongoose persists the nested changes in Mixed type
+    execution.markModified('context');
+    execution.markModified('context.variables');
+
+    logger.info('flow', {
+      action: 'data_collection_config_stored',
+      variableName: dc.variableName,
+      variables: JSON.stringify(execution.context.variables),
+    });
+
+    // Calculate expiration time
+    const expiresAt = dc.expiresInMinutes
+      ? new Date(Date.now() + dc.expiresInMinutes * 60 * 1000)
+      : undefined;
+
+    return {
+      success: true,
+      shouldPause: true,
+      pauseFor: 'response',
+      pauseUntil: expiresAt,
+    };
+  }
+
+  /**
+   * Execute api_call action - Advanced HTTP request with retry, timeout, variable extraction
+   */
+  private async executeApiCall(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const apiConfig = config.apiCallConfig;
+    if (!apiConfig || !apiConfig.url) {
+      return { success: false, error: 'API Call config or URL is missing' };
+    }
+
+    const {
+      method = 'GET',
+      url,
+      headers = [],
+      queryParams = [],
+      bodyType = 'none',
+      body = '',
+      authType = 'none',
+      authConfig = {},
+      timeout = 30,
+      retryCount = 0,
+      retryDelay = 5,
+      successCodes = [200, 201, 204],
+      extractVariables = [],
+      onError = 'continue',
+      errorNodeId,
+      saveErrorTo,
+      saveResponseTo,
+      saveStatusCodeTo,
+    } = apiConfig;
+
+    // Resolve URL with placeholders
+    let resolvedUrl = this.resolvePlaceholders(url, ctx);
+
+    // Add query params
+    const enabledParams = queryParams.filter((p: any) => p.enabled && p.key);
+    if (enabledParams.length > 0) {
+      const params = new URLSearchParams();
+      enabledParams.forEach((p: any) => {
+        params.append(p.key, this.resolvePlaceholders(p.value, ctx));
+      });
+      // Add API key to query if configured
+      if (authType === 'api-key' && authConfig.apiKeyLocation === 'query' && authConfig.apiKeyName) {
+        params.append(authConfig.apiKeyName, this.resolvePlaceholders(authConfig.apiKeyValue || '', ctx));
+      }
+      resolvedUrl += (resolvedUrl.includes('?') ? '&' : '?') + params.toString();
+    }
+
+    // Build headers
+    const requestHeaders: Record<string, string> = {};
+    headers.filter((h: any) => h.enabled && h.key).forEach((h: any) => {
+      requestHeaders[h.key] = this.resolvePlaceholders(h.value, ctx);
+    });
+
+    // Add auth headers
+    if (authType === 'bearer' && authConfig.bearerToken) {
+      const token = this.resolvePlaceholders(authConfig.bearerToken, ctx);
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    } else if (authType === 'basic' && authConfig.basicUsername) {
+      const username = this.resolvePlaceholders(authConfig.basicUsername, ctx);
+      const password = this.resolvePlaceholders(authConfig.basicPassword || '', ctx);
+      const credentials = Buffer.from(`${username}:${password}`).toString('base64');
+      requestHeaders['Authorization'] = `Basic ${credentials}`;
+    } else if (authType === 'api-key' && authConfig.apiKeyName && authConfig.apiKeyLocation === 'header') {
+      const keyValue = this.resolvePlaceholders(authConfig.apiKeyValue || '', ctx);
+      requestHeaders[authConfig.apiKeyName] = keyValue;
+    }
+
+    // Set content type for body
+    if (bodyType === 'json') {
+      requestHeaders['Content-Type'] = 'application/json';
+    } else if (bodyType === 'x-www-form-urlencoded') {
+      requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+    }
+
+    // Resolve body placeholders
+    const resolvedBody = bodyType !== 'none' ? this.resolvePlaceholders(body, ctx) : undefined;
+
+    logger.info('flow', {
+      action: 'api_call_start',
+      method,
+      url: resolvedUrl,
+      hasBody: !!resolvedBody,
+      timeout,
+      retryCount,
+    });
+
+    // Execute request with retry logic
+    let lastError: string | null = null;
+    let responseData: any = null;
+    let statusCode = 0;
+    let success = false;
+
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        // Add delay between retries
+        if (attempt > 0) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay * 1000));
+          logger.info('flow', {
+            action: 'api_call_retry',
+            attempt,
+            maxRetries: retryCount,
+          });
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout * 1000);
+
+        const fetchOptions: RequestInit = {
+          method,
+          headers: requestHeaders,
+          signal: controller.signal,
+        };
+
+        if (resolvedBody && method !== 'GET') {
+          fetchOptions.body = resolvedBody;
+        }
+
+        const response = await fetch(resolvedUrl, fetchOptions);
+        clearTimeout(timeoutId);
+
+        statusCode = response.status;
+
+        // Parse response
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          responseData = await response.text();
+        }
+
+        // Check if success
+        success = successCodes.includes(statusCode);
+
+        if (success) {
+          logger.info('flow', {
+            action: 'api_call_success',
+            statusCode,
+            attempt,
+          });
+          break;
+        } else {
+          lastError = `HTTP ${statusCode}: ${response.statusText}`;
+          logger.warn('flow', {
+            action: 'api_call_non_success_status',
+            statusCode,
+            attempt,
+          });
+        }
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          lastError = `Request timeout (${timeout}s)`;
+        } else {
+          lastError = error.message || String(error);
+        }
+        logger.error('flow', {
+          action: 'api_call_error',
+          error: lastError,
+          attempt,
+        });
+      }
+    }
+
+    // Mark context as modified
+    execution.markModified('context');
+    execution.markModified('context.variables');
+
+    // Save status code to variable if configured
+    if (saveStatusCodeTo) {
+      execution.context.variables[saveStatusCodeTo] = statusCode;
+    }
+
+    // Handle success case
+    if (success) {
+      // Save full response if configured
+      if (saveResponseTo) {
+        execution.context.variables[saveResponseTo] = responseData;
+      }
+
+      // Extract variables from response
+      for (const extract of extractVariables) {
+        if (extract.variableName && extract.jsonPath) {
+          const value = this.extractJsonPath(responseData, extract.jsonPath);
+          execution.context.variables[extract.variableName] = value !== undefined 
+            ? value 
+            : extract.defaultValue || '';
+          
+          logger.info('flow', {
+            action: 'api_call_variable_extracted',
+            variableName: extract.variableName,
+            jsonPath: extract.jsonPath,
+            value: typeof value === 'object' ? JSON.stringify(value).substring(0, 100) : String(value).substring(0, 100),
+          });
+        }
+      }
+
+      return {
+        success: true,
+        output: { statusCode, data: responseData },
+      };
+    }
+
+    // Handle error case
+    if (saveErrorTo) {
+      execution.context.variables[saveErrorTo] = lastError || 'Unknown error';
+    }
+
+    // Also save response even on error (might contain error details)
+    if (saveResponseTo && responseData) {
+      execution.context.variables[saveResponseTo] = responseData;
+    }
+
+    logger.warn('flow', {
+      action: 'api_call_failed',
+      error: lastError,
+      statusCode,
+      onError,
+    });
+
+    switch (onError) {
+      case 'stop':
+        return { success: false, error: lastError || 'API call failed' };
+      
+      case 'goto_node':
+        if (errorNodeId) {
+          return { success: true, nextNodeId: errorNodeId };
+        }
+        return { success: true };
+      
+      case 'continue':
+      default:
+        return { success: true };
+    }
+  }
+
+  /**
+   * Extract value from JSON using dot notation path
+   */
+  private extractJsonPath(obj: any, path: string): any {
+    if (!obj || !path) return undefined;
+    
+    const parts = path.split('.');
+    let value = obj;
+    
+    for (const part of parts) {
+      if (value === undefined || value === null) return undefined;
+      
+      // Handle array index notation like "items[0]"
+      const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
+      if (arrayMatch) {
+        const [, key, index] = arrayMatch;
+        value = value[key];
+        if (Array.isArray(value)) {
+          value = value[parseInt(index, 10)];
+        } else {
+          return undefined;
+        }
+      } else {
+        value = value[part];
+      }
+    }
+    
+    return value;
+  }
+
+  /**
+   * Validate user response for data collection
+   */
+  private validateResponse(
+    response: string,
+    config: {
+      validationType: string;
+      required?: boolean;
+      minLength?: number;
+      maxLength?: number;
+      pattern?: string;
+      choices?: { value: string }[];
+    }
+  ): { valid: boolean; error?: string } {
+    if (!response && config.required) {
+      return { valid: false, error: 'Esta respuesta es obligatoria' };
+    }
+
+    if (!response) return { valid: true };
+
+    // Length checks
+    if (config.minLength && response.length < config.minLength) {
+      return { valid: false, error: `Mínimo ${config.minLength} caracteres` };
+    }
+    if (config.maxLength && response.length > config.maxLength) {
+      return { valid: false, error: `Máximo ${config.maxLength} caracteres` };
+    }
+
+    // Type-specific validation
+    switch (config.validationType) {
+      case 'email': {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(response)) {
+          return { valid: false, error: 'Por favor ingresa un email válido' };
+        }
+        break;
+      }
+
+      case 'phone': {
+        const phoneRegex = /^[\d\s\-+()]{8,20}$/;
+        if (!phoneRegex.test(response)) {
+          return { valid: false, error: 'Por favor ingresa un teléfono válido' };
+        }
+        break;
+      }
+
+      case 'number': {
+        if (isNaN(Number(response))) {
+          return { valid: false, error: 'Por favor ingresa un número válido' };
+        }
+        break;
+      }
+
+      case 'url': {
+        try {
+          new URL(response);
+        } catch {
+          return { valid: false, error: 'Por favor ingresa una URL válida' };
+        }
+        break;
+      }
+
+      case 'date': {
+        const date = new Date(response);
+        if (isNaN(date.getTime())) {
+          return { valid: false, error: 'Por favor ingresa una fecha válida' };
+        }
+        break;
+      }
+
+      case 'choice': {
+        if (config.choices && !config.choices.some(c => c.value === response)) {
+          return { valid: false, error: 'Por favor selecciona una opción válida' };
+        }
+        break;
+      }
+    }
+
+    // Custom regex pattern
+    if (config.pattern) {
+      try {
+        const regex = new RegExp(config.pattern);
+        if (!regex.test(response)) {
+          return { valid: false, error: 'Formato inválido' };
+        }
+      } catch {
+        // Invalid regex, skip
+      }
+    }
+
+    return { valid: true };
   }
 
   /**
@@ -790,7 +1841,7 @@ export class FlowEngine {
           success: true,
           shouldPause: true,
           pauseFor: 'response',
-          pauseUntil: config.maxWaitMinutes 
+          pauseUntil: config.maxWaitMinutes
             ? new Date(Date.now() + config.maxWaitMinutes * 60 * 1000)
             : undefined,
         };
@@ -816,11 +1867,46 @@ export class FlowEngine {
 
   /**
    * Get next node based on edges
+   * IMPORTANT: Ignores button handles (btn-xxx) - those are triggered by user clicks
    */
   private getNextNode(flow: IFlow, currentNodeId: string, output?: any): string | null {
-    const edges = flow.edges.filter(e => e.source === currentNodeId);
-    
-    if (edges.length === 0) return null;
+    const allEdges = flow.edges.filter(e => e.source === currentNodeId);
+
+    // Filter out button-connected edges - those should only be followed on button click
+    const edges = allEdges.filter(e => !e.sourceHandle?.startsWith('btn-'));
+    const buttonEdges = allEdges.filter(e => e.sourceHandle?.startsWith('btn-'));
+
+    logger.info('flow', {
+      action: 'get_next_node',
+      flowId: flow._id.toString(),
+      currentNodeId,
+      allEdgesCount: allEdges.length,
+      regularEdgesCount: edges.length,
+      buttonEdgesCount: buttonEdges.length,
+      edges: edges.map(e => ({ source: e.source, target: e.target, handle: e.sourceHandle })),
+    });
+
+    // If all edges are button edges, wait for button click (return null)
+    if (edges.length === 0) {
+      if (buttonEdges.length > 0) {
+        logger.info('flow', {
+          action: 'waiting_for_button_click',
+          flowId: flow._id.toString(),
+          currentNodeId,
+          buttonEdges: buttonEdges.length,
+          reason: 'All edges are connected to buttons - waiting for user click',
+        });
+      } else {
+        logger.info('flow', {
+          action: 'no_next_node',
+          flowId: flow._id.toString(),
+          currentNodeId,
+          reason: 'No edges from current node - flow ends here',
+        });
+      }
+      return null;
+    }
+
     if (edges.length === 1) return edges[0].target;
 
     // Handle condition branches
@@ -830,26 +1916,452 @@ export class FlowEngine {
       return matchingEdge?.target || null;
     }
 
-    // Default to first edge
+    // Default to first edge (non-button edge)
     return edges[0].target;
   }
 
   /**
-   * Resolve placeholders in text
+   * Resolve placeholders in text - supports {{variable}} syntax like ManyChat/Handlebars
    */
   private resolvePlaceholders(text: string, ctx: ExecutionContext): string {
-    return text
-      .replace(/\{user\.firstName\}/g, ctx.user.firstName)
-      .replace(/\{user\.lastName\}/g, ctx.user.lastName || '')
-      .replace(/\{user\.username\}/g, ctx.user.username || '')
-      .replace(/\{user\.id\}/g, String(ctx.user.id))
-      .replace(/\{agent\.name\}/g, ctx.agent?.name || '')
-      .replace(/\{message\.content\}/g, ctx.message?.content || '')
-      .replace(/\{session\.id\}/g, ctx.sessionId)
-      .replace(/\{chat\.id\}/g, String(ctx.chatId))
-      .replace(/\{date\}/g, new Date().toISOString().split('T')[0])
-      .replace(/\{time\}/g, new Date().toTimeString().slice(0, 5))
-      .replace(/\{var\.(\w+)\}/g, (_, name) => ctx.variables[name] || '');
+    if (!text) return '';
+
+    // Universal {{path.to.value}} resolver
+    return text.replace(/\{\{([^}]+)\}\}/g, (_, path: string) => {
+      const trimmedPath = path.trim();
+
+      // Handle special built-in variables
+      switch (trimmedPath) {
+        case 'date':
+          return new Date().toISOString().split('T')[0];
+        case 'time':
+          return new Date().toTimeString().slice(0, 5);
+        case 'datetime':
+          return new Date().toISOString().replace('T', ' ').slice(0, 19);
+        case 'timestamp':
+          return Date.now().toString();
+      }
+
+      // Try to resolve from context using dot notation
+      const value = this.resolveNestedValue(trimmedPath, ctx);
+
+      logger.info('flow', {
+        action: 'placeholder_resolved',
+        path: trimmedPath,
+        resolvedValue: value !== undefined ? String(value) : 'UNDEFINED',
+        ctxVariables: JSON.stringify(ctx.variables),
+      });
+
+      if (value !== undefined && value !== null) {
+        return String(value);
+      }
+
+      // Return empty string for unresolved variables
+      return '';
+    });
+  }
+
+  /**
+   * Resolve nested value from object using dot notation
+   */
+  private resolveNestedValue(path: string, obj: any): any {
+    const parts = path.split('.');
+    let value = obj;
+
+    for (const part of parts) {
+      if (value === undefined || value === null) return undefined;
+
+      // Handle special aliases
+      if (part === 'var' || part === 'variables') {
+        value = value.variables;
+      } else if (part === 'customFields' || part === 'custom') {
+        // custom and customFields both map to variables (where we store field values)
+        value = value.variables;
+      } else {
+        value = value[part];
+      }
+    }
+
+    // If not found and path doesn't start with a known prefix, try in variables
+    if (value === undefined && parts.length === 1 && obj.variables) {
+      value = obj.variables[parts[0]];
+    }
+
+    return value;
+  }
+
+  // ============= ADVANCED MESSAGE EXECUTION =============
+
+  /**
+   * Execute send_message action with blocks and keyboard support
+   */
+  private async executeSendMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution,
+    nodeId?: string
+  ): Promise<ExecutionResult> {
+    const chatId = ctx.chatId;
+    const flowId = execution.flowId.toString();
+    let success = true;
+    let lastMessageId: number | null = null;
+
+    logger.info('flow', {
+      action: 'send_message_action',
+      chatId,
+      hasBlocks: !!(config.messageBlocks?.length),
+      hasKeyboard: !!config.keyboard,
+      executionId: execution._id.toString(),
+    });
+
+    // Check if using new blocks format or legacy
+    if (config.messageBlocks && config.messageBlocks.length > 0) {
+      // Process each block in order - each block can have its own keyboard
+      for (let i = 0; i < config.messageBlocks.length; i++) {
+        const block = config.messageBlocks[i];
+
+        // Each block uses its own keyboard if defined
+        const blockKeyboard = block.keyboard
+          ? this.buildKeyboard(block.keyboard, flowId, nodeId)
+          : undefined;
+
+        // Use WithId versions to capture messageId
+        const blockMessageId = await this.executeMessageBlockWithId(block, chatId, ctx, blockKeyboard);
+        if (blockMessageId === false) {
+          success = false;
+          logger.warn('flow', {
+            action: 'message_block_failed',
+            blockType: block.type,
+            blockId: block.id,
+          });
+        } else if (blockMessageId && blockMessageId > 0) {
+          lastMessageId = blockMessageId;
+          success = true;
+        }
+      }
+    } else {
+      // Legacy: single text message (still supports global keyboard for backward compatibility)
+      const content = this.resolvePlaceholders(config.messageContent || '', ctx);
+      const legacyKeyboard = config.keyboard ? this.buildKeyboard(config.keyboard, flowId, nodeId) : undefined;
+
+      if (content) {
+        const msgId = await sendMessageWithId(chatId, content, { replyMarkup: legacyKeyboard });
+        if (msgId) {
+          lastMessageId = msgId;
+        } else {
+          success = false;
+        }
+      }
+
+      // Handle legacy media
+      if (config.mediaUrl) {
+        const caption = config.messageContent ? this.resolvePlaceholders(config.messageContent, ctx) : undefined;
+        if (config.messageType === 'image') {
+          const msgId = await sendPhotoWithId(chatId, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
+          if (msgId) lastMessageId = msgId;
+        } else if (config.messageType === 'document') {
+          const msgId = await sendDocumentWithId(chatId, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
+          if (msgId) lastMessageId = msgId;
+        }
+      }
+    }
+
+    logger.info('flow', {
+      action: 'send_message_result',
+      success,
+      chatId,
+      lastMessageId,
+    });
+
+    // Store the current node ID and message ID in context for button click handling
+    if (nodeId) {
+      execution.context.lastNodeWithButtons = nodeId;
+    }
+    if (lastMessageId) {
+      execution.context.lastMessageId = lastMessageId;
+    }
+
+    return { success, output: { messageSent: success, nodeId, messageId: lastMessageId } };
+  }
+
+  /**
+   * Execute schedule_message action
+   * Creates a scheduled message using the robust scheduling system
+   */
+  private async executeScheduleMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext
+  ): Promise<ExecutionResult> {
+    // Get configuration from new format or legacy format
+    const scheduleConfig = config.scheduleMessageConfig;
+    
+    // Determine schedule type
+    const scheduleType = scheduleConfig?.type || 
+      (config.scheduleType === 'after_inactivity' ? 'after_inactivity' : 'fixed_time');
+    
+    // Get message content
+    const messageText = this.resolvePlaceholders(
+      scheduleConfig?.messageContent || config.messageContent || '', 
+      ctx
+    );
+    
+    if (!messageText) {
+      logger.warn('flow', {
+        action: 'schedule_message_skipped',
+        reason: 'empty_message',
+        sessionId: ctx.sessionId,
+      });
+      return { success: false, output: { error: 'Message content is empty' } };
+    }
+    
+    try {
+      // Build scheduled message params
+      const scheduleParams: any = {
+        sessionId: ctx.sessionId,
+        chatId: ctx.chatId,
+        type: scheduleType,
+        message: { text: messageText },
+        createdBy: 'system',
+      };
+      
+      // Add type-specific config
+      if (scheduleType === 'after_inactivity') {
+        scheduleParams.delayMinutes = scheduleConfig?.delayMinutes || config.scheduleDelay || 30;
+      } else if (scheduleType === 'fixed_time' && scheduleConfig?.scheduledAt) {
+        scheduleParams.scheduledAt = new Date(scheduleConfig.scheduledAt);
+      } else if (scheduleType === 'on_event' && scheduleConfig?.triggerEvent) {
+        scheduleParams.triggerEvent = scheduleConfig.triggerEvent;
+      }
+      
+      // Add expiration if configured
+      if (scheduleConfig?.expiresInHours) {
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + scheduleConfig.expiresInHours);
+        scheduleParams.expiresAt = expiresAt;
+      }
+      
+      // Create the scheduled message
+      const result = await createScheduledMessage(scheduleParams);
+      
+      logger.info('flow', {
+        action: 'schedule_message_created',
+        scheduledMessageId: result?._id?.toString(),
+        type: scheduleType,
+        sessionId: ctx.sessionId,
+        delayMinutes: scheduleParams.delayMinutes,
+        scheduledAt: scheduleParams.scheduledAt,
+        triggerEvent: scheduleParams.triggerEvent,
+      });
+      
+      return { 
+        success: !!result, 
+        output: { 
+          scheduledMessageId: result?._id?.toString(),
+          scheduleType,
+          scheduledAt: scheduleParams.scheduledAt,
+          delayMinutes: scheduleParams.delayMinutes,
+        } 
+      };
+    } catch (error) {
+      logger.error('flow', {
+        action: 'schedule_message_failed',
+        error: error instanceof Error ? error.message : String(error),
+        sessionId: ctx.sessionId,
+      });
+      
+      return { 
+        success: false, 
+        output: { error: error instanceof Error ? error.message : 'Failed to schedule message' } 
+      };
+    }
+  }
+
+  /**
+   * Execute a message block and return the message ID
+   */
+  private async executeMessageBlockWithId(
+    block: MessageBlock,
+    chatId: number,
+    ctx: ExecutionContext,
+    replyMarkup?: any
+  ): Promise<number | null | false> {
+    const parseMode = (block as any).parseMode as 'Markdown' | 'MarkdownV2' | 'HTML' | undefined;
+
+    switch (block.type) {
+      case 'text': {
+        const content = this.resolvePlaceholders(block.content || '', ctx);
+        logger.info('flow', {
+          action: 'send_block_text',
+          originalContent: block.content,
+          resolvedContent: content,
+          availableVariables: JSON.stringify(ctx.variables),
+        });
+        if (!content) return null; // Empty text is ok
+        return await sendMessageWithId(chatId, content, { replyMarkup, parseMode });
+      }
+
+      case 'image': {
+        if (!block.url) return false;
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
+        return await sendPhotoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+      }
+
+      case 'document': {
+        if (!block.url) return false;
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
+        return await sendDocumentWithId(chatId, block.url, {
+          caption,
+          fileName: (block as any).filename,
+          replyMarkup,
+          parseMode,
+        });
+      }
+
+      case 'audio': {
+        if (!block.url) return false;
+        if ((block as any).isVoiceNote) {
+          return await sendVoice(chatId, block.url, { replyMarkup }) ? null : false;
+        } else {
+          return await sendAudio(chatId, block.url, { replyMarkup }) ? null : false;
+        }
+      }
+
+      case 'video': {
+        if (!block.url) return false;
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
+        return await sendVideoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+      }
+
+      case 'delay': {
+        const seconds = (block as any).seconds || 1;
+        await this.sleep(seconds * 1000);
+        return null;
+      }
+
+      default:
+        logger.warn('flow', { action: 'unknown_block_type', type: (block as any).type });
+        return null;
+    }
+  }
+
+  /**
+   * Execute a single message block
+   */
+  private async executeMessageBlock(
+    block: MessageBlock,
+    chatId: number,
+    ctx: ExecutionContext,
+    replyMarkup?: InlineKeyboardMarkup | ReplyKeyboardMarkup
+  ): Promise<boolean> {
+    // Get parseMode from block (if supported)
+    const parseMode = (block as any).parseMode as 'Markdown' | 'MarkdownV2' | 'HTML' | undefined;
+
+    switch (block.type) {
+      case 'text': {
+        const content = this.resolvePlaceholders(block.content || '', ctx);
+        if (!content) return true; // Empty text is ok
+        return await sendMessage(chatId, content, { replyMarkup, parseMode });
+      }
+
+      case 'image': {
+        if (!block.url) return false;
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
+        return await sendPhoto(chatId, block.url, { caption, replyMarkup, parseMode });
+      }
+
+      case 'document': {
+        if (!block.url) return false;
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
+        return await sendDocument(chatId, block.url, {
+          caption,
+          fileName: block.filename,
+          replyMarkup,
+          parseMode,
+        });
+      }
+
+      case 'audio': {
+        if (!block.url) return false;
+        if (block.isVoiceNote) {
+          return await sendVoice(chatId, block.url, { replyMarkup });
+        } else {
+          return await sendAudio(chatId, block.url, { replyMarkup });
+        }
+      }
+
+      case 'video': {
+        if (!block.url) return false;
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
+        return await sendVideo(chatId, block.url, { caption, replyMarkup, parseMode });
+      }
+
+      case 'delay': {
+        const seconds = block.seconds || 1;
+        await this.sleep(seconds * 1000);
+        return true;
+      }
+
+      default:
+        logger.warn('flow', { action: 'unknown_block_type', type: (block as any).type });
+        return true;
+    }
+  }
+
+  /**
+   * Build Telegram keyboard from config
+   * Generates callback_data with flow routing information
+   */
+  private buildKeyboard(config: KeyboardConfig, flowId?: string, nodeId?: string): InlineKeyboardMarkup | ReplyKeyboardMarkup | undefined {
+    if (!config.rows || config.rows.length === 0) return undefined;
+
+    if (config.type === 'inline') {
+      const inline_keyboard = config.rows.map(row =>
+        row.buttons.map(btn => {
+          // Generate callback_data with flow routing info
+          // Format: flow:{flowId}:node:{nodeId}:btn:{btnId}:{mode}
+          const mode = btn.onClick?.mode || 'continue';
+          const callbackData = btn.callbackData ||
+            `flow:${flowId || 'unknown'}:node:${nodeId || 'unknown'}:btn:${btn.id}:${mode}`;
+
+          // If it's a URL button, use url parameter
+          if (mode === 'url' && (btn.onClick?.url || btn.url)) {
+            return {
+              text: btn.text,
+              url: btn.onClick?.url || btn.url,
+            };
+          }
+
+          return {
+            text: btn.text,
+            callback_data: callbackData,
+          };
+        })
+      );
+      return { inline_keyboard };
+    } else if (config.type === 'reply') {
+      const keyboard = config.rows.map(row =>
+        row.buttons.map(btn => ({
+          text: btn.text,
+        }))
+      );
+      return {
+        keyboard,
+        one_time_keyboard: config.oneTimeKeyboard ?? true,
+        resize_keyboard: config.resizeKeyboard ?? true,
+        input_field_placeholder: config.placeholder,
+      } as ReplyKeyboardMarkup;
+    } else if (config.type === 'remove') {
+      return { remove_keyboard: true } as any;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Sleep utility
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // ============= WAITING EXECUTIONS =============
@@ -858,6 +2370,7 @@ export class FlowEngine {
    * Process executions that are waiting
    */
   private async processWaitingExecutions(): Promise<void> {
+    // console.log('Processing waiting executions...');
     // Find paused executions that are ready to resume
     const executions = await FlowExecution.find({
       status: 'paused',
@@ -899,7 +2412,7 @@ export class FlowEngine {
    */
   async cancelSessionExecutions(sessionId: string, reason: string): Promise<number> {
     const result = await FlowExecution.updateMany(
-      { 
+      {
         sessionId,
         status: { $in: ['pending', 'running', 'paused'] },
       },
@@ -915,25 +2428,1468 @@ export class FlowEngine {
   }
 
   /**
-   * Resume executions waiting for user response
+   * Resume execution from a button click
+   * Handles continue and goto_node modes
    */
-  async resumeOnUserResponse(sessionId: string): Promise<void> {
+  async resumeFromButton(
+    flowId: string,
+    nodeId: string,
+    buttonId: string,
+    mode: 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none',
+    sessionId: string,
+    buttonData: Record<string, any>
+  ): Promise<boolean> {
+    logger.info('flow', {
+      action: 'resume_from_button',
+      flowId,
+      nodeId,
+      buttonId,
+      mode,
+      sessionId,
+    });
+
+    // Find active execution for this session and flow
+    // Also look for executions paused waiting for button click
+    const execution = await FlowExecution.findOne({
+      flowId,
+      sessionId,
+      status: { $in: ['running', 'paused'] },
+    });
+
+    if (!execution) {
+      logger.info('flow', {
+        action: 'no_execution_for_button',
+        flowId,
+        sessionId,
+        reason: 'No active execution found',
+      });
+      return false;
+    }
+
+    // Verify the execution is actually waiting for this button
+    if (execution.status === 'paused' && execution.waitingFor === 'button_click') {
+      logger.info('flow', {
+        action: 'execution_waiting_for_button',
+        executionId: execution._id.toString(),
+        currentNodeId: execution.currentNodeId,
+        expectedNodeId: nodeId,
+      });
+    }
+
+    const flow = await Flow.findById(flowId);
+    if (!flow) {
+      logger.warn('flow', { action: 'flow_not_found', flowId });
+      return false;
+    }
+
+    // Store button click data in context
+    execution.context.variables._lastButtonClick = {
+      buttonId,
+      nodeId,
+      mode,
+      timestamp: new Date().toISOString(),
+      ...buttonData.button,
+    };
+    execution.markModified('context');
+
+    // Get the node that has this button
+    const sourceNode = flow.nodes.find(n => n.id === nodeId);
+    if (!sourceNode) {
+      logger.warn('flow', { action: 'node_not_found', nodeId });
+      return false;
+    }
+
+    // Find edge connected to this button handle
+    const expectedHandle = `btn-${buttonId}`;
+    const allEdgesFromNode = flow.edges.filter(e => e.source === nodeId);
+    const buttonEdge = flow.edges.find(e =>
+      e.source === nodeId && e.sourceHandle === expectedHandle
+    );
+
+    logger.info('flow', {
+      action: 'looking_for_button_edge',
+      nodeId,
+      buttonId,
+      expectedHandle,
+      allEdgesFromNode: allEdgesFromNode.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle
+      })),
+      foundButtonEdge: buttonEdge ? { target: buttonEdge.target, handle: buttonEdge.sourceHandle } : null,
+    });
+
+    let nextNodeId: string | undefined;
+
+    if (mode === 'goto_node' && buttonData.button?.targetNodeId) {
+      // Explicit target node from button config
+      nextNodeId = buttonData.button.targetNodeId;
+    } else if (buttonEdge) {
+      // Use connected edge
+      nextNodeId = buttonEdge.target;
+    } else {
+      // Fall back to default output
+      const defaultEdge = flow.edges.find(e =>
+        e.source === nodeId && (!e.sourceHandle || e.sourceHandle === 'default')
+      );
+      nextNodeId = defaultEdge?.target;
+
+      logger.info('flow', {
+        action: 'button_edge_not_found_using_default',
+        nodeId,
+        buttonId,
+        defaultEdgeTarget: nextNodeId,
+      });
+    }
+
+    if (!nextNodeId) {
+      logger.info('flow', {
+        action: 'no_next_node_for_button',
+        nodeId,
+        buttonId,
+      });
+      // Complete the execution if no next node
+      execution.complete();
+      await execution.save();
+      return true;
+    }
+
+    // Check if we should edit the last message instead of sending new
+    const messageMode = buttonData.button?.onClick?.messageMode || 'send_new';
+
+    // If messageMode is 'edit_message', we need to find the last message sent
+    // and edit it instead of sending a new one and continuing the flow
+    if (messageMode === 'edit_message' && execution.context.lastMessageId) {
+      logger.info('flow', {
+        action: 'edit_mode_message',
+        nodeId,
+        buttonId,
+        lastMessageId: execution.context.lastMessageId,
+      });
+
+      // Get the next node to get its message content
+      const nextNode = flow.nodes.find(n => n.id === nextNodeId);
+      if (nextNode && nextNode.type === 'action') {
+        const config = nextNode.config as any;
+        if (config.actionType === 'send_message') {
+          let resolvedContent: string | undefined;
+          let parseMode: 'HTML' | 'Markdown' | 'MarkdownV2' = 'HTML';
+          let replyMarkup: any;
+
+          // Handle new messageBlocks format
+          if (config.messageBlocks && config.messageBlocks.length > 0) {
+            const textBlock = config.messageBlocks.find((b: any) => b.type === 'text');
+            if (textBlock && textBlock.content) {
+              resolvedContent = this.resolvePlaceholders(textBlock.content, execution.context);
+              if (textBlock.parseMode) {
+                parseMode = textBlock.parseMode;
+              }
+              // Build keyboard from first text block if it has one
+              if (textBlock.keyboard) {
+                replyMarkup = this.buildKeyboard(
+                  textBlock.keyboard,
+                  flow._id?.toString(),
+                  nextNodeId
+                );
+              }
+            }
+          } else if (config.messageContent) {
+            // Handle legacy format
+            resolvedContent = this.resolvePlaceholders(config.messageContent, execution.context);
+            if (config.keyboard) {
+              replyMarkup = this.buildKeyboard(
+                config.keyboard,
+                flow._id?.toString(),
+                nextNodeId
+              );
+            }
+          }
+
+          if (resolvedContent) {
+            // Edit the message instead of sending a new one
+            await editMessage(
+              execution.context.chatId,
+              execution.context.lastMessageId,
+              resolvedContent,
+              { replyMarkup, parseMode }
+            );
+
+            // Add step for button click
+            const step: ExecutionStep = {
+              nodeId,
+              nodeType: 'button_click',
+              nodeLabel: `Botón: ${buttonData.button?.text || buttonId} (edición)`,
+              status: 'completed',
+              startedAt: new Date(),
+              completedAt: new Date(),
+              retryCount: 0,
+              output: {
+                type: 'button_click',
+                buttonId,
+                buttonText: buttonData.button?.text,
+                messageEdited: true,
+                messageId: execution.context.lastMessageId,
+              },
+            };
+            execution.steps.push(step);
+
+            // The message has been edited with content from nextNode
+            // Now check if nextNode has buttons - if so, pause and wait for button click
+            // If not, complete the execution
+            const nextNodeConfig = nextNode.config as any;
+            const hasKeyboard = nextNodeConfig?.keyboard?.rows?.length > 0 ||
+              nextNodeConfig?.messageBlocks?.some((b: any) => b.keyboard?.rows?.length > 0);
+
+            if (hasKeyboard) {
+              // Has buttons - pause and wait for next button click
+              execution.pause('button_click');
+              execution.currentNodeId = nextNodeId;
+              execution.nextNodeId = null;
+              await execution.save();
+
+              logger.info('flow', {
+                action: 'paused_after_edit_waiting_for_buttons',
+                nodeId,
+                nextNodeId,
+                buttonId,
+                messageId: execution.context.lastMessageId,
+              });
+            } else {
+              // No buttons - complete the execution
+              execution.complete();
+              await execution.save();
+
+              logger.info('flow', {
+                action: 'completed_after_edit_no_buttons',
+                nodeId,
+                nextNodeId,
+                buttonId,
+                messageId: execution.context.lastMessageId,
+              });
+            }
+
+            return true;
+          }
+        }
+      }
+
+      // If we can't edit (no messageId, no next node, etc), fall through to normal button handling
+      logger.warn('flow', {
+        action: 'edit_mode_failed_falling_back',
+        nodeId,
+        buttonId,
+        reason: 'Could not edit message, falling back to normal handling',
+      });
+    }
+
+    // Add step for button click
+    const step: ExecutionStep = {
+      nodeId,
+      nodeType: 'button_click',
+      nodeLabel: `Botón: ${buttonData.button?.text || buttonId}`,
+      status: 'completed',
+      startedAt: new Date(),
+      completedAt: new Date(),
+      retryCount: 0,
+      output: {
+        type: 'button_click',
+        buttonId,
+        buttonText: buttonData.button?.text,
+        nextNodeId,
+      },
+    };
+    execution.steps.push(step);
+
+    // Resume and continue to next node
+    execution.resume();
+    await execution.save();
+
+    // Execute from next node
+    await this.executeFromNode(execution, flow, nextNodeId);
+    return true;
+  }
+
+  /**
+   * Start a flow execution from a specific node
+   * Used when a button with goto_node is clicked but no active execution exists
+   */
+  async startFlowFromNode(
+    flowId: string,
+    startNodeId: string,
+    sessionId: string,
+    chatId: number,
+    userId: number,
+    data: Record<string, any> = {}
+  ): Promise<IFlowExecution | null> {
+    logger.info('flow', {
+      action: 'start_flow_from_node',
+      flowId,
+      startNodeId,
+      sessionId,
+      chatId,
+    });
+
+    // Get the flow
+    const flow = await Flow.findById(flowId);
+    if (!flow) {
+      logger.warn('flow', { action: 'flow_not_found', flowId });
+      return null;
+    }
+
+    // Verify the node exists
+    const targetNode = flow.nodes.find(n => n.id === startNodeId);
+    if (!targetNode) {
+      logger.warn('flow', { action: 'target_node_not_found', flowId, startNodeId });
+      return null;
+    }
+
+    // Build execution context with user data
+    const userInfo = data.user || {};
+    const now = new Date();
+    const context: ExecutionContext = {
+      triggerType: 'button_clicked',
+      triggerData: {
+        buttonId: data.button?.id,
+        targetNodeId: startNodeId,
+        startedFromButton: true,
+      },
+      sessionId,
+      chatId,
+      userId,
+      user: {
+        id: userId,
+        firstName: userInfo.firstName || '',
+        lastName: userInfo.lastName,
+        username: userInfo.username,
+        language: userInfo.language,
+      },
+      variables: {
+        button: data.button || {},
+        _startedFromNode: startNodeId,
+      },
+      startedAt: now,
+      lastActiveAt: now,
+    };
+
+    // Start execution from the specified node
+    const execution = await this.startExecution(flow, context, startNodeId);
+
+    logger.info('flow', {
+      action: 'flow_started_from_node',
+      executionId: execution._id.toString(),
+      flowId,
+      startNodeId,
+    });
+
+    return execution;
+  }
+
+  /**
+   * Resume executions waiting for user response
+   * Also handles data collection validation
+   */
+  async resumeOnUserResponse(sessionId: string, userResponse?: string): Promise<void> {
+    // Don't resume executions that were paused very recently (within 2 seconds)
+    // This prevents the message that triggered the flow from also resuming it
+    const minPausedAt = new Date(Date.now() - 2000);
+    
     const executions = await FlowExecution.find({
       sessionId,
       status: 'paused',
       waitingFor: 'response',
+      pausedAt: { $lt: minPausedAt },
+    });
+
+    logger.info('flow', {
+      action: 'resume_on_user_response',
+      sessionId,
+      executionsFound: executions.length,
+      hasResponse: !!userResponse,
     });
 
     for (const execution of executions) {
       const flow = await Flow.findById(execution.flowId);
       if (!flow) continue;
 
+      // Check for data collection config
+      const dcConfig = execution.context.variables._dataCollection;
+      
+      logger.info('flow', {
+        action: 'resume_checking_data_collection',
+        executionId: execution._id.toString(),
+        hasDataCollection: !!dcConfig,
+        variablesFromDB: JSON.stringify(execution.context.variables),
+        userResponse: userResponse?.substring(0, 50),
+      });
+      
+      if (dcConfig && userResponse) {
+        // Validate the response
+        const validation = this.validateResponse(userResponse, dcConfig);
+
+        if (!validation.valid) {
+          // Increment retry count
+          dcConfig.retryCount = (dcConfig.retryCount || 0) + 1;
+          
+          // Update the config in execution context
+          execution.context.variables._dataCollection = dcConfig;
+          execution.markModified('context');
+          execution.markModified('context.variables');
+
+          logger.info('flow', {
+            action: 'data_collection_retry',
+            retryCount: dcConfig.retryCount,
+            maxRetries: dcConfig.maxRetries,
+            variableName: dcConfig.variableName,
+          });
+
+          if (dcConfig.retryCount >= (dcConfig.maxRetries || 3)) {
+            // Max retries reached - fail or continue
+            logger.warn('flow', {
+              action: 'data_collection_max_retries',
+              sessionId,
+              variableName: dcConfig.variableName,
+              retryCount: dcConfig.retryCount,
+            });
+            // Continue with empty value
+            execution.context.variables[dcConfig.variableName] = '';
+            delete execution.context.variables._dataCollection;
+            execution.markModified('context');
+            execution.markModified('context.variables');
+          } else {
+            // Send error message and wait again
+            const errorMsg = dcConfig.errorMessage || validation.error || 'Respuesta inválida';
+            await sendMessage(execution.chatId, `❌ ${errorMsg}\n\nPor favor intenta de nuevo. (Intento ${dcConfig.retryCount}/${dcConfig.maxRetries || 3})`);
+            await execution.save();
+            continue; // Don't resume yet
+          }
+        } else {
+          // Valid response - store it
+          const varName = dcConfig.variableName;
+          execution.context.variables[varName] = userResponse;
+          delete execution.context.variables._dataCollection;
+          
+          // Mark context as modified for Mongoose to detect nested changes
+          execution.markModified('context');
+          execution.markModified('context.variables');
+
+          logger.info('flow', {
+            action: 'variable_stored',
+            variableName: varName,
+            value: userResponse,
+            variablesNow: JSON.stringify(execution.context.variables),
+            contextVariablesRef: typeof execution.context.variables,
+          });
+
+          // Also save to user's custom fields using the proper service
+          const user = await User.findOne({ telegramId: execution.context.userId });
+          if (user) {
+            // Convert value type based on content
+            let typedValue: string | number | boolean = userResponse;
+            if (userResponse === 'true') typedValue = true;
+            else if (userResponse === 'false') typedValue = false;
+            else if (!isNaN(Number(userResponse)) && userResponse !== '') typedValue = Number(userResponse);
+            
+            await setUserFieldByKey(user._id!.toString(), varName, typedValue);
+          }
+
+          logger.info('flow', {
+            action: 'data_collection_success',
+            sessionId,
+            variableName: varName,
+            value: userResponse.substring(0, 50),
+            allVariables: JSON.stringify(execution.context.variables),
+          });
+        }
+      }
+
       execution.resume();
+      
+      // Store variables before save to ensure they persist
+      const savedVariables = { ...execution.context.variables };
+      
       await execution.save();
+      
+      // Restore variables to execution context (in case Mongoose reset them)
+      execution.context.variables = savedVariables;
+
+      logger.info('flow', {
+        action: 'resuming_after_data_collection',
+        executionId: execution._id.toString(),
+        nextNodeId: execution.nextNodeId,
+        variablesAfterSave: JSON.stringify(execution.context.variables),
+      });
 
       if (execution.nextNodeId) {
         await this.executeFromNode(execution, flow, execution.nextNodeId);
+      } else {
+        logger.warn('flow', {
+          action: 'no_next_node_after_resume',
+          executionId: execution._id.toString(),
+        });
       }
+    }
+  }
+
+  // ============= SIMULATION =============
+
+  /**
+   * Simulate flow execution without side effects
+   * Returns step-by-step what would happen
+   */
+  async simulateFlow(
+    flow: IFlow,
+    context: Partial<ExecutionContext>
+  ): Promise<{
+    success: boolean;
+    steps: Array<{
+      nodeId: string;
+      nodeType: string;
+      nodeLabel: string;
+      status: 'executed' | 'skipped' | 'would_execute' | 'error';
+      duration?: number;
+      output?: any;
+      error?: string;
+      actionSkipped?: boolean;
+      conditionResult?: boolean;
+    }>;
+    totalDuration: number;
+    errors: string[];
+    warnings: string[];
+  }> {
+    const steps: Array<{
+      nodeId: string;
+      nodeType: string;
+      nodeLabel: string;
+      status: 'executed' | 'skipped' | 'would_execute' | 'error';
+      duration?: number;
+      output?: any;
+      error?: string;
+      actionSkipped?: boolean;
+      conditionResult?: boolean;
+    }> = [];
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const startTime = Date.now();
+
+    // Build full context with defaults
+    const fullContext: ExecutionContext = {
+      triggerType: context.triggerType || 'chat_created',
+      triggerData: context.triggerData || {},
+      sessionId: context.sessionId || 'sim_session_001',
+      chatId: context.chatId || 123456789,
+      userId: context.userId || 987654321,
+      user: context.user || {
+        id: 987654321,
+        firstName: 'Test',
+        lastName: 'User',
+        username: 'testuser',
+        language: 'es',
+      },
+      agent: context.agent,
+      message: context.message,
+      variables: context.variables || {},
+      startedAt: new Date(),
+      lastActiveAt: new Date(),
+    };
+
+    // Find trigger node
+    const triggerNode = flow.nodes.find(n => n.type === 'trigger');
+    if (!triggerNode) {
+      errors.push('No trigger node found');
+      return { success: false, steps, totalDuration: 0, errors, warnings };
+    }
+
+    // Execute flow simulation
+    let currentNodeId: string | null = triggerNode.id;
+    let iterations = 0;
+    const maxIterations = 100;
+
+    while (currentNodeId && iterations < maxIterations) {
+      iterations++;
+      const nodeStart = Date.now();
+
+      const node = flow.nodes.find(n => n.id === currentNodeId);
+      if (!node) {
+        errors.push(`Node not found: ${currentNodeId}`);
+        break;
+      }
+
+      const step: typeof steps[0] = {
+        nodeId: node.id,
+        nodeType: node.type,
+        nodeLabel: node.label,
+        status: 'executed',
+        duration: 0,
+      };
+
+      try {
+        switch (node.type) {
+          case 'trigger':
+            // Trigger just passes through
+            step.output = { triggered: true, type: (node.config as any)?.triggerType };
+            break;
+
+          case 'condition':
+            // Actually evaluate condition
+            const condConfig = node.config as ConditionConfig;
+            const condResult = this.evaluateConditions(condConfig, fullContext);
+            step.conditionResult = condResult;
+            step.output = { conditionResult: condResult };
+            break;
+
+          case 'action':
+            // Mark actions as "would_execute" - don't actually run them
+            step.status = 'would_execute';
+            step.actionSkipped = true;
+            const actionConfig = node.config as ActionConfig;
+            step.output = {
+              actionType: actionConfig.actionType,
+              wouldDo: this.describeAction(actionConfig, fullContext),
+            };
+            break;
+
+          case 'delay':
+            // Show what delay would happen
+            const delayConfig = node.config as DelayConfig;
+            step.status = 'would_execute';
+            step.output = {
+              delayType: delayConfig.delayType,
+              delayMinutes: delayConfig.delayMinutes,
+              description: `Would wait ${delayConfig.delayMinutes || 0} minutes`,
+            };
+            break;
+
+          case 'end':
+            step.output = { flowCompleted: true };
+            break;
+        }
+      } catch (error) {
+        step.status = 'error';
+        step.error = String(error);
+        errors.push(`Error at node "${node.label}": ${error}`);
+      }
+
+      step.duration = Date.now() - nodeStart;
+      steps.push(step);
+
+      // Get next node
+      if (node.type === 'end') {
+        break;
+      }
+
+      const edges = flow.edges.filter(e => e.source === currentNodeId);
+      if (edges.length === 0) {
+        warnings.push(`Node "${node.label}" has no outgoing connections`);
+        break;
+      }
+
+      // For conditions, follow the correct branch
+      if (step.conditionResult !== undefined) {
+        const branch = step.conditionResult ? 'true' : 'false';
+        const matchingEdge = edges.find(e => e.sourceHandle === branch);
+        currentNodeId = matchingEdge?.target || null;
+
+        if (!currentNodeId) {
+          warnings.push(`No ${branch.toUpperCase()} path found for condition "${node.label}"`);
+        }
+      } else {
+        currentNodeId = edges[0].target;
+      }
+    }
+
+    if (iterations >= maxIterations) {
+      errors.push('Maximum iterations exceeded - possible infinite loop');
+    }
+
+    return {
+      success: errors.length === 0,
+      steps,
+      totalDuration: Date.now() - startTime,
+      errors,
+      warnings,
+    };
+  }
+
+  // ============= NEW TELEGRAM ACTION IMPLEMENTATIONS =============
+
+  /**
+   * Edit a previously sent message
+   */
+  private async executeEditMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const editConfig = (config as any).editMessageConfig;
+    if (!editConfig) {
+      return { success: false, error: 'No edit message config provided' };
+    }
+
+    // Get message ID based on target type
+    let messageId: number | null = null;
+
+    switch (editConfig.targetType) {
+      case 'last_bot_message':
+        messageId = execution.context.variables._lastBotMessageId;
+        break;
+      case 'variable':
+        messageId = execution.context.variables[editConfig.messageIdVariable || ''];
+        break;
+      case 'specific_id':
+        messageId = editConfig.specificMessageId;
+        break;
+    }
+
+    if (!messageId) {
+      return { success: false, error: 'No message ID found to edit' };
+    }
+
+    const newText = this.resolvePlaceholders(editConfig.newText || '', ctx);
+    
+    // Build keyboard if needed
+    let replyMarkup: InlineKeyboardMarkup | undefined;
+    if (editConfig.updateKeyboard && editConfig.newKeyboard) {
+      replyMarkup = this.buildInlineKeyboardFromConfig(editConfig.newKeyboard);
+    }
+
+    const success = await editMessage(ctx.chatId, messageId, newText, {
+      parseMode: editConfig.parseMode || 'HTML',
+      replyMarkup,
+    });
+
+    logger.info('flow', {
+      action: 'edit_message',
+      chatId: ctx.chatId,
+      messageId,
+      success,
+    });
+
+    return { success };
+  }
+
+  /**
+   * Delete a message
+   */
+  private async executeDeleteMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const deleteConfig = (config as any).deleteMessageConfig;
+    if (!deleteConfig) {
+      return { success: false, error: 'No delete message config provided' };
+    }
+
+    let messageId: number | null = null;
+
+    switch (deleteConfig.targetType) {
+      case 'last_bot_message':
+        messageId = execution.context.variables._lastBotMessageId;
+        break;
+      case 'last_user_message':
+        messageId = ctx.message?.id ? parseInt(ctx.message.id, 10) : null;
+        break;
+      case 'variable':
+        messageId = execution.context.variables[deleteConfig.messageIdVariable || ''];
+        break;
+      case 'specific_id':
+        messageId = deleteConfig.specificMessageId;
+        break;
+    }
+
+    if (!messageId) {
+      return { success: false, error: 'No message ID found to delete' };
+    }
+
+    const success = await deleteMessage(ctx.chatId, messageId);
+
+    logger.info('flow', {
+      action: 'delete_message',
+      chatId: ctx.chatId,
+      messageId,
+      success,
+    });
+
+    return { success };
+  }
+
+  /**
+   * Edit inline keyboard of a message
+   */
+  private async executeEditKeyboard(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const kbConfig = (config as any).editKeyboardConfig;
+    if (!kbConfig) {
+      return { success: false, error: 'No edit keyboard config provided' };
+    }
+
+    let messageId: number | null = null;
+
+    switch (kbConfig.targetType) {
+      case 'last_bot_message':
+        messageId = execution.context.variables._lastBotMessageId;
+        break;
+      case 'variable':
+        messageId = execution.context.variables[kbConfig.messageIdVariable || ''];
+        break;
+      case 'specific_id':
+        messageId = kbConfig.specificMessageId;
+        break;
+    }
+
+    if (!messageId) {
+      return { success: false, error: 'No message ID found to edit keyboard' };
+    }
+
+    let newKeyboard: InlineKeyboardMarkup | undefined;
+    
+    switch (kbConfig.operation) {
+      case 'replace':
+      case 'add_row':
+        if (kbConfig.newKeyboard) {
+          newKeyboard = this.buildInlineKeyboardFromConfig(kbConfig.newKeyboard);
+        }
+        break;
+      case 'remove':
+        newKeyboard = undefined; // Will remove keyboard
+        break;
+      case 'disable_button':
+        // TODO: Get current keyboard, find button, mark as disabled
+        logger.warn('flow', { action: 'disable_button_not_implemented' });
+        break;
+    }
+
+    const success = await editMessageReplyMarkup(ctx.chatId, messageId, newKeyboard);
+
+    logger.info('flow', {
+      action: 'edit_keyboard',
+      chatId: ctx.chatId,
+      messageId,
+      operation: kbConfig.operation,
+      success,
+    });
+
+    return { success };
+  }
+
+  /**
+   * Remove inline keyboard from a message
+   */
+  private async executeRemoveKeyboard(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const messageId = execution.context.variables._lastBotMessageId;
+    
+    if (!messageId) {
+      return { success: false, error: 'No message ID found to remove keyboard' };
+    }
+
+    const success = await editMessageReplyMarkup(ctx.chatId, messageId);
+
+    logger.info('flow', {
+      action: 'remove_keyboard',
+      chatId: ctx.chatId,
+      messageId,
+      success,
+    });
+
+    return { success };
+  }
+
+  /**
+   * Send a reply keyboard (persistent menu)
+   */
+  private async executeSendReplyKeyboard(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const kbConfig = (config as any).replyKeyboardConfig;
+    if (!kbConfig || !kbConfig.rows) {
+      return { success: false, error: 'No reply keyboard config provided' };
+    }
+
+    // Build keyboard
+    const keyboard = kbConfig.rows.map((row: any) =>
+      row.buttons.map((btn: any) => {
+        const button: any = { text: btn.text };
+        if (btn.type === 'contact') button.request_contact = true;
+        if (btn.type === 'location') button.request_location = true;
+        if (btn.type === 'poll') button.request_poll = { type: btn.pollType };
+        return button;
+      })
+    );
+
+    const replyMarkup = buildReplyKeyboard({
+      keyboard,
+      resizeKeyboard: kbConfig.resizeKeyboard ?? true,
+      oneTimeKeyboard: kbConfig.oneTimeKeyboard ?? false,
+      inputFieldPlaceholder: kbConfig.inputPlaceholder,
+      isPersistent: kbConfig.isPersistent,
+    });
+
+    const messageText = this.resolvePlaceholders(kbConfig.messageText || 'Selecciona una opción:', ctx);
+    
+    const msgId = await sendMessageWithId(ctx.chatId, messageText, {
+      replyMarkup,
+      parseMode: 'HTML',
+    });
+
+    if (msgId) {
+      execution.context.variables._lastBotMessageId = msgId;
+      execution.markModified('context.variables');
+    }
+
+    logger.info('flow', {
+      action: 'send_reply_keyboard',
+      chatId: ctx.chatId,
+      buttonCount: keyboard.flat().length,
+    });
+
+    return { success: !!msgId };
+  }
+
+  /**
+   * Remove reply keyboard
+   */
+  private async executeRemoveReplyKeyboard(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const removeMarkup = buildReplyKeyboardRemove();
+
+    const msgId = await sendMessageWithId(ctx.chatId, '...', {
+      replyMarkup: removeMarkup,
+    });
+
+    // Delete the placeholder message after a brief moment
+    if (msgId) {
+      setTimeout(async () => {
+        await deleteMessage(ctx.chatId, msgId);
+      }, 500);
+    }
+
+    logger.info('flow', {
+      action: 'remove_reply_keyboard',
+      chatId: ctx.chatId,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Send a chat action (typing, upload_photo, etc.)
+   */
+  private async executeSendChatAction(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const actionConfig = (config as any).chatActionConfig;
+    const action = (actionConfig?.action || 'typing') as ChatAction;
+    const duration = (actionConfig?.simulateDuration || 0) * 1000;
+
+    if (duration > 0) {
+      // Simulate typing for the specified duration
+      await simulateTyping(ctx.chatId, duration);
+    } else {
+      // Just send the action once
+      await sendChatAction(ctx.chatId, action);
+    }
+
+    logger.info('flow', {
+      action: 'send_chat_action',
+      chatId: ctx.chatId,
+      actionType: action,
+      duration,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Pin a message
+   */
+  private async executePinMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const pinConfig = (config as any).pinMessageConfig;
+    
+    let messageId: number | null = null;
+
+    switch (pinConfig?.targetType || 'last_bot_message') {
+      case 'last_bot_message':
+        messageId = execution.context.variables._lastBotMessageId;
+        break;
+      case 'variable':
+        messageId = execution.context.variables[pinConfig.messageIdVariable || ''];
+        break;
+      case 'specific_id':
+        messageId = pinConfig.specificMessageId;
+        break;
+    }
+
+    if (!messageId) {
+      return { success: false, error: 'No message ID found to pin' };
+    }
+
+    const success = await pinChatMessage(ctx.chatId, messageId, {
+      disableNotification: pinConfig?.disableNotification ?? true,
+    });
+
+    logger.info('flow', {
+      action: 'pin_message',
+      chatId: ctx.chatId,
+      messageId,
+      success,
+    });
+
+    return { success };
+  }
+
+  /**
+   * Unpin a message
+   */
+  private async executeUnpinMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const unpinConfig = (config as any).pinMessageConfig;
+    
+    let messageId: number | undefined;
+
+    if (unpinConfig?.targetType === 'specific_id' && unpinConfig.specificMessageId) {
+      messageId = unpinConfig.specificMessageId;
+    } else if (unpinConfig?.targetType === 'variable' && unpinConfig.messageIdVariable) {
+      messageId = execution.context.variables[unpinConfig.messageIdVariable];
+    }
+
+    const success = await unpinChatMessage(ctx.chatId, messageId);
+
+    logger.info('flow', {
+      action: 'unpin_message',
+      chatId: ctx.chatId,
+      messageId,
+      success,
+    });
+
+    return { success };
+  }
+
+  /**
+   * Save a message ID to a variable
+   */
+  private executeSaveMessageId(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): ExecutionResult {
+    const saveConfig = (config as any).saveMessageIdConfig;
+    if (!saveConfig?.variableName) {
+      return { success: false, error: 'No variable name provided' };
+    }
+
+    let messageId: number | string | null = null;
+
+    switch (saveConfig.messageSource) {
+      case 'last_bot_message':
+        messageId = execution.context.variables._lastBotMessageId ?? null;
+        break;
+      case 'last_user_message':
+        messageId = ctx.message?.id ?? null;
+        break;
+    }
+
+    if (messageId) {
+      execution.context.variables[saveConfig.variableName] = messageId;
+      execution.markModified('context.variables');
+    }
+
+    logger.info('flow', {
+      action: 'save_message_id',
+      variableName: saveConfig.variableName,
+      messageId,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Delay execution for a specified time (without pausing the flow)
+   */
+  private async executeDelayAction(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const delayConfig = (config as any).delayActionConfig;
+    const delaySeconds = delayConfig?.delaySeconds || 0;
+    const showTyping = delayConfig?.showTyping ?? false;
+
+    if (delaySeconds > 0) {
+      if (showTyping) {
+        // Simulate typing during the delay
+        await simulateTyping(ctx.chatId, delaySeconds * 1000);
+      } else {
+        // Just wait
+        await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+      }
+    }
+
+    logger.info('flow', {
+      action: 'delay_action',
+      delaySeconds,
+      showTyping,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Send a location
+   */
+  private async executeSendLocation(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const locConfig = (config as any).locationConfig;
+    if (!locConfig) {
+      return { success: false, error: 'No location config provided' };
+    }
+
+    const latitude = parseFloat(this.resolvePlaceholders(locConfig.latitude || '0', ctx));
+    const longitude = parseFloat(this.resolvePlaceholders(locConfig.longitude || '0', ctx));
+
+    const msgId = await sendLocation(ctx.chatId, latitude, longitude, {
+      livePeriod: locConfig.livePeriod,
+    });
+
+    if (msgId) {
+      execution.context.variables._lastBotMessageId = msgId;
+      execution.markModified('context.variables');
+    }
+
+    logger.info('flow', {
+      action: 'send_location',
+      chatId: ctx.chatId,
+      latitude,
+      longitude,
+    });
+
+    return { success: !!msgId };
+  }
+
+  /**
+   * Send a contact
+   */
+  private async executeSendContact(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const contactConfig = (config as any).contactConfig;
+    if (!contactConfig) {
+      return { success: false, error: 'No contact config provided' };
+    }
+
+    const phoneNumber = this.resolvePlaceholders(contactConfig.phoneNumber || '', ctx);
+    const firstName = this.resolvePlaceholders(contactConfig.firstName || '', ctx);
+    const lastName = contactConfig.lastName 
+      ? this.resolvePlaceholders(contactConfig.lastName, ctx) 
+      : undefined;
+
+    const msgId = await sendContact(ctx.chatId, phoneNumber, firstName, {
+      lastName,
+    });
+
+    if (msgId) {
+      execution.context.variables._lastBotMessageId = msgId;
+      execution.markModified('context.variables');
+    }
+
+    logger.info('flow', {
+      action: 'send_contact',
+      chatId: ctx.chatId,
+      phoneNumber,
+    });
+
+    return { success: !!msgId };
+  }
+
+  /**
+   * Send a sticker
+   */
+  private async executeSendSticker(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const stickerConfig = (config as any).stickerConfig;
+    if (!stickerConfig) {
+      return { success: false, error: 'No sticker config provided' };
+    }
+
+    const sticker = stickerConfig.stickerSource === 'url' 
+      ? stickerConfig.stickerUrl 
+      : stickerConfig.stickerId;
+
+    if (!sticker) {
+      return { success: false, error: 'No sticker ID or URL provided' };
+    }
+
+    const msgId = await sendSticker(ctx.chatId, sticker);
+
+    if (msgId) {
+      execution.context.variables._lastBotMessageId = msgId;
+      execution.markModified('context.variables');
+    }
+
+    logger.info('flow', {
+      action: 'send_sticker',
+      chatId: ctx.chatId,
+      stickerSource: stickerConfig.stickerSource,
+    });
+
+    return { success: !!msgId };
+  }
+
+  /**
+   * Copy a message to another chat or same chat
+   */
+  private async executeCopyMessage(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    // For now, copy the last user message
+    const sourceMessageId = ctx.message?.id ? parseInt(ctx.message.id, 10) : null;
+    
+    if (!sourceMessageId) {
+      return { success: false, error: 'No source message ID found' };
+    }
+
+    const msgId = await copyMessage(ctx.chatId, ctx.chatId, sourceMessageId);
+
+    if (msgId) {
+      execution.context.variables._lastBotMessageId = msgId;
+      execution.markModified('context.variables');
+    }
+
+    logger.info('flow', {
+      action: 'copy_message',
+      chatId: ctx.chatId,
+      sourceMessageId,
+    });
+
+    return { success: !!msgId };
+  }
+
+  /**
+   * Execute a sub-flow
+   */
+  private async executeRunSubflow(
+    config: ActionConfig,
+    ctx: ExecutionContext,
+    execution: IFlowExecution
+  ): Promise<ExecutionResult> {
+    const subflowConfig = (config as any).subflowConfig;
+    if (!subflowConfig?.flowId) {
+      return { success: false, error: 'No subflow ID provided' };
+    }
+
+    // Find the subflow
+    const subflow = await Flow.findById(subflowConfig.flowId);
+    if (!subflow) {
+      return { success: false, error: `Subflow not found: ${subflowConfig.flowId}` };
+    }
+
+    if (!subflow.enabled || subflow.status !== 'published') {
+      return { success: false, error: 'Subflow is not enabled or published' };
+    }
+
+    // Find trigger node
+    const triggerNode = subflow.nodes.find(n => n.type === 'trigger');
+    if (!triggerNode) {
+      return { success: false, error: 'Subflow has no trigger node' };
+    }
+
+    // Build context for subflow
+    const subflowContext: ExecutionContext = {
+      ...ctx,
+      startedAt: new Date(),
+      lastActiveAt: new Date(),
+    };
+
+    // Pass variables if configured
+    if (subflowConfig.passVariables) {
+      if (subflowConfig.variablesToPass && subflowConfig.variablesToPass.length > 0) {
+        // Only pass specified variables
+        subflowContext.variables = {};
+        for (const varName of subflowConfig.variablesToPass) {
+          if (execution.context.variables[varName] !== undefined) {
+            subflowContext.variables[varName] = execution.context.variables[varName];
+          }
+        }
+      } else {
+        // Pass all variables
+        subflowContext.variables = { ...execution.context.variables };
+      }
+    } else {
+      subflowContext.variables = {};
+    }
+
+    logger.info('flow', {
+      action: 'run_subflow_start',
+      parentExecutionId: execution._id.toString(),
+      subflowId: subflow._id.toString(),
+      subflowName: subflow.name,
+    });
+
+    if (subflowConfig.waitForCompletion) {
+      // Execute subflow synchronously
+      const subExecution = await this.startExecution(subflow, subflowContext, triggerNode.id);
+      
+      // Wait for completion (with timeout)
+      const maxWait = 30000; // 30 seconds
+      const startTime = Date.now();
+      
+      while (Date.now() - startTime < maxWait) {
+        const updatedExecution = await FlowExecution.findById(subExecution._id);
+        if (!updatedExecution) break;
+        
+        if (['completed', 'failed', 'cancelled'].includes(updatedExecution.status)) {
+          // Copy variables back to parent
+          if (subflowConfig.passVariables) {
+            Object.assign(execution.context.variables, updatedExecution.context.variables);
+            execution.markModified('context.variables');
+          }
+          
+          return {
+            success: updatedExecution.status === 'completed',
+            output: { subflowStatus: updatedExecution.status },
+          };
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      logger.warn('flow', {
+        action: 'run_subflow_timeout',
+        subflowId: subflow._id.toString(),
+      });
+      
+      return { success: false, error: 'Subflow execution timeout' };
+    } else {
+      // Execute subflow asynchronously (fire and forget)
+      this.startExecution(subflow, subflowContext, triggerNode.id).catch(err => {
+        logger.error('flow', {
+          action: 'run_subflow_async_error',
+          error: String(err),
+        });
+      });
+      
+      return { success: true };
+    }
+  }
+
+  /**
+   * Build inline keyboard from config
+   */
+  private buildInlineKeyboardFromConfig(kbConfig: any): InlineKeyboardMarkup {
+    if (!kbConfig || !kbConfig.rows) {
+      return { inline_keyboard: [] };
+    }
+
+    return {
+      inline_keyboard: kbConfig.rows.map((row: any) =>
+        row.buttons.map((btn: any) => ({
+          text: btn.text,
+          callback_data: btn.callbackData || btn.id,
+          url: btn.url,
+        }))
+      ),
+    };
+  }
+
+  /**
+   * Describe what an action would do (for simulation)
+   */
+  private describeAction(config: ActionConfig, ctx: ExecutionContext): string {
+    switch (config.actionType) {
+      case 'send_message':
+        const msg = this.resolvePlaceholders(config.messageContent || '', ctx);
+        return `Send message: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`;
+      case 'schedule_message':
+        return `Schedule message in ${config.scheduleDelay} minutes`;
+      case 'transfer_chat':
+        return `Transfer chat to agent ${config.targetAgentId}`;
+      case 'assign_agent':
+        return `Assign to agent ${config.targetAgentId}`;
+      case 'change_category':
+        return `Change category to "${config.categoryName}"`;
+      case 'add_tag':
+        return `Add tag "${config.tagName}"`;
+      case 'remove_tag':
+        return `Remove tag "${config.tagName}"`;
+      case 'create_note':
+        return `Create note: "${config.noteContent?.substring(0, 50)}..."`;
+      case 'block_user':
+        return `Block user for ${config.blockDurationHours} hours`;
+      case 'call_webhook':
+        return `Call webhook: ${config.webhookMethod} ${config.webhookUrl}`;
+      case 'set_custom_field':
+        return `Set field "${config.customFieldName}" = "${config.customFieldValue}"`;
+      case 'close_chat':
+        return 'Close the chat';
+      case 'add_to_queue':
+        return `Add to queue with priority ${config.queuePriority}`;
+      // New Telegram actions
+      case 'edit_message':
+        return 'Edit a previously sent message';
+      case 'delete_message':
+        return 'Delete a message';
+      case 'edit_keyboard':
+        return 'Edit inline keyboard of a message';
+      case 'remove_keyboard':
+        return 'Remove inline keyboard from message';
+      case 'send_reply_keyboard':
+        return 'Send a reply keyboard menu';
+      case 'remove_reply_keyboard':
+        return 'Remove reply keyboard';
+      case 'send_chat_action':
+        return 'Show typing or other action';
+      case 'pin_message':
+        return 'Pin a message';
+      case 'unpin_message':
+        return 'Unpin a message';
+      case 'save_message_id':
+        return 'Save message ID to variable';
+      case 'delay_action':
+        const delay = (config as any).delayActionConfig?.delaySeconds || 0;
+        return `Wait ${delay} seconds`;
+      case 'send_location':
+        return 'Send a location';
+      case 'send_contact':
+        return 'Send a contact';
+      case 'send_sticker':
+        return 'Send a sticker';
+      case 'copy_message':
+        return 'Copy a message';
+      case 'run_subflow':
+        return `Execute subflow: ${(config as any).subflowConfig?.flowId}`;
+      default:
+        return `Execute action: ${config.actionType}`;
     }
   }
 }

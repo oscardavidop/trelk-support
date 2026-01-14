@@ -413,3 +413,121 @@ export interface ChatSessionExtended extends ChatSession {
   firstResponseBy?: string;
 }
 
+// ============= AGENT PREFERENCES & SETTINGS =============
+
+export interface AgentPreferences {
+  _id?: string;
+  agentId: string;
+  
+  // Appearance
+  theme: 'light' | 'dark' | 'system';
+  focusMode: boolean;
+  language: string;
+  timezone: string;
+  
+  // Sounds
+  sounds: {
+    enabled: boolean;
+    newChat: boolean;
+    newMessage: boolean;
+    mention: boolean;
+    volume: number;
+  };
+  
+  // Chat behavior
+  autoScroll: boolean;
+  enterToSend: boolean;
+  showTypingIndicator: boolean;
+  showReadReceipts: boolean;
+  
+  // Shortcuts
+  shortcutsEnabled: boolean;
+  
+  // Notifications
+  notifications: {
+    email: {
+      enabled: boolean;
+      onNewChat: boolean;
+      onMention: boolean;
+      onAssignment: boolean;
+      dailyDigest: boolean;
+    };
+    inApp: {
+      enabled: boolean;
+      sound: boolean;
+      onNewMessage: boolean;
+      onNewChat: boolean;
+      onMention: boolean;
+    };
+    telegram: {
+      enabled: boolean;
+      chatId?: number;
+      onNewChat: boolean;
+      onMention: boolean;
+    };
+    desktop: {
+      enabled: boolean;
+      onNewMessage: boolean;
+      onNewChat: boolean;
+    };
+  };
+  
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AgentSession {
+  _id: string;
+  agentId: string;
+  tokenHash?: string;
+  
+  // Device info
+  deviceType: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+  browser?: string;
+  os?: string;
+  ip?: string;
+  location?: string;
+  
+  // Status
+  isActive: boolean;
+  isCurrent?: boolean;
+  loginAt: string;
+  lastSeenAt: string;
+  logoutAt?: string;
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AgentActivityType = 
+  | 'status_change'
+  | 'login'
+  | 'logout'
+  | 'chat_opened'
+  | 'chat_closed'
+  | 'chat_transferred'
+  | 'message_sent'
+  | 'settings_changed'
+  | 'password_changed'
+  | 'session_revoked'
+  | 'other';
+
+export interface AgentActivity {
+  _id: string;
+  agentId: string;
+  type: AgentActivityType;
+  description: string;
+  
+  // Context
+  sessionId?: string;
+  targetAgentId?: string;
+  metadata?: Record<string, unknown>;
+  
+  // Location
+  ip?: string;
+  userAgent?: string;
+  
+  createdAt: string;
+}
+
+

@@ -133,25 +133,51 @@ export function initializeSocket(): Socket {
 
   // Session events
   socket.on('session:new', (session: ChatSession) => {
-    console.log('📥 New session:', session.sessionId);
-    useChatStore.getState().addSession(session);
-    playNotificationSound();
+    console.log('📥 New session:', session.sessionId, 'assigned to:', session.assignedAgent?._id || 'none');
     
-    // Toast for new session
-    toast.info(
-      'Nuevo chat',
-      `${session.user?.firstName || 'Usuario'} inició una conversación`,
-      { 
-        groupKey: `session:new:${session.sessionId}`,
-        sessionId: session.sessionId,
-        priority: 'high'
-      }
-    );
+    const currentAgent = useAuthStore.getState().agent;
+    const isMySession = session.assignedAgent?._id === currentAgent?._id || 
+                        session.assignedAgent?._id === currentAgent?.id;
+    
+    // Only add to MY sessions if it's assigned to me
+    // If it has no assignedAgent or is assigned to someone else, it should be in queue
+    if (session.assignedAgent && isMySession) {
+      useChatStore.getState().addSession(session);
+      playNotificationSound();
+      
+      toast.info(
+        'Nuevo chat',
+        `${session.user?.firstName || 'Usuario'} inició una conversación`,
+        { 
+          groupKey: `session:new:${session.sessionId}`,
+          sessionId: session.sessionId,
+          priority: 'high'
+        }
+      );
+    } else if (!session.assignedAgent) {
+      // No agent assigned, this should go to queue (session:queued will handle it)
+      // But some edge cases might send session:new for unassigned sessions
+      useChatStore.getState().addToQueue(session);
+      playNotificationSound();
+    }
+    // If assigned to another agent, ignore - not our business
   });
 
   socket.on('session:updated', (session: ChatSession) => {
-    console.log('📝 Session updated:', session.sessionId);
-    useChatStore.getState().updateSession(session);
+    console.log('📝 Session updated:', session.sessionId, 'assigned to:', session.assignedAgent?._id || 'none');
+    
+    const currentAgent = useAuthStore.getState().agent;
+    const isMySession = session.assignedAgent?._id === currentAgent?._id || 
+                        session.assignedAgent?._id === currentAgent?.id;
+    
+    // If the session is now assigned to another agent, remove from my lists
+    if (session.assignedAgent && !isMySession) {
+      useChatStore.getState().removeSession(session.sessionId);
+      useChatStore.getState().removeFromQueue(session.sessionId);
+    } else {
+      // It's still mine or unassigned (in queue), update it
+      useChatStore.getState().updateSession(session);
+    }
   });
 
   socket.on('session:closed', (sessionId: string) => {
@@ -200,7 +226,9 @@ export function initializeSocket(): Socket {
 
   socket.on('session:unassigned', (data: { sessionId: string }) => {
     console.log('🔓 Session unassigned (taken by other agent):', data.sessionId);
+    // Remove from BOTH queue and sessions - it's no longer ours
     useChatStore.getState().removeFromQueue(data.sessionId);
+    useChatStore.getState().removeSession(data.sessionId);
   });
 
   socket.on('session:accessDenied', (data: { sessionId: string; reason: string }) => {
@@ -264,6 +292,12 @@ export function initializeSocket(): Socket {
   socket.on('agent:status', (data: { agentId: string; status: Agent['onlineStatus'] }) => {
     console.log('👤 Agent status:', data.agentId, data.status);
     useAgentsStore.getState().updateAgentStatus(data.agentId, data.status);
+    
+    // If it's the current agent, update auth store too (fix UI not updating)
+    const currentAgent = useAuthStore.getState().agent;
+    if (currentAgent && (currentAgent._id === data.agentId || currentAgent.id === data.agentId)) {
+      useAuthStore.getState().updateAgentFields({ onlineStatus: data.status });
+    }
   });
 
   // Agent availability updates
@@ -575,6 +609,37 @@ export function initializeSocket(): Socket {
     
     const event = new CustomEvent('automation:triggered', { detail: data });
     window.dispatchEvent(event);
+  });
+
+  // Flow updated (hot-reload notification)
+  socket.on('flow:updated', (data: {
+    flowId: string;
+    action: 'published' | 'unpublished' | 'updated' | 'deleted';
+    version?: number;
+    flowName?: string;
+  }) => {
+    console.log('🔄 Flow updated:', data.flowId, data.action);
+    
+    // Dispatch custom event for Flow Builder to listen
+    const event = new CustomEvent('flow:updated', { detail: data });
+    window.dispatchEvent(event);
+    
+    // Show toast notification
+    const messages: Record<string, string> = {
+      published: `Flow "${data.flowName || 'Flow'}" publicado (v${data.version})`,
+      unpublished: `Flow "${data.flowName || 'Flow'}" desactivado`,
+      updated: `Flow "${data.flowName || 'Flow'}" actualizado`,
+      deleted: `Flow "${data.flowName || 'Flow'}" eliminado`,
+    };
+    
+    const toastType = data.action === 'published' ? 'success' : 
+                      data.action === 'deleted' ? 'warning' : 'info';
+    
+    toast[toastType](
+      'Flow actualizado',
+      messages[data.action] || 'El flow ha sido modificado',
+      { groupKey: `flow:${data.flowId}:${data.action}`, duration: 5000 }
+    );
   });
 
   return socket;

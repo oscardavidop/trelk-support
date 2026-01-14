@@ -1,8 +1,9 @@
 /**
  * FlowToolbar - Top toolbar for flow editor
+ * With Undo/Redo, Status controls, and Actions
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { FlowStatus } from '../../types/flow';
 
 interface FlowToolbarProps {
@@ -12,12 +13,20 @@ interface FlowToolbarProps {
   isLoading: boolean;
   onSave: () => void;
   onPublish: () => void;
+  onUnpublish: () => void;
   onSimulate: () => void;
   onClose: () => void;
   onCenterView: () => void;
   onTogglePalette: () => void;
+  onVersionHistory: () => void;
+  onDelete: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   isPaletteOpen: boolean;
   readOnly?: boolean;
+  lastSaved?: Date | null;
 }
 
 const FlowToolbar: React.FC<FlowToolbarProps> = ({
@@ -27,13 +36,23 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
   isLoading,
   onSave,
   onPublish,
+  onUnpublish,
   onSimulate,
   onClose,
   onCenterView,
   onTogglePalette,
+  onVersionHistory,
+  onDelete,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   isPaletteOpen,
   readOnly = false,
+  lastSaved,
 }) => {
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   const getStatusBadge = () => {
     const styles: Record<FlowStatus, { bg: string; text: string; label: string }> = {
       draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-400', label: 'Borrador' },
@@ -47,6 +66,16 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
         {style.label}
       </span>
     );
+  };
+
+  // Format last saved time
+  const formatLastSaved = () => {
+    if (!lastSaved) return null;
+    const now = new Date();
+    const diff = now.getTime() - lastSaved.getTime();
+    if (diff < 60000) return 'hace un momento';
+    if (diff < 3600000) return `hace ${Math.floor(diff / 60000)} min`;
+    return lastSaved.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -70,12 +99,45 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
             {flowName}
           </h1>
           {getStatusBadge()}
-          {hasChanges && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-              Sin guardar
+          {hasChanges ? (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 animate-pulse">
+              {isLoading ? 'Guardando...' : 'Sin guardar'}
             </span>
-          )}
+          ) : lastSaved ? (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+              ✓ Guardado {formatLastSaved()}
+            </span>
+          ) : null}
         </div>
+
+        {/* Divider */}
+        <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
+
+        {/* Undo/Redo */}
+        {!readOnly && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Deshacer (Ctrl+Z)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Rehacer (Ctrl+Shift+Z)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Center section - View controls */}
@@ -109,6 +171,17 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
       {/* Right section - Actions */}
       <div className="flex items-center gap-2">
+        {/* Version History */}
+        <button
+          onClick={onVersionHistory}
+          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          title="Historial de versiones"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+
         {/* Simulate */}
         <button
           onClick={onSimulate}
@@ -143,20 +216,71 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
               <span className="text-sm font-medium">Guardar</span>
             </button>
 
-            {/* Publish */}
-            <button
-              onClick={onPublish}
-              disabled={isLoading || hasChanges}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={hasChanges ? 'Guarda primero los cambios' : 'Publicar flow'}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm font-medium">
-                {flowStatus === 'published' ? 'Actualizar' : 'Publicar'}
-              </span>
-            </button>
+            {/* Publish/Unpublish */}
+            {flowStatus === 'published' ? (
+              <button
+                onClick={onUnpublish}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                title="Desactivar flow"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium">Desactivar</span>
+              </button>
+            ) : (
+              <button
+                onClick={onPublish}
+                disabled={isLoading || hasChanges}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={hasChanges ? 'Guarda primero los cambios' : 'Publicar flow'}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium">Publicar</span>
+              </button>
+            )}
+
+            {/* More menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Más opciones"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+              
+              {showMoreMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20">
+                    <button
+                      onClick={() => { onVersionHistory(); setShowMoreMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Historial de versiones
+                    </button>
+                    <button
+                      onClick={() => { onDelete(); setShowMoreMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Eliminar flow
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </>
         )}
       </div>

@@ -2,11 +2,343 @@
  * FlowsPage - Main flows management page
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { FlowListItem, FlowStatus, TriggerType } from '../../types/flow';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import type { FlowListItem, FlowStatus, TriggerType, FlowVersion, SimulationResult } from '../../types/flow';
 import { TRIGGER_LABELS } from '../../types/flow';
 import * as flowService from '../../services/flow.service';
 import FlowBuilder from './FlowBuilder';
+
+// ============= MODAL COMPONENTS =============
+
+// Simulation Modal
+const SimulationModal: React.FC<{
+  flowId: string;
+  flowName: string;
+  onClose: () => void;
+}> = ({ flowId, flowName, onClose }) => {
+  const [triggerType, setTriggerType] = useState<TriggerType>('message_received');
+  const [context, setContext] = useState({
+    message: 'Hola, necesito ayuda',
+    firstName: 'Usuario',
+    lastName: 'Test',
+    username: 'testuser',
+  });
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<SimulationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const runSimulation = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await flowService.simulateFlow(flowId, triggerType, {
+        message: { content: context.message, type: 'text' },
+        user: { 
+          firstName: context.firstName, 
+          lastName: context.lastName, 
+          username: context.username 
+        },
+      });
+      setResult(res);
+    } catch (err: any) {
+      setError(err.message || 'Error en simulación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Simular Flow
+            </h2>
+            <p className="text-sm text-gray-500">{flowName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto p-6">
+          {/* Trigger selection */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo de Trigger
+            </label>
+            <select
+              value={triggerType}
+              onChange={(e) => setTriggerType(e.target.value as TriggerType)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              <option value="message_received">Mensaje recibido</option>
+              <option value="chat_created">Chat creado</option>
+              <option value="keyword_detected">Keyword detectada</option>
+              <option value="file_received">Archivo recibido</option>
+              <option value="chat_assigned">Chat asignado</option>
+              <option value="chat_closed">Chat cerrado</option>
+            </select>
+          </div>
+
+          {/* Context inputs */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mensaje
+              </label>
+              <input
+                type="text"
+                value={context.message}
+                onChange={(e) => setContext({ ...context, message: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Nombre
+              </label>
+              <input
+                type="text"
+                value={context.firstName}
+                onChange={(e) => setContext({ ...context, firstName: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              />
+            </div>
+          </div>
+
+          {/* Run button */}
+          <button
+            onClick={runSimulation}
+            disabled={loading}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              </svg>
+            )}
+            Ejecutar Simulación
+          </button>
+
+          {/* Error */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Results */}
+          {result && (
+            <div className="mt-6">
+              <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${result.success ? 'bg-green-500' : 'bg-red-500'}`} />
+                Resultado de Simulación
+              </h3>
+              
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{result.stepsExecuted}</p>
+                  <p className="text-xs text-gray-500">Pasos</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{result.totalDuration}ms</p>
+                  <p className="text-xs text-gray-500">Duración</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{result.warnings?.length || 0}</p>
+                  <p className="text-xs text-gray-500">Warnings</p>
+                </div>
+              </div>
+
+              {/* Steps timeline */}
+              <div className="space-y-2 max-h-60 overflow-auto">
+                {result.steps?.map((step, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                      step.status === 'success' ? 'bg-green-100 text-green-600' :
+                      step.status === 'skipped' ? 'bg-gray-100 text-gray-500' :
+                      'bg-red-100 text-red-600'
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{step.nodeLabel}</p>
+                      <p className="text-xs text-gray-500">{step.nodeType} · {step.duration}ms</p>
+                      {step.output && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{step.output}</p>}
+                      {step.error && <p className="text-xs text-red-500 mt-1">{step.error}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Version History Modal
+const VersionHistoryModal: React.FC<{
+  flowId: string;
+  flowName: string;
+  currentVersion: number;
+  onClose: () => void;
+  onRollback: (version: number) => void;
+}> = ({ flowId, flowName, currentVersion, onClose, onRollback }) => {
+  const [versions, setVersions] = useState<FlowVersion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rollingBack, setRollingBack] = useState<number | null>(null);
+
+  useEffect(() => {
+    loadVersions();
+  }, [flowId]);
+
+  const loadVersions = async () => {
+    try {
+      const res = await flowService.getFlowVersions(flowId);
+      setVersions(res?.versions || []);
+    } catch (err: any) {
+      setError(err.message || 'Error cargando versiones');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRollback = async (version: number) => {
+    setRollingBack(version);
+    try {
+      await flowService.rollbackFlow(flowId, version);
+      onRollback(version);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Error restaurando versión');
+    } finally {
+      setRollingBack(null);
+    }
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Historial de Versiones
+            </h2>
+            <p className="text-sm text-gray-500">{flowName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <svg className="w-8 h-8 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+          ) : error ? (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm">
+              {error}
+            </div>
+          ) : versions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p>No hay versiones guardadas aún</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {versions.map((v) => (
+                <div
+                  key={v.version}
+                  className={`p-4 rounded-lg border ${
+                    v.version === currentVersion
+                      ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          Versión {v.version}
+                        </span>
+                        {v.version === currentVersion && (
+                          <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs rounded-full">
+                            Actual
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        {formatDate(v.publishedAt)}
+                      </p>
+                      {v.changeDescription && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {v.changeDescription}
+                        </p>
+                      )}
+                    </div>
+                    {v.version !== currentVersion && (
+                      <button
+                        onClick={() => handleRollback(v.version)}
+                        disabled={rollingBack !== null}
+                        className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {rollingBack === v.version ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                        ) : (
+                          'Restaurar'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============= MAIN COMPONENT =============
 
 const FlowsPage: React.FC = () => {
   // State
@@ -20,6 +352,16 @@ const FlowsPage: React.FC = () => {
   const [builderFlow, setBuilderFlow] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  
+  // Modal states
+  const [showSimulationModal, setShowSimulationModal] = useState(false);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  
+  // Auto-save state
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingChangesRef = useRef<{ nodes: any[]; edges: any[] } | null>(null);
 
   // Load flows
   const loadFlows = async () => {
@@ -77,44 +419,135 @@ const FlowsPage: React.FC = () => {
     }
   };
 
-  // Save flow from builder
-  const handleSaveFlow = async (nodes: any[], edges: any[]) => {
+  // Save flow from builder (with auto-save support)
+  const handleSaveFlow = useCallback(async (nodes: any[], edges: any[]) => {
     if (!builderFlow?._id) return;
+    
+    // Clear any pending auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    setIsSaving(true);
     try {
       const updated = await flowService.updateFlow(builderFlow._id, {
         nodes,
         edges,
       });
       setBuilderFlow(updated);
+      setLastSaved(new Date());
+      pendingChangesRef.current = null;
       loadFlows();
     } catch (err: any) {
       setError(err.message || 'Error guardando flow');
+    } finally {
+      setIsSaving(false);
     }
-  };
+  }, [builderFlow?._id]);
+
+  // Auto-save function (debounced)
+  const handleAutoSave = useCallback((nodes: any[], edges: any[]) => {
+    if (!builderFlow?._id) return;
+    
+    // Store pending changes
+    pendingChangesRef.current = { nodes, edges };
+    
+    // Clear previous timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    // Set new timeout for auto-save (3 seconds after last change)
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (pendingChangesRef.current) {
+        handleSaveFlow(pendingChangesRef.current.nodes, pendingChangesRef.current.edges);
+      }
+    }, 3000);
+  }, [builderFlow?._id, handleSaveFlow]);
+
+  // Cleanup auto-save timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Publish flow
   const handlePublishFlow = async () => {
     if (!builderFlow?._id) return;
+    setIsSaving(true);
     try {
       const updated = await flowService.publishFlow(builderFlow._id);
       setBuilderFlow(updated);
       loadFlows();
     } catch (err: any) {
       setError(err.message || 'Error publicando flow');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Simulate flow
+  // Unpublish flow
+  const handleUnpublishFlow = async () => {
+    if (!builderFlow?._id) return;
+    setIsSaving(true);
+    try {
+      const updated = await flowService.unpublishFlow(builderFlow._id);
+      setBuilderFlow(updated);
+      loadFlows();
+    } catch (err: any) {
+      setError(err.message || 'Error desactivando flow');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Simulate flow - opens modal
   const handleSimulateFlow = () => {
-    // TODO: Open simulation modal
-    console.log('Simulate flow');
+    if (!builderFlow?._id) return;
+    setShowSimulationModal(true);
   };
 
   // Close builder
   const handleCloseBuilder = () => {
+    // Clear any pending auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
     setIsBuilderOpen(false);
     setBuilderFlow(null);
+    setShowSimulationModal(false);
+    setShowVersionModal(false);
     loadFlows();
+  };
+
+  // Version history - opens modal
+  const handleVersionHistory = () => {
+    if (!builderFlow?._id) return;
+    setShowVersionModal(true);
+  };
+
+  // Handle rollback from version modal
+  const handleRollback = async (version: number) => {
+    // Reload the flow after rollback
+    if (builderFlow?._id) {
+      const updated = await flowService.getFlowById(builderFlow._id);
+      setBuilderFlow(updated);
+    }
+  };
+
+  // Delete current flow from builder
+  const handleDeleteCurrentFlow = async () => {
+    if (!builderFlow?._id) return;
+    if (!confirm('¿Estás seguro de eliminar este flow? Esta acción no se puede deshacer.')) return;
+    try {
+      await flowService.deleteFlow(builderFlow._id);
+      handleCloseBuilder();
+    } catch (err: any) {
+      setError(err.message || 'Error eliminando flow');
+    }
   };
 
   // Delete flow
@@ -162,13 +595,41 @@ const FlowsPage: React.FC = () => {
   // Show builder if open
   if (isBuilderOpen) {
     return (
-      <FlowBuilder
-        flow={builderFlow}
-        onSave={handleSaveFlow}
-        onPublish={handlePublishFlow}
-        onSimulate={handleSimulateFlow}
-        onClose={handleCloseBuilder}
-      />
+      <>
+        <FlowBuilder
+          flow={builderFlow}
+          onSave={handleSaveFlow}
+          onAutoSave={handleAutoSave}
+          onPublish={handlePublishFlow}
+          onUnpublish={handleUnpublishFlow}
+          onSimulate={handleSimulateFlow}
+          onClose={handleCloseBuilder}
+          onDelete={handleDeleteCurrentFlow}
+          onVersionHistory={handleVersionHistory}
+          isLoading={isSaving}
+          lastSaved={lastSaved}
+        />
+        
+        {/* Simulation Modal */}
+        {showSimulationModal && builderFlow && (
+          <SimulationModal
+            flowId={builderFlow._id}
+            flowName={builderFlow.name}
+            onClose={() => setShowSimulationModal(false)}
+          />
+        )}
+        
+        {/* Version History Modal */}
+        {showVersionModal && builderFlow && (
+          <VersionHistoryModal
+            flowId={builderFlow._id}
+            flowName={builderFlow.name}
+            currentVersion={builderFlow.currentVersion || 1}
+            onClose={() => setShowVersionModal(false)}
+            onRollback={handleRollback}
+          />
+        )}
+      </>
     );
   }
 

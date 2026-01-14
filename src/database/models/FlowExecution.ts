@@ -20,6 +20,7 @@ export interface ExecutionStep {
   output?: Record<string, any>;
   error?: string;
   retryCount: number;
+  messageId?: number; // Telegram message ID for edit operations
 }
 
 export interface ExecutionContext {
@@ -55,6 +56,9 @@ export interface ExecutionContext {
   // Execution metadata
   startedAt: Date;
   lastActiveAt: Date;
+  // Button flow support
+  lastNodeWithButtons?: string;
+  lastMessageId?: number; // Last sent message ID for edit operations
 }
 
 // ============= DOCUMENT INTERFACE =============
@@ -74,7 +78,7 @@ export interface IFlowExecution extends Document {
   steps: ExecutionStep[];
   // Delay/Wait state
   waitingUntil?: Date;
-  waitingFor?: 'response' | 'agent_online' | 'business_hours' | 'condition' | 'fixed_time';
+  waitingFor?: 'response' | 'agent_online' | 'business_hours' | 'condition' | 'fixed_time' | 'button_click';
   // Retry
   retryCount: number;
   maxRetries: number;
@@ -125,6 +129,7 @@ const ExecutionStepSchema = new Schema<ExecutionStep>({
   output: Schema.Types.Mixed,
   error: String,
   retryCount: { type: Number, default: 0 },
+  messageId: Number, // Telegram message ID for editing
 }, { _id: false });
 
 const ExecutionContextSchema = new Schema<ExecutionContext>({
@@ -145,14 +150,19 @@ const ExecutionContextSchema = new Schema<ExecutionContext>({
     name: String,
   },
   message: {
-    id: String,
-    content: String,
-    type: String,
-    mediaUrl: String,
+    type: new Schema({
+      id: String,
+      content: String,
+      type: String,
+      mediaUrl: String,
+    }, { _id: false }),
+    required: false,
   },
   variables: { type: Schema.Types.Mixed, default: {} },
   startedAt: { type: Date, default: Date.now },
   lastActiveAt: { type: Date, default: Date.now },
+  lastNodeWithButtons: String,
+  lastMessageId: Number,
 }, { _id: false });
 
 const FlowExecutionSchema = new Schema<IFlowExecution>({
@@ -172,7 +182,7 @@ const FlowExecutionSchema = new Schema<IFlowExecution>({
   waitingUntil: Date,
   waitingFor: {
     type: String,
-    enum: ['response', 'agent_online', 'business_hours', 'condition', 'fixed_time'],
+    enum: ['response', 'agent_online', 'business_hours', 'condition', 'fixed_time', 'button_click'],
   },
   retryCount: { type: Number, default: 0 },
   maxRetries: { type: Number, default: 3 },

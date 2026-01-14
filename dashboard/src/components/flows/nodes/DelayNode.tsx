@@ -5,6 +5,7 @@
 import React, { memo } from 'react';
 import type { JSX } from 'react';
 import { Handle, Position } from 'reactflow';
+import NodeWrapper from './NodeWrapper';
 import type { NodeProps } from 'reactflow';
 import type { DelayConfig, DelayType } from '../../../types/flow';
 import { DELAY_LABELS } from '../../../types/flow';
@@ -54,7 +55,7 @@ const getDelayIcon = (delayType: DelayType) => {
   );
 };
 
-function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
+function DelayNode({ data, selected, id }: NodeProps<DelayNodeData>) {
   const delayType = data.config?.delayType;
   const delayLabel = delayType ? DELAY_LABELS[delayType] : 'Esperar';
 
@@ -93,16 +94,17 @@ function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
   };
 
   return (
-    <div
-      className={`
-        bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 min-w-[180px]
-        transition-all duration-200
-        ${selected 
-          ? 'border-purple-500 ring-2 ring-purple-200 dark:ring-purple-900' 
-          : 'border-purple-400 dark:border-purple-600'
-        }
-      `}
-    >
+    <NodeWrapper nodeId={id} selected={selected}>
+      <div
+        className={`
+          bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 min-w-[180px]
+          transition-all duration-200
+          ${selected 
+            ? 'border-purple-500 ring-2 ring-purple-200 dark:ring-purple-900' 
+            : 'border-purple-400 dark:border-purple-600'
+          }
+        `}
+      >
       {/* Input handle (top) */}
       <Handle
         type="target"
@@ -148,13 +150,14 @@ function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
         )}
       </div>
 
-      {/* Output handle (bottom) */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-purple-500 border-2 border-white dark:border-gray-800"
-      />
-    </div>
+        {/* Output handle (bottom) */}
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="w-3 h-3 bg-purple-500 border-2 border-white dark:border-gray-800"
+        />
+      </div>
+    </NodeWrapper>
   );
 }
 

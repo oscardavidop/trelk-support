@@ -6,6 +6,8 @@ import { Types } from 'mongoose';
 import Flow, { IFlow, IFlowNode, IFlowEdge, FlowStatus, TriggerType } from '../database/models/Flow.js';
 import FlowExecution from '../database/models/FlowExecution.js';
 import { logger } from './logger.js';
+import { FlowCache } from './cache.js';
+import { isRedisConnected } from './redis.js';
 
 // ============= TYPES =============
 
@@ -174,6 +176,11 @@ export async function updateFlow(
 
   await flow.save();
 
+  // Update cache if flow is published (active flows are cached)
+  if (isRedisConnected() && flow.status === 'published') {
+    await FlowCache.updateFlowCache(flow);
+  }
+
   logger.info('flow', { 
     action: 'flow_updated',
     flowId: flow._id.toString(),
@@ -192,6 +199,11 @@ export async function deleteFlow(flowId: string | Types.ObjectId): Promise<boole
   if (result.deletedCount > 0) {
     // Also delete executions
     await FlowExecution.deleteMany({ flowId });
+
+    // Invalidate cache
+    if (isRedisConnected()) {
+      await FlowCache.invalidateFlow(flowId.toString());
+    }
     
     logger.info('flow', { 
       action: 'flow_deleted',
@@ -276,6 +288,11 @@ export async function publishFlow(
 
   await flow.save();
 
+  // Update cache with the newly published flow
+  if (isRedisConnected()) {
+    await FlowCache.updateFlowCache(flow);
+  }
+
   logger.info('flow', { 
     action: 'flow_published',
     flowId: flow._id.toString(),
@@ -306,6 +323,11 @@ export async function unpublishFlow(
   );
 
   if (flow) {
+    // Invalidate cache for this flow and all related trigger caches
+    if (isRedisConnected()) {
+      await FlowCache.invalidateFlow(flow._id.toString());
+    }
+
     logger.info('flow', { 
       action: 'flow_unpublished',
       flowId: flow._id.toString(),
@@ -452,8 +474,15 @@ export function validateFlow(flow: IFlow): FlowValidationResult {
     }
     
     // Validate specific action types
-    if (config.actionType === 'send_message' && !config.messageContent) {
-      errors.push(`Action "${action.label}" has no message content`);
+    if (config.actionType === 'send_message') {
+      // Check for content in either messageContent or messageBlocks
+      const hasMessageContent = !!config.messageContent;
+      const hasMessageBlocks = config.messageBlocks?.length > 0 && 
+        config.messageBlocks.some((block: any) => block.content || block.mediaUrl);
+      
+      if (!hasMessageContent && !hasMessageBlocks) {
+        errors.push(`Action "${action.label}" has no message content`);
+      }
     }
     if (config.actionType === 'call_webhook' && !config.webhookUrl) {
       errors.push(`Action "${action.label}" has no webhook URL`);

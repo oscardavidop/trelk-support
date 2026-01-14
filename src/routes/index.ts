@@ -21,6 +21,8 @@ import { activityRoutes, auditRoutes } from './activity.routes.js';
 import { surveyRoutes } from './survey.routes.js';
 import { scheduledMessageRoutes } from './scheduledMessage.routes.js';
 import { flowRoutes } from './flow.routes.js';
+import { registerSettingsRoutes } from './settings.routes.js';
+import { systemRoutes } from './system.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -93,4 +95,12 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   
   // Flow Builder routes
   await fastify.register(flowRoutes, { prefix: '/api' });
+  
+  // Settings routes (account, preferences, security, activity)
+  await fastify.register(async (settingsRoutes) => {
+    await registerSettingsRoutes(settingsRoutes);
+  });
+
+  // System monitoring routes (admin/supervisor only)
+  await fastify.register(systemRoutes, { prefix: '/api/system' });
 }

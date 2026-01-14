@@ -24,6 +24,7 @@ import Flow from '../database/models/Flow.js';
 import { flowEngine, TriggerEvent } from '../services/flowEngine.service.js';
 import { logger } from '../services/logger.js';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
+import { emitFlowUpdated } from '../services/socket.js';
 
 // ============= TYPES =============
 
@@ -216,6 +217,9 @@ export async function flowRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(404).send({ ok: false, error: 'Flow not found' });
       }
 
+      // Emit socket event for hot-reload
+      emitFlowUpdated(request.params.flowId, 'deleted');
+
       return { ok: true };
     } catch (error) {
       logger.error('api', { action: 'delete_flow_error', error: String(error) });
@@ -270,6 +274,14 @@ export async function flowRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(400).send({ ok: false, error: result.error });
       }
 
+      // Emit socket event for hot-reload
+      emitFlowUpdated(
+        request.params.flowId,
+        'published',
+        result.flow?.currentVersion,
+        result.flow?.name
+      );
+
       return { ok: true, flow: result.flow };
     } catch (error) {
       logger.error('api', { action: 'publish_flow_error', error: String(error) });
@@ -295,6 +307,14 @@ export async function flowRoutes(fastify: FastifyInstance): Promise<void> {
       if (!flow) {
         return reply.status(404).send({ ok: false, error: 'Flow not found' });
       }
+
+      // Emit socket event for hot-reload
+      emitFlowUpdated(
+        request.params.flowId,
+        'unpublished',
+        flow.currentVersion,
+        flow.name
+      );
 
       return { ok: true, flow };
     } catch (error) {
@@ -369,6 +389,65 @@ export async function flowRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ============= EXECUTIONS =============
+
+  // Get all executions (with filters)
+  fastify.get('/flows/executions', async (request, reply) => {
+    const query = request.query as {
+      flowId?: string;
+      sessionId?: string;
+      status?: string;
+      page?: string;
+      limit?: string;
+    };
+
+    try {
+      const filter: any = {};
+      
+      if (query.flowId) {
+        filter.flowId = new Types.ObjectId(query.flowId);
+      }
+      if (query.sessionId) {
+        filter.sessionId = query.sessionId;
+      }
+      if (query.status) {
+        filter.status = query.status;
+      }
+
+      const page = query.page ? parseInt(query.page) : 1;
+      const limit = Math.min(query.limit ? parseInt(query.limit) : 50, 100);
+
+      const [executions, total] = await Promise.all([
+        FlowExecution.find(filter)
+          .sort({ startedAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .populate('flowId', 'name'),
+        FlowExecution.countDocuments(filter),
+      ]);
+
+      // Transform the data to include flowName
+      const formattedExecutions = executions.map(exec => {
+        const execObj = exec.toObject();
+        return {
+          ...execObj,
+          flowName: (execObj.flowId as any)?.name || 'Unknown Flow',
+          flowId: (execObj.flowId as any)?._id || execObj.flowId,
+        };
+      });
+
+      return { 
+        ok: true, 
+        executions: formattedExecutions, 
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      logger.error('api', { action: 'get_all_executions_error', error: String(error) });
+      return reply.status(500).send({ ok: false, error: 'Failed to get executions' });
+    }
+  });
 
   // Get flow executions
   fastify.get<{ Params: FlowParams }>('/flows/:flowId/executions', async (request, reply) => {
@@ -472,10 +551,23 @@ export async function flowRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post<{ Params: FlowParams }>('/flows/:flowId/simulate', async (request, reply) => {
     const body = request.body as {
       triggerType: string;
-      triggerData?: Record<string, any>;
-      sessionId?: string;
-      chatId?: number;
-      userId?: number;
+      context?: {
+        triggerData?: Record<string, any>;
+        sessionId?: string;
+        chatId?: number;
+        userId?: number;
+        user?: {
+          firstName?: string;
+          lastName?: string;
+          username?: string;
+          language?: string;
+        };
+        message?: {
+          content?: string;
+          type?: string;
+        };
+        variables?: Record<string, any>;
+      };
     };
 
     try {
@@ -487,78 +579,116 @@ export async function flowRoutes(fastify: FastifyInstance): Promise<void> {
 
       // Validate flow first
       const validation = validateFlow(flow);
-      if (!validation.valid) {
-        return { 
-          ok: false, 
-          error: 'Flow validation failed',
-          validation,
-        };
-      }
-
+      
       // Build simulation context
-      const triggerNode = flow.nodes.find(n => n.type === 'trigger');
-      if (!triggerNode) {
-        return reply.status(400).send({ ok: false, error: 'No trigger node found' });
-      }
+      const simulationContext = {
+        triggerType: body.triggerType as any,
+        triggerData: body.context?.triggerData || {},
+        sessionId: body.context?.sessionId,
+        chatId: body.context?.chatId,
+        userId: body.context?.userId,
+        user: body.context?.user ? {
+          id: body.context.userId || 123456789,
+          firstName: body.context.user.firstName || 'Test',
+          lastName: body.context.user.lastName,
+          username: body.context.user.username,
+          language: body.context.user.language || 'es',
+        } : undefined,
+        message: body.context?.message ? {
+          id: 'sim_msg_001',
+          content: body.context.message.content || '',
+          type: body.context.message.type || 'text',
+        } : undefined,
+        variables: body.context?.variables || {},
+      };
 
-      // Simulate step by step
-      const simulationSteps: Array<{
-        nodeId: string;
-        nodeType: string;
-        nodeLabel: string;
-        wouldExecute: boolean;
-        conditionResult?: boolean;
-        output?: any;
-      }> = [];
-
-      let currentNodeId: string | null = triggerNode.id;
-      let iterations = 0;
-
-      while (currentNodeId && iterations < 50) {
-        iterations++;
-        
-        const node = flow.nodes.find(n => n.id === currentNodeId);
-        if (!node) break;
-
-        const step: typeof simulationSteps[0] = {
-          nodeId: node.id,
-          nodeType: node.type,
-          nodeLabel: node.label,
-          wouldExecute: true,
-        };
-
-        // For conditions, evaluate with mock data
-        if (node.type === 'condition') {
-          step.conditionResult = Math.random() > 0.5; // Random for simulation
-          step.output = { conditionResult: step.conditionResult };
-        }
-
-        simulationSteps.push(step);
-
-        // Get next node
-        const edges = flow.edges.filter(e => e.source === currentNodeId);
-        if (edges.length === 0) break;
-
-        if (step.conditionResult !== undefined) {
-          const branch = step.conditionResult ? 'true' : 'false';
-          currentNodeId = edges.find(e => e.sourceHandle === branch)?.target || null;
-        } else {
-          currentNodeId = edges[0].target;
-        }
-      }
+      // Run simulation
+      const simulation = await flowEngine.simulateFlow(flow, simulationContext);
 
       return { 
         ok: true, 
         simulation: {
-          flow: { id: flow._id.toString(), name: flow.name },
+          flow: { 
+            id: flow._id.toString(), 
+            name: flow.name,
+            version: flow.currentVersion,
+          },
           triggerType: body.triggerType,
-          steps: simulationSteps,
-          wouldComplete: currentNodeId === null,
+          validation,
+          ...simulation,
         },
       };
     } catch (error) {
       logger.error('api', { action: 'simulate_flow_error', error: String(error) });
       return reply.status(500).send({ ok: false, error: 'Failed to simulate flow' });
+    }
+  });
+
+  // ============= API CALL TESTING =============
+
+  // Test API call from playground
+  fastify.post('/flows/test-api-call', async (request, reply) => {
+    const body = request.body as {
+      method: string;
+      url: string;
+      headers?: Record<string, string>;
+      body?: string;
+      timeout?: number;
+    };
+
+    if (!body.url) {
+      return reply.status(400).send({ ok: false, error: 'URL is required' });
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), body.timeout || 30000);
+
+      const fetchOptions: RequestInit = {
+        method: body.method || 'GET',
+        headers: body.headers || {},
+        signal: controller.signal,
+      };
+
+      // Add body for non-GET requests
+      if (body.body && body.method !== 'GET') {
+        fetchOptions.body = body.body;
+      }
+
+      const startTime = Date.now();
+      const response = await fetch(body.url, fetchOptions);
+      clearTimeout(timeoutId);
+
+      // Read response body
+      let responseBody: any;
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (contentType.includes('application/json')) {
+        responseBody = await response.json();
+      } else {
+        responseBody = await response.text();
+      }
+
+      // Get response headers
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+
+      return {
+        ok: true,
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+        body: responseBody,
+        time: Date.now() - startTime,
+      };
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return reply.status(408).send({ ok: false, error: 'Request timeout' });
+      }
+      logger.error('api', { action: 'test_api_call_error', error: String(error) });
+      return reply.status(500).send({ ok: false, error: error.message || 'Request failed' });
     }
   });
 

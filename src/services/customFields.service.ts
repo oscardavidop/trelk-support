@@ -1,10 +1,15 @@
 /**
  * Custom Fields Service
  * CRUD for field definitions and user field values
+ * 
+ * Now with Redis caching for acceleration:
+ * - CustomFieldDefinitions: Read-through cache (2h TTL)
+ * - UserCustomFields: Write-behind to MongoDB
  */
 
 import { CustomFieldDefinition, UserCustomField, type CustomFieldType } from '../database/index.js';
 import mongoose from 'mongoose';
+import { CustomFieldDefinitionCache, UserCustomFieldsCache } from './cache-models.service.js';
 
 export interface FieldDefinition {
   id: string;
@@ -42,14 +47,14 @@ export interface CreateFieldInput {
 // ============= FIELD DEFINITIONS =============
 
 /**
- * Get all field definitions
+ * Get all field definitions (cached)
  */
 export async function getAllFieldDefinitions(activeOnly = true): Promise<FieldDefinition[]> {
-  const query = activeOnly ? { isActive: true } : {};
-  const fields = await CustomFieldDefinition.find(query).sort({ order: 1, name: 1 });
+  // Use cached version
+  const fields = await CustomFieldDefinitionCache.getAll(activeOnly);
 
   return fields.map(f => ({
-    id: f._id!.toString(),
+    id: f._id?.toString?.() || f._id,
     name: f.name,
     key: f.key,
     type: f.type,
@@ -78,6 +83,9 @@ export async function createFieldDefinition(input: CreateFieldInput): Promise<Fi
     createdBy: new mongoose.Types.ObjectId(input.agentId),
   });
 
+  // Invalidate cache
+  await CustomFieldDefinitionCache.invalidateAll();
+
   return {
     id: field._id!.toString(),
     name: field.name,
@@ -102,6 +110,9 @@ export async function updateFieldDefinition(
   const field = await CustomFieldDefinition.findByIdAndUpdate(fieldId, updates, { new: true });
   if (!field) return null;
 
+  // Invalidate cache
+  await CustomFieldDefinitionCache.invalidate(fieldId, field.key);
+
   return {
     id: field._id!.toString(),
     name: field.name,
@@ -120,8 +131,12 @@ export async function updateFieldDefinition(
  * Delete (soft) a field definition
  */
 export async function deleteFieldDefinition(fieldId: string): Promise<boolean> {
-  const result = await CustomFieldDefinition.findByIdAndUpdate(fieldId, { isActive: false });
-  return !!result;
+  const field = await CustomFieldDefinition.findByIdAndUpdate(fieldId, { isActive: false });
+  if (field) {
+    // Invalidate cache
+    await CustomFieldDefinitionCache.invalidate(fieldId, field.key);
+  }
+  return !!field;
 }
 
 // ============= USER FIELD VALUES =============
@@ -182,4 +197,65 @@ export async function clearUserFieldValue(userId: string, fieldId: string): Prom
   });
 
   return result.deletedCount > 0;
+}
+
+/**
+ * Set a custom field value by field KEY (for automations/flows)
+ * Creates the field definition if it doesn't exist
+ */
+export async function setUserFieldByKey(
+  userId: string,
+  fieldKey: string,
+  value: string | number | boolean | Date,
+  systemAgentId?: string
+): Promise<boolean> {
+  // Find field definition from cache
+  let fieldDef = await CustomFieldDefinitionCache.getByKey(fieldKey.toLowerCase());
+  
+  if (!fieldDef) {
+    // Auto-create the field definition
+    const type: CustomFieldType = 
+      typeof value === 'number' ? 'number' :
+      typeof value === 'boolean' ? 'boolean' :
+      value instanceof Date ? 'date' : 'text';
+    
+    const newField = await CustomFieldDefinition.create({
+      name: fieldKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert key to title
+      key: fieldKey.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+      type,
+      required: false,
+      order: 999,
+      isActive: true,
+      createdBy: systemAgentId ? new mongoose.Types.ObjectId(systemAgentId) : new mongoose.Types.ObjectId('000000000000000000000000'),
+    });
+    
+    // Invalidate cache after creation
+    await CustomFieldDefinitionCache.invalidateAll();
+    fieldDef = { _id: newField._id!.toString() };
+  }
+
+  // Set the value via write-behind cache
+  const agentId = systemAgentId || '000000000000000000000000';
+  await UserCustomFieldsCache.set(userId, fieldDef._id, value, agentId);
+
+  return true;
+}
+
+/**
+ * Get a custom field value by key (cached)
+ */
+export async function getUserFieldByKey(
+  userId: string,
+  fieldKey: string
+): Promise<string | number | boolean | Date | null> {
+  // Get field definition from cache
+  const fieldDef = await CustomFieldDefinitionCache.getByKey(fieldKey.toLowerCase());
+  if (!fieldDef) return null;
+
+  const userField = await UserCustomField.findOne({
+    user: new mongoose.Types.ObjectId(userId),
+    field: new mongoose.Types.ObjectId(fieldDef._id),
+  });
+
+  return userField?.value ?? null;
 }

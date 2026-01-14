@@ -3,6 +3,7 @@
  * Handles creation, execution, cancellation, and management of scheduled messages
  * 
  * Features:
+ * - BullMQ-based scheduling for reliability
  * - Exactly-once delivery with distributed locking
  * - Automatic cancellation on user response
  * - Placeholder resolution
@@ -27,6 +28,9 @@ import { Message } from '../database/models/Message.js';
 import { logger } from './logger.js';
 import { sendMessage, sendPhoto, sendDocument, sendAudio } from './telegram.js';
 import { getIO } from './socket.js';
+// BullMQ integration
+import { scheduleMessage as scheduleWithBullMQ, cancelScheduledMessage as cancelBullMQJob } from '../workers/index.js';
+import { isRedisConnected } from './redis.js';
 
 // Worker instance ID for distributed locking
 const WORKER_ID = `worker-${process.pid}-${uuidv4().slice(0, 8)}`;
@@ -127,12 +131,51 @@ export async function createScheduledMessage(
       : undefined,
   });
 
+  // ============= BULLMQ SCHEDULING =============
+  // If Redis is available and this is a fixed-time message, add to BullMQ queue
+  if (isRedisConnected() && input.type === 'fixed_time' && input.scheduledAt) {
+    try {
+      const jobId = await scheduleWithBullMQ(
+        scheduled._id.toString(),
+        input.sessionId,
+        input.chatId,
+        input.scheduledAt
+      );
+      
+      if (jobId) {
+        // Update the document with the BullMQ job ID for tracking
+        await ScheduledMessage.findByIdAndUpdate(scheduled._id, {
+          bullmqJobId: jobId,
+        });
+        
+        logger.info('api', {
+          action: 'scheduled_message_queued_bullmq',
+          scheduledMessageId: scheduled._id.toString(),
+          jobId,
+          scheduledAt: input.scheduledAt.toISOString(),
+        });
+      }
+    } catch (err) {
+      // Log error but don't fail - fallback to cron-based processing
+      logger.warn('api', {
+        action: 'bullmq_schedule_failed',
+        scheduledMessageId: scheduled._id.toString(),
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   // Log activity
-  await logActivity(input.sessionId, 'scheduled_message_created', {
-    scheduledMessageId: scheduled._id.toString(),
-    type: input.type,
-    createdBy: input.createdBy,
-  });
+  await logActivity(
+    input.sessionId, 
+    'scheduled_message_created',
+    `Mensaje programado creado para ${input.type === 'fixed_time' ? 'hora fija' : input.type === 'after_inactivity' ? 'después de inactividad' : 'evento'}`,
+    {
+      scheduledMessageId: scheduled._id.toString(),
+      type: input.type,
+      createdBy: input.createdBy,
+    }
+  );
 
   // Emit socket event
   emitScheduledMessageEvent('scheduled_message_created', scheduled);
@@ -172,11 +215,29 @@ export async function cancelScheduledMessage(
   );
 
   if (message) {
-    await logActivity(message.sessionId, 'scheduled_message_cancelled', {
-      scheduledMessageId: messageId,
-      cancelledBy,
-      reason,
-    });
+    // Cancel BullMQ job if exists
+    if (isRedisConnected()) {
+      try {
+        await cancelBullMQJob(messageId);
+      } catch (err) {
+        logger.warn('api', {
+          action: 'bullmq_cancel_failed',
+          scheduledMessageId: messageId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    await logActivity(
+      message.sessionId, 
+      'scheduled_message_cancelled',
+      reason || 'Mensaje programado cancelado',
+      {
+        scheduledMessageId: messageId,
+        cancelledBy,
+        reason,
+      }
+    );
 
     emitScheduledMessageEvent('scheduled_message_cancelled', message);
 
@@ -291,13 +352,38 @@ export async function processScheduledMessages(): Promise<{
 
   const allPending = [...pendingFixedTime, ...pendingInactivity];
 
+  // Log if messages found
+  if (allPending.length > 0) {
+    logger.info('api', {
+      action: 'scheduled_messages_found',
+      fixedTimeCount: pendingFixedTime.length,
+      inactivityCount: pendingInactivity.length,
+      totalToProcess: allPending.length,
+    });
+  }
+
   // 4. Process each message
   for (const message of allPending) {
     stats.processed++;
     
+    logger.info('api', {
+      action: 'scheduled_message_processing',
+      messageId: message._id.toString(),
+      type: message.type,
+      sessionId: message.sessionId,
+      chatId: message.chatId,
+    });
+    
     // Try to acquire lock
     const locked = await acquireLock(message._id);
-    if (!locked) continue; // Another worker got it
+    if (!locked) {
+      logger.info('api', {
+        action: 'scheduled_message_lock_failed',
+        messageId: message._id.toString(),
+        reason: 'Another worker got it',
+      });
+      continue;
+    }
 
     try {
       // Validate session is still active
@@ -334,11 +420,24 @@ export async function processScheduledMessages(): Promise<{
         );
         stats.sent++;
 
-        // Log and emit
-        await logActivity(message.sessionId, 'scheduled_message_sent', {
-          scheduledMessageId: message._id.toString(),
+        logger.info('api', {
+          action: 'scheduled_message_sent_success',
+          messageId: message._id.toString(),
+          chatId: message.chatId,
+          sessionId: message.sessionId,
           telegramMessageId: result.telegramMessageId,
         });
+
+        // Log and emit
+        await logActivity(
+          message.sessionId, 
+          'scheduled_message_sent',
+          'Mensaje programado enviado exitosamente',
+          {
+            scheduledMessageId: message._id.toString(),
+            telegramMessageId: result.telegramMessageId,
+          }
+        );
 
         const updated = await ScheduledMessage.findById(message._id);
         if (updated) {
@@ -348,6 +447,15 @@ export async function processScheduledMessages(): Promise<{
         // Handle failure
         const newAttempts = message.attempts + 1;
         const isFinal = newAttempts >= message.maxAttempts;
+        
+        logger.error('api', {
+          action: 'scheduled_message_send_failed',
+          messageId: message._id.toString(),
+          chatId: message.chatId,
+          error: result.error,
+          attempts: newAttempts,
+          isFinal,
+        });
 
         await ScheduledMessage.updateOne(
           { _id: message._id },
@@ -362,11 +470,16 @@ export async function processScheduledMessages(): Promise<{
 
         if (isFinal) {
           stats.failed++;
-          await logActivity(message.sessionId, 'scheduled_message_failed', {
-            scheduledMessageId: message._id.toString(),
-            error: result.error,
-            attempts: newAttempts,
-          });
+          await logActivity(
+            message.sessionId, 
+            'scheduled_message_failed',
+            `Mensaje programado falló después de ${newAttempts} intentos: ${result.error}`,
+            {
+              scheduledMessageId: message._id.toString(),
+              error: result.error,
+              attempts: newAttempts,
+            }
+          );
         }
       }
     } catch (error) {
@@ -634,36 +747,50 @@ async function sendScheduledMessage(
 
     let success = false;
 
-    if (content.media) {
+    // Check if media exists AND has a valid type
+    const hasValidMedia = content.media && content.media.type && (content.media.fileId || content.media.url);
+    
+    if (hasValidMedia) {
       // Send media message
-      switch (content.media.type) {
+      switch (content.media!.type) {
         case 'photo':
           success = await sendPhoto(
             chatId,
-            content.media.fileId || content.media.url!,
-            content.media.caption || content.text
+            content.media!.fileId || content.media!.url!,
+            { caption: content.media!.caption || content.text }
           );
           break;
         case 'audio':
         case 'voice':
           success = await sendAudio(
             chatId,
-            content.media.fileId || content.media.url!,
-            content.media.caption
+            content.media!.fileId || content.media!.url!,
+            { caption: content.media!.caption }
           );
           break;
         case 'document':
         case 'video':
           success = await sendDocument(
             chatId,
-            content.media.fileId || content.media.url!,
-            content.media.caption
+            content.media!.fileId || content.media!.url!,
+            { caption: content.media!.caption }
           );
           break;
       }
     } else if (content.text) {
       // Send text message
+      logger.info('api', {
+        action: 'scheduled_message_sending_text',
+        chatId,
+        textLength: content.text.length,
+        textPreview: content.text.substring(0, 50),
+      });
       success = await sendMessage(chatId, content.text);
+      logger.info('api', {
+        action: 'scheduled_message_send_result',
+        chatId,
+        success,
+      });
     } else {
       return { success: false, error: 'No content to send' };
     }
@@ -735,17 +862,21 @@ function applyPlaceholders(text: string, placeholders: Record<string, string>): 
 async function logActivity(
   sessionId: string,
   action: string,
+  description: string,
   metadata: Record<string, unknown>
 ): Promise<void> {
   try {
     await ActivityLog.create({
       sessionId,
       action,
+      description,
       actor: {
         type: 'system',
         name: 'ScheduledMessages',
       },
       metadata,
+      icon: action.includes('cancelled') ? '🚫' : action.includes('sent') ? '📤' : '⏰',
+      color: action.includes('failed') ? 'red' : action.includes('cancelled') ? 'yellow' : 'blue',
     });
   } catch (error) {
     logger.error('api', {

@@ -5,6 +5,7 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
+import NodeWrapper from './NodeWrapper';
 
 interface EndNodeData {
   label: string;
@@ -16,18 +17,19 @@ interface EndNodeData {
   };
 }
 
-function EndNode({ data, selected }: NodeProps<EndNodeData>) {
+function EndNode({ data, selected, id }: NodeProps<EndNodeData>) {
   return (
-    <div
-      className={`
-        bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 min-w-[120px]
-        transition-all duration-200
-        ${selected 
-          ? 'border-gray-500 ring-2 ring-gray-200 dark:ring-gray-700' 
-          : 'border-gray-400 dark:border-gray-600'
-        }
-      `}
-    >
+    <NodeWrapper nodeId={id} selected={selected}>
+      <div
+        className={`
+          bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 min-w-[120px]
+          transition-all duration-200
+          ${selected 
+            ? 'border-gray-500 ring-2 ring-gray-200 dark:ring-gray-700' 
+            : 'border-gray-400 dark:border-gray-600'
+          }
+        `}
+      >
       {/* Input handle (top) */}
       <Handle
         type="target"
@@ -51,6 +53,7 @@ function EndNode({ data, selected }: NodeProps<EndNodeData>) {
         </div>
       </div>
     </div>
+    </NodeWrapper>
   );
 }
 

@@ -57,6 +57,7 @@ export interface ContactInfo {
     };
   };
   customFields: Array<{
+    fieldId: string;
     key: string;
     name: string;
     type: string;
@@ -124,6 +125,7 @@ export async function getContactInfo(sessionId: string): Promise<ContactInfo | n
   );
 
   const customFields = customFieldDefs.map(def => ({
+    fieldId: def._id?.toString(),
     key: def.key,
     name: def.name,
     type: def.type,

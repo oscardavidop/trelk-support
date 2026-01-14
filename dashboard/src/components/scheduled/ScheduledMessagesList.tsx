@@ -28,6 +28,7 @@ import {
 } from '../../services/scheduledMessage.service';
 import type { ScheduledMessage, ScheduledMessageStatus, ScheduleType } from '../../types/scheduledMessage';
 import { toast } from '../../stores/toastStore';
+import { getSocket } from '../../services/socket';
 
 interface Props {
   sessionId: string;
@@ -87,6 +88,29 @@ export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
     return () => clearInterval(interval);
   }, [loadMessages]);
 
+  // Listen for socket events to auto-refresh
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleScheduledEvent = (data: { sessionId?: string }) => {
+      // Reload if the event is for this session
+      if (data.sessionId === sessionId) {
+        loadMessages();
+      }
+    };
+
+    socket.on('scheduled_message_created', handleScheduledEvent);
+    socket.on('scheduled_message_cancelled', handleScheduledEvent);
+    socket.on('scheduled_message_sent', handleScheduledEvent);
+
+    return () => {
+      socket.off('scheduled_message_created', handleScheduledEvent);
+      socket.off('scheduled_message_cancelled', handleScheduledEvent);
+      socket.off('scheduled_message_sent', handleScheduledEvent);
+    };
+  }, [sessionId, loadMessages]);
+
   const handleCancel = async (messageId: string) => {
     setCancellingId(messageId);
     try {
@@ -125,30 +149,22 @@ export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
   }
 
   return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4">
-        <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          Mensajes programados
-          {pendingMessages.length > 0 && (
-            <span className="px-1.5 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
-              {pendingMessages.length}
-            </span>
-          )}
-        </h3>
+    <div className="space-y-2">
+      {/* Refresh button */}
+      <div className="flex items-center justify-end px-3 pt-2">
         <button
           onClick={loadMessages}
           disabled={loading}
           className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+          title="Actualizar"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {/* Pending Messages */}
       {pendingMessages.length > 0 && (
-        <div className="px-4 space-y-2">
+        <div className="px-3 space-y-2">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Pendientes</p>
           {pendingMessages.map((msg) => (
             <MessageCard
@@ -165,7 +181,7 @@ export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
 
       {/* Other Messages */}
       {otherMessages.length > 0 && (
-        <div className="px-4 pb-4 space-y-2">
+        <div className="px-3 pb-3 space-y-2">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Historial</p>
           {otherMessages.slice(0, 5).map((msg) => (
             <MessageCard

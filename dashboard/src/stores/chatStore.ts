@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import type { ChatSession, Message, DashboardStats } from '../types';
 
-type TabType = 'open' | 'queue' | 'closed';
+type TabType = 'open' | 'all' | 'queue' | 'closed';
 type DateFilter = 'today' | 'week' | 'month' | 'all';
 
 interface SessionCounts {
@@ -142,14 +142,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
   })),
   
   setActiveSession: (session) => {
-    set({ activeSession: session, messages: [] });
+    const currentSession = get().activeSession;
+    // Only clear messages if switching to a different session
+    if (session?.sessionId !== currentSession?.sessionId) {
+      set({ activeSession: session, messages: [] });
+    } else {
+      // Same session, just update the session data but keep messages
+      set({ activeSession: session });
+    }
   },
   
   setMessages: (messages) => set({ messages }),
   
   addMessage: (message) => {
     const { activeSession } = get();
-    if (activeSession && message.session === activeSession.sessionId) {
+    // Support both 'session' and 'sessionId' fields for compatibility
+    const messageSessionId = message.session || (message as any).sessionId;
+    if (activeSession && messageSessionId === activeSession.sessionId) {
       set((state) => ({
         messages: [...state.messages, message],
       }));

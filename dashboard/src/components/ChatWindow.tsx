@@ -3,10 +3,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
-import { 
-  acceptSession, 
-  closeSession, 
-  joinSession, 
+import {
+  acceptSession,
+  closeSession,
+  joinSession,
   leaveSession,
   editMessage,
   deleteMessage,
@@ -15,10 +15,10 @@ import {
   reportSpam
 } from '../services/socket';
 import { toast } from '../stores/toastStore';
-import { 
-  X, 
-  CheckCircle, 
-  Clock, 
+import {
+  X,
+  CheckCircle,
+  Clock,
   User,
   Bot,
   Headphones,
@@ -39,7 +39,8 @@ import {
   Maximize2,
   ArrowRightLeft,
   Ban,
-  Pin
+  Pin,
+  Eye
 } from 'lucide-react';
 import type { ChatSession, Message, TypingEvent, ChatCategory } from '../types';
 import AgentComposer from './AgentComposer';
@@ -60,19 +61,19 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
   const agent = useAuthStore((state) => state.agent);
   const { messages, setMessages, isLoadingMessages, setLoadingMessages, updateMessage, deleteMessage: removeMessage, pinnedMessages, setPinnedMessage, clearPinnedMessage } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Enterprise states
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [survey, setSurvey] = useState<{ rating: number; comment?: string } | null>(null);
-  
+
   // Context menu states
   const [contextMenu, setContextMenu] = useState<{
     message: Message;
     position: { x: number; y: number };
   } | null>(null);
-  
+
   // Modal states
   const [editModal, setEditModal] = useState<{ message: Message } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ message: Message } | null>(null);
@@ -80,11 +81,11 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
   const [addNoteModal, setAddNoteModal] = useState<{ message: Message } | null>(null);
   const [tagSelectorModal, setTagSelectorModal] = useState<{ message: Message } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  
+
   // Whispers from supervisor
   const { whispers, markWhisperAsRead: markWhisperReadStore } = useSupervisorStore();
   const sessionWhispers = whispers.filter(w => w.sessionId === session.sessionId);
-  
+
   // Handle whisper read
   const handleWhisperRead = useCallback((whisperId: string) => {
     markWhisperReadApi(whisperId);
@@ -94,10 +95,10 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
   // Join session room and load messages
   useEffect(() => {
     let isMounted = true;
-    
+
     // Clear previous messages immediately to avoid showing stale data
     setMessages([]);
-    
+
     const loadSessionMessages = async () => {
       setLoadingMessages(true);
       try {
@@ -106,13 +107,13 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
             Authorization: `Bearer ${useAuthStore.getState().token}`,
           },
         });
-        
+
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
-        
+
         const data = await res.json();
-        
+
         // Only update if component is still mounted and session hasn't changed
         if (isMounted && data.ok) {
           setMessages(data.messages);
@@ -131,10 +132,10 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         }
       }
     };
-    
+
     joinSession(session.sessionId);
     loadSessionMessages();
-    
+
     // Load survey for closed sessions
     if (session.status === 'closed') {
       loadSurvey();
@@ -145,7 +146,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
       leaveSession(session.sessionId);
     };
   }, [session.sessionId, session.status, setMessages, setLoadingMessages]);
-  
+
   // Typing indicator listeners
   useEffect(() => {
     const handleTypingStart = (e: CustomEvent<TypingEvent>) => {
@@ -153,16 +154,16 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         setIsUserTyping(true);
       }
     };
-    
+
     const handleTypingStop = (e: CustomEvent<TypingEvent>) => {
       if (e.detail.sessionId === session.sessionId) {
         setIsUserTyping(false);
       }
     };
-    
+
     window.addEventListener('typing:start', handleTypingStart as EventListener);
     window.addEventListener('typing:stop', handleTypingStop as EventListener);
-    
+
     return () => {
       window.removeEventListener('typing:start', handleTypingStart as EventListener);
       window.removeEventListener('typing:stop', handleTypingStop as EventListener);
@@ -208,7 +209,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
       console.error('Failed to load survey:', error);
     }
   };
-  
+
   // Context menu handlers
   const handleMessageClick = useCallback((message: Message, event: React.MouseEvent) => {
     event.preventDefault();
@@ -217,32 +218,32 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
       position: { x: event.clientX, y: event.clientY }
     });
   }, []);
-  
+
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
-  
+
   // Message action handlers
   const handleReply = useCallback((message: Message) => {
     setReplyTo(message);
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleCancelReply = useCallback(() => {
     setReplyTo(null);
   }, []);
-  
+
   const handleCopy = useCallback(async (message: Message) => {
     await navigator.clipboard.writeText(message.content);
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleCopyLink = useCallback(async (message: Message) => {
     const link = `${window.location.origin}/chat/${session.sessionId}#message-${message._id}`;
     await navigator.clipboard.writeText(link);
     closeContextMenu();
   }, [session.sessionId, closeContextMenu]);
-  
+
   const handlePin = useCallback((message: Message) => {
     pinMessage(message._id, session.sessionId, (result) => {
       if (result.ok) {
@@ -251,7 +252,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     });
     closeContextMenu();
   }, [session.sessionId, setPinnedMessage, closeContextMenu]);
-  
+
   const handleUnpin = useCallback((message: Message) => {
     unpinMessage(message._id, session.sessionId, (result) => {
       if (result.ok) {
@@ -260,12 +261,12 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     });
     closeContextMenu();
   }, [session.sessionId, clearPinnedMessage, closeContextMenu]);
-  
+
   const handleEdit = useCallback((message: Message) => {
     setEditModal({ message });
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleEditSave = useCallback((messageId: string, newContent: string) => {
     editMessage(messageId, session.sessionId, newContent, (result) => {
       if (result.ok) {
@@ -274,12 +275,12 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     });
     setEditModal(null);
   }, [session.sessionId, updateMessage]);
-  
+
   const handleDelete = useCallback((message: Message) => {
     setDeleteModal({ message });
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleDeleteConfirm = useCallback((messageId: string) => {
     deleteMessage(messageId, session.sessionId, (result) => {
       if (result.ok) {
@@ -288,12 +289,12 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     });
     setDeleteModal(null);
   }, [session.sessionId, removeMessage]);
-  
+
   const handleSaveQuickReply = useCallback((message: Message) => {
     setSaveQuickReplyModal({ message });
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleSaveQuickReplyConfirm = useCallback(async (data: { title: string; content: string; category?: string; shortcut?: string }) => {
     try {
       await fetch('/api/quick-replies', {
@@ -309,17 +310,17 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     }
     setSaveQuickReplyModal(null);
   }, []);
-  
+
   const handleBlockUser = useCallback(() => {
     setShowBlockModal(true);
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleAddTag = useCallback((message: Message) => {
     setTagSelectorModal({ message });
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleTagSelect = useCallback(async (messageId: string, tags: string[]) => {
     try {
       await fetch(`/api/messages/${messageId}/tags`, {
@@ -336,12 +337,12 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     }
     setTagSelectorModal(null);
   }, [updateMessage]);
-  
+
   const handleAddNote = useCallback((message: Message) => {
     setAddNoteModal({ message });
     closeContextMenu();
   }, [closeContextMenu]);
-  
+
   const handleNoteSave = useCallback(async (messageId: string, note: string) => {
     try {
       await fetch(`/api/messages/${messageId}/note`, {
@@ -358,14 +359,14 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     }
     setAddNoteModal(null);
   }, [updateMessage]);
-  
+
   const handleReportSpam = useCallback((message: Message) => {
     if (confirm('¿Reportar este mensaje como spam?')) {
       reportSpam(message._id, session.sessionId);
     }
     closeContextMenu();
   }, [session.sessionId, closeContextMenu]);
-  
+
   // Get pinned message for this session
   const pinnedMessage = pinnedMessages[session.sessionId];
 
@@ -377,6 +378,19 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
     });
   };
 
+  /* Componente auxiliar pequeño para los botones de icono */
+  const TooltipButton = ({ onClick, icon, label, danger }: any) => (
+    <button
+      onClick={onClick}
+      className={`p-1.5 rounded-md transition-colors group relative ${danger
+          ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+          : 'text-gray-400 hover:text-white hover:bg-gray-800'
+        }`}
+      title={label}
+    >
+      {icon}
+    </button>
+  );
   const handleClose = () => {
     if (confirm('Are you sure you want to close this conversation?')) {
       closeSession(session.sessionId, 'Agent closed conversation', (result) => {
@@ -389,6 +403,9 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
 
   const isMySession = session.assignedAgent?._id === agent?._id;
   const isClosed = session.status === 'closed';
+  const isAdmin = agent?.role === 'admin';
+  const isSupervisor = agent?.role === 'supervisor';
+  const isAuditMode = !isMySession && !isClosed && session.assignedAgent && (isAdmin || isSupervisor);
 
   const getCloseReasonLabel = () => {
     if (!session.closeReason) return 'Conversación cerrada';
@@ -415,9 +432,21 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
 
   return (
     <div className="flex flex-col h-full">
+      {/* Audit Mode Banner - Viewing another agent's chat */}
+      {isAuditMode && (
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-900/40 border-b border-purple-500/30 text-purple-300 text-sm h-[40px]">
+          <Eye className="w-4 h-4" />
+          <span className="font-medium">Modo Auditoría</span>
+          <span className="text-purple-400">•</span>
+          <span>Supervisando chat de {session.assignedAgent?.name}</span>
+          <div className="ml-2 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          <span className="text-xs text-purple-400">En vivo</span>
+        </div>
+      )}
+
       {/* Closed Banner */}
       {isClosed && (
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700 text-gray-400 text-sm">
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700 text-gray-400 text-sm h-[56px]">
           <Lock className="w-4 h-4" />
           <span>Modo solo lectura</span>
           <span className="text-gray-600">•</span>
@@ -431,116 +460,130 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         </div>
       )}
 
-      {/* Header */}
-      <div className={`flex items-center justify-between p-4 border-b border-gray-800 ${isClosed ? 'bg-gray-900/30' : 'bg-gray-900/50'}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-medium">
-            {session.user.firstName.charAt(0).toUpperCase()}
+      {/* Header Component - H-[56px] Fixed Height */}
+      <div className={`
+  flex items-center justify-between px-4 h-[56px] border-b border-gray-800 
+  backdrop-blur-md transition-colors z-20 sticky top-0
+  ${isClosed ? 'bg-gray-900/60' : 'bg-gray-900/95'}
+`}>
+
+        {/* Left: User Profile - Vertically Compact */}
+        <div className="flex items-center gap-3 min-w-0 h-full">
+          {/* Avatar (40px height) fits perfectly inside 56px */}
+          <div className="relative shrink-0 my-auto">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm
+        ${session.user.isSubscriber
+                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 ring-1 ring-purple-500/40'
+                : 'bg-gradient-to-br from-gray-600 to-gray-700 ring-1 ring-white/10'
+              }`}
+            >
+              {session.user.firstName.charAt(0).toUpperCase()}
+            </div>
+            {/* Platform indicator icon (optional) */}
+            <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[1.5px] border-[1.5px] border-gray-900">
+              <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
+            </div>
           </div>
-          <div>
-            <h3 className="font-medium text-white">
-              {session.user.firstName} {session.user.lastName || ''}
+
+          {/* Info Text - Tightened for 56px height */}
+          <div className="flex flex-col justify-center min-w-0 leading-tight">
+            <div className="flex items-baseline gap-1.5 mb-0.5 truncate">
+              <h3 className="font-semibold text-lg text-white truncate">
+                {session.user.firstName} {session.user.lastName || ''}
+              </h3>
               {session.user.username && (
-                <span className="text-gray-500 font-normal ml-2">@{session.user.username}</span>
-              )}
-            </h3>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>Telegram ID: {session.user.telegramId}</span>
-              <span>•</span>
-              <span className="uppercase">{session.user.language}</span>
-              {session.user.isSubscriber && (
-                <>
-                  <span>•</span>
-                  <span className="text-secondary">Premium</span>
-                </>
+                <span className="text-[15px] text-gray-400 font-medium truncate">@{session.user.username}</span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Right: Actions Toolbar - Centered vertically */}
+        <div className="flex items-center gap-1.5 h-full">
+
+          {/* 1. Primary Status Actions */}
           {session.status === 'waiting' && (
             <button
               onClick={handleAccept}
-              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-md shadow-sm transition-all hover:scale-105 active:scale-95 mr-1"
             >
-              <CheckCircle className="w-4 h-4" />
-              Accept
+              <CheckCircle className="w-3.5 h-3.5" />
+              Aceptar
             </button>
           )}
-          
+
+          {isClosed && (
+            <div className="mr-1">
+              <ReopenChatButton
+                sessionId={session.sessionId}
+                reopenCount={(session as any).reopenCount || 0}
+              />
+            </div>
+          )}
+
           {session.status === 'human' && isMySession && (
             <button
               onClick={handleClose}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-800 hover:bg-red-500/10 hover:text-red-400 text-gray-300 border border-gray-700 text-xs font-medium rounded-md transition-all group mr-1"
             >
-              <X className="w-4 h-4" />
-              Close
+              <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-400" />
+              Cerrar
             </button>
           )}
-          
-          {/* Enterprise Actions */}
+
+          {/* Separator */}
+          <div className="w-px h-5 bg-gray-800 mx-0.5 hidden sm:block" />
+
+          {/* 2. Management Actions (Icon only) */}
           {session.status === 'human' && isMySession && (
-            <>
-              <CategorySelector 
-                sessionId={session.sessionId} 
-                currentCategory={(session as any).category}
-                compact 
-              />
-              <button
-                onClick={() => setShowTransferModal(true)}
-                className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-                title="Transferir chat"
-              >
-                <ArrowRightLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setShowBlockModal(true)}
-                className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
-                title="Bloquear usuario"
-              >
-                <Ban className="w-5 h-5" />
-              </button>
-            </>
+            <div className="flex items-center gap-0.5">
+              <div className="scale-90 origin-right"> { /* Slightly smaller category selector to fit nicely */}
+                <CategorySelector
+                  sessionId={session.sessionId}
+                  currentCategory={(session as any).category}
+                  compact
+                />
+              </div>
+
+              <TooltipButton onClick={() => setShowTransferModal(true)} icon={<ArrowRightLeft className="w-4 h-4" />} label="Transferir" />
+              <TooltipButton onClick={() => setShowBlockModal(true)} icon={<Ban className="w-4 h-4" />} label="Bloquear" danger />
+            </div>
           )}
-          
-          {/* Reopen button for closed chats */}
-          {isClosed && (
-            <ReopenChatButton 
-              sessionId={session.sessionId}
-              reopenCount={(session as any).reopenCount || 0}
-            />
-          )}
-          
-          <a
-            href={`https://t.me/${session.user.username || ''}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <ExternalLink className="w-5 h-5" />
-          </a>
-          
-          {/* Toggle Sidebar Button */}
-          {onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className={`p-2 rounded-lg transition-colors ${
-                isSidebarOpen 
-                  ? 'text-primary bg-primary/10' 
-                  : 'text-gray-500 hover:text-white hover:bg-gray-800'
-              }`}
-              title={isSidebarOpen ? 'Ocultar información' : 'Mostrar información'}
+
+          {/* Separator */}
+          {(session.status === 'human' && isMySession) && <div className="w-px h-5 bg-gray-800 mx-0.5 hidden sm:block" />}
+
+          {/* 3. Utility Actions */}
+          <div className="flex items-center gap-0.5">
+            <a
+              href={`https://t.me/${session.user.username || ''}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors"
+              title="Abrir en Telegram"
             >
-              {isSidebarOpen ? (
-                <PanelRightClose className="w-5 h-5" />
-              ) : (
-                <PanelRightOpen className="w-5 h-5" />
-              )}
-            </button>
-          )}
+              <ExternalLink className="w-4 h-4" />
+            </a>
+
+            {onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                className={`p-1.5 rounded-md transition-colors ${isSidebarOpen
+                  ? 'text-primary bg-primary/10 ring-1 ring-primary/20'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`}
+                title={isSidebarOpen ? 'Ocultar panel lateral' : 'Mostrar info usuario'}
+              >
+                {isSidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+
+
+
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-messages-scroll">
@@ -565,7 +608,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
             </div>
           </div>
         )}
-        
+
         {/* Whispers from Supervisor */}
         {sessionWhispers.length > 0 && (
           <WhisperDisplay
@@ -584,7 +627,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
             onMarkAsRead={handleWhisperRead}
           />
         )}
-        
+
         {isLoadingMessages ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -595,32 +638,32 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           </div>
         ) : (
           messages.map((message) => (
-            <MessageBubble 
-              key={message._id} 
+            <MessageBubble
+              key={message._id}
               message={message}
               onContextMenu={(e) => handleMessageClick(message, e)}
               isPinned={pinnedMessage?._id === message._id}
             />
           ))
         )}
-        
+
         {/* Typing Indicator */}
         {isUserTyping && <TypingIndicator name={session.user.firstName} />}
-        
+
         {/* Survey for closed sessions */}
         {isClosed && survey && (
           <div className="mt-4">
             <SurveyDisplay survey={survey as any} />
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
       {session.status === 'human' && isMySession ? (
-        <AgentComposer 
-          session={session} 
+        <AgentComposer
+          session={session}
           replyTo={replyTo}
           onCancelReply={handleCancelReply}
         />
@@ -659,7 +702,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           </p>
         </div>
       )}
-      
+
       {/* Enterprise Modals */}
       <TransferModal
         isOpen={showTransferModal}
@@ -667,7 +710,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         sessionId={session.sessionId}
         currentAgentId={session.assignedAgent?._id}
       />
-      
+
       <BlockUserModal
         isOpen={showBlockModal}
         onClose={() => setShowBlockModal(false)}
@@ -675,7 +718,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         username={session.user.username}
         firstName={session.user.firstName}
       />
-      
+
       {/* Context Menu */}
       {contextMenu && (
         <MessageContextMenu
@@ -697,7 +740,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           onReportSpam={handleReportSpam}
         />
       )}
-      
+
       {/* Message Action Modals */}
       {editModal && (
         <EditMessageModal
@@ -707,7 +750,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           onSave={handleEditSave}
         />
       )}
-      
+
       {deleteModal && (
         <DeleteMessageModal
           isOpen={true}
@@ -716,7 +759,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           onConfirm={handleDeleteConfirm}
         />
       )}
-      
+
       {saveQuickReplyModal && (
         <SaveQuickReplyModal
           isOpen={true}
@@ -725,7 +768,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           onSave={handleSaveQuickReplyConfirm}
         />
       )}
-      
+
       {addNoteModal && (
         <AddNoteModal
           isOpen={true}
@@ -733,7 +776,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
           onSave={(note) => handleNoteSave(addNoteModal.message._id, note)}
         />
       )}
-      
+
       {tagSelectorModal && (
         <TagSelectorModal
           isOpen={true}
@@ -770,12 +813,12 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
   // Helper to convert media reference to proxy URL
   const getProxyMediaUrl = (mediaRef: string | undefined): string | undefined => {
     if (!mediaRef) return undefined;
-    
+
     // If it's already a full URL path, return as-is
     if (mediaRef.startsWith('/api/media/') || mediaRef.startsWith('/api/download/') || mediaRef.startsWith('/uploads/')) {
       return mediaRef;
     }
-    
+
     // If it starts with http, it might be an old-style Telegram URL - convert it
     if (mediaRef.startsWith('http')) {
       const telegramMatch = mediaRef.match(/api\.telegram\.org\/file\/bot[^/]+\/(.+)$/);
@@ -784,7 +827,7 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
       }
       return mediaRef;
     }
-    
+
     // Otherwise, treat it as a file_id from telegram-bot-api local mode
     // The backend will resolve it via getFile() API
     return `/api/media/${encodeURIComponent(mediaRef)}`;
@@ -793,7 +836,7 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
   // Render media content based on type
   const renderMediaContent = () => {
     const mediaUrl = getProxyMediaUrl(message.mediaUrl);
-    
+
     if (!mediaUrl) {
       return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
     }
@@ -801,53 +844,52 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
     switch (message.messageType) {
       case 'image':
         return (
-          <MediaImage 
-            url={mediaUrl} 
-            alt={message.content} 
+          <MediaImage
+            url={mediaUrl}
+            alt={message.content}
             isAgent={isAgent}
           />
         );
-      
+
       case 'voice':
       case 'audio':
         return (
-          <MediaAudio 
-            url={mediaUrl} 
+          <MediaAudio
+            url={mediaUrl}
             title={message.content}
             isAgent={isAgent}
           />
         );
-      
+
       case 'document':
       case 'file':
         return (
-          <MediaFile 
-            url={mediaUrl} 
+          <MediaFile
+            url={mediaUrl}
             fileName={message.fileName || message.content}
             isAgent={isAgent}
           />
         );
-      
+
       case 'sticker':
         return (
           <MediaSticker url={mediaUrl} />
         );
-      
+
       default:
         return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
     }
   };
 
   return (
-    <div 
+    <div
       id={`message-${message._id}`}
       className={`flex ${isAgent ? 'justify-end' : 'justify-start'} group`}
     >
       <div className={`flex items-end gap-2 max-w-[70%] ${isAgent ? 'flex-row-reverse' : ''}`}>
         {/* Avatar */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isAgent ? 'bg-primary' : isBot ? 'bg-gray-700' : 'bg-gray-600'
-        }`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAgent ? 'bg-primary' : isBot ? 'bg-gray-700' : 'bg-gray-600'
+          }`}>
           {isAgent ? (
             <Headphones className="w-4 h-4 text-white" />
           ) : isBot ? (
@@ -858,26 +900,23 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
         </div>
 
         {/* Bubble */}
-        <div 
+        <div
           onContextMenu={onContextMenu}
-          className={`px-4 py-2.5 rounded-2xl cursor-context-menu select-none transition-all ${
-            isAgent 
-              ? 'bg-primary text-white rounded-br-md hover:bg-primary/90' 
-              : 'bg-gray-800 text-white rounded-bl-md hover:bg-gray-700'
-          } ${isPinned ? 'ring-2 ring-primary/50' : ''}`}
+          className={`px-4 py-2.5 rounded-2xl cursor-context-menu select-none transition-all ${isAgent
+            ? 'bg-primary text-white rounded-br-md hover:bg-primary/90'
+            : 'bg-gray-800 text-white rounded-bl-md hover:bg-gray-700'
+            } ${isPinned ? 'ring-2 ring-primary/50' : ''}`}
         >
           {/* Reply Quote */}
           {message.replyToMessage && (
-            <div className={`flex items-start gap-2 mb-2 pb-2 border-b ${
-              isAgent ? 'border-white/20' : 'border-gray-600'
-            }`}>
-              <div className={`w-0.5 h-full min-h-[24px] rounded-full flex-shrink-0 ${
-                isAgent ? 'bg-white/40' : 'bg-primary'
-              }`} />
+            <div className={`flex items-start gap-2 mb-2 pb-2 border-b ${isAgent ? 'border-white/20' : 'border-gray-600'
+              }`}>
+              <div className={`w-0.5 h-full min-h-[24px] rounded-full flex-shrink-0 ${isAgent ? 'bg-white/40' : 'bg-primary'
+                }`} />
               <div className="min-w-0 flex-1">
                 <p className={`text-xs font-medium ${isAgent ? 'text-white/70' : 'text-primary'}`}>
-                  {message.replyToMessage.sender === 'user' 
-                    ? 'Usuario' 
+                  {message.replyToMessage.sender === 'user'
+                    ? 'Usuario'
                     : message.replyToMessage.senderAgent?.name || 'Agente'}
                 </p>
                 <p className={`text-xs truncate ${isAgent ? 'text-white/50' : 'text-gray-500'}`}>
@@ -886,7 +925,7 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
               </div>
             </div>
           )}
-          
+
           {/* Pinned indicator */}
           {isPinned && (
             <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
@@ -894,12 +933,12 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
               <span>Fijado</span>
             </div>
           )}
-          
+
           {message.senderAgent && (
             <p className="text-xs opacity-70 mb-1">{message.senderAgent.name}</p>
           )}
           {renderMediaContent()}
-          
+
           <div className={`flex items-center gap-2 mt-1 ${isAgent ? 'text-white/60' : 'text-gray-500'}`}>
             <span className="text-xs">
               {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -942,9 +981,8 @@ function MediaImage({ url, alt, isAgent }: { url: string; alt: string; isAgent: 
         <img
           src={url}
           alt={alt}
-          className={`max-w-xs max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${
-            isLoading ? 'hidden' : 'block'
-          }`}
+          className={`max-w-xs max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${isLoading ? 'hidden' : 'block'
+            }`}
           onLoad={() => setIsLoading(false)}
           onError={() => {
             setIsLoading(false);
@@ -961,10 +999,10 @@ function MediaImage({ url, alt, isAgent }: { url: string; alt: string; isAgent: 
           </button>
         )}
       </div>
-      
+
       {/* Fullscreen Modal */}
       {isFullscreen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsFullscreen(false)}
         >
@@ -1040,14 +1078,13 @@ function MediaAudio({ url, title, isAgent }: { url: string; title: string; isAge
         onError={() => setHasError(true)}
         preload="metadata"
       />
-      
+
       <button
         onClick={togglePlay}
-        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
-          isAgent 
-            ? 'bg-white/20 hover:bg-white/30' 
-            : 'bg-primary/80 hover:bg-primary'
-        }`}
+        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${isAgent
+          ? 'bg-white/20 hover:bg-white/30'
+          : 'bg-primary/80 hover:bg-primary'
+          }`}
       >
         {isPlaying ? (
           <Pause className="w-5 h-5" />
@@ -1055,14 +1092,14 @@ function MediaAudio({ url, title, isAgent }: { url: string; title: string; isAge
           <Play className="w-5 h-5 ml-0.5" />
         )}
       </button>
-      
+
       <div className="flex-1">
         <div className="flex items-center justify-between text-xs opacity-70 mb-1">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
         <div className="relative h-1.5 bg-white/20 rounded-full overflow-hidden">
-          <div 
+          <div
             className={`absolute h-full transition-all ${isAgent ? 'bg-white/60' : 'bg-primary'}`}
             style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
           />
@@ -1087,11 +1124,10 @@ function MediaFile({ url, fileName, isAgent }: { url: string; fileName: string; 
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors ${
-        isAgent 
-          ? 'bg-white/10 hover:bg-white/20' 
-          : 'bg-gray-700/50 hover:bg-gray-700'
-      }`}
+      className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors ${isAgent
+        ? 'bg-white/10 hover:bg-white/20'
+        : 'bg-gray-700/50 hover:bg-gray-700'
+        }`}
     >
       {getFileIcon()}
       <div className="flex-1 min-w-0">

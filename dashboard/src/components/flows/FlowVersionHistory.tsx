@@ -31,8 +31,8 @@ const FlowVersionHistory: React.FC<FlowVersionHistoryProps> = ({
   const loadVersions = async () => {
     try {
       setLoading(true);
-      const versionList = await flowService.getFlowVersions(flow._id);
-      setVersions(versionList);
+      const response = await flowService.getFlowVersions(flow._id);
+      setVersions(response.versions);
     } catch (err: any) {
       setError(err.message || 'Error cargando versiones');
     } finally {
