@@ -3,7 +3,7 @@
  * Supports blocks (text, image, document, audio, video, delay) and keyboards
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type {
   MessageBlock,
   TextBlock,
@@ -44,6 +44,21 @@ interface MessageEditorProps {
   flows?: FlowOption[];
 }
 
+// ============= SUPPORTED LANGUAGES =============
+const SUPPORTED_LANGUAGES = [
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
+  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'ko', name: '한국어', flag: '🇰🇷' },
+  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
+];
+
 // ============= ICONS =============
 
 const BlockIcons = {
@@ -82,16 +97,285 @@ const BlockIcons = {
 // ============= VARIABLE SELECTOR =============
 
 const AVAILABLE_VARIABLES = [
-  { path: 'user.firstName', label: 'Nombre', description: 'Nombre del usuario' },
-  { path: 'user.lastName', label: 'Apellido', description: 'Apellido del usuario' },
-  { path: 'user.username', label: 'Username', description: '@username de Telegram' },
-  { path: 'user.id', label: 'User ID', description: 'ID de Telegram' },
-  { path: 'message.content', label: 'Mensaje', description: 'Contenido del último mensaje' },
-  { path: 'chat.id', label: 'Chat ID', description: 'ID del chat' },
-  { path: 'date', label: 'Fecha', description: 'Fecha actual (YYYY-MM-DD)' },
-  { path: 'time', label: 'Hora', description: 'Hora actual (HH:MM)' },
-  { path: 'agent.name', label: 'Agente', description: 'Nombre del agente asignado' },
+  { path: 'user.firstName', label: 'Nombre', description: 'Nombre del usuario', category: 'user' },
+  { path: 'user.lastName', label: 'Apellido', description: 'Apellido del usuario', category: 'user' },
+  { path: 'user.username', label: 'Username', description: '@username de Telegram', category: 'user' },
+  { path: 'user.id', label: 'User ID', description: 'ID de Telegram', category: 'user' },
+  { path: 'user.language', label: 'Idioma', description: 'Idioma del usuario', category: 'user' },
+  { path: 'message.content', label: 'Mensaje', description: 'Contenido del último mensaje', category: 'message' },
+  { path: 'chat.id', label: 'Chat ID', description: 'ID del chat', category: 'chat' },
+  { path: 'date', label: 'Fecha', description: 'Fecha actual (YYYY-MM-DD)', category: 'system' },
+  { path: 'time', label: 'Hora', description: 'Hora actual (HH:MM)', category: 'system' },
+  { path: 'datetime', label: 'Fecha y hora', description: 'Fecha y hora actual', category: 'system' },
+  { path: 'agent.name', label: 'Agente', description: 'Nombre del agente asignado', category: 'agent' },
 ];
+
+// Textos i18n de ejemplo (se cargan dinámicamente)
+const COMMON_TEXT_KEYS = [
+  { key: 'WELCOME_MESSAGE', description: 'Mensaje de bienvenida' },
+  { key: 'GOODBYE_MESSAGE', description: 'Mensaje de despedida' },
+  { key: 'AGENT_ASSIGNED', description: 'Agente asignado' },
+  { key: 'WAIT_MESSAGE', description: 'Mensaje de espera' },
+  { key: 'ERROR_MESSAGE', description: 'Mensaje de error' },
+  { key: 'HELP_MESSAGE', description: 'Mensaje de ayuda' },
+  { key: 'MENU_MESSAGE', description: 'Menú principal' },
+  { key: 'TRANSFER_MESSAGE', description: 'Transferencia a agente' },
+];
+
+// ============= i18n CONFIGURATION COMPONENT =============
+// Detects {{TEXT.KEY}} patterns and shows language source configuration
+
+interface I18nConfigProps {
+  config: ActionConfig;
+  onChange: (updates: Partial<ActionConfig>) => void;
+  detectedTextKeys: string[];
+  readOnly?: boolean;
+}
+
+const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detectedTextKeys, readOnly }) => {
+  const i18nConfig = config.i18nConfig || { source: 'user_language' };
+  
+  const updateI18nConfig = (updates: Partial<ActionConfig['i18nConfig']>) => {
+    onChange({ 
+      i18nConfig: { ...i18nConfig, ...updates } as ActionConfig['i18nConfig']
+    });
+  };
+
+  return (
+    <div className="border border-purple-200 dark:border-purple-800 rounded-xl p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="p-1.5 bg-purple-100 dark:bg-purple-900 rounded-lg">
+          <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+          </svg>
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            🌐 Configuración de Textos i18n
+          </h4>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400">
+            Configura cómo obtener el idioma para los textos multilingüe
+          </p>
+        </div>
+      </div>
+
+      {/* Detected keys */}
+      <div className="mb-3 p-2 bg-white/60 dark:bg-gray-800/60 rounded-lg">
+        <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+          Textos detectados:
+        </span>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {detectedTextKeys.map((key, i) => (
+            <span 
+              key={i}
+              className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded text-[10px] font-mono"
+            >
+              {`{{TEXT.${key}}}`}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Language source selector */}
+      <div className="space-y-2">
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+          ¿De dónde obtener el idioma?
+        </label>
+        
+        {/* Option: User Language */}
+        <label className={`
+          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
+          ${i18nConfig.source === 'user_language'
+            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
+            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
+          }
+        `}>
+          <input
+            type="radio"
+            name="i18n-source"
+            checked={i18nConfig.source === 'user_language'}
+            onChange={() => updateI18nConfig({ source: 'user_language', customFieldName: undefined, variableName: undefined, fixedLanguage: undefined })}
+            disabled={readOnly}
+            className="mt-0.5 text-purple-500"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              👤 Idioma del usuario
+            </div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400">
+              Usa el idioma configurado en el perfil del usuario (user.language)
+            </div>
+          </div>
+        </label>
+
+        {/* Option: Custom Field */}
+        <label className={`
+          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
+          ${i18nConfig.source === 'custom_field'
+            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
+            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
+          }
+        `}>
+          <input
+            type="radio"
+            name="i18n-source"
+            checked={i18nConfig.source === 'custom_field'}
+            onChange={() => updateI18nConfig({ source: 'custom_field', variableName: undefined, fixedLanguage: undefined })}
+            disabled={readOnly}
+            className="mt-0.5 text-purple-500"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              📋 Campo personalizado
+            </div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+              Usa el valor de un campo personalizado del usuario (ej: "lang", "preferred_language")
+            </div>
+            {i18nConfig.source === 'custom_field' && (
+              <input
+                type="text"
+                value={i18nConfig.customFieldName || ''}
+                onChange={(e) => updateI18nConfig({ customFieldName: e.target.value })}
+                placeholder="Nombre del campo (ej: lang)"
+                disabled={readOnly}
+                className="w-full px-2 py-1.5 text-xs border border-purple-300 dark:border-purple-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+          </div>
+        </label>
+
+        {/* Option: Variable */}
+        <label className={`
+          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
+          ${i18nConfig.source === 'variable'
+            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
+            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
+          }
+        `}>
+          <input
+            type="radio"
+            name="i18n-source"
+            checked={i18nConfig.source === 'variable'}
+            onChange={() => updateI18nConfig({ source: 'variable', customFieldName: undefined, fixedLanguage: undefined })}
+            disabled={readOnly}
+            className="mt-0.5 text-purple-500"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              📦 Variable del flow
+            </div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+              Usa el valor de una variable de sesión del flow
+            </div>
+            {i18nConfig.source === 'variable' && (
+              <input
+                type="text"
+                value={i18nConfig.variableName || ''}
+                onChange={(e) => updateI18nConfig({ variableName: e.target.value })}
+                placeholder="Nombre de variable (ej: userLanguage)"
+                disabled={readOnly}
+                className="w-full px-2 py-1.5 text-xs border border-purple-300 dark:border-purple-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+          </div>
+        </label>
+
+        {/* Option: Fixed Language */}
+        <label className={`
+          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
+          ${i18nConfig.source === 'fixed'
+            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
+            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
+          }
+        `}>
+          <input
+            type="radio"
+            name="i18n-source"
+            checked={i18nConfig.source === 'fixed'}
+            onChange={() => updateI18nConfig({ source: 'fixed', customFieldName: undefined, variableName: undefined, fixedLanguage: 'es' })}
+            disabled={readOnly}
+            className="mt-0.5 text-purple-500"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              🔒 Idioma fijo
+            </div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+              Usa siempre un idioma específico
+            </div>
+            {i18nConfig.source === 'fixed' && (
+              <select
+                value={i18nConfig.fixedLanguage || 'es'}
+                onChange={(e) => updateI18nConfig({ fixedLanguage: e.target.value })}
+                disabled={readOnly}
+                className="w-full px-2 py-1.5 text-xs border border-purple-300 dark:border-purple-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {SUPPORTED_LANGUAGES.map(lang => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.flag} {lang.name} ({lang.code})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </label>
+      </div>
+
+      {/* Info box */}
+      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-start gap-2">
+          <span className="text-blue-500 text-sm">💡</span>
+          <p className="text-[10px] text-blue-700 dark:text-blue-300">
+            Los textos deben estar definidos en <strong>/admin/texts</strong> con traducciones para cada idioma. 
+            Si el idioma no está disponible, se usará español como fallback.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper function to detect {{TEXT.KEY}} patterns in content
+function detectTextKeys(blocks: MessageBlock[]): string[] {
+  const keys = new Set<string>();
+  const textPattern = /\{\{TEXT\.([A-Z0-9_]+)\}\}/g;
+  
+  for (const block of blocks) {
+    // Check text content
+    if ('content' in block && block.content) {
+      let match;
+      while ((match = textPattern.exec(block.content)) !== null) {
+        keys.add(match[1]);
+      }
+    }
+    // Check caption
+    if ('caption' in block && block.caption) {
+      let match;
+      while ((match = textPattern.exec(block.caption)) !== null) {
+        keys.add(match[1]);
+      }
+    }
+    // Check button texts in keyboard
+    if ('keyboard' in block && block.keyboard?.rows) {
+      for (const row of block.keyboard.rows) {
+        for (const btn of row.buttons) {
+          if (btn.text) {
+            let match;
+            while ((match = textPattern.exec(btn.text)) !== null) {
+              keys.add(match[1]);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return Array.from(keys);
+}
 
 interface VariableSelectorProps {
   onSelect: (variable: string) => void;
@@ -99,6 +383,8 @@ interface VariableSelectorProps {
 
 const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'variables' | 'texts'>('variables');
+  const [customTextKey, setCustomTextKey] = useState('');
 
   return (
     <div className="relative">
@@ -115,30 +401,109 @@ const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) => {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           
-          {/* CLAVES DEL CSS AQUÍ:
-             1. bottom-full: Hace que el menú nazca desde la parte superior del botón hacia arriba.
-             2. mb-2: Un pequeño margen para separarlo del botón.
-             3. z-50: Para asegurarse de que flote sobre todo lo demás.
-          */}
-          <div className="absolute z-50 bottom-full right-0 mb-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-            {AVAILABLE_VARIABLES.map((v) => (
+          <div className="absolute z-50 bottom-full right-0 mb-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button
-                key={v.path}
                 type="button"
-                onClick={() => {
-                  onSelect(`{{${v.path}}}`);
-                  setIsOpen(false);
-                }}
-                className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                onClick={() => setActiveTab('variables')}
+                className={`flex-1 px-3 py-2 text-xs font-medium ${
+                  activeTab === 'variables'
+                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-b-2 border-blue-500'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
               >
-                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                  {v.label}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                  {`{{${v.path}}}`}
-                </div>
+                Variables
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setActiveTab('texts')}
+                className={`flex-1 px-3 py-2 text-xs font-medium ${
+                  activeTab === 'texts'
+                    ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border-b-2 border-purple-500'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                🌐 Textos i18n
+              </button>
+            </div>
+            
+            <div className="max-h-64 overflow-y-auto">
+              {activeTab === 'variables' ? (
+                // Variables tab
+                AVAILABLE_VARIABLES.map((v) => (
+                  <button
+                    key={v.path}
+                    type="button"
+                    onClick={() => {
+                      onSelect(`{{${v.path}}}`);
+                      setIsOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  >
+                    <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                      {v.label}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                      {`{{${v.path}}}`}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                // Texts i18n tab
+                <div>
+                  {/* Custom text key input */}
+                  <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex gap-1">
+                      <input
+                        type="text"
+                        value={customTextKey}
+                        onChange={(e) => setCustomTextKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
+                        placeholder="KEY_PERSONALIZADA"
+                        className="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (customTextKey) {
+                            onSelect(`{{TEXT.${customTextKey}}}`);
+                            setIsOpen(false);
+                            setCustomTextKey('');
+                          }
+                        }}
+                        disabled={!customTextKey}
+                        className="px-2 py-1.5 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+                      >
+                        Insertar
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Usa textos de /admin/texts
+                    </p>
+                  </div>
+                  
+                  {/* Common text keys */}
+                  {COMMON_TEXT_KEYS.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => {
+                        onSelect(`{{TEXT.${t.key}}}`);
+                        setIsOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-purple-50 dark:hover:bg-purple-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                    >
+                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                        {t.description}
+                      </div>
+                      <div className="text-xs text-purple-500 dark:text-purple-400 font-mono">
+                        {`{{TEXT.${t.key}}}`}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -1246,7 +1611,11 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
   const blocks = config.messageBlocks || [];
   
   // Get button validation warnings
-  const validation = React.useMemo(() => getButtonValidation(blocks), [blocks]);
+  const validation = useMemo(() => getButtonValidation(blocks), [blocks]);
+  
+  // Detect {{TEXT.KEY}} patterns in all blocks
+  const detectedTextKeys = useMemo(() => detectTextKeys(blocks), [blocks]);
+  const hasI18nTexts = detectedTextKeys.length > 0;
 
   // Initialize with legacy content if no blocks
   React.useEffect(() => {
@@ -1360,6 +1729,16 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
 
   return (
     <div className="space-y-3">
+      {/* i18n Configuration - Shows when {{TEXT.KEY}} is detected */}
+      {hasI18nTexts && (
+        <I18nConfigPanel
+          config={config}
+          onChange={onChange}
+          detectedTextKeys={detectedTextKeys}
+          readOnly={readOnly}
+        />
+      )}
+
       {/* Validation warnings */}
       {validation.hasWarnings && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">

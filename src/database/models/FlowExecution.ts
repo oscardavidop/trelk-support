@@ -53,6 +53,8 @@ export interface ExecutionContext {
   };
   // Custom variables set during execution
   variables: Record<string, any>;
+  // Custom fields from user profile (for i18n and conditions)
+  customFields?: Record<string, any>;
   // Execution metadata
   startedAt: Date;
   lastActiveAt: Date;

@@ -243,7 +243,7 @@ export interface AnswerCallbackQueryOptions {
 
 export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error';
-  type: 'command' | 'callback' | 'message' | 'api' | 'error' | 'ticket' | 'chat' | 'inactivity' | 'saved_reply' | 'upload' | 'survey' | 'enterprise' | 'transfer' | 'block' | 'flow' | 'settings' | 'redis' | 'cache' | 'queue' | 'workers' | 'worker:scheduled' | 'worker:flow' | 'worker:cleanup' | 'worker:inactivity' | 'worker:notifications' | 'cache-models';
+  type: 'command' | 'callback' | 'message' | 'api' | 'error' | 'ticket' | 'chat' | 'inactivity' | 'saved_reply' | 'upload' | 'survey' | 'enterprise' | 'transfer' | 'block' | 'flow' | 'settings' | 'redis' | 'cache' | 'queue' | 'workers' | 'worker:scheduled' | 'worker:flow' | 'worker:cleanup' | 'worker:inactivity' | 'worker:notifications' | 'cache-models' | 'session-guard' | 'admin' | 'admin-control' | 'settings-cache';
   userId?: number;
   chatId?: number;
   data: Record<string, unknown>;

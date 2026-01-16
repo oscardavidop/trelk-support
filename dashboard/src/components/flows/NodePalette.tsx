@@ -15,6 +15,7 @@ interface NodeSubCategory {
   id: string;
   label: string;
   items: NodeItem[];
+  icon?: JSX.Element;
 }
 
 interface NodeCategory {
@@ -378,6 +379,11 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
         {
           id: 'chat_management',
           label: '👤 Gestión de Chat',
+          icon: (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          ),
           items: [
             {
               type: 'action',
@@ -785,7 +791,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
                       <div key={subCat.id} className="mt-2">
                         {/* SubCategory header */}
                         <div className="mx-3 mb-1 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                          {subCat.label}
+                          {subCat.icon} {subCat.label}
                         </div>
                         {/* SubCategory items */}
                         {(searchQuery ? subFilteredItems : subCat.items).map((item, idx) => 

@@ -60,7 +60,7 @@ import {
 import type { InlineKeyboardMarkup, ReplyKeyboardMarkup, ChatAction } from '../types/index.js';
 import { logger } from './logger.js';
 import { createScheduledMessage } from './scheduledMessage.service.js';
-import { notifyNewSession } from './socket.js';
+import { notifyNewSession, emitChatClosed } from './socket.js';
 import {
   getOrCreateSession,
   transferToHuman,
@@ -75,6 +75,8 @@ import { FlowCache, CacheKeys, CacheTTL, getOrFetch } from './cache.js';
 import { isRedisConnected } from './redis.js';
 // Write-behind cache for FlowExecutions
 import { FlowExecutionCache } from './cache-models.service.js';
+// Text Registry for i18n text resolution
+import { resolveText, getTextSync, type SupportedLanguage } from './text-registry.service.js';
 
 // ============= TYPES =============
 
@@ -96,6 +98,129 @@ interface ExecutionResult {
   pauseUntil?: Date;
   pauseFor?: string;
 }
+
+// ============= CALLBACK DATA REGISTRY =============
+// Telegram limits callback_data to 64 bytes
+// We use short IDs and store full data in memory + Redis for persistence
+
+import { getRedisClient } from './redis.js';
+
+interface CallbackMapping {
+  flowId: string;
+  nodeId: string;
+  btnId: string;
+  mode: string;
+  createdAt: number;
+}
+
+// In-memory callback registry (cache)
+const callbackRegistry = new Map<string, CallbackMapping>();
+const CALLBACK_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CALLBACK_TTL_SECONDS = 24 * 60 * 60; // 24 hours in seconds for Redis
+const REDIS_CALLBACK_PREFIX = 'cb:';
+
+// Generate short unique ID (8 chars, ~2.8 trillion combinations)
+function generateShortId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Register callback and return short ID - stores in both memory and Redis
+function registerCallback(flowId: string, nodeId: string, btnId: string, mode: string): string {
+  const shortId = generateShortId();
+  const mapping: CallbackMapping = {
+    flowId,
+    nodeId,
+    btnId,
+    mode,
+    createdAt: Date.now(),
+  };
+  
+  // Store in memory
+  callbackRegistry.set(shortId, mapping);
+  
+  // Store in Redis asynchronously (don't await to avoid blocking)
+  const redis = getRedisClient();
+  if (redis) {
+    redis.setex(
+      `${REDIS_CALLBACK_PREFIX}${shortId}`,
+      CALLBACK_TTL_SECONDS,
+      JSON.stringify(mapping)
+    ).catch(err => {
+      logger.warn('flow', { action: 'callback_redis_store_failed', shortId, error: String(err) });
+    });
+  }
+  
+  return shortId;
+}
+
+// Get callback data from short ID - checks memory first, then Redis
+export async function getCallbackDataAsync(shortId: string): Promise<CallbackMapping | null> {
+  // Check memory first
+  const memData = callbackRegistry.get(shortId);
+  if (memData) {
+    // Check if expired
+    if (Date.now() - memData.createdAt > CALLBACK_TTL_MS) {
+      callbackRegistry.delete(shortId);
+      return null;
+    }
+    return memData;
+  }
+  
+  // Try Redis
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      const redisData = await redis.get(`${REDIS_CALLBACK_PREFIX}${shortId}`);
+      if (redisData) {
+        const mapping: CallbackMapping = JSON.parse(redisData);
+        // Cache in memory for future lookups
+        callbackRegistry.set(shortId, mapping);
+        return mapping;
+      }
+    } catch (err) {
+      logger.warn('flow', { action: 'callback_redis_get_failed', shortId, error: String(err) });
+    }
+  }
+  
+  return null;
+}
+
+// Synchronous version for backward compatibility (memory only)
+export function getCallbackData(shortId: string): CallbackMapping | null {
+  const data = callbackRegistry.get(shortId);
+  if (!data) return null;
+  
+  // Check if expired
+  if (Date.now() - data.createdAt > CALLBACK_TTL_MS) {
+    callbackRegistry.delete(shortId);
+    return null;
+  }
+  
+  return data;
+}
+
+// Cleanup expired callbacks from memory (Redis handles its own TTL)
+function cleanupCallbacks(): void {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [key, value] of callbackRegistry.entries()) {
+    if (now - value.createdAt > CALLBACK_TTL_MS) {
+      callbackRegistry.delete(key);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    logger.debug('flow', { action: 'callback_cleanup', removed: cleaned, remaining: callbackRegistry.size });
+  }
+}
+
+// Cleanup every hour
+setInterval(cleanupCallbacks, 60 * 60 * 1000);
 
 // ============= FLOW ENGINE CLASS =============
 
@@ -285,6 +410,7 @@ export class FlowEngine {
         language: user.language,
       },
       variables: {},
+      customFields: (user as any).customFields || {}, // Load custom fields from user profile
       startedAt: new Date(),
       lastActiveAt: new Date(),
     };
@@ -823,10 +949,26 @@ export class FlowEngine {
 
   /**
    * Resolve field path from context
+   * Supports: user.language, user.firstName, customFields.fieldName, variables.varName, etc.
    */
   private resolveField(field: string, context: ExecutionContext): any {
     const parts = field.split('.');
     let value: any = context;
+
+    // Handle special field aliases
+    if (parts[0] === 'customFields' || parts[0] === 'custom') {
+      // Custom fields are stored in variables
+      if (parts.length > 1) {
+        const fieldName = parts.slice(1).join('.');
+        return context.variables?.[fieldName];
+      }
+      return context.variables;
+    }
+
+    // Handle language shorthand
+    if (field === 'language' || field === 'lang') {
+      return context.user?.language;
+    }
 
     for (const part of parts) {
       if (value === undefined || value === null) return undefined;
@@ -1260,8 +1402,15 @@ export class FlowEngine {
         const fieldKey = config.customFieldName || '';
         const resolvedValue = this.resolvePlaceholders(config.customFieldValue || '', ctx);
         
-        // Store in execution context variables
+        // Store in execution context variables (for backward compatibility)
         execution.context.variables[fieldKey] = resolvedValue;
+        
+        // IMPORTANT: Also update ctx.customFields for i18n resolution within the same flow execution
+        if (!ctx.customFields) {
+          ctx.customFields = {};
+        }
+        ctx.customFields[fieldKey] = resolvedValue;
+        execution.context.customFields = ctx.customFields;
 
         // Find user by telegramId and set the custom field using the new service
         const user = await User.findOne({ telegramId: ctx.userId });
@@ -1273,13 +1422,22 @@ export class FlowEngine {
           else if (!isNaN(Number(resolvedValue)) && resolvedValue !== '') typedValue = Number(resolvedValue);
           
           await setUserFieldByKey(user._id!.toString(), fieldKey, typedValue);
+          
+          logger.info('flow', {
+            action: 'custom_field_set',
+            fieldKey,
+            resolvedValue,
+            userId: ctx.userId,
+          });
         }
         
         return { success: true };
       }
 
       case 'close_chat': {
-        await ChatSession.updateOne(
+        // Close the chat session
+        // First try by sessionId, then by telegramChatId (for cases where sessionId is temporary)
+        let closeResult = await ChatSession.findOneAndUpdate(
           { sessionId: ctx.sessionId },
           {
             $set: {
@@ -1288,9 +1446,70 @@ export class FlowEngine {
               closedByType: 'system',
               closeReason: 'automation',
             },
+          },
+          { new: true }
+        ).populate('user');
+        
+        // If no session found by sessionId (maybe it's a temporary nosession-xxx),
+        // try to find by telegramChatId
+        if (!closeResult && ctx.chatId) {
+          closeResult = await ChatSession.findOneAndUpdate(
+            { 
+              telegramChatId: ctx.chatId,
+              status: { $in: ['queued', 'waiting', 'human', 'bot'] }
+            },
+            {
+              $set: {
+                status: 'closed',
+                closedAt: new Date(),
+                closedByType: 'system',
+                closeReason: 'automation',
+              },
+            },
+            { new: true }
+          ).populate('user');
+          
+          if (closeResult) {
+            logger.info('flow', {
+              action: 'close_chat_found_by_chatId',
+              chatId: ctx.chatId,
+              sessionId: closeResult.sessionId,
+            });
           }
-        );
-        return { success: true };
+        }
+        
+        // Emit WebSocket events for real-time dashboard update
+        if (closeResult) {
+          // Cancel any pending scheduled messages
+          try {
+            const { autoCancelSessionMessages } = await import('./scheduledMessage.service.js');
+            await autoCancelSessionMessages(closeResult.sessionId, 'Session closed by automation');
+          } catch (e) {
+            logger.warn('flow', { action: 'cancel_scheduled_messages_failed', error: String(e) });
+          }
+          
+          emitChatClosed(closeResult.sessionId, 'Closed by automation', 'automation');
+          
+          logger.info('flow', {
+            action: 'close_chat_success',
+            sessionId: closeResult.sessionId,
+            chatId: ctx.chatId,
+          });
+          
+          // Optionally send a confirmation message to user
+          if ((config as any).closeMessage) {
+            const closeMsg = this.resolvePlaceholders((config as any).closeMessage, ctx);
+            await sendMessage(ctx.chatId, closeMsg);
+          }
+        } else {
+          logger.warn('flow', {
+            action: 'close_chat_no_session_found',
+            sessionId: ctx.sessionId,
+            chatId: ctx.chatId,
+          });
+        }
+        
+        return { success: !!closeResult };
       }
 
       case 'add_to_queue': {
@@ -1920,11 +2139,101 @@ export class FlowEngine {
     return edges[0].target;
   }
 
+  // i18n configuration type for determining language source
+  private getLanguageFromI18nConfig(
+    i18nConfig: { 
+      source: 'user_language' | 'custom_field' | 'variable' | 'fixed'; 
+      customFieldName?: string; 
+      variableName?: string; 
+      fixedLanguage?: string; 
+    } | undefined, 
+    ctx: ExecutionContext
+  ): SupportedLanguage {
+    if (!i18nConfig) {
+      // Default: use user language
+      logger.debug('flow', { action: 'i18n_no_config', usingDefault: ctx.user?.language || 'es' });
+      return (ctx.user?.language || 'es') as SupportedLanguage;
+    }
+
+    logger.info('flow', {
+      action: 'i18n_resolve_language',
+      source: i18nConfig.source,
+      customFieldName: i18nConfig.customFieldName,
+      variableName: i18nConfig.variableName,
+      fixedLanguage: i18nConfig.fixedLanguage,
+      ctxCustomFields: JSON.stringify(ctx.customFields),
+      ctxVariables: JSON.stringify(ctx.variables),
+    });
+
+    switch (i18nConfig.source) {
+      case 'user_language':
+        return (ctx.user?.language || 'es') as SupportedLanguage;
+      
+      case 'custom_field':
+        if (i18nConfig.customFieldName) {
+          const fieldValue = ctx.customFields?.[i18nConfig.customFieldName];
+          logger.info('flow', {
+            action: 'i18n_custom_field_lookup',
+            fieldName: i18nConfig.customFieldName,
+            fieldValue,
+            fieldType: typeof fieldValue,
+          });
+          if (fieldValue && typeof fieldValue === 'string') {
+            // Validate it's a supported language
+            const validLangs = ['es', 'en', 'pt', 'fr', 'de', 'it', 'ru', 'zh', 'ja', 'ko', 'ar'];
+            if (validLangs.includes(fieldValue.toLowerCase())) {
+              logger.info('flow', { action: 'i18n_resolved', language: fieldValue.toLowerCase() });
+              return fieldValue.toLowerCase() as SupportedLanguage;
+            }
+          }
+        }
+        logger.warn('flow', { action: 'i18n_fallback_es', reason: 'custom_field_not_found_or_invalid' });
+        return 'es' as SupportedLanguage; // Fallback
+      
+      case 'variable':
+        if (i18nConfig.variableName) {
+          const varValue = ctx.variables?.[i18nConfig.variableName];
+          logger.info('flow', {
+            action: 'i18n_variable_lookup',
+            varName: i18nConfig.variableName,
+            varValue,
+          });
+          if (varValue && typeof varValue === 'string') {
+            const validLangs = ['es', 'en', 'pt', 'fr', 'de', 'it', 'ru', 'zh', 'ja', 'ko', 'ar'];
+            if (validLangs.includes(varValue.toLowerCase())) {
+              return varValue.toLowerCase() as SupportedLanguage;
+            }
+          }
+        }
+        return 'es' as SupportedLanguage; // Fallback
+      
+      case 'fixed':
+        return (i18nConfig.fixedLanguage || 'es') as SupportedLanguage;
+      
+      default:
+        return (ctx.user?.language || 'es') as SupportedLanguage;
+    }
+  }
+
   /**
    * Resolve placeholders in text - supports {{variable}} syntax like ManyChat/Handlebars
+   * Now also resolves {{TEXT.KEY}} for i18n text registry
+   * @param i18nConfig Optional configuration for determining which language to use for i18n texts
    */
-  private resolvePlaceholders(text: string, ctx: ExecutionContext): string {
+  private resolvePlaceholders(
+    text: string, 
+    ctx: ExecutionContext,
+    i18nConfig?: { 
+      source: 'user_language' | 'custom_field' | 'variable' | 'fixed'; 
+      customFieldName?: string; 
+      variableName?: string; 
+      fixedLanguage?: string; 
+    }
+  ): string {
     if (!text) return '';
+
+    // Get language for i18n resolution based on config
+    const userLang = this.getLanguageFromI18nConfig(i18nConfig, ctx);
 
     // Universal {{path.to.value}} resolver
     return text.replace(/\{\{([^}]+)\}\}/g, (_, path: string) => {
@@ -1940,6 +2249,41 @@ export class FlowEngine {
           return new Date().toISOString().replace('T', ' ').slice(0, 19);
         case 'timestamp':
           return Date.now().toString();
+      }
+
+      // ============= TEXT REGISTRY RESOLUTION =============
+      // Format: {{TEXT.WELCOME_MESSAGE}} or {{text.WELCOME_MESSAGE}}
+      if (trimmedPath.toUpperCase().startsWith('TEXT.')) {
+        const textKey = trimmedPath.substring(5).toUpperCase(); // Remove "TEXT." prefix
+        const resolvedText = getTextSync(textKey, userLang);
+        
+        logger.info('flow', {
+          action: 'text_registry_resolved',
+          key: textKey,
+          lang: userLang,
+          resolved: resolvedText ? resolvedText.substring(0, 50) + '...' : 'NOT_FOUND',
+        });
+        
+        if (resolvedText) {
+          // Recursively resolve any variables inside the text, passing i18nConfig
+          return this.resolvePlaceholders(resolvedText, ctx, i18nConfig);
+        }
+        return `{{TEXT.${textKey}}}`; // Return original if not found
+      }
+
+      // Also check if this is a text registry key directly (without TEXT. prefix)
+      // This allows {{WELCOME_MESSAGE}} as shorthand for {{TEXT.WELCOME_MESSAGE}}
+      const directTextKey = trimmedPath.toUpperCase();
+      const directText = getTextSync(directTextKey, userLang);
+      if (directText) {
+        logger.info('flow', {
+          action: 'text_registry_direct_resolved',
+          key: directTextKey,
+          lang: userLang,
+          resolved: directText.substring(0, 50) + '...',
+        });
+        // Recursively resolve any variables inside the text, passing i18nConfig
+        return this.resolvePlaceholders(directText, ctx, i18nConfig);
       }
 
       // Try to resolve from context using dot notation
@@ -2025,8 +2369,14 @@ export class FlowEngine {
           ? this.buildKeyboard(block.keyboard, flowId, nodeId)
           : undefined;
 
-        // Use WithId versions to capture messageId
-        const blockMessageId = await this.executeMessageBlockWithId(block, chatId, ctx, blockKeyboard);
+        // Use WithId versions to capture messageId, pass i18nConfig for language resolution
+        const blockMessageId = await this.executeMessageBlockWithId(
+          block, 
+          chatId, 
+          ctx, 
+          blockKeyboard,
+          config.i18nConfig
+        );
         if (blockMessageId === false) {
           success = false;
           logger.warn('flow', {
@@ -2034,14 +2384,28 @@ export class FlowEngine {
             blockType: block.type,
             blockId: block.id,
           });
-        } else if (blockMessageId && blockMessageId > 0) {
+        } else if (typeof blockMessageId === 'number' && blockMessageId > 0) {
           lastMessageId = blockMessageId;
           success = true;
+          logger.info('flow', {
+            action: 'message_block_sent',
+            blockType: block.type,
+            blockId: block.id,
+            messageId: blockMessageId,
+          });
+        } else if (blockMessageId === null) {
+          // null means empty content or delay block - not a failure
+          logger.info('flow', {
+            action: 'message_block_skipped',
+            blockType: block.type,
+            blockId: block.id,
+            reason: 'empty content or delay',
+          });
         }
       }
     } else {
       // Legacy: single text message (still supports global keyboard for backward compatibility)
-      const content = this.resolvePlaceholders(config.messageContent || '', ctx);
+      const content = this.resolvePlaceholders(config.messageContent || '', ctx, config.i18nConfig);
       const legacyKeyboard = config.keyboard ? this.buildKeyboard(config.keyboard, flowId, nodeId) : undefined;
 
       if (content) {
@@ -2055,7 +2419,7 @@ export class FlowEngine {
 
       // Handle legacy media
       if (config.mediaUrl) {
-        const caption = config.messageContent ? this.resolvePlaceholders(config.messageContent, ctx) : undefined;
+        const caption = config.messageContent ? this.resolvePlaceholders(config.messageContent, ctx, config.i18nConfig) : undefined;
         if (config.messageType === 'image') {
           const msgId = await sendPhotoWithId(chatId, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
           if (msgId) lastMessageId = msgId;
@@ -2183,63 +2547,135 @@ export class FlowEngine {
     block: MessageBlock,
     chatId: number,
     ctx: ExecutionContext,
-    replyMarkup?: any
+    replyMarkup?: any,
+    i18nConfig?: ActionConfig['i18nConfig']
   ): Promise<number | null | false> {
     const parseMode = (block as any).parseMode as 'Markdown' | 'MarkdownV2' | 'HTML' | undefined;
 
     switch (block.type) {
       case 'text': {
-        const content = this.resolvePlaceholders(block.content || '', ctx);
+        const content = this.resolvePlaceholders(block.content || '', ctx, i18nConfig);
+        
         logger.info('flow', {
-          action: 'send_block_text',
-          originalContent: block.content,
-          resolvedContent: content,
-          availableVariables: JSON.stringify(ctx.variables),
+          action: 'send_block_text_preparing',
+          chatId,
+          originalContent: block.content?.substring(0, 100),
+          resolvedContent: content?.substring(0, 100),
+          contentLength: content?.length || 0,
+          hasReplyMarkup: !!replyMarkup,
+          i18nSource: i18nConfig?.source || 'user_language',
         });
-        if (!content) return null; // Empty text is ok
-        return await sendMessageWithId(chatId, content, { replyMarkup, parseMode });
+        
+        if (!content) {
+          logger.info('flow', { action: 'send_block_text_empty', chatId, reason: 'no_content' });
+          return null; // Empty text is ok - skipped
+        }
+        
+        // Attempt to send
+        logger.info('flow', {
+          action: 'send_block_text_sending',
+          chatId,
+          contentPreview: content.substring(0, 50),
+        });
+        
+        const messageId = await sendMessageWithId(chatId, content, { replyMarkup, parseMode });
+        
+        if (messageId) {
+          logger.info('flow', {
+            action: 'send_block_text_success',
+            chatId,
+            messageId,
+          });
+          return messageId;
+        } else {
+          logger.error('flow', {
+            action: 'send_block_text_failed',
+            chatId,
+            reason: 'telegram_api_returned_null',
+            contentPreview: content.substring(0, 50),
+          });
+          return false; // API error - mark as failed
+        }
       }
 
       case 'image': {
-        if (!block.url) return false;
-        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
-        return await sendPhotoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+        if (!block.url) {
+          logger.warn('flow', { action: 'send_block_image_no_url', chatId });
+          return false;
+        }
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx, i18nConfig) : undefined;
+        const messageId = await sendPhotoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+        if (!messageId) {
+          logger.error('flow', { action: 'send_block_image_failed', chatId, url: block.url });
+          return false;
+        }
+        return messageId;
       }
 
       case 'document': {
-        if (!block.url) return false;
-        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
-        return await sendDocumentWithId(chatId, block.url, {
+        if (!block.url) {
+          logger.warn('flow', { action: 'send_block_document_no_url', chatId });
+          return false;
+        }
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx, i18nConfig) : undefined;
+        const messageId = await sendDocumentWithId(chatId, block.url, {
           caption,
           fileName: (block as any).filename,
           replyMarkup,
           parseMode,
         });
+        if (!messageId) {
+          logger.error('flow', { action: 'send_block_document_failed', chatId, url: block.url });
+          return false;
+        }
+        return messageId;
       }
 
       case 'audio': {
-        if (!block.url) return false;
+        if (!block.url) {
+          logger.warn('flow', { action: 'send_block_audio_no_url', chatId });
+          return false;
+        }
         if ((block as any).isVoiceNote) {
-          return await sendVoice(chatId, block.url, { replyMarkup }) ? null : false;
+          const success = await sendVoice(chatId, block.url, { replyMarkup });
+          if (!success) {
+            logger.error('flow', { action: 'send_block_voice_failed', chatId, url: block.url });
+            return false;
+          }
+          return null; // Voice doesn't return messageId but succeeded
         } else {
-          return await sendAudio(chatId, block.url, { replyMarkup }) ? null : false;
+          const success = await sendAudio(chatId, block.url, { replyMarkup });
+          if (!success) {
+            logger.error('flow', { action: 'send_block_audio_failed', chatId, url: block.url });
+            return false;
+          }
+          return null; // Audio doesn't return messageId but succeeded
         }
       }
 
       case 'video': {
-        if (!block.url) return false;
-        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
-        return await sendVideoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+        if (!block.url) {
+          logger.warn('flow', { action: 'send_block_video_no_url', chatId });
+          return false;
+        }
+        const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx, i18nConfig) : undefined;
+        const messageId = await sendVideoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+        if (!messageId) {
+          logger.error('flow', { action: 'send_block_video_failed', chatId, url: block.url });
+          return false;
+        }
+        return messageId;
       }
 
       case 'delay': {
         const seconds = (block as any).seconds || 1;
+        logger.info('flow', { action: 'send_block_delay', chatId, seconds });
         await this.sleep(seconds * 1000);
         return null;
       }
 
       default:
-        logger.warn('flow', { action: 'unknown_block_type', type: (block as any).type });
+        logger.warn('flow', { action: 'unknown_block_type', type: (block as any).type, chatId });
         return null;
     }
   }
@@ -2310,6 +2746,7 @@ export class FlowEngine {
   /**
    * Build Telegram keyboard from config
    * Generates callback_data with flow routing information
+   * Uses compact callback IDs to stay within Telegram's 64-byte limit
    */
   private buildKeyboard(config: KeyboardConfig, flowId?: string, nodeId?: string): InlineKeyboardMarkup | ReplyKeyboardMarkup | undefined {
     if (!config.rows || config.rows.length === 0) return undefined;
@@ -2317,19 +2754,36 @@ export class FlowEngine {
     if (config.type === 'inline') {
       const inline_keyboard = config.rows.map(row =>
         row.buttons.map(btn => {
-          // Generate callback_data with flow routing info
-          // Format: flow:{flowId}:node:{nodeId}:btn:{btnId}:{mode}
+          // Get mode from button config
           const mode = btn.onClick?.mode || 'continue';
-          const callbackData = btn.callbackData ||
-            `flow:${flowId || 'unknown'}:node:${nodeId || 'unknown'}:btn:${btn.id}:${mode}`;
 
-          // If it's a URL button, use url parameter
+          // If it's a URL button, use url parameter (no callback_data needed)
           if (mode === 'url' && (btn.onClick?.url || btn.url)) {
             return {
               text: btn.text,
               url: btn.onClick?.url || btn.url,
             };
           }
+
+          // Register callback and get short ID
+          // Format: fb:{shortId} (only 11 chars, well under 64 byte limit)
+          const shortId = registerCallback(
+            flowId || 'unknown',
+            nodeId || 'unknown',
+            btn.id,
+            mode
+          );
+          const callbackData = `fb:${shortId}`;
+
+          logger.debug('flow', {
+            action: 'callback_registered',
+            shortId,
+            flowId,
+            nodeId,
+            btnId: btn.id,
+            mode,
+            callbackDataLength: callbackData.length,
+          });
 
           return {
             text: btn.text,
@@ -2499,15 +2953,15 @@ export class FlowEngine {
       return false;
     }
 
-    // Find edge connected to this button handle
+    // Find ALL edges connected to this button handle (support multiple connections)
     const expectedHandle = `btn-${buttonId}`;
     const allEdgesFromNode = flow.edges.filter(e => e.source === nodeId);
-    const buttonEdge = flow.edges.find(e =>
+    const buttonEdges = flow.edges.filter(e =>
       e.source === nodeId && e.sourceHandle === expectedHandle
     );
 
     logger.info('flow', {
-      action: 'looking_for_button_edge',
+      action: 'looking_for_button_edges',
       nodeId,
       buttonId,
       expectedHandle,
@@ -2517,9 +2971,119 @@ export class FlowEngine {
         target: e.target,
         sourceHandle: e.sourceHandle
       })),
-      foundButtonEdge: buttonEdge ? { target: buttonEdge.target, handle: buttonEdge.sourceHandle } : null,
+      foundButtonEdges: buttonEdges.map(e => ({ target: e.target, handle: e.sourceHandle })),
+      multipleEdges: buttonEdges.length > 1,
     });
 
+    // If multiple edges from same button, we need to execute ALL of them
+    // Priority: execute non-message actions first (assign_agent, set_field, etc.)
+    // Then execute message actions (which may pause for buttons)
+    if (buttonEdges.length > 1) {
+      logger.info('flow', {
+        action: 'multiple_button_edges_detected',
+        buttonId,
+        edgeCount: buttonEdges.length,
+        targets: buttonEdges.map(e => e.target),
+      });
+
+      // Categorize target nodes
+      const messageNodes: string[] = [];
+      const actionNodes: string[] = [];
+      
+      for (const edge of buttonEdges) {
+        const targetNode = flow.nodes.find(n => n.id === edge.target);
+        if (targetNode && targetNode.type === 'action') {
+          const config = targetNode.config as any;
+          if (config.actionType === 'send_message') {
+            messageNodes.push(edge.target);
+          } else {
+            actionNodes.push(edge.target);
+          }
+        } else if (targetNode) {
+          actionNodes.push(edge.target);
+        }
+      }
+
+      logger.info('flow', {
+        action: 'categorized_button_targets',
+        buttonId,
+        actionNodes,
+        messageNodes,
+      });
+
+      // Execute action nodes first (like assign_agent)
+      for (const actionNodeId of actionNodes) {
+        await this.executeFromNode(execution, flow, actionNodeId);
+      }
+
+      // Then handle message nodes (may pause for buttons)
+      if (messageNodes.length > 0) {
+        // Use the first message node as the "next" node
+        const nextNodeId = messageNodes[0];
+        
+        // Check if we should edit instead of send
+        const messageMode = buttonData.button?.onClick?.messageMode || 'send_new';
+        if (messageMode === 'edit_message' && execution.context.lastMessageId) {
+          // Handle edit mode for the message node
+          const nextNode = flow.nodes.find(n => n.id === nextNodeId);
+          if (nextNode && nextNode.type === 'action') {
+            const config = nextNode.config as any;
+            if (config.actionType === 'send_message') {
+              let resolvedContent: string | undefined;
+              let parseMode: 'HTML' | 'Markdown' | 'MarkdownV2' = 'HTML';
+              let replyMarkup: any;
+
+              if (config.messageBlocks && config.messageBlocks.length > 0) {
+                const textBlock = config.messageBlocks.find((b: any) => b.type === 'text');
+                if (textBlock && textBlock.content) {
+                  resolvedContent = this.resolvePlaceholders(textBlock.content, execution.context, config.i18nConfig);
+                  if (textBlock.parseMode) parseMode = textBlock.parseMode;
+                  if (textBlock.keyboard) {
+                    replyMarkup = this.buildKeyboard(textBlock.keyboard, flow._id?.toString(), nextNodeId);
+                  }
+                }
+              } else if (config.messageContent) {
+                resolvedContent = this.resolvePlaceholders(config.messageContent, execution.context, config.i18nConfig);
+                if (config.keyboard) {
+                  replyMarkup = this.buildKeyboard(config.keyboard, flow._id?.toString(), nextNodeId);
+                }
+              }
+
+              if (resolvedContent) {
+                await editMessage(execution.context.chatId, execution.context.lastMessageId, resolvedContent, { replyMarkup, parseMode });
+                
+                // Check if the message node has buttons
+                const hasKeyboard = config?.keyboard?.rows?.length > 0 ||
+                  config?.messageBlocks?.some((b: any) => b.keyboard?.rows?.length > 0);
+
+                if (hasKeyboard) {
+                  execution.pause('button_click');
+                  execution.currentNodeId = nextNodeId;
+                  execution.nextNodeId = null;
+                  await execution.save();
+                } else {
+                  execution.complete();
+                  await execution.save();
+                }
+                return true;
+              }
+            }
+          }
+        }
+
+        // Normal send (not edit)
+        await this.executeFromNode(execution, flow, nextNodeId);
+        return true;
+      }
+
+      // If only action nodes were executed, complete
+      execution.complete();
+      await execution.save();
+      return true;
+    }
+
+    // Single edge or no edge - original logic
+    const buttonEdge = buttonEdges[0];
     let nextNodeId: string | undefined;
 
     if (mode === 'goto_node' && buttonData.button?.targetNodeId) {

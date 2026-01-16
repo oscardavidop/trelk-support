@@ -148,6 +148,7 @@ export async function deleteCustomField(fieldId: string): Promise<{ ok: boolean;
       method: 'DELETE',
       headers: getAuthHeaders(),
       credentials: 'include',
+      body: JSON.stringify({}),
     });
     const data = await res.json();
     

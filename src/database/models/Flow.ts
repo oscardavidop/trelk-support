@@ -298,6 +298,14 @@ export interface ActionConfig {
     cancelOnChatClose?: boolean;
     expiresInHours?: number;
   };
+  
+  // i18n Text Configuration - Determines which language to use for {{TEXT.KEY}} placeholders
+  i18nConfig?: {
+    source: 'user_language' | 'custom_field' | 'variable' | 'fixed';
+    customFieldName?: string;  // When source is 'custom_field', use this field to get language
+    variableName?: string;     // When source is 'variable', use this variable to get language
+    fixedLanguage?: string;    // When source is 'fixed', use this specific language (e.g., 'es', 'en')
+  };
 }
 
 export interface DelayConfig {

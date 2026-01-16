@@ -6,7 +6,9 @@ import { useAgentsStore } from '../stores/agentsStore';
 import { useConnectionStore } from '../stores/connectionStore';
 import { useSupervisorStore } from '../stores/supervisorStore';
 import { useCopilotStore } from '../stores/copilotStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { toast } from '../stores/toastStore';
+import { getBrowserSessionId, getDeviceInfo } from './sessionGuard.service';
 import type { ChatSession, Message, DashboardStats, Agent, TypingEvent, TransferEvent, ReopenEvent, BlockEvent, UnblockEvent } from '../types';
 
 let socket: Socket | null = null;
@@ -34,6 +36,16 @@ export function initializeSocket(): Socket {
     console.log('🔌 Socket connected');
     reconnectAttempt = 0;
     useConnectionStore.getState().setConnected();
+    
+    // Register browser session for single-session enforcement
+    const browserSessionId = getBrowserSessionId();
+    const device = getDeviceInfo();
+    socket?.emit('session:register', { browserSessionId, device }, (result: { ok: boolean; data?: { replaced: boolean } }) => {
+      if (result.ok && result.data?.replaced) {
+        console.log('⚠️ Session replaced another active session');
+      }
+    });
+    
     // Don't request sessions here - wait for sync:state event
   });
 
@@ -71,6 +83,13 @@ export function initializeSocket(): Socket {
     
     // Re-fetch sessions after reconnection
     requestSessions();
+    
+    // Re-join active session room if there is one
+    const activeSession = useChatStore.getState().activeSession;
+    if (activeSession) {
+      console.log('🔄 Rejoining session room:', activeSession.sessionId);
+      socket?.emit('session:join', activeSession.sessionId);
+    }
     
     // Toast for successful reconnection
     toast.success('Reconectado', 'La conexión se ha restablecido.', { 
@@ -131,6 +150,30 @@ export function initializeSocket(): Socket {
     toast.error('Error de sincronización', data.message, { groupKey: 'sync:error' });
   });
 
+  // ============= SESSION GUARD EVENTS =============
+  
+  socket.on('session:replaced', (data: { reason: string; newDevice: string; newIp: string; replacedAt: string }) => {
+    console.warn('🔒 Session replaced:', data);
+    toast.error(
+      'Sesión cerrada',
+      `Se inició sesión desde ${data.newDevice}`,
+      { groupKey: 'session:replaced', priority: 'critical', duration: 0 }
+    );
+    // The force_logout event will handle the actual logout
+  });
+  
+  socket.on('session:force_logout', (data: { reason: string }) => {
+    console.warn('🔒 Force logout:', data.reason);
+    // Clear auth state and redirect to login
+    useAuthStore.getState().logout();
+    window.location.href = '/login?reason=session_replaced';
+  });
+  
+  socket.on('tab:duplicate_detected', (data: { activeTabId: string; message: string }) => {
+    console.warn('🔒 Duplicate tab detected:', data);
+    // This is handled by the SessionGuard service in ChatPage
+  });
+
   // Session events
   socket.on('session:new', (session: ChatSession) => {
     console.log('📥 New session:', session.sessionId, 'assigned to:', session.assignedAgent?._id || 'none');
@@ -143,7 +186,7 @@ export function initializeSocket(): Socket {
     // If it has no assignedAgent or is assigned to someone else, it should be in queue
     if (session.assignedAgent && isMySession) {
       useChatStore.getState().addSession(session);
-      playNotificationSound();
+      playNotificationSound('chat');
       
       toast.info(
         'Nuevo chat',
@@ -158,7 +201,7 @@ export function initializeSocket(): Socket {
       // No agent assigned, this should go to queue (session:queued will handle it)
       // But some edge cases might send session:new for unassigned sessions
       useChatStore.getState().addToQueue(session);
-      playNotificationSound();
+      playNotificationSound('chat');
     }
     // If assigned to another agent, ignore - not our business
   });
@@ -189,7 +232,7 @@ export function initializeSocket(): Socket {
   socket.on('session:queued', (session: ChatSession) => {
     console.log('📋 Session added to queue:', session.sessionId);
     useChatStore.getState().addToQueue(session);
-    playNotificationSound();
+    playNotificationSound('chat');
     
     // Toast for queued session
     toast.info(
@@ -245,7 +288,7 @@ export function initializeSocket(): Socket {
     
     // Play sound for user messages
     if (message.sender === 'user') {
-      playNotificationSound();
+      playNotificationSound('message');
     }
   });
 
@@ -852,10 +895,16 @@ export function markWhisperAsRead(
 
 // ============= HELPERS =============
 
-function playNotificationSound(): void {
+function playNotificationSound(type: 'chat' | 'message' = 'message'): void {
   try {
+    const { notifications } = useSettingsStore.getState().settings;
+    
+    // Check if sound is enabled based on type
+    if (type === 'chat' && !notifications.newChatSound) return;
+    if (type === 'message' && !notifications.newMessageSound) return;
+    
     const audio = new Audio('/notification.mp3');
-    audio.volume = 0.3;
+    audio.volume = notifications.volume ?? 0.3;
     audio.play().catch(() => {
       // Ignore autoplay errors
     });

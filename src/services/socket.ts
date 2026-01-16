@@ -37,7 +37,7 @@ import {
   addToQueue,
 } from './chat.service.js';
 import { getAgentStats } from './agent.service.js';
-import { sendMessage as sendTelegramMessage, sendPhoto, sendDocument, sendVoice, sendChatAction, editMessage as editTelegramMessage } from './telegram.js';
+import { sendMessage as sendTelegramMessage, sendMessageWithId, sendPhoto, sendDocument, sendVoice, sendChatAction, editMessage as editTelegramMessage, deleteMessage as deleteTelegramMessage } from './telegram.js';
 import { logger } from './logger.js';
 import { startInactivityTimer, closeByAgent, clearQueuedTimer } from './inactivity.service.js';
 import { getAbsolutePath } from './upload.service.js';
@@ -61,6 +61,17 @@ import {
   getAgentSyncState,
   tryAssignSession,
 } from './reconciliation.service.js';
+import {
+  registerSession,
+  validateSession,
+  getActiveSession,
+  updateSocketId,
+  removeSession,
+  registerChatTab,
+  heartbeatTab,
+  releaseChatTab,
+  type ActiveSession,
+} from './session-guard.service.js';
 import { triggerEventMessages } from './scheduledMessage.service.js';
 import type { ChatCategory } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
@@ -119,9 +130,27 @@ export interface ServerToClientEvents {
   'chat:closed': (data: { 
     sessionId: string; 
     reason: string; 
-    closedBy: 'inactivity' | 'user' | 'agent';
+    closedBy: 'inactivity' | 'user' | 'agent' | 'automation' | 'system';
     closedAt?: string;
     session?: unknown;
+  }) => void;
+  
+  // Session guard events (single session/tab enforcement)
+  'session:replaced': (data: { 
+    reason: string;
+    newDevice: string;
+    newIp: string;
+    replacedAt: string;
+  }) => void;
+  'session:terminated': (data: { 
+    reason: string;
+  }) => void;
+  'tab:duplicate_detected': (data: { 
+    activeTabId: string;
+    message: string;
+  }) => void;
+  'session:force_logout': (data: { 
+    reason: string;
   }) => void;
   
   // User block events
@@ -325,6 +354,47 @@ export interface ServerToClientEvents {
     latencyMs?: number;
   }) => void;
   
+  // Admin Control Panel events
+  'system:chats_force_closed': (data: {
+    reason: string;
+    closedBy: string;
+    count: number;
+  }) => void;
+  'system:your_chats_closed': (data: {
+    reason: string;
+    closedBy: string;
+    count: number;
+  }) => void;
+  'chats:reassigned_away': (data: {
+    count: number;
+    toAgent: string;
+  }) => void;
+  'chats:reassigned_to_you': (data: {
+    count: number;
+    fromAgent: string;
+  }) => void;
+  'system:flows_disabled': (data: {
+    disabledBy: string;
+    count: number;
+  }) => void;
+  'system:maintenance_mode': (data: {
+    enabled: boolean;
+    message?: string;
+  }) => void;
+  
+  // Settings events
+  'settings:updated': (data: { 
+    timestamp: string; 
+    settings: Record<string, unknown>;
+  }) => void;
+  
+  // Text Registry events
+  'texts:updated': (data: { 
+    action: 'created' | 'updated' | 'deleted';
+    key: string;
+    timestamp: string;
+  }) => void;
+  
   // Errors
   'error': (error: { message: string }) => void;
 }
@@ -390,12 +460,20 @@ export interface ClientToServerEvents {
   // Request data
   'stats:request': (callback: (stats: DashboardStats) => void) => void;
   'sessions:request': (callback: (sessions: SessionData[]) => void) => void;
+  
+  // Session guard actions
+  'session:register': (data: { browserSessionId: string; device: string }, callback: (result: ResultData) => void) => void;
+  'session:validate': (data: { browserSessionId: string }, callback: (result: ResultData) => void) => void;
+  'tab:register': (data: { tabId: string }, callback: (result: ResultData) => void) => void;
+  'tab:heartbeat': (data: { tabId: string }, callback: (result: ResultData) => void) => void;
+  'tab:release': (data: { tabId: string }) => void;
 }
 
 interface SocketData {
   agentId: string;
   email: string;
   role: string;
+  browserSessionId?: string;
 }
 
 // Data types
@@ -494,7 +572,7 @@ interface ResultData {
 }
 
 // Store active connections
-const agentSockets = new Map<string, Socket>();
+export const agentSockets = new Map<string, Socket>();
 const sessionRooms = new Map<string, Set<string>>(); // sessionId -> Set of agentIds
 
 let io: SocketServer<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -1022,15 +1100,16 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         }
       }
       
-      // Save message to DB
+      // Send to user via Telegram FIRST to get the telegram message ID
+      const telegramMessageId = await sendMessageWithId(session.telegramChatId, content, {
+        reply_to_message_id: telegramReplyToMessageId,
+      });
+      
+      // Save message to DB with telegram message ID (needed for edit/delete)
       const message = await addMessage(sessionId, 'agent', content, {
         senderAgentId: agentId,
         replyToMessageId,
-      });
-      
-      // Send to user via Telegram with reply_to_message_id if applicable
-      await sendTelegramMessage(session.telegramChatId, content, {
-        reply_to_message_id: telegramReplyToMessageId,
+        telegramMessageId: telegramMessageId || undefined,
       });
       
       // Trigger flow: agent message sent
@@ -1043,8 +1122,15 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Start/restart inactivity timer - agent sent message, waiting for user response
       await startInactivityTimer(sessionId, session.telegramChatId);
       
-      // Broadcast to session room
-      io.to(`session:${sessionId}`).emit('message:new', {
+      // Ensure this socket is in the session room
+      const room = `session:${sessionId}`;
+      if (!socket.rooms.has(room)) {
+        socket.join(room);
+        logger.debug('api', { action: 'auto_joined_session_room', sessionId, socketId: socket.id });
+      }
+      
+      // Broadcast to session room (including this socket)
+      io.to(room).emit('message:new', {
         _id: message._id.toString(),
         session: sessionId,
         sender: 'agent',
@@ -1098,8 +1184,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Start inactivity timer
       await startInactivityTimer(sessionId, session.telegramChatId);
       
+      // Ensure this socket is in the session room
+      const room = `session:${sessionId}`;
+      if (!socket.rooms.has(room)) {
+        socket.join(room);
+      }
+      
       // Broadcast to session room
-      io.to(`session:${sessionId}`).emit('message:new', {
+      io.to(room).emit('message:new', {
         _id: message._id.toString(),
         session: sessionId,
         sender: 'agent',
@@ -1146,8 +1238,15 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Start inactivity timer
       await startInactivityTimer(sessionId, session.telegramChatId);
       
+      // Ensure socket is in session room before broadcasting
+      const room = `session:${sessionId}`;
+      if (!socket.rooms.has(room)) {
+        socket.join(room);
+        logger.debug('api', { action: 'auto_joined_session_room', sessionId, socketId: socket.id });
+      }
+      
       // Broadcast to session room
-      io.to(`session:${sessionId}`).emit('message:new', {
+      io.to(room).emit('message:new', {
         _id: message._id.toString(),
         session: sessionId,
         sender: 'agent',
@@ -1195,8 +1294,15 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Start inactivity timer
       await startInactivityTimer(sessionId, session.telegramChatId);
       
+      // Ensure socket is in session room before broadcasting
+      const room = `session:${sessionId}`;
+      if (!socket.rooms.has(room)) {
+        socket.join(room);
+        logger.debug('api', { action: 'auto_joined_session_room', sessionId, socketId: socket.id });
+      }
+      
       // Broadcast to session room
-      io.to(`session:${sessionId}`).emit('message:new', {
+      io.to(room).emit('message:new', {
         _id: message._id.toString(),
         session: sessionId,
         sender: 'agent',
@@ -1293,7 +1399,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Delete message
   socket.on('message:delete', async ({ messageId, sessionId }, callback?) => {
     try {
-      const message = await Message.findById(messageId);
+      const message = await Message.findById(messageId).populate('session');
       
       if (!message) {
         callback?.({ ok: false, error: 'Message not found' });
@@ -1305,6 +1411,22 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (message.sender !== 'agent' || senderAgent?._id?.toString() !== agentId) {
         callback?.({ ok: false, error: 'Not authorized to delete this message' });
         return;
+      }
+      
+      // Try to delete in Telegram if we have the telegram message ID
+      const session = message.session as any;
+      if (message.telegramMessageId && session?.telegramChatId) {
+        try {
+          await deleteTelegramMessage(session.telegramChatId, message.telegramMessageId);
+          logger.info('chat', { action: 'telegram_message_deleted', messageId, telegramMessageId: message.telegramMessageId });
+        } catch (telegramError) {
+          logger.warn('chat', { 
+            action: 'telegram_delete_failed', 
+            messageId, 
+            error: String(telegramError) 
+          });
+          // Continue with DB update even if Telegram delete fails
+        }
       }
       
       // Soft delete - replace content
@@ -1673,6 +1795,151 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     callback(sessions.map(formatSessionData));
   });
   
+  // ============= SESSION GUARD (SINGLE SESSION/TAB) =============
+  
+  // Register browser session - called after login
+  socket.on('session:register', async ({ browserSessionId, device }, callback) => {
+    try {
+      // Get IP from socket handshake
+      const ip = socket.handshake.headers['x-forwarded-for'] as string || 
+                 socket.handshake.address || 
+                 'unknown';
+      
+      // IMPORTANT: Get old socket BEFORE registering (it was stored before this handler)
+      // We need to find the old socket by checking all sockets for this agent
+      let oldSocketToDisconnect: typeof socket | null = null;
+      
+      // Find any other socket for this agent that isn't the current one
+      for (const [, s] of io.sockets.sockets) {
+        if (s.data.agentId === agentId && s.id !== socket.id) {
+          oldSocketToDisconnect = s as typeof socket;
+          break;
+        }
+      }
+      
+      // Register the session
+      const result = await registerSession(agentId, socket.id, browserSessionId, {
+        device,
+        ip: Array.isArray(ip) ? ip[0] : ip,
+      });
+      
+      // Store browserSessionId in socket data for validation
+      socket.data.browserSessionId = browserSessionId;
+      
+      // If there's an old socket, notify and disconnect it
+      if (oldSocketToDisconnect) {
+        logger.info('api', {
+          action: 'forcing_old_session_disconnect',
+          agentId,
+          oldSocketId: oldSocketToDisconnect.id,
+          newSocketId: socket.id,
+        });
+        
+        // Emit to the old socket
+        oldSocketToDisconnect.emit('session:replaced', {
+          reason: 'Sesión iniciada en otro dispositivo',
+          newDevice: device,
+          newIp: Array.isArray(ip) ? ip[0] : ip,
+          replacedAt: new Date().toISOString(),
+        });
+        
+        // Force disconnect the old socket after a short delay
+        setTimeout(() => {
+          oldSocketToDisconnect?.emit('session:force_logout', { reason: 'Sesión reemplazada por nuevo inicio' });
+          oldSocketToDisconnect?.disconnect(true);
+        }, 500);
+      }
+      
+      // Update socket reference to new socket
+      agentSockets.set(agentId, socket);
+      
+      logger.info('api', {
+        action: 'session_registered',
+        agentId,
+        browserSessionId,
+        replaced: result.replaced || !!oldSocketToDisconnect,
+      });
+      
+      callback({ ok: true, data: { replaced: result.replaced || !!oldSocketToDisconnect } });
+    } catch (error) {
+      logger.error('api', {
+        action: 'session_register_error',
+        agentId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      callback({ ok: false, error: 'Failed to register session' });
+    }
+  });
+  
+  // Validate session is still active
+  socket.on('session:validate', async ({ browserSessionId }, callback) => {
+    try {
+      const result = await validateSession(agentId, browserSessionId);
+      
+      if (!result.valid && result.replaced) {
+        // Session was replaced, force logout
+        socket.emit('session:force_logout', { reason: 'Sesión reemplazada' });
+        callback({ ok: false, error: 'Session replaced' });
+        return;
+      }
+      
+      callback({ ok: result.valid });
+    } catch (error) {
+      callback({ ok: false, error: 'Validation failed' });
+    }
+  });
+  
+  // Register tab for /chat page (multi-tab prevention)
+  socket.on('tab:register', async ({ tabId }, callback) => {
+    try {
+      const result = await registerChatTab(agentId, tabId, socket.id);
+      
+      if (result.isBlocked) {
+        // Another tab is active
+        socket.emit('tab:duplicate_detected', {
+          activeTabId: result.activeTabId || 'unknown',
+          message: 'Chat abierto en otra pestaña',
+        });
+        callback({ ok: false, error: 'duplicate_tab', data: { blocked: true } });
+        return;
+      }
+      
+      callback({ ok: true });
+    } catch (error) {
+      callback({ ok: false, error: 'Tab registration failed' });
+    }
+  });
+  
+  // Tab heartbeat
+  socket.on('tab:heartbeat', async ({ tabId }, callback) => {
+    try {
+      const isActive = await heartbeatTab(agentId, tabId);
+      
+      if (!isActive) {
+        // This tab is no longer active
+        socket.emit('tab:duplicate_detected', {
+          activeTabId: 'another',
+          message: 'Otra pestaña tomó el control',
+        });
+        callback({ ok: false, error: 'not_active_tab' });
+        return;
+      }
+      
+      callback({ ok: true });
+    } catch (error) {
+      callback({ ok: false, error: 'Heartbeat failed' });
+    }
+  });
+  
+  // Release tab lock
+  socket.on('tab:release', async ({ tabId }) => {
+    try {
+      await releaseChatTab(agentId, tabId);
+    } catch (error) {
+      // Silent fail
+    }
+  });
+  
   // ============= DISCONNECTION =============
   
   socket.on('disconnect', async () => {
@@ -1870,7 +2137,7 @@ export function emitChatWarning(sessionId: string, minutesRemaining: number): vo
 export function emitChatClosed(
   sessionId: string, 
   reason: string, 
-  closedBy: 'inactivity' | 'user' | 'agent'
+  closedBy: 'inactivity' | 'user' | 'agent' | 'automation' | 'system'
 ): void {
   if (!io) return;
   

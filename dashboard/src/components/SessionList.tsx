@@ -64,18 +64,19 @@ export default function SessionList() {
   // Admin/Supervisor check and filtered sessions
   const isAdminOrSupervisor = currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
   
-  // My sessions - only OPEN sessions assigned to me (exclude closed)
+  // My sessions - only sessions I'm ACTIVELY attending (human or waiting for response)
+  // Exclude: bot, queued, closed - these are not "my active chats"
   const mySessions = useMemo(() => 
     sessions.filter(s => 
       s.assignedAgent?._id === currentAgent?._id && 
-      s.status !== 'closed'
+      (s.status === 'human' || s.status === 'waiting')
     ),
     [sessions, currentAgent?._id]
   );
   
-  // All active sessions (for admin/supervisor view) - exclude closed
+  // All active sessions (for admin/supervisor view) - only human attended chats
   const allActiveSessions = useMemo(() => 
-    sessions.filter(s => s.status !== 'closed'), 
+    sessions.filter(s => s.status === 'human' || s.status === 'waiting'), 
     [sessions]
   );
 

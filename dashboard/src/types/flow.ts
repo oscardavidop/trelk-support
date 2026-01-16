@@ -112,6 +112,8 @@ export interface ConditionRule {
   field: string;
   operator: ConditionOperator;
   value: any;
+  customFieldName?: string; // For customFields type
+  variableName?: string;    // For variables type
 }
 
 export interface ConditionGroup {
@@ -427,6 +429,14 @@ export interface ActionConfig {
     passVariables?: boolean;  // Pass current variables to subflow
     waitForCompletion?: boolean;  // Wait for subflow to complete
     variablesToPass?: string[];  // Specific variables to pass
+  };
+  
+  // i18n Text Configuration - Determines which language to use for {{TEXT.KEY}} placeholders
+  i18nConfig?: {
+    source: 'user_language' | 'custom_field' | 'variable' | 'fixed';
+    customFieldName?: string;  // When source is 'custom_field', use this field to get language
+    variableName?: string;     // When source is 'variable', use this variable to get language
+    fixedLanguage?: string;    // When source is 'fixed', use this specific language (e.g., 'es', 'en')
   };
   
   // schedule_message: Enhanced scheduled message configuration

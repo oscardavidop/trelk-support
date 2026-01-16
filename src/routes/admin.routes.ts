@@ -15,14 +15,11 @@ import {
   deleteAgent,
 } from '../services/agent.service.js';
 import {
-  getSettings,
-  updateBotSettings,
-  updateChatSettings,
-  updateAgentRules,
-  updateSecuritySettings,
-  updateAllSettings,
-  resetSettings,
-} from '../services/settings.service.js';
+  getCachedSettings,
+  updateSettings as updateAllCachedSettings,
+  resetSettings as resetCachedSettings,
+  formatSettingsForClient,
+} from '../services/settings-cache.service.js';
 import {
   getAllSavedReplies,
   getSavedReplyById,
@@ -34,7 +31,6 @@ import {
   PLACEHOLDERS,
 } from '../services/savedReply.service.js';
 import { logger } from '../services/logger.js';
-import type { IBotSettings, IChatSettings, IAgentRules, ISecuritySettings } from '../database/index.js';
 
 // ============= REQUEST TYPES =============
 
@@ -60,10 +56,11 @@ interface ResetPasswordBody {
 }
 
 interface UpdateSettingsBody {
-  bot?: Partial<IBotSettings>;
-  chat?: Partial<IChatSettings>;
-  agentRules?: Partial<IAgentRules>;
-  security?: Partial<ISecuritySettings>;
+  bot?: Record<string, unknown>;
+  chat?: Record<string, unknown>;
+  agents?: Record<string, unknown>;
+  security?: Record<string, unknown>;
+  notifications?: Record<string, unknown>;
 }
 
 interface SavedReplyParams {
@@ -325,19 +322,26 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
    * Get all settings
    */
   fastify.get('/api/admin/settings', async () => {
-    const settings = await getSettings();
-    return { ok: true, settings };
+    const settings = await getCachedSettings();
+    // Format for frontend compatibility
+    return { ok: true, settings: formatSettingsForClient(settings) };
   });
   
   /**
    * Update settings (partial or full)
    */
   fastify.patch<{ Body: UpdateSettingsBody }>('/api/admin/settings', async (request, reply) => {
-    const { bot, chat, agentRules, security } = request.body;
+    const { bot, chat, agents, security, notifications } = request.body as {
+      bot?: Record<string, unknown>;
+      chat?: Record<string, unknown>;
+      agents?: Record<string, unknown>;
+      security?: Record<string, unknown>;
+      notifications?: Record<string, unknown>;
+    };
     const agentId = request.agent!._id.toString();
     
-    const settings = await updateAllSettings(
-      { bot, chat, agentRules, security },
+    const settings = await updateAllCachedSettings(
+      { bot, chat, agents, security, notifications },
       agentId
     );
     
@@ -347,53 +351,53 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
       sections: Object.keys(request.body),
     });
     
-    return { ok: true, settings };
+    return { ok: true, settings: formatSettingsForClient(settings) };
   });
   
   /**
    * Update bot settings
    */
-  fastify.patch<{ Body: Partial<IBotSettings> }>('/api/admin/settings/bot', async (request) => {
-    const settings = await updateBotSettings(request.body, request.agent!._id.toString());
-    return { ok: true, settings };
+  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/bot', async (request) => {
+    const settings = await updateAllCachedSettings({ bot: request.body }, request.agent!._id.toString());
+    return { ok: true, settings: formatSettingsForClient(settings) };
   });
   
   /**
    * Update chat settings
    */
-  fastify.patch<{ Body: Partial<IChatSettings> }>('/api/admin/settings/chat', async (request) => {
-    const settings = await updateChatSettings(request.body, request.agent!._id.toString());
-    return { ok: true, settings };
+  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/chat', async (request) => {
+    const settings = await updateAllCachedSettings({ chat: request.body }, request.agent!._id.toString());
+    return { ok: true, settings: formatSettingsForClient(settings) };
   });
   
   /**
    * Update agent rules
    */
-  fastify.patch<{ Body: Partial<IAgentRules> }>('/api/admin/settings/agent-rules', async (request) => {
-    const settings = await updateAgentRules(request.body, request.agent!._id.toString());
-    return { ok: true, settings };
+  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/agent-rules', async (request) => {
+    const settings = await updateAllCachedSettings({ agents: request.body }, request.agent!._id.toString());
+    return { ok: true, settings: formatSettingsForClient(settings) };
   });
   
   /**
    * Update security settings
    */
-  fastify.patch<{ Body: Partial<ISecuritySettings> }>('/api/admin/settings/security', async (request) => {
-    const settings = await updateSecuritySettings(request.body, request.agent!._id.toString());
-    return { ok: true, settings };
+  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/security', async (request) => {
+    const settings = await updateAllCachedSettings({ security: request.body }, request.agent!._id.toString());
+    return { ok: true, settings: formatSettingsForClient(settings) };
   });
   
   /**
    * Reset settings to defaults
    */
   fastify.post('/api/admin/settings/reset', async (request) => {
-    const settings = await resetSettings(request.agent!._id.toString());
+    const settings = await resetCachedSettings(request.agent!._id.toString());
     
     logger.info('api', { 
       action: 'settings_reset', 
       resetBy: request.agent!._id.toString(),
     });
     
-    return { ok: true, settings, message: 'Settings reset to defaults' };
+    return { ok: true, settings: formatSettingsForClient(settings), message: 'Settings reset to defaults' };
   });
   
   /**

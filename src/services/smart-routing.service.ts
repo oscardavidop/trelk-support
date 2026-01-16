@@ -10,6 +10,7 @@ import { ChatSession, type IChatSession } from '../database/models/ChatSession.j
 import { User } from '../database/models/User.js';
 import { ActivityHelpers } from './activity-log.service.js';
 import { io } from './socket.js';
+import { getAssignmentSettings, isWithinWorkingHours } from './settings-cache.service.js';
 
 // Language detection keywords (simplified - in production use a proper library)
 const LANGUAGE_KEYWORDS: Record<string, string[]> = {
@@ -236,6 +237,25 @@ export async function findBestAgent(
   sessionId: string,
   firstMessage?: string
 ): Promise<{ agent: IAgent | null; reason: string }> {
+  // Check working hours first
+  const withinWorkingHours = await isWithinWorkingHours();
+  if (!withinWorkingHours) {
+    return { agent: null, reason: 'Outside of working hours' };
+  }
+  
+  // Get assignment settings from cache
+  const assignmentSettings = await getAssignmentSettings();
+  
+  // Check if auto-assign is enabled
+  if (!assignmentSettings.autoAssign) {
+    // Queue the chat for manual assignment
+    await ChatSession.findOneAndUpdate(
+      { sessionId },
+      { status: 'queued' }
+    );
+    return { agent: null, reason: 'Auto-assign disabled, added to queue' };
+  }
+  
   // Get session with user
   const session = await ChatSession.findOne({ sessionId }).populate('user').lean();
   if (!session) {
@@ -258,9 +278,20 @@ export async function findBestAgent(
   if (detectedCategory && !session.category) {
     await ChatSession.findByIdAndUpdate(session._id, { category: detectedCategory });
   }
+  
+  // Get max chats per agent from settings
+  const maxChatsPerAgent = assignmentSettings.maxChatsPerAgent;
+  
+  // Check if skill-based routing is enabled
+  const useSkillRouting = assignmentSettings.skillBased;
+  
+  // Check if priority routing is enabled
+  const usePriorityRouting = assignmentSettings.priorityRouting;
 
-  // Get active routing rules, ordered by priority
-  const rules = await RoutingRule.find({ isActive: true }).sort({ priority: 1 }).lean();
+  // Get active routing rules, ordered by priority (only if skill-based routing enabled)
+  const rules = useSkillRouting 
+    ? await RoutingRule.find({ isActive: true }).sort({ priority: 1 }).lean()
+    : [];
 
   // Try each rule in priority order
   for (const rule of rules) {
@@ -285,7 +316,7 @@ export async function findBestAgent(
             const agent = await Agent.findById(action.targetAgentId);
             if (agent && agent.onlineStatus === 'online' && agent.isActive) {
               const skills = await AgentSkills.findOne({ agentId: agent._id });
-              const maxChats = skills?.maxConcurrentChats || MAX_CONCURRENT_CHATS;
+              const maxChats = skills?.maxConcurrentChats || maxChatsPerAgent;
               if (agent.activeChats < maxChats) {
                 return { agent, reason: `Matched rule: ${rule.name}` };
               }
@@ -318,7 +349,7 @@ export async function findBestAgent(
 
           // Filter agents at capacity
           const eligibleAgents = scores.filter((s: { agent: IAgent; skills?: IAgentSkills; score: number }) => {
-            const maxChats = s.skills?.maxConcurrentChats || MAX_CONCURRENT_CHATS;
+            const maxChats = s.skills?.maxConcurrentChats || maxChatsPerAgent;
             return s.agent.activeChats < maxChats;
           });
 
@@ -360,19 +391,29 @@ export async function findBestAgent(
     }
   }
 
-  // No rule matched - fall back to round-robin
+  // No rule matched - fall back based on assignment mode
   const fallbackAgents = await Agent.find({
     isActive: true,
     onlineStatus: 'online',
   }).lean();
+  
+  // Sort agents based on assignment mode
+  let sortedAgents = [...fallbackAgents];
+  if (assignmentSettings.mode === 'least-busy') {
+    sortedAgents.sort((a, b) => a.activeChats - b.activeChats);
+  } else if (assignmentSettings.mode === 'round-robin') {
+    // Simple round-robin: shuffle agents
+    sortedAgents.sort(() => Math.random() - 0.5);
+  }
+  // 'manual' mode: just iterate in order
 
-  for (const agent of fallbackAgents) {
+  for (const agent of sortedAgents) {
     const skills = await AgentSkills.findOne({ agentId: agent._id });
-    const maxChats = skills?.maxConcurrentChats || MAX_CONCURRENT_CHATS;
+    const maxChats = skills?.maxConcurrentChats || maxChatsPerAgent;
     if (agent.activeChats < maxChats) {
       const fullAgent = await Agent.findById(agent._id);
       if (fullAgent) {
-        return { agent: fullAgent, reason: 'Default round-robin (no rules matched)' };
+        return { agent: fullAgent, reason: `Assignment mode: ${assignmentSettings.mode}` };
       }
     }
   }

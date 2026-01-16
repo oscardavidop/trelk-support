@@ -328,7 +328,7 @@ export function useMessageActions(sessionId: string) {
   }, []);
   
   const handleCopyLink = useCallback(async (message: Message) => {
-    const link = `${window.location.origin}/chat/${sessionId}#message-${message._id}`;
+    const link = `${window.location.origin}/dashboard/chat?session=${sessionId}#message-${message._id}`;
     try {
       await navigator.clipboard.writeText(link);
       console.log('Copied link:', link);

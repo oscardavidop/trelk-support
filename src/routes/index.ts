@@ -23,6 +23,8 @@ import { scheduledMessageRoutes } from './scheduledMessage.routes.js';
 import { flowRoutes } from './flow.routes.js';
 import { registerSettingsRoutes } from './settings.routes.js';
 import { systemRoutes } from './system.routes.js';
+import { adminControlRoutes } from './admin-control.routes.js';
+import { textsRoutes } from './texts.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -103,4 +105,10 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // System monitoring routes (admin/supervisor only)
   await fastify.register(systemRoutes, { prefix: '/api/system' });
+
+  // Admin Control Panel routes (admin only - super admin features)
+  await fastify.register(adminControlRoutes, { prefix: '/api/admin-control' });
+
+  // Text Registry / i18n routes
+  await fastify.register(textsRoutes, { prefix: '/api/admin/texts' });
 }

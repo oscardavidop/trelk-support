@@ -70,12 +70,29 @@ const AVAILABLE_FIELDS = [
   { path: 'user.firstName', label: 'Nombre del usuario', type: 'string' },
   { path: 'user.lastName', label: 'Apellido del usuario', type: 'string' },
   { path: 'user.username', label: 'Username', type: 'string' },
+  { path: 'user.language', label: 'Idioma del usuario', type: 'language' },
   { path: 'session.category', label: 'Categoría', type: 'string' },
   { path: 'session.priority', label: 'Prioridad', type: 'string' },
   { path: 'session.tags', label: 'Tags', type: 'array' },
   { path: 'session.messageCount', label: 'Número de mensajes', type: 'number' },
   { path: 'agent.name', label: 'Nombre del agente', type: 'string' },
-  { path: 'variables.custom', label: 'Variable personalizada', type: 'any' },
+  { path: 'customFields', label: 'Campo personalizado', type: 'customField' },
+  { path: 'variables', label: 'Variable', type: 'variable' },
+];
+
+// Idiomas soportados para condiciones
+const SUPPORTED_LANGUAGES = [
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
+  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'ko', name: '한국어', flag: '🇰🇷' },
+  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
 ];
 
 
@@ -961,16 +978,97 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                       </select>
                     </div>
 
-                    {/* 3. Input de Valor */}
+                    {/* 3. Input de Valor - Dinámico según el tipo de campo */}
                     <div className="col-span-4">
-                      <input
-                        type="text"
-                        value={rule.value || ''}
-                        onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
-                        disabled={readOnly}
-                        placeholder="Valor a comparar..."
-                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-400"
-                      />
+                      {(() => {
+                        const fieldInfo = AVAILABLE_FIELDS.find(f => f.path === rule.field);
+                        const fieldType = fieldInfo?.type || 'string';
+                        
+                        // Selector de idioma
+                        if (fieldType === 'language' || rule.field === 'user.language') {
+                          return (
+                            <select
+                              value={rule.value || ''}
+                              onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
+                              disabled={readOnly}
+                              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            >
+                              <option value="">Seleccionar idioma...</option>
+                              {SUPPORTED_LANGUAGES.map((lang) => (
+                                <option key={lang.code} value={lang.code}>
+                                  {lang.flag} {lang.name}
+                                </option>
+                              ))}
+                            </select>
+                          );
+                        }
+                        
+                        // Campo personalizado - necesita especificar el nombre del campo
+                        if (fieldType === 'customField' || rule.field === 'customFields') {
+                          return (
+                            <div className="flex gap-1">
+                              <input
+                                type="text"
+                                value={rule.customFieldName || ''}
+                                onChange={(e) => {
+                                  updateRule(groupIndex, ruleIndex, 'customFieldName', e.target.value);
+                                  updateRule(groupIndex, ruleIndex, 'field', `customFields.${e.target.value}`);
+                                }}
+                                disabled={readOnly}
+                                placeholder="Nombre campo"
+                                className="w-1/2 px-2 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400"
+                              />
+                              <input
+                                type="text"
+                                value={rule.value || ''}
+                                onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
+                                disabled={readOnly}
+                                placeholder="Valor"
+                                className="w-1/2 px-2 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400"
+                              />
+                            </div>
+                          );
+                        }
+                        
+                        // Variable - necesita especificar el nombre de la variable
+                        if (fieldType === 'variable' || rule.field === 'variables') {
+                          return (
+                            <div className="flex gap-1">
+                              <input
+                                type="text"
+                                value={rule.variableName || ''}
+                                onChange={(e) => {
+                                  updateRule(groupIndex, ruleIndex, 'variableName', e.target.value);
+                                  updateRule(groupIndex, ruleIndex, 'field', `variables.${e.target.value}`);
+                                }}
+                                disabled={readOnly}
+                                placeholder="Variable"
+                                className="w-1/2 px-2 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400"
+                              />
+                              <input
+                                type="text"
+                                value={rule.value || ''}
+                                onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
+                                disabled={readOnly}
+                                placeholder="Valor"
+                                className="w-1/2 px-2 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400"
+                              />
+                            </div>
+                          );
+                        }
+                        
+                        // Input estándar de texto
+                        return (
+                          <input
+                            type="text"
+                            value={rule.value || ''}
+                            onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
+                            disabled={readOnly}
+                            placeholder="Valor a comparar..."
+                            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-400"
+                          />
+                        );
+                      })()}
                     </div>
 
                     {/* 4. Botón Eliminar */}

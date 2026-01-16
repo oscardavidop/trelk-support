@@ -1,5 +1,5 @@
 // Trelk Support Dashboard - Main App
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './pages/DashboardLayout';
 import OverviewPage from './pages/OverviewPage';
@@ -13,10 +13,19 @@ import ExportsPage from './pages/ExportsPage';
 import MySettingsPage from './pages/MySettingsPage';
 import CustomFieldsPage from './pages/CustomFieldsPage';
 import SystemPage from './pages/SystemPage';
+import SystemControlPage from './pages/SystemControlPage';
+import TextsPage from './pages/TextsPage';
 import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
 import { ThemeProvider } from './components/ThemeProvider';
 import './index.css';
+
+// Redirect /chat/:sessionId to /dashboard/chat?session=:sessionId (preserving hash)
+function ChatRedirect() {
+  const { sessionId } = useParams();
+  const location = useLocation();
+  return <Navigate to={`/dashboard/chat?session=${sessionId}${location.hash}`} replace />;
+}
 
 export default function App() {
   return (
@@ -24,6 +33,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          {/* Redirect legacy /chat/:sessionId URLs to new format */}
+          <Route path="/chat/:sessionId" element={<ChatRedirect />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<OverviewPage />} />
             <Route path="chat" element={<ChatPage />} />
@@ -39,6 +50,8 @@ export default function App() {
             <Route path="flows/:flowId" element={<FlowsPage />} />
             <Route path="custom-fields" element={<CustomFieldsPage />} />
             <Route path="system" element={<SystemPage />} />
+            <Route path="system-control" element={<SystemControlPage />} />
+            <Route path="texts" element={<TextsPage />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

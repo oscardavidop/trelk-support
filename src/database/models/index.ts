@@ -35,6 +35,7 @@ export { AgentSessionState, type IAgentSessionState } from './AgentSessionState.
 // Enterprise models - Logging & Audit
 export { ActivityLog, type IActivityLog, type ActivityAction } from './ActivityLog.js';
 export { AuditLog, type IAuditLog, type AuditCategory, type AuditSeverity } from './AuditLog.js';
+export { AdminAuditLog, type IAdminAuditLog } from './AdminAuditLog.js';
 
 // Enterprise models - Security
 export { UserRateLimit, type IUserRateLimit, type ViolationType } from './UserRateLimit.js';

@@ -25,6 +25,8 @@ import { initializeRedis, closeRedis, getRedisHealth, isRedisConnected } from '.
 import { initializeWorkers, shutdownWorkers, getAllQueueStats, areWorkersInitialized } from './workers/index.js';
 // Write-behind cache sync
 import { startCacheSync, stopCacheSync, flushPendingWrites } from './services/cache-models.service.js';
+// Text Registry i18n
+import { initializeTextRegistry, seedDefaultTexts } from './services/text-registry.service.js';
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -264,6 +266,11 @@ async function start(): Promise<void> {
 
     // Restore pending survey polls from database
     await restorePendingPolls();
+    
+    // Initialize Text Registry (i18n) cache
+    await initializeTextRegistry();
+    await seedDefaultTexts();
+    console.log('   ✅ Text Registry Initialized');
     
     // Queued session timers are now persisted in Redis via BullMQ
     // No need to restore - jobs survive server restarts

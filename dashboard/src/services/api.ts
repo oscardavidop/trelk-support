@@ -43,6 +43,7 @@ export interface ApiInstance {
 interface RequestConfig {
   headers?: HeadersInit;
   signal?: AbortSignal;
+  data?: unknown;
 }
 
 interface ApiResult<T> {
@@ -91,7 +92,7 @@ export const api: ApiInstance = {
   post: <T>(url: string, data?: unknown, config?: RequestConfig) => request<T>('POST', url, data, config),
   put: <T>(url: string, data?: unknown, config?: RequestConfig) => request<T>('PUT', url, data, config),
   patch: <T>(url: string, data?: unknown, config?: RequestConfig) => request<T>('PATCH', url, data, config),
-  delete: <T>(url: string, config?: RequestConfig) => request<T>('DELETE', url, undefined, config),
+  delete: <T>(url: string, data?: unknown, config?: RequestConfig) => request<T>('DELETE', url, data, config),
 };
 
 // ============= TYPED API METHODS =============

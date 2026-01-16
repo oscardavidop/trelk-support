@@ -181,6 +181,17 @@ export default function AgentComposer({
     }
   }, [sendStatus]);
 
+  // Auto-focus textarea when session changes or component mounts
+  useEffect(() => {
+    if (!disabled) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [session.sessionId, disabled]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -271,6 +282,8 @@ export default function AgentComposer({
           setMessage('');
           setSendStatus('sent');
           onCancelReply?.();
+          // Re-focus textarea after sending
+          setTimeout(() => textareaRef.current?.focus(), 50);
           if (closeAfter) {
             closeSession(session.sessionId, 'Agent closed conversation');
           }

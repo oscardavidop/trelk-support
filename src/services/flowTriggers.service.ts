@@ -469,7 +469,8 @@ export async function triggerKeywordDetectedNoSession(
 
 /**
  * Handle flow button click callback
- * Supports two formats:
+ * Supports three formats:
+ * - Compact: fb:{shortId} (new compact format, under 64 bytes)
  * - Simple: flow:{nodeId}:btn:{btnId} (current format from frontend)
  * - Full: flow:{flowId}:node:{nodeId}:btn:{btnId}:{mode}
  */
@@ -481,7 +482,44 @@ export async function handleFlowButtonCallback(
 ): Promise<{ handled: boolean; error?: string }> {
   const parts = callbackData.split(':');
   
-  // Must start with "flow:"
+  // Check for compact format first: fb:{shortId}
+  if (parts[0] === 'fb' && parts.length === 2) {
+    const shortId = parts[1];
+    const { getCallbackDataAsync } = await import('./flowEngine.service.js');
+    const callbackMapping = await getCallbackDataAsync(shortId);
+    
+    if (!callbackMapping) {
+      logger.warn('flow', {
+        action: 'flow_button_expired_or_invalid',
+        shortId,
+        chatId,
+      });
+      return { handled: false, error: 'Button expired or invalid' };
+    }
+    
+    logger.info('flow', {
+      action: 'flow_button_compact_format',
+      shortId,
+      flowId: callbackMapping.flowId,
+      nodeId: callbackMapping.nodeId,
+      btnId: callbackMapping.btnId,
+      mode: callbackMapping.mode,
+      chatId,
+    });
+    
+    // Use the callback mapping data
+    return handleFlowButtonWithData(
+      callbackMapping.flowId,
+      callbackMapping.nodeId,
+      callbackMapping.btnId,
+      callbackMapping.mode as 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none',
+      user,
+      chatId,
+      messageId
+    );
+  }
+  
+  // Must start with "flow:" for legacy formats
   if (parts[0] !== 'flow') {
     return { handled: false };
   }
@@ -529,6 +567,31 @@ export async function handleFlowButtonCallback(
     return { handled: false };
   }
   
+  // Delegate to the common handler with parsed data
+  return handleFlowButtonWithData(
+    flowId,
+    nodeId,
+    btnId!,
+    mode,
+    user,
+    chatId,
+    messageId
+  );
+}
+
+/**
+ * Handle flow button with parsed data
+ * Common logic for all callback formats (compact, simple, full)
+ */
+async function handleFlowButtonWithData(
+  flowId: string | undefined,
+  nodeId: string | undefined,
+  btnId: string,
+  mode: 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none',
+  user: IUser,
+  chatId: number,
+  messageId: number
+): Promise<{ handled: boolean; error?: string }> {
   // Build sessionId patterns to search
   const sessionId = `nosession-${chatId}`;
   
@@ -711,7 +774,6 @@ export async function handleFlowButtonCallback(
         nodeId,
         mode,
         targetNodeId,  // Include targetNodeId in the event
-        callbackData,
         onClick: buttonClickData,  // Include full onClick data (includes messageMode, etc)
       },
       messageId,

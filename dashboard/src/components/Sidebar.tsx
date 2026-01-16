@@ -26,7 +26,8 @@ import {
   Shield,
   History,
   ListChecks,
-  Server
+  Server,
+  Languages
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
@@ -111,8 +112,10 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
     { path: '/dashboard/audit', icon: Activity, label: 'Actividad', requireRole: 'supervisor' as const },
     { path: '/dashboard/exports', icon: Download, label: 'Exportar', requireRole: 'supervisor' as const },
     { path: '/dashboard/system', icon: Server, label: 'Sistema', requireRole: 'supervisor' as const },
+    { path: '/dashboard/system-control', icon: Shield, label: 'Control', requireRole: 'admin' as const, danger: true },
     { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', requireRole: 'admin' as const },
     { path: '/dashboard/flows', icon: GitBranch, label: 'Flows', requireRole: 'admin' as const },
+    { path: '/dashboard/texts', icon: Languages, label: 'Textos i18n', requireRole: 'admin' as const },
     { path: '/dashboard/custom-fields', icon: ListChecks, label: 'Campos', requireRole: 'admin' as const },
     { path: '/dashboard/agents', icon: Users, label: 'Agents', requireRole: 'admin' as const },
     { path: '/dashboard/settings', icon: Settings, label: 'Settings', requireRole: 'admin' as const },
@@ -212,14 +215,19 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const isDanger = 'danger' in item && item.danger;
           return (
             <Link
               key={item.path}
               to={item.path}
               title={isCollapsed ? item.label : undefined}
               className={`flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  ? isDanger 
+                    ? 'bg-danger/20 text-danger'
+                    : 'bg-primary/10 text-primary'
+                  : isDanger
+                    ? 'text-danger/70 hover:text-danger hover:bg-danger/10'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
                 }`}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />

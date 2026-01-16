@@ -31,6 +31,7 @@ export const QUEUE_NAMES = {
 } as const;
 
 type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES];
+export type { QueueName };
 
 // ============= STATE =============
 

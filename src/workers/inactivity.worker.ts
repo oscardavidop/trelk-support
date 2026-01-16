@@ -13,8 +13,8 @@ import {
 } from '../services/queue.js';
 import { logger } from '../services/logger.js';
 import { sendMessage as sendTelegramMessage } from '../services/telegram.js';
-import { emitChatWarning, emitChatClosed } from '../services/socket.js';
-import { closeSession, getSessionById } from '../services/chat.service.js';
+import { emitChatWarning, emitChatClosed, getIO } from '../services/socket.js';
+import { closeSession, getSessionById, addMessage } from '../services/chat.service.js';
 
 // ============= WORKER PROCESSOR =============
 
@@ -88,7 +88,29 @@ async function handleWarning(
   const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.\n\n⚠️ This chat will close automatically in ${remainingMinutes} minutes due to inactivity.`;
 
   try {
+    // Send to Telegram
     await sendTelegramMessage(chatId, warningMessage);
+    
+    // Save message in database
+    const savedMessage = await addMessage(sessionId, 'bot', warningMessage, {
+      messageType: 'system',
+    });
+    
+    // Emit message:new event so it shows in real-time in the dashboard
+    const io = getIO();
+    if (io) {
+      const messageData = {
+        _id: savedMessage._id.toString(),
+        session: sessionId,
+        sender: 'bot',
+        content: warningMessage,
+        messageType: 'system' as const,
+        createdAt: savedMessage.createdAt,
+      };
+      io.to(`session:${sessionId}`).emit('message:new', messageData);
+    }
+    
+    // Emit warning event for UI notification
     emitChatWarning(sessionId, remainingMinutes);
 
     logger.info('worker:inactivity', {
@@ -130,10 +152,29 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
   }
 
   try {
+    const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.\n\n✅ Chat closed due to inactivity. Thank you for contacting Trelk Support.`;
+
+    // Save message in database BEFORE closing the session
+    const savedMessage = await addMessage(sessionId, 'bot', closeMessage, {
+      messageType: 'system',
+    });
+    
+    // Emit message:new event so it shows in real-time in the dashboard
+    const io = getIO();
+    if (io) {
+      const messageData = {
+        _id: savedMessage._id.toString(),
+        session: sessionId,
+        sender: 'bot',
+        content: closeMessage,
+        messageType: 'system' as const,
+        createdAt: savedMessage.createdAt,
+      };
+      io.to(`session:${sessionId}`).emit('message:new', messageData);
+    }
+    
     const agentId = session.assignedAgent?._id?.toString() || null;
     await closeSession(sessionId, agentId, 'Closed due to inactivity', 'system');
-
-    const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.\n\n✅ Chat closed due to inactivity. Thank you for contacting Trelk Support.`;
 
     await sendTelegramMessage(chatId, closeMessage, {
       replyMarkup: { remove_keyboard: true },
@@ -179,9 +220,29 @@ async function handleQueuedClose(sessionId: string, chatId: number): Promise<any
   }
 
   try {
-    await closeSession(sessionId, null, 'Closed due to inactivity in queue', 'system');
-
     const closeMessage = `✅ El chat ha sido cerrado automáticamente por inactividad.\n\n✅ Chat closed automatically due to inactivity.\n\nSi necesitas ayuda, inicia una nueva conversación.`;
+
+    // Save message in database BEFORE closing the session
+    const savedMessage = await addMessage(sessionId, 'bot', closeMessage, {
+      messageType: 'system',
+    });
+    
+    // Emit message:new event so it shows in real-time in the dashboard
+    const io = getIO();
+    if (io) {
+      const messageData = {
+        _id: savedMessage._id.toString(),
+        session: sessionId,
+        sender: 'bot',
+        content: closeMessage,
+        messageType: 'system' as const,
+        createdAt: savedMessage.createdAt,
+      };
+      // For queued sessions, emit to all (they're visible to all agents)
+      io.emit('message:new', messageData);
+    }
+    
+    await closeSession(sessionId, null, 'Closed due to inactivity in queue', 'system');
 
     await sendTelegramMessage(chatId, closeMessage, {
       replyMarkup: { remove_keyboard: true },

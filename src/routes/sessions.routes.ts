@@ -212,6 +212,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         isRead: msg.isRead,
         isEdited: msg.isEdited || false,
         editedAt: msg.editedAt,
+        isPinned: (msg as any).isPinned || false,
         createdAt: msg.createdAt,
         replyToMessage: (msg as any).replyTo ? {
           _id: (msg as any).replyTo._id?.toString(),
@@ -221,7 +222,10 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         } : undefined,
       }));
       
-      return { ok: true, messages: transformedMessages };
+      // Find the pinned message
+      const pinnedMessage = transformedMessages.find(m => m.isPinned);
+      
+      return { ok: true, messages: transformedMessages, pinnedMessage: pinnedMessage || null };
     }
   );
   

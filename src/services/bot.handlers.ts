@@ -5,7 +5,7 @@
 
 import { ConversationState, TicketCategory } from '../config/index.js';
 import type { TelegramMessage, TelegramCallbackQuery, Language } from '../types/index.js';
-import { sendMessage, editMessage, answerCallbackQuery, resolveFileUrl } from './telegram.js';
+import { sendMessage, editMessage, answerCallbackQuery, resolveFileUrl, sendChatAction } from './telegram.js';
 import { 
   getOrCreateUser,
   updateUserLanguage,
@@ -42,7 +42,7 @@ import {
 } from '../messages/index.js';
 import { logger } from './logger.js';
 import { SPAM_PROTECTION } from '../config/index.js';
-import { getSettings } from './settings.service.js';
+import { getAutoReplySettings, getBotSettings, isWithinWorkingHours } from './settings-cache.service.js';
 import { 
   startInactivityTimer, 
   resetInactivityTimer, 
@@ -52,7 +52,16 @@ import {
 } from './inactivity.service.js';
 import { isUserBlocked, submitSurvey } from './enterprise.service.js';
 import type { IUser } from '../database/index.js';
-import type { ReplyKeyboardMarkup } from '../types/index.js';
+import type { ReplyKeyboardMarkup, ReplyMarkup } from '../types/index.js';
+
+// ============= LOCAL TYPES =============
+
+interface SendOptions {
+  replyMarkup?: ReplyMarkup;
+  parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+  disablePreview?: boolean;
+  reply_to_message_id?: number;
+}
 
 // ============= DYNAMIC SETTINGS HELPER =============
 
@@ -68,16 +77,39 @@ function getHumanSupportKeyboard(): ReplyKeyboardMarkup {
   };
 }
 
+/**
+ * Send message with typing indicator and delay based on settings
+ */
+async function sendMessageWithTyping(
+  chatId: number,
+  text: string,
+  options?: SendOptions
+): Promise<void> {
+  const settings = await getAutoReplySettings();
+  
+  // Show typing indicator if enabled
+  if (settings.typingIndicator) {
+    await sendChatAction(chatId, 'typing');
+  }
+  
+  // Apply auto-reply delay if enabled
+  if (settings.enabled && settings.delay > 0) {
+    await new Promise(resolve => setTimeout(resolve, settings.delay));
+  }
+  
+  await sendMessage(chatId, text, options);
+}
+
 async function getBotMessage(key: 'welcome' | 'transfer' | 'offline', lang: Language): Promise<string> {
-  const settings = await getSettings();
+  const settings = await getBotSettings();
   
   switch (key) {
     case 'welcome':
-      return settings.bot.welcomeMessage || getMessage('welcome', lang);
+      return settings.welcomeMessage || getMessage('welcome', lang);
     case 'transfer':
-      return settings.bot.transferMessage || getMessage('humanConfirm', lang);
+      return settings.transferMessage || getMessage('humanConfirm', lang);
     case 'offline':
-      return settings.bot.offlineMessage || getMessage('error', lang);
+      return settings.offlineMessage || getMessage('error', lang);
     default:
       return '';
   }
@@ -475,7 +507,8 @@ export async function handleCallbackQuery(query: TelegramCallbackQuery): Promise
   const chatId = message.chat.id;
   
   // Check if this is a flow button callback first
-  if (data.startsWith('flow:')) {
+  // Supports both legacy format (flow:...) and compact format (fb:...)
+  if (data.startsWith('flow:') || data.startsWith('fb:')) {
     const user = await getOrCreateUser(from, message.chat.id);
     await answerCallbackQuery(id);
     
@@ -483,6 +516,10 @@ export async function handleCallbackQuery(query: TelegramCallbackQuery): Promise
     if (result.handled) {
       logger.info('callback', { action: 'flow_button_handled', data: data.substring(0, 50) });
       return;
+    }
+    // If not handled (e.g., expired callback), log and continue
+    if (result.error) {
+      logger.warn('callback', { action: 'flow_button_not_handled', data, error: result.error });
     }
   }
   

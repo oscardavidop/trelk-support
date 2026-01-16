@@ -55,12 +55,16 @@ interface ChatWindowProps {
   session: ChatSession;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
+  targetMessageId?: string | null;
 }
 
-export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: ChatWindowProps) {
+export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, targetMessageId }: ChatWindowProps) {
   const agent = useAuthStore((state) => state.agent);
   const { messages, setMessages, isLoadingMessages, setLoadingMessages, updateMessage, deleteMessage: removeMessage, pinnedMessages, setPinnedMessage, clearPinnedMessage } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Highlighted message state
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   // Enterprise states
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -98,6 +102,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
 
     // Clear previous messages immediately to avoid showing stale data
     setMessages([]);
+    clearPinnedMessage(session.sessionId);
 
     const loadSessionMessages = async () => {
       setLoadingMessages(true);
@@ -117,6 +122,10 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
         // Only update if component is still mounted and session hasn't changed
         if (isMounted && data.ok) {
           setMessages(data.messages);
+          // Load pinned message if exists
+          if (data.pinnedMessage) {
+            setPinnedMessage(session.sessionId, data.pinnedMessage);
+          }
         } else if (isMounted && !data.ok) {
           console.error('Failed to load messages:', data.error);
           toast.error('Error', 'No se pudieron cargar los mensajes');
@@ -146,6 +155,23 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
       leaveSession(session.sessionId);
     };
   }, [session.sessionId, session.status, setMessages, setLoadingMessages]);
+
+  // Scroll to target message when messages are loaded
+  useEffect(() => {
+    if (targetMessageId && messages.length > 0 && !isLoadingMessages) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`message-${targetMessageId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightedMessageId(targetMessageId);
+          // Remove highlight after animation
+          setTimeout(() => setHighlightedMessageId(null), 3000);
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [targetMessageId, messages.length, isLoadingMessages]);
 
   // Typing indicator listeners
   useEffect(() => {
@@ -643,6 +669,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen }: 
               message={message}
               onContextMenu={(e) => handleMessageClick(message, e)}
               isPinned={pinnedMessage?._id === message._id}
+              isHighlighted={highlightedMessageId === message._id}
             />
           ))
         )}
@@ -793,9 +820,10 @@ interface MessageBubbleProps {
   message: Message;
   onContextMenu?: (e: React.MouseEvent) => void;
   isPinned?: boolean;
+  isHighlighted?: boolean;
 }
 
-function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps) {
+function MessageBubble({ message, onContextMenu, isPinned, isHighlighted }: MessageBubbleProps) {
   const isAgent = message.sender === 'agent';
   const isBot = message.sender === 'bot';
   const isSystem = message.messageType === 'system';
@@ -884,7 +912,7 @@ function MessageBubble({ message, onContextMenu, isPinned }: MessageBubbleProps)
   return (
     <div
       id={`message-${message._id}`}
-      className={`flex ${isAgent ? 'justify-end' : 'justify-start'} group`}
+      className={`flex ${isAgent ? 'justify-end' : 'justify-start'} group transition-all duration-500 ${isHighlighted ? 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-gray-900 rounded-lg' : ''}`}
     >
       <div className={`flex items-end gap-2 max-w-[70%] ${isAgent ? 'flex-row-reverse' : ''}`}>
         {/* Avatar */}

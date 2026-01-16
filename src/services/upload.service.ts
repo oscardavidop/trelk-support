@@ -8,13 +8,17 @@ import { existsSync } from 'fs';
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { logger } from './logger.js';
+import { getFileUploadSettings } from './settings-cache.service.js';
 
 // ============= CONFIGURATION =============
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+
+// Size limits (constants used in validation)
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_AUDIO_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
@@ -52,7 +56,32 @@ const ALLOWED_VIDEO_TYPES = [
   'video/x-matroska', // .mkv
 ];
 
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+// ============= DYNAMIC SETTINGS HELPERS =============
+
+/**
+ * Check if file sharing is enabled in settings
+ */
+export async function isFileSharingEnabled(): Promise<boolean> {
+  const settings = await getFileUploadSettings();
+  return settings.enabled;
+}
+
+/**
+ * Get max file size from settings (in bytes)
+ */
+export async function getMaxFileSizeBytes(): Promise<number> {
+  const settings = await getFileUploadSettings();
+  return settings.maxSizeMB * 1024 * 1024;
+}
+
+/**
+ * Check if file extension is allowed by settings
+ */
+export async function isFileTypeAllowed(filename: string): Promise<boolean> {
+  const settings = await getFileUploadSettings();
+  const ext = extname(filename).toLowerCase().replace('.', '');
+  return settings.allowedTypes.includes(ext);
+}
 
 // ============= TYPES =============
 
@@ -175,19 +204,33 @@ export async function uploadFile(
   mimeType: string
 ): Promise<UploadResult> {
   try {
-    // Validate type
-    if (!validateMimeType(mimeType, ALLOWED_FILE_TYPES)) {
+    // Check if file sharing is enabled
+    const fileSharingEnabled = await isFileSharingEnabled();
+    if (!fileSharingEnabled) {
       return {
         ok: false,
-        error: `Invalid file type. Allowed: PDF, DOCX, ZIP, XLSX, TXT, CSV`,
+        error: 'File sharing is currently disabled',
       };
     }
+    
+    // Check if file type is allowed by settings
+    const typeAllowed = await isFileTypeAllowed(originalName);
+    if (!typeAllowed) {
+      // Fall back to mime type validation
+      if (!validateMimeType(mimeType, ALLOWED_FILE_TYPES)) {
+        return {
+          ok: false,
+          error: `Invalid file type. Allowed: PDF, DOCX, ZIP, XLSX, TXT, CSV`,
+        };
+      }
+    }
 
-    // Validate size
-    if (!validateFileSize(buffer.length, MAX_FILE_SIZE)) {
+    // Get max file size from settings
+    const maxSize = await getMaxFileSizeBytes();
+    if (!validateFileSize(buffer.length, maxSize)) {
       return {
         ok: false,
-        error: `File too large. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+        error: `File too large. Max size: ${maxSize / 1024 / 1024}MB`,
       };
     }
 

@@ -5,7 +5,7 @@
  * Uses BullMQ for persistent timers that survive server restarts
  */
 
-import { getSettings } from './settings.service.js';
+import { getChatSettings, getQueueSettings } from './settings-cache.service.js';
 import { closeSession, getSessionById } from './chat.service.js';
 import { sendMessage as sendTelegramMessage } from './telegram.js';
 import { emitChatClosed, emitChatWarning } from './socket.js';
@@ -52,8 +52,8 @@ export async function startInactivityTimer(
   // Clear any existing timer for this session
   await clearInactivityTimer(sessionId);
   
-  const settings = await getSettings();
-  const autoCloseMinutes = settings.chat.autoCloseInactiveMinutes || 10;
+  const chatSettings = await getChatSettings();
+  const autoCloseMinutes = chatSettings.autoCloseInactiveMinutes || 10;
   const warningMinutes = Math.max(1, autoCloseMinutes - 5); // Warn 5 mins before closing
   const remainingAfterWarning = autoCloseMinutes - warningMinutes;
   
@@ -120,8 +120,8 @@ export async function startQueuedTimer(
 ): Promise<void> {
   await clearQueuedTimer(sessionId);
   
-  const settings = await getSettings();
-  const queuedTimeoutMinutes = settings.chat.queuedTimeoutMinutes || 10;
+  const queueSettings = await getQueueSettings();
+  const queuedTimeoutMinutes = queueSettings.maxWaitMinutes || 10;
   
   logger.debug('inactivity', {
     action: 'queued_timer_started',
