@@ -16,6 +16,7 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   lastActivity: Date;
+  photoFileId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -37,6 +38,7 @@ const UserSchema = new Schema<IUser>(
       required: true,
     },
     lastName: String,
+    photoFileId: String,
     language: {
       type: String,
       enum: ['en', 'es'],

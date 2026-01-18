@@ -9,7 +9,8 @@ import type {
   EditMessageOptions,
   AnswerCallbackQueryOptions,
   ReplyMarkup,
-  InlineKeyboardMarkup 
+  InlineKeyboardMarkup, 
+  TelegramUserProfilePhotos
 } from '../types/index.js';
 import { logger } from './logger.js';
 import { join } from 'path';
@@ -1561,4 +1562,28 @@ export async function simulateTyping(
   if (remaining > 0) {
     await new Promise(resolve => setTimeout(resolve, remaining));
   }
+}
+
+
+export async function getUserProfilePhotos(
+  userId: number,
+  options?: {
+    offset?: number;
+    limit?: number;
+  }
+): Promise<TelegramUserProfilePhotos | null> {
+  const body: Record<string, unknown> = {
+    user_id: userId,
+  };
+  
+  if (options?.offset !== undefined) {
+    body.offset = options.offset;
+  }
+  
+  if (options?.limit !== undefined) {
+    body.limit = options.limit;
+  }
+  
+  const result = await apiRequest<TelegramUserProfilePhotos>('getUserProfilePhotos', body);
+  return result;
 }

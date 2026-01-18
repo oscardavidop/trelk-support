@@ -206,12 +206,12 @@ export async function uploadFile(
   try {
     // Check if file sharing is enabled
     const fileSharingEnabled = await isFileSharingEnabled();
-    if (!fileSharingEnabled) {
-      return {
-        ok: false,
-        error: 'File sharing is currently disabled',
-      };
-    }
+    // if (!fileSharingEnabled) {
+    //   return {
+    //     ok: false,
+    //     error: 'File sharing is currently disabled',
+    //   };
+    // }
     
     // Check if file type is allowed by settings
     const typeAllowed = await isFileTypeAllowed(originalName);

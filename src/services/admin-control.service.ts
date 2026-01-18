@@ -692,7 +692,8 @@ export async function rebuildIndexes(ctx: AdminContext, collectionName: string):
     if (!db) throw new Error('Database not connected');
 
     const collection = db.collection(collectionName);
-    await db.command({ reIndex: collectionName });
+    await collection.dropIndexes();
+    // await db.command({ reIndex: collectionName });
 
     const actionResult: ActionResult = {
       success: true,

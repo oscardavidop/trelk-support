@@ -86,56 +86,57 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
     async (request: FastifyRequest<{ Params: MediaParams }>, reply: FastifyReply) => {
       try {
         const { fileId } = request.params;
-        
+        const { download } = request.query as { download?: string };
+
         if (!fileId) {
           return reply.status(400).send({ ok: false, error: 'File ID required' });
         }
-        
+
         // Get file info from Telegram API
         const file = await getFile(fileId);
-        
+
         if (!file || !file.file_path) {
           console.error('File not found:', fileId);
           return reply.status(404).send({ ok: false, error: 'File not found' });
         }
-        
+
         const localPath = file.file_path;
-        
+
         // Security check - ensure path doesn't escape allowed directories
         // The path should be under the telegram-bot-api working directory
         if (!localPath.startsWith('/home/quinton/support/')) {
           console.error('Invalid file path:', localPath);
           return reply.status(403).send({ ok: false, error: 'Access denied' });
         }
-        
+
         // Check if file exists
         if (!fs.existsSync(localPath)) {
           console.error('File does not exist:', localPath);
           return reply.status(404).send({ ok: false, error: 'File not found on disk' });
         }
-        
+
         // Get file stats
         const stats = fs.statSync(localPath);
         const mimeType = getMimeType(localPath);
         const fileName = path.basename(localPath);
-        
+
         // Set headers
         reply.header('Content-Type', mimeType);
         reply.header('Content-Length', stats.size);
-        reply.header('Content-Disposition', `inline; filename="${fileName}"`);
-        reply.header('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-        
+        reply.header('Content-Disposition', download === 'true' ? `attachment; filename="${fileName}"` : `inline; filename="${fileName}"`);
+        reply.header('Cache-Control', 'public, max-age=2592000'); // Cache for 30 days
+
         // Stream the file
         const stream = fs.createReadStream(localPath);
         return reply.send(stream);
-        
+
       } catch (error) {
         console.error('Media serve error:', error);
         return reply.status(500).send({ ok: false, error: 'Failed to serve file' });
       }
     }
   );
-  
+
   /**
    * GET /api/download/:fileId
    * Download a file by its Telegram file_id (forces download)
@@ -146,44 +147,44 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
     async (request: FastifyRequest<{ Params: MediaParams }>, reply: FastifyReply) => {
       try {
         const { fileId } = request.params;
-        
+
         if (!fileId) {
           return reply.status(400).send({ ok: false, error: 'File ID required' });
         }
-        
+
         // Get file info from Telegram API
         const file = await getFile(fileId);
-        
+
         if (!file || !file.file_path) {
           return reply.status(404).send({ ok: false, error: 'File not found' });
         }
-        
+
         const localPath = file.file_path;
-        
+
         // Security check
         if (!localPath.startsWith('/home/quinton/support/')) {
           return reply.status(403).send({ ok: false, error: 'Access denied' });
         }
-        
+
         // Check if file exists
         if (!fs.existsSync(localPath)) {
           return reply.status(404).send({ ok: false, error: 'File not found on disk' });
         }
-        
+
         // Get file stats
         const stats = fs.statSync(localPath);
         const mimeType = getMimeType(localPath);
         const fileName = path.basename(localPath);
-        
+
         // Set headers for download
         reply.header('Content-Type', mimeType);
         reply.header('Content-Length', stats.size);
         reply.header('Content-Disposition', `attachment; filename="${fileName}"`);
-        
+
         // Stream the file
         const stream = fs.createReadStream(localPath);
         return reply.send(stream);
-        
+
       } catch (error) {
         console.error('Download error:', error);
         return reply.status(500).send({ ok: false, error: 'Failed to download file' });

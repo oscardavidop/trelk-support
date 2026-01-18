@@ -768,6 +768,7 @@ async function handleFlowButtonWithData(
     chatId,
     userId: user.telegramId,
     data: {
+      chatId,  // Include chatId for execution lookup fallback
       button: {
         id: btnId,
         flowId,
@@ -782,6 +783,7 @@ async function handleFlowButtonWithData(
         lastName: user.lastName,
         username: user.username,
         language: user.language,
+        telegramId: user.telegramId,  // Include for execution lookup
       },
     },
   };

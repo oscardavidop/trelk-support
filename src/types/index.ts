@@ -249,3 +249,15 @@ export interface LogEntry {
   data: Record<string, unknown>;
   timestamp: number;
 }
+
+export interface TelegramUserProfilePhotos {
+  total_count: number;
+  photos: TelegramPhotoSize[][];
+}
+
+export interface TelegramFile {
+  file_id: string;
+  file_unique_id: string;
+  file_size?: number;
+  file_path?: string;
+}

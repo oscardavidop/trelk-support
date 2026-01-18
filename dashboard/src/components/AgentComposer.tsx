@@ -1,3 +1,5 @@
+// Agent Composer - Full-featured message composer for support agents
+// Features: Text, Images, Files, Audio recording, Quick replies, Save as reply, Schedule messages
 import {
   useState,
   useEffect,
@@ -688,8 +690,8 @@ export default function AgentComposer({
       {/* --- ZONA 2: Área Principal de Input --- */}
       {/* Solo se muestra si no estamos en modo "Solo Preview" (con botones dedicados) */}
       {!previewImage && !pendingFile && (
-        <div className="p-4">
-          <div className={`relative flex flex-col bg-gray-800/50 border transition-all duration-200 rounded-xl ${isFocused ? 'border-primary/50 ring-1 ring-primary/20 bg-gray-800' : 'border-gray-700 hover:border-gray-600'
+        <div className="">
+          <div className={`relative flex flex-col bg-gray-800/50 transition-all duration-200 ${isFocused ? 'border-primary/50 bg-gray-800' : ''
             }`}>
 
             {/* 2.1 Textarea (Auto-growing) */}
@@ -810,7 +812,7 @@ export default function AgentComposer({
           </div>
 
           {/* Footer Hints */}
-          <div className="flex justify-between items-center mt-2 px-1">
+          <div className="flex justify-between items-center mt-2 p-2">
             <div className="flex gap-3 text-[10px] text-gray-500">
               <span className="hidden sm:inline"><b>Enter</b> enviar</span>
               <span className="hidden sm:inline"><b>Shift+Enter</b> línea</span>

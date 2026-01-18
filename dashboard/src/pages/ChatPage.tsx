@@ -7,12 +7,13 @@ import ChatWindow from '../components/ChatWindow';
 import EmptyState from '../components/EmptyState';
 import { ChatInfoSidebar } from '../components/ChatInfoSidebar';
 import { TabBlockedOverlay, SessionReplacedOverlay } from '../components/SessionGuardOverlay';
-import { 
-  initSessionGuard, 
-  registerAsActiveTab, 
+import {
+  initSessionGuard,
+  registerAsActiveTab,
   releaseTab,
   cleanupSessionGuard,
 } from '../services/sessionGuard.service';
+import { MessageCircle, MessageSquare } from 'lucide-react';
 
 export default function ChatPage() {
   const { activeSession, sessions, setActiveSession } = useChatStore();
@@ -20,11 +21,11 @@ export default function ChatPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Session guard state
   const [isTabBlocked, setIsTabBlocked] = useState(false);
   const [sessionReplaced, setSessionReplaced] = useState<{ device: string; ip: string } | null>(null);
-  
+
   // Get target message ID from URL hash
   const targetMessageId = location.hash?.replace('#message-', '') || null;
 
@@ -34,14 +35,14 @@ export default function ChatPage() {
       onTabBlocked: () => setIsTabBlocked(true),
       onSessionReplaced: (data) => setSessionReplaced({ device: data.newDevice, ip: data.newIp }),
     });
-    
+
     // Try to register as active tab
     registerAsActiveTab('/dashboard/chat').then((success) => {
       if (!success) {
         setIsTabBlocked(true);
       }
     });
-    
+
     // Cleanup on unmount
     return () => {
       releaseTab();
@@ -74,7 +75,7 @@ export default function ChatPage() {
 
   // Count waiting sessions for badge
   const waitingCount = sessions.filter(s => s.status === 'waiting').length;
-  
+
   // Handle redirect from blocked tab
   const handleGoToDashboard = useCallback(() => {
     navigate('/dashboard');
@@ -83,27 +84,31 @@ export default function ChatPage() {
   return (
     <div className="h-screen flex">
       {/* Session Guard Overlays */}
-      <TabBlockedOverlay 
-        isBlocked={isTabBlocked} 
-        onClose={handleGoToDashboard} 
+      <TabBlockedOverlay
+        isBlocked={isTabBlocked}
+        onClose={handleGoToDashboard}
       />
-      <SessionReplacedOverlay 
-        isShown={!!sessionReplaced} 
+      <SessionReplacedOverlay
+        isShown={!!sessionReplaced}
         device={sessionReplaced?.device}
         ip={sessionReplaced?.ip}
       />
-      
+
       {/* Session List */}
-      <div className="border-r border-gray-800 flex flex-col" style={{ width: isSidebarOpen ? 370 : 370 }}>
-        <div className="p-4 border-b border-gray-800 h-[56px] flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            Conversations
-            {waitingCount > 0 && (
-              <span className="px-2 py-0.5 bg-warning text-gray-900 text-xs font-bold rounded-full">
-                {waitingCount}
-              </span>
-            )}
-          </h2>
+      <div className="border-r border-gray-800 flex flex-col bg-gray-950" style={{ width: isSidebarOpen ? 370 : 370 }}>
+        <div className="p-4 border-b border-gray-800 h-[56px] flex items-center gap-3">
+          <div className="p-2 bg-purple-500/20 rounded-xl">
+            <MessageSquare className="w-4 h-4 text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">Conversations
+              {waitingCount > 0 && (
+                <span className="px-2 py-0.5 bg-warning text-gray-900 text-xs font-bold rounded-full">
+                  {waitingCount}
+                </span>
+              )}
+            </h2>
+          </div>
         </div>
         <SessionList />
       </div>
@@ -111,9 +116,9 @@ export default function ChatPage() {
       {/* Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {activeSession ? (
-          <ChatWindow 
+          <ChatWindow
             key={activeSession.sessionId}
-            session={activeSession} 
+            session={activeSession}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
             targetMessageId={targetMessageId}

@@ -1084,13 +1084,19 @@ export class FlowEngine {
 
           // 1. Crear sesión real (igual que handleHumanConfirm)
           const session = await getOrCreateSession(user, ctx.chatId);
+          const oldSessionId = ctx.sessionId;
           ctx.sessionId = session.sessionId;
+          
+          // IMPORTANT: Also update execution.sessionId so future button clicks can find this execution
+          execution.sessionId = session.sessionId;
+          execution.markModified('sessionId');
 
           logger.info('flow', {
             action: 'session_created_for_escalation',
-            oldSessionId: `nosession-${ctx.chatId}`,
+            oldSessionId,
             newSessionId: session.sessionId,
             chatId: ctx.chatId,
+            executionUpdated: true,
           });
 
           // 2. Transfer to waiting (igual que handleHumanConfirm)
@@ -1436,6 +1442,12 @@ export class FlowEngine {
 
       case 'close_chat': {
         // Close the chat session
+        logger.info('flow', {
+          action: 'close_chat_attempting',
+          sessionId: ctx.sessionId,
+          chatId: ctx.chatId,
+        });
+        
         // First try by sessionId, then by telegramChatId (for cases where sessionId is temporary)
         let closeResult = await ChatSession.findOneAndUpdate(
           { sessionId: ctx.sessionId },
@@ -1450,9 +1462,30 @@ export class FlowEngine {
           { new: true }
         ).populate('user');
         
+        logger.info('flow', {
+          action: 'close_chat_first_attempt',
+          foundBySessionId: !!closeResult,
+          sessionId: ctx.sessionId,
+        });
+        
         // If no session found by sessionId (maybe it's a temporary nosession-xxx),
         // try to find by telegramChatId
         if (!closeResult && ctx.chatId) {
+          // First, let's see what sessions exist for this chatId
+          const existingSessions = await ChatSession.find({
+            telegramChatId: ctx.chatId,
+            status: { $in: ['queued', 'waiting', 'human', 'bot'] }
+          }).select('sessionId status createdAt');
+          
+          logger.info('flow', {
+            action: 'close_chat_searching_by_chatId',
+            chatId: ctx.chatId,
+            existingSessions: existingSessions.map(s => ({ 
+              sessionId: s.sessionId, 
+              status: s.status 
+            })),
+          });
+          
           closeResult = await ChatSession.findOneAndUpdate(
             { 
               telegramChatId: ctx.chatId,
@@ -2904,17 +2937,41 @@ export class FlowEngine {
 
     // Find active execution for this session and flow
     // Also look for executions paused waiting for button click
-    const execution = await FlowExecution.findOne({
+    // Note: sessionId might have changed during execution (e.g., assign_agent creates new session)
+    // so we also search by chatId from buttonData
+    const chatId = buttonData?.user?.telegramId || buttonData?.chatId;
+    
+    let execution = await FlowExecution.findOne({
       flowId,
       sessionId,
       status: { $in: ['running', 'paused'] },
     });
+    
+    // If not found by sessionId, try by chatId (in case sessionId changed during execution)
+    if (!execution && chatId) {
+      execution = await FlowExecution.findOne({
+        flowId,
+        chatId,
+        status: { $in: ['running', 'paused'] },
+      });
+      
+      if (execution) {
+        logger.info('flow', {
+          action: 'execution_found_by_chatId',
+          flowId,
+          chatId,
+          executionSessionId: execution.sessionId,
+          searchedSessionId: sessionId,
+        });
+      }
+    }
 
     if (!execution) {
       logger.info('flow', {
         action: 'no_execution_for_button',
         flowId,
         sessionId,
+        chatId,
         reason: 'No active execution found',
       });
       return false;
@@ -3200,7 +3257,7 @@ export class FlowEngine {
 
             // The message has been edited with content from nextNode
             // Now check if nextNode has buttons - if so, pause and wait for button click
-            // If not, complete the execution
+            // If not, continue execution from nextNode to process any connected actions (like close_chat)
             const nextNodeConfig = nextNode.config as any;
             const hasKeyboard = nextNodeConfig?.keyboard?.rows?.length > 0 ||
               nextNodeConfig?.messageBlocks?.some((b: any) => b.keyboard?.rows?.length > 0);
@@ -3220,17 +3277,56 @@ export class FlowEngine {
                 messageId: execution.context.lastMessageId,
               });
             } else {
-              // No buttons - complete the execution
-              execution.complete();
-              await execution.save();
-
+              // No buttons - continue execution to process any connected nodes
+              // The message was edited, so we don't need to execute send_message again
+              // but we DO need to continue to any nodes connected to nextNode
+              
+              // Find the node AFTER nextNode (the send_message we just edited)
+              const afterEditNodeId = this.getNextNode(flow, nextNodeId);
+              
               logger.info('flow', {
-                action: 'completed_after_edit_no_buttons',
+                action: 'continuing_after_edit_no_buttons',
                 nodeId,
                 nextNodeId,
+                afterEditNodeId,
                 buttonId,
                 messageId: execution.context.lastMessageId,
               });
+              
+              // Mark the send_message node as completed
+              const sendMsgStep: ExecutionStep = {
+                nodeId: nextNodeId,
+                nodeType: 'action',
+                nodeLabel: nextNode.label || 'Enviar mensaje',
+                status: 'completed',
+                startedAt: new Date(),
+                completedAt: new Date(),
+                retryCount: 0,
+                output: {
+                  type: 'send_message_edit',
+                  messageEdited: true,
+                  messageId: execution.context.lastMessageId,
+                },
+              };
+              execution.steps.push(step);
+              execution.steps.push(sendMsgStep);
+              execution.currentNodeId = nextNodeId;
+              execution.resume();
+              await execution.save();
+              
+              // Continue from the node AFTER nextNode (if it exists)
+              if (afterEditNodeId) {
+                await this.executeFromNode(execution, flow, afterEditNodeId);
+              } else {
+                // No more nodes - complete the execution
+                execution.complete();
+                await execution.save();
+                logger.info('flow', {
+                  action: 'completed_after_edit_no_more_nodes',
+                  nodeId,
+                  nextNodeId,
+                });
+              }
             }
 
             return true;

@@ -92,7 +92,7 @@ async function handleWarning(
     await sendTelegramMessage(chatId, warningMessage);
     
     // Save message in database
-    const savedMessage = await addMessage(sessionId, 'bot', warningMessage, {
+    const savedMessage = await addMessage(sessionId, 'bot', 'Se envió una advertencia de inactividad.', {
       messageType: 'system',
     });
     
@@ -103,7 +103,7 @@ async function handleWarning(
         _id: savedMessage._id.toString(),
         session: sessionId,
         sender: 'bot',
-        content: warningMessage,
+        content: 'Se envió una advertencia de inactividad.',
         messageType: 'system' as const,
         createdAt: savedMessage.createdAt,
       };
@@ -155,7 +155,7 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
     const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.\n\n✅ Chat closed due to inactivity. Thank you for contacting Trelk Support.`;
 
     // Save message in database BEFORE closing the session
-    const savedMessage = await addMessage(sessionId, 'bot', closeMessage, {
+    const savedMessage = await addMessage(sessionId, 'bot', 'Se ha cerrado el chat por inactividad.', {
       messageType: 'system',
     });
     
@@ -166,7 +166,7 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
         _id: savedMessage._id.toString(),
         session: sessionId,
         sender: 'bot',
-        content: closeMessage,
+        content: 'Se ha cerrado el chat por inactividad.',
         messageType: 'system' as const,
         createdAt: savedMessage.createdAt,
       };

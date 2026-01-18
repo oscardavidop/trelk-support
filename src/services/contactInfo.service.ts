@@ -20,6 +20,7 @@ export interface ContactInfo {
     platform: 'telegram';
     createdAt: Date;
     lastActivity: Date;
+    photoFileId?: string;
   };
   session: {
     sessionId: string;
@@ -144,6 +145,7 @@ export async function getContactInfo(sessionId: string): Promise<ContactInfo | n
       platform: 'telegram',
       createdAt: user.createdAt,
       lastActivity: user.lastActivity,
+      photoFileId: user.photoFileId,
     },
     session: {
       sessionId: session.sessionId,

@@ -191,10 +191,10 @@ export function initSessionGuard(
       window.location.href = '/login?reason=session_replaced';
     });
     
-    socket.on('tab:duplicate_detected', () => {
-      console.warn('[SessionGuard] Server detected duplicate tab');
-      blockThisTab();
-    });
+    // socket.on('tab:duplicate_detected', () => {
+    //   console.warn('[SessionGuard] Server detected duplicate tab');
+    //   blockThisTab();
+    // });
   }
 }
 

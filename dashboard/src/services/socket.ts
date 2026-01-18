@@ -169,10 +169,10 @@ export function initializeSocket(): Socket {
     window.location.href = '/login?reason=session_replaced';
   });
   
-  socket.on('tab:duplicate_detected', (data: { activeTabId: string; message: string }) => {
-    console.warn('🔒 Duplicate tab detected:', data);
-    // This is handled by the SessionGuard service in ChatPage
-  });
+  // socket.on('tab:duplicate_detected', (data: { activeTabId: string; message: string }) => {
+  //   console.warn('🔒 Duplicate tab detected:', data);
+  //   // This is handled by the SessionGuard service in ChatPage
+  // });
 
   // Session events
   socket.on('session:new', (session: ChatSession) => {

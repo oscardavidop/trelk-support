@@ -68,7 +68,7 @@ export function DialogContent({ children, className = '' }: DialogContentProps) 
       
       {/* Content */}
       <div 
-        className={`relative top-14 z-50 w-full max-w-lg rounded-lg border border-gray-800 bg-gray-900 p-6 shadow-xl ${className}`}
+        className={`relative top-[112px] z-50 w-full max-w-lg rounded-lg border border-gray-800 bg-gray-900 p-6 shadow-xl ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}

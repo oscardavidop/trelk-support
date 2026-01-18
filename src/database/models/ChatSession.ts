@@ -3,6 +3,7 @@
  */
 
 import mongoose, { Schema, Document, Types } from 'mongoose';
+import { IUser } from './User.js';
 
 export type SessionStatus = 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
 export type ClosedByType = 'user' | 'agent' | 'system';
@@ -30,7 +31,7 @@ export interface IPostChatSurvey {
 
 export interface IChatSession extends Document {
   sessionId: string;
-  user: Types.ObjectId;
+  user: IUser;
   telegramChatId: number;
   status: SessionStatus;
   assignedAgent?: Types.ObjectId;

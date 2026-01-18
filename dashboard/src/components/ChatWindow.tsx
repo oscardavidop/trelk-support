@@ -1,8 +1,10 @@
 // Chat Window component
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
+import type { ElementType } from 'react';
+
 import {
   acceptSession,
   closeSession,
@@ -40,7 +42,13 @@ import {
   ArrowRightLeft,
   Ban,
   Pin,
-  Eye
+  Eye,
+  Volume2,
+  VolumeX,
+  Code
+} from 'lucide-react';
+import {
+  File as FileIcon,
 } from 'lucide-react';
 import type { ChatSession, Message, TypingEvent, ChatCategory } from '../types';
 import AgentComposer from './AgentComposer';
@@ -50,6 +58,7 @@ import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal
 import { WhisperDisplay } from './chat/WhisperDisplay';
 import { useSupervisorStore } from '../stores/supervisorStore';
 import { markWhisperAsRead as markWhisperReadApi } from '../services/socket';
+import { formatFileSize, useFileDownload, useFileSize } from '../hooks/useFileSize';
 
 interface ChatWindowProps {
   session: ChatSession;
@@ -62,7 +71,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   const agent = useAuthStore((state) => state.agent);
   const { messages, setMessages, isLoadingMessages, setLoadingMessages, updateMessage, deleteMessage: removeMessage, pinnedMessages, setPinnedMessage, clearPinnedMessage } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Highlighted message state
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
@@ -409,8 +418,8 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
     <button
       onClick={onClick}
       className={`p-1.5 rounded-md transition-colors group relative ${danger
-          ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
-          : 'text-gray-400 hover:text-white hover:bg-gray-800'
+        ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+        : 'text-gray-400 hover:text-white hover:bg-gray-800'
         }`}
       title={label}
     >
@@ -455,7 +464,29 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       minute: '2-digit',
     });
   };
+  // Helper: Simple Badge
+  const Badge = ({ text, className = "" }: { text: string, icon?: boolean, className?: string }) => (
+    <span className={`inline-flex items-center px-1.5 py-[1px] rounded text-[10px] font-medium bg-gray-800 text-gray-400 border border-gray-700/50 ${className}`}>
+      {text}
+    </span>
+  );
 
+  // Helper: Icon Button with Hover Effects
+  const IconButton = ({ onClick, icon, tooltip, danger }: any) => (
+    <button
+      onClick={onClick}
+      className={`
+      p-2 rounded-lg transition-all duration-200 active:scale-95 relative group
+      ${danger
+          ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+          : 'text-gray-400 hover:text-white hover:bg-white/5'
+        }
+    `}
+      title={tooltip}
+    >
+      {icon}
+    </button>
+  );
   return (
     <div className="flex flex-col h-full">
       {/* Audit Mode Banner - Viewing another agent's chat */}
@@ -472,7 +503,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
       {/* Closed Banner */}
       {isClosed && (
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700 text-gray-400 text-sm h-[56px]">
+        <div className="flex items-center justify-center gap-2 px-4 py-2 border-b border-gray-800 text-gray-400 text-sm bg-gray-950 h-[56px]">
           <Lock className="w-4 h-4" />
           <span>Modo solo lectura</span>
           <span className="text-gray-600">•</span>
@@ -486,84 +517,117 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         </div>
       )}
 
-      {/* Header Component - H-[56px] Fixed Height */}
+      {/* Header Component - Fixed Height [56px] */}
       <div className={`
-  flex items-center justify-between px-4 h-[56px] border-b border-gray-800 
-  backdrop-blur-md transition-colors z-20 sticky top-0
-  ${isClosed ? 'bg-gray-900/60' : 'bg-gray-900/95'}
-`}>
+      relative z-20 flex items-center justify-between px-4 h-[56px] w-full
+      border-b border-white/10 backdrop-blur-xl transition-all duration-300
+      ${isClosed ? 'bg-gray-50/50 dark:bg-[#0f1117]' : 'bg-gray-950'}
+    `}>
 
-        {/* Left: User Profile - Vertically Compact */}
-        <div className="flex items-center gap-3 min-w-0 h-full">
-          {/* Avatar (40px height) fits perfectly inside 56px */}
-          <div className="relative shrink-0 my-auto">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm
-        ${session.user.isSubscriber
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 ring-1 ring-purple-500/40'
-                : 'bg-gradient-to-br from-gray-600 to-gray-700 ring-1 ring-white/10'
-              }`}
-            >
-              {session.user.firstName.charAt(0).toUpperCase()}
+        {/* --- LEFT: User Profile --- */}
+        <div className="flex items-center gap-3.5 min-w-0 h-full overflow-hidden">
+
+          {/* Avatar Container (38px visual size) */}
+          <div className="relative shrink-0 flex items-center justify-center">
+            <div className={`
+            w-[38px] h-[38px] rounded-full flex items-center justify-center 
+            text-sm font-bold text-white shadow-inner
+            ${session.user.isSubscriber
+                ? 'bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 ring-2 ring-purple-500/20'
+                : 'bg-gradient-to-br from-gray-700 to-gray-800 ring-1 ring-white/10'
+              }
+          `}>
+              {
+                session.user.photoFileId ? (
+                  <img
+                    src={`/api/media/${session.user.photoFileId}`}
+                    alt={`${session.user.firstName} ${session.user.lastName}`}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="select-none">
+                    {session.user.firstName.charAt(0).toUpperCase()}
+                    {session.user.lastName ? session.user.lastName.charAt(0).toUpperCase() : ''}
+                  </span>
+                )
+              }
             </div>
-            {/* Platform indicator icon (optional) */}
-            <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[1.5px] border-[1.5px] border-gray-900">
-              <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
+
+            {/* Platform Indicator (Telegram) */}
+            <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[2px] ring-2 ring-gray-900">
+              <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
             </div>
           </div>
 
-          {/* Info Text - Tightened for 56px height */}
-          <div className="flex flex-col justify-center min-w-0 leading-tight">
-            <div className="flex items-baseline gap-1.5 mb-0.5 truncate">
-              <h3 className="font-semibold text-lg text-white truncate">
+          {/* Text Info */}
+          <div className="flex flex-col justify-center gap-0.5 min-w-0">
+            {/* Name & Username Row */}
+            <div className="flex items-baseline gap-2 truncate">
+              <h3 className="text-[15px] font-semibold text-gray-100 truncate tracking-tight">
                 {session.user.firstName} {session.user.lastName || ''}
               </h3>
               {session.user.username && (
-                <span className="text-[15px] text-gray-400 font-medium truncate">@{session.user.username}</span>
+                <span className="text-xs text-gray-500 font-medium truncate">@{session.user.username}</span>
+              )}
+            </div>
+
+            {/* Meta Badges Row */}
+            <div className="flex items-center gap-1.5">
+              <Badge icon={false} text={`ID: ${session.user.telegramId}`} />
+              <Badge icon={false} text={session.user.language || 'UNK'} className="uppercase font-bold" />
+
+              {session.user.isSubscriber && (
+                <div className="flex items-center gap-1 px-1.5 py-[1px] rounded bg-amber-500/10 border border-amber-500/20">
+                  <svg className="w-2.5 h-2.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                  <span className="text-[9px] font-bold text-amber-400 tracking-wider">PRO</span>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right: Actions Toolbar - Centered vertically */}
-        <div className="flex items-center gap-1.5 h-full">
+        {/* --- RIGHT: Actions Toolbar --- */}
+        <div className="flex items-center h-full gap-1">
 
-          {/* 1. Primary Status Actions */}
-          {session.status === 'waiting' && (
-            <button
-              onClick={handleAccept}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-md shadow-sm transition-all hover:scale-105 active:scale-95 mr-1"
-            >
-              <CheckCircle className="w-3.5 h-3.5" />
-              Aceptar
-            </button>
-          )}
+          {/* GROUP 1: Primary State Actions */}
+          <div className="flex items-center mr-1">
+            {session.status === 'waiting' && (
+              <button
+                onClick={handleAccept}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-green-900/20 transition-all hover:translate-y-[-1px] active:translate-y-[0px] active:scale-95"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Aceptar</span>
+              </button>
+            )}
 
-          {isClosed && (
-            <div className="mr-1">
+            {isClosed && (
               <ReopenChatButton
                 sessionId={session.sessionId}
                 reopenCount={(session as any).reopenCount || 0}
               />
-            </div>
-          )}
+            )}
 
-          {session.status === 'human' && isMySession && (
-            <button
-              onClick={handleClose}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-800 hover:bg-red-500/10 hover:text-red-400 text-gray-300 border border-gray-700 text-xs font-medium rounded-md transition-all group mr-1"
-            >
-              <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-400" />
-              Cerrar
-            </button>
-          )}
+            {session.status === 'human' && isMySession && (
+              <button
+                onClick={handleClose}
+                className="group flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 hover:border-gray-600 text-xs font-medium rounded-lg transition-all active:scale-95"
+                title="Cerrar y archivar ticket"
+              >
+                <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-400 transition-colors" />
+                <span className="group-hover:text-white">Cerrar</span>
+              </button>
+            )}
+          </div>
 
           {/* Separator */}
-          <div className="w-px h-5 bg-gray-800 mx-0.5 hidden sm:block" />
+          <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
 
-          {/* 2. Management Actions (Icon only) */}
+          {/* GROUP 2: Management Tools (Icon Only) */}
           {session.status === 'human' && isMySession && (
-            <div className="flex items-center gap-0.5">
-              <div className="scale-90 origin-right"> { /* Slightly smaller category selector to fit nicely */}
+            <div className="flex items-center gap-1">
+              {/* Category Selector (Compact Mode) */}
+              <div className="scale-95 origin-right">
                 <CategorySelector
                   sessionId={session.sessionId}
                   currentCategory={(session as any).category}
@@ -571,22 +635,22 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                 />
               </div>
 
-              <TooltipButton onClick={() => setShowTransferModal(true)} icon={<ArrowRightLeft className="w-4 h-4" />} label="Transferir" />
-              <TooltipButton onClick={() => setShowBlockModal(true)} icon={<Ban className="w-4 h-4" />} label="Bloquear" danger />
+              <IconButton onClick={() => setShowTransferModal(true)} icon={<ArrowRightLeft className="w-4 h-4" />} tooltip="Transferir Agente" />
+              <IconButton onClick={() => setShowBlockModal(true)} icon={<Ban className="w-4 h-4" />} tooltip="Bloquear Usuario" danger />
             </div>
           )}
 
           {/* Separator */}
-          {(session.status === 'human' && isMySession) && <div className="w-px h-5 bg-gray-800 mx-0.5 hidden sm:block" />}
+          {(session.status === 'human' && isMySession) && <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />}
 
-          {/* 3. Utility Actions */}
-          <div className="flex items-center gap-0.5">
+          {/* GROUP 3: Utilities */}
+          <div className="flex items-center gap-1">
             <a
               href={`https://t.me/${session.user.username || ''}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors"
-              title="Abrir en Telegram"
+              className="p-2 text-gray-400 hover:text-[#229ED9] hover:bg-[#229ED9]/10 rounded-lg transition-colors"
+              title="Abrir en Telegram Web"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
@@ -594,11 +658,11 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             {onToggleSidebar && (
               <button
                 onClick={onToggleSidebar}
-                className={`p-1.5 rounded-md transition-colors ${isSidebarOpen
+                className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${isSidebarOpen
                   ? 'text-primary bg-primary/10 ring-1 ring-primary/20'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
-                title={isSidebarOpen ? 'Ocultar panel lateral' : 'Mostrar info usuario'}
+                title={isSidebarOpen ? 'Ocultar detalles' : 'Ver detalles del usuario'}
               >
                 {isSidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
               </button>
@@ -607,26 +671,27 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         </div>
       </div>
 
-
-
-
-
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-messages-scroll">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-gradient-to-b from-neutral-950/40 to-neutral-900/20">
+
         {/* Pinned Message Bar */}
         {pinnedMessage && (
-          <div className="sticky top-0 z-10 mb-2">
-            <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 border border-primary/30 rounded-lg">
-              <Pin className="w-4 h-4 text-primary flex-shrink-0" />
+          <div className="sticky top-2 z-10">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/10 backdrop-blur border border-primary/30 rounded-xl shadow-sm">
+              <Pin className="w-4 h-4 text-primary shrink-0" />
+
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{pinnedMessage.content}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm text-white font-medium truncate">
+                  {pinnedMessage.content}
+                </p>
+                <p className="text-xs text-gray-400">
                   {pinnedMessage.senderAgent?.name || pinnedMessage.sender}
                 </p>
               </div>
+
               <button
                 onClick={() => handleUnpin(pinnedMessage)}
-                className="p-1 text-gray-500 hover:text-white transition-colors"
+                className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition"
                 title="Desfijar mensaje"
               >
                 <X className="w-4 h-4" />
@@ -637,55 +702,80 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
         {/* Whispers from Supervisor */}
         {sessionWhispers.length > 0 && (
-          <WhisperDisplay
-            sessionId={session.sessionId}
-            whispers={sessionWhispers.map(w => ({
-              _id: w.id,
-              sessionId: w.sessionId,
-              fromSupervisor: {
-                _id: w.supervisorId,
-                name: w.supervisorName,
-              },
-              message: w.content,
-              isRead: w.isRead,
-              createdAt: w.createdAt.toString(),
-            }))}
-            onMarkAsRead={handleWhisperRead}
-          />
+          <div className="space-y-2">
+            <WhisperDisplay
+              sessionId={session.sessionId}
+              whispers={sessionWhispers.map(w => ({
+                _id: w.id,
+                sessionId: w.sessionId,
+                fromSupervisor: {
+                  _id: w.supervisorId,
+                  name: w.supervisorName,
+                },
+                message: w.content,
+                isRead: w.isRead,
+                createdAt: w.createdAt.toString(),
+              }))}
+              onMarkAsRead={handleWhisperRead}
+            />
+          </div>
         )}
 
+        {/* Loading / Empty / Messages */}
         {isLoadingMessages ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            <span className="text-sm">Cargando mensajes…</span>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            No messages yet
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-1 select-none">
+            <span className="text-sm">Aún no hay mensajes</span>
+            <span className="text-xs text-gray-600">
+              Inicia la conversación cuando quieras
+            </span>
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message._id}
-              message={message}
-              onContextMenu={(e) => handleMessageClick(message, e)}
-              isPinned={pinnedMessage?._id === message._id}
-              isHighlighted={highlightedMessageId === message._id}
-            />
-          ))
-        )}
+          <div className="space-y-3">
+            {messages.map((msg, index) => {
+              const prev = messages[index - 1];
+              const showDate =
+                !prev ||
+                new Date(prev.createdAt).toDateString() !==
+                new Date(msg.createdAt).toDateString();
 
+              return (
+                <React.Fragment key={msg._id}>
+                  {showDate && <DateSeparator date={new Date(msg.createdAt)} />}
+                  <MessageBubble
+                    message={msg}
+                    onContextMenu={(e) => handleMessageClick(msg, e)}
+                    isPinned={pinnedMessage?._id === msg._id}
+                    isHighlighted={highlightedMessageId === msg._id}
+                    session={session}
+                  />
+                </React.Fragment>
+              );
+            })}
+
+          </div>
+        )}
         {/* Typing Indicator */}
-        {isUserTyping && <TypingIndicator name={session.user.firstName} />}
+        {isUserTyping && (
+          <div className="pt-1">
+            <TypingIndicator name={session.user.firstName} />
+          </div>
+        )}
 
         {/* Survey for closed sessions */}
         {isClosed && survey && (
-          <div className="mt-4">
+          <div className="mt-6">
             <SurveyDisplay survey={survey as any} />
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
+
 
       {/* Input */}
       {session.status === 'human' && isMySession ? (
@@ -821,76 +911,84 @@ interface MessageBubbleProps {
   onContextMenu?: (e: React.MouseEvent) => void;
   isPinned?: boolean;
   isHighlighted?: boolean;
+  session: ChatSession;
 }
 
-function MessageBubble({ message, onContextMenu, isPinned, isHighlighted }: MessageBubbleProps) {
+function DateSeparator({ date }: { date: Date }) {
+  const label = date.toLocaleDateString([], {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  return (
+    <div className="flex justify-center my-4 sticky top-1 z-[1]">
+      <span className="px-4 py-1 text-xs font-medium rounded-full bg-gray-800/80 text-gray-400 backdrop-blur border border-gray-700">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+
+function MessageBubble({
+  message,
+  onContextMenu,
+  isPinned,
+  isHighlighted,
+  session,
+}: MessageBubbleProps) {
   const isAgent = message.sender === 'agent';
   const isBot = message.sender === 'bot';
   const isSystem = message.messageType === 'system';
 
+  /* ───────── SYSTEM MESSAGE ───────── */
   if (isSystem) {
     return (
-      <div className="flex justify-center">
-        <span className="px-3 py-1 bg-gray-800 text-gray-500 text-sm rounded-full">
+      <div className="flex justify-center my-2">
+        <span className="px-4 py-1.5 text-xs rounded-full bg-gray-800/70 text-gray-500 backdrop-blur">
           {message.content}
         </span>
       </div>
     );
   }
 
-  // Helper to convert media reference to proxy URL
-  const getProxyMediaUrl = (mediaRef: string | undefined): string | undefined => {
-    if (!mediaRef) return undefined;
-
-    // If it's already a full URL path, return as-is
-    if (mediaRef.startsWith('/api/media/') || mediaRef.startsWith('/api/download/') || mediaRef.startsWith('/uploads/')) {
+  /* ───────── MEDIA HELPERS ───────── */
+  const getProxyMediaUrl = (mediaRef?: string) => {
+    if (!mediaRef) return;
+    if (
+      mediaRef.startsWith('/api/media/') ||
+      mediaRef.startsWith('/api/download/') ||
+      mediaRef.startsWith('/uploads/')
+    ) {
       return mediaRef;
     }
-
-    // If it starts with http, it might be an old-style Telegram URL - convert it
     if (mediaRef.startsWith('http')) {
-      const telegramMatch = mediaRef.match(/api\.telegram\.org\/file\/bot[^/]+\/(.+)$/);
-      if (telegramMatch) {
-        return `/api/media/${telegramMatch[1]}`;
-      }
-      return mediaRef;
+      const match = mediaRef.match(/api\.telegram\.org\/file\/bot[^/]+\/(.+)$/);
+      return match ? `/api/media/${match[1]}` : mediaRef;
     }
-
-    // Otherwise, treat it as a file_id from telegram-bot-api local mode
-    // The backend will resolve it via getFile() API
     return `/api/media/${encodeURIComponent(mediaRef)}`;
   };
 
-  // Render media content based on type
   const renderMediaContent = () => {
     const mediaUrl = getProxyMediaUrl(message.mediaUrl);
-
     if (!mediaUrl) {
-      return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
+      return (
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          {message.content}
+        </p>
+      );
     }
 
     switch (message.messageType) {
       case 'image':
-        return (
-          <MediaImage
-            url={mediaUrl}
-            alt={message.content}
-            isAgent={isAgent}
-          />
-        );
-
-      case 'voice':
+        return <MediaImage url={mediaUrl} alt={message.content} isAgent={isAgent} />;
       case 'audio':
-        return (
-          <MediaAudio
-            url={mediaUrl}
-            title={message.content}
-            isAgent={isAgent}
-          />
-        );
-
-      case 'document':
+      case 'voice':
+        return <MediaAudio url={mediaUrl} title={message.content} isAgent={isAgent} />;
       case 'file':
+      case 'document':
         return (
           <MediaFile
             url={mediaUrl}
@@ -898,30 +996,42 @@ function MessageBubble({ message, onContextMenu, isPinned, isHighlighted }: Mess
             isAgent={isAgent}
           />
         );
-
       case 'sticker':
-        return (
-          <MediaSticker url={mediaUrl} />
-        );
-
+        return <MediaSticker url={mediaUrl} />;
       default:
-        return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
+        return null;
     }
   };
 
   return (
     <div
       id={`message-${message._id}`}
-      className={`flex ${isAgent ? 'justify-end' : 'justify-start'} group transition-all duration-500 ${isHighlighted ? 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-gray-900 rounded-lg' : ''}`}
+      className={`flex ${isAgent ? 'justify-end' : 'justify-start'} group`}
     >
-      <div className={`flex items-end gap-2 max-w-[70%] ${isAgent ? 'flex-row-reverse' : ''}`}>
+      <div
+        className={`flex items-end gap-2 max-w-[72%] ${isAgent ? 'flex-row-reverse' : ''
+          }`}
+      >
         {/* Avatar */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAgent ? 'bg-primary' : isBot ? 'bg-gray-700' : 'bg-gray-600'
-          }`}>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm overflow-hidden bg-gray-700 shrink-0">
           {isAgent ? (
-            <Headphones className="w-4 h-4 text-white" />
+            message.senderAgent?.avatar ? (
+              <img
+                src={message.senderAgent.avatar}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-xs font-semibold text-white">
+                {message.senderAgent?.name?.[0]?.toUpperCase()}
+              </span>
+            )
           ) : isBot ? (
             <Bot className="w-4 h-4 text-white" />
+          ) : session.user.photoFileId ? (
+            <img
+              src={`/api/media/${session.user.photoFileId}`}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <User className="w-4 h-4 text-white" />
           )}
@@ -930,56 +1040,57 @@ function MessageBubble({ message, onContextMenu, isPinned, isHighlighted }: Mess
         {/* Bubble */}
         <div
           onContextMenu={onContextMenu}
-          className={`px-4 py-2.5 rounded-2xl cursor-context-menu select-none transition-all ${isAgent
-            ? 'bg-primary text-white rounded-br-md hover:bg-primary/90'
-            : 'bg-gray-800 text-white rounded-bl-md hover:bg-gray-700'
-            } ${isPinned ? 'ring-2 ring-primary/50' : ''}`}
+          className={`
+            relative px-4 py-2.5 rounded-2xl transition
+            ${isAgent
+              ? 'bg-primary text-white rounded-br-md'
+              : 'bg-gray-800 text-white rounded-bl-md'}
+            ${isPinned ? 'ring-2 ring-primary/40' : ''}
+            ${isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''}
+            hover:shadow-md
+          `}
         >
-          {/* Reply Quote */}
-          {message.replyToMessage && (
-            <div className={`flex items-start gap-2 mb-2 pb-2 border-b ${isAgent ? 'border-white/20' : 'border-gray-600'
-              }`}>
-              <div className={`w-0.5 h-full min-h-[24px] rounded-full flex-shrink-0 ${isAgent ? 'bg-white/40' : 'bg-primary'
-                }`} />
-              <div className="min-w-0 flex-1">
-                <p className={`text-xs font-medium ${isAgent ? 'text-white/70' : 'text-primary'}`}>
-                  {message.replyToMessage.sender === 'user'
-                    ? 'Usuario'
-                    : message.replyToMessage.senderAgent?.name || 'Agente'}
-                </p>
-                <p className={`text-xs truncate ${isAgent ? 'text-white/50' : 'text-gray-500'}`}>
-                  {message.replyToMessage.content}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Pinned indicator */}
-          {isPinned && (
-            <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
-              <Pin className="w-3 h-3" />
-              <span>Fijado</span>
-            </div>
-          )}
-
+          {/* Sender name */}
           {message.senderAgent && (
-            <p className="text-xs opacity-70 mb-1">{message.senderAgent.name}</p>
+            <p className="text-xs font-medium opacity-70 mb-1">
+              {message.senderAgent.name}
+            </p>
           )}
+
+          {/* Reply */}
+          {message.replyToMessage && (
+            <div className="mb-2 pl-2 border-l-2 border-primary/60">
+              <p className="text-xs text-primary font-medium">
+                {message.replyToMessage.sender === 'user'
+                  ? 'Usuario'
+                  : message.replyToMessage.senderAgent?.name || 'Agente'}
+              </p>
+              <p className="text-xs text-gray-400 truncate">
+                {message.replyToMessage.content}
+              </p>
+            </div>
+          )}
+
+          {/* Content */}
           {renderMediaContent()}
 
-          <div className={`flex items-center gap-2 mt-1 ${isAgent ? 'text-white/60' : 'text-gray-500'}`}>
-            <span className="text-xs">
-              {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 mt-1 text-[11px] opacity-60">
+            <span>
+              {new Date(message.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </span>
-            {(message as any).isEdited && (
-              <span className="text-xs italic">(editado)</span>
-            )}
+            {(message as any).isEdited && <span>(editado)</span>}
+            {isPinned && <Pin className="w-3 h-3" />}
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 // ============= MEDIA COMPONENTS =============
 
@@ -1046,7 +1157,7 @@ function MediaImage({ url, alt, isAgent }: { url: string; alt: string; isAgent: 
             <X className="w-6 h-6" />
           </button>
           <a
-            href={url}
+            href={`${url}?download=true`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
@@ -1061,109 +1172,349 @@ function MediaImage({ url, alt, isAgent }: { url: string; alt: string; isAgent: 
   );
 }
 
-// Audio Media Component
-function MediaAudio({ url, title, isAgent }: { url: string; title: string; isAgent: boolean }) {
+function MediaAudio({
+  url,
+  title,
+  isAgent,
+}: {
+  url: string;
+  title?: string;
+  isAgent: boolean;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const barsRef = useRef<HTMLDivElement[]>([]);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
+  /* ───────── PLAY / PAUSE + AUTO PAUSE ───────── */
+  const togglePlay = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      if (!isPlaying) {
+        registerAudio(audioRef.current);
+        await audioRef.current.play();
       } else {
-        audioRef.current.play();
+        audioRef.current.pause();
       }
       setIsPlaying(!isPlaying);
+    } catch {
+      setHasError(true);
     }
   };
 
-  const formatTime = (time: number) => {
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  /* ───────── VOLUME CONTROL ───────── */
+  const changeVolume = (v: number) => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = v;
+    audioRef.current.muted = v === 0;
+    setVolume(v);
+    setIsMuted(v === 0);
   };
+
+  const toggleMute = () => changeVolume(isMuted ? 0.8 : 0);
+
+  /* ───────── SEEK ───────── */
+  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    audioRef.current.currentTime = percent * duration;
+  };
+
+  const formatTime = (t: number) => {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  /* ───────── WAVE ANIMATION ───────── */
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      barsRef.current.forEach(bar => {
+        if (!bar) return;
+        bar.style.height = `${20 + Math.random() * 80}%`;
+      });
+    }, 150);
+
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   if (hasError) {
     return (
-      <div className="flex items-center gap-2 py-2">
-        <Mic className="w-5 h-5 opacity-60" />
-        <span className="text-sm opacity-80">Audio failed to load</span>
+      <div className="flex items-center gap-2 text-sm opacity-70">
+        <Mic className="w-4 h-4" />
+        <span>Error al cargar audio</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-3 min-w-[200px] py-1">
+    <div
+      className={`flex items-center gap-3 px-3 py-2 rounded-xl min-w-[280px]
+        ${isAgent ? 'bg-white/10' : 'bg-primary/10'}
+      `}
+    >
       <audio
         ref={audioRef}
         src={url}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        preload="metadata"
+        onLoadedMetadata={(e) => {
+          setDuration(e.currentTarget.duration);
+          setIsLoading(false);
+        }}
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         onEnded={() => setIsPlaying(false)}
         onError={() => setHasError(true)}
-        preload="metadata"
       />
 
+      {/* ▶ Play */}
       <button
         onClick={togglePlay}
-        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${isAgent
-          ? 'bg-white/20 hover:bg-white/30'
-          : 'bg-primary/80 hover:bg-primary'
-          }`}
+        disabled={isLoading}
+        className={`w-10 h-10 rounded-full flex items-center justify-center
+          ${isAgent ? 'bg-white/20' : 'bg-primary text-white'}
+        `}
       >
-        {isPlaying ? (
+        {isLoading ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : isPlaying ? (
           <Pause className="w-5 h-5" />
         ) : (
           <Play className="w-5 h-5 ml-0.5" />
         )}
       </button>
 
+      {/* 🌊 Waveform */}
+      <div className="flex items-end gap-[2px] h-8 w-20">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div
+            key={i}
+            ref={(el) => {
+              if (el) barsRef.current[i] = el;
+            }}
+            className={`w-[3px] rounded-full transition-all duration-150
+              ${isAgent ? 'bg-white/60' : 'bg-primary'}
+            `}
+            style={{ height: '30%' }}
+          />
+        ))}
+      </div>
+
+      {/* ⏱ Time + Seek */}
       <div className="flex-1">
-        <div className="flex items-center justify-between text-xs opacity-70 mb-1">
+        <div
+          onClick={seek}
+          className="h-2 rounded-full bg-white/20 cursor-pointer overflow-hidden"
+        >
+          <div
+            className={`${isAgent ? 'bg-white/70' : 'bg-primary'} h-full`}
+            style={{
+              width: duration ? `${(currentTime / duration) * 100}%` : '0%',
+            }}
+          />
+        </div>
+        <div className="flex justify-between text-[11px] opacity-70 mt-1">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
-        <div className="relative h-1.5 bg-white/20 rounded-full overflow-hidden">
-          <div
-            className={`absolute h-full transition-all ${isAgent ? 'bg-white/60' : 'bg-primary'}`}
-            style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
-          />
-        </div>
+      </div>
+
+      {/* 🎚 Controls */}
+      <div className="flex items-center gap-2">
+        <button onClick={toggleMute}>
+          {isMuted ? (
+            <VolumeX className="w-4 h-4" />
+          ) : (
+            <Volume2 className="w-4 h-4" />
+          )}
+        </button>
+
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={volume}
+          onChange={(e) => changeVolume(Number(e.target.value))}
+          className="w-16 accent-primary"
+        />
+
+        {/* ⬇ Download */}
+        <a
+          href={url}
+          download
+          className="p-1.5 rounded-md hover:bg-white/10 transition"
+          title="Descargar audio"
+        >
+          <Download className="w-4 h-4" />
+        </a>
       </div>
     </div>
   );
 }
+let currentPlayingAudio: HTMLAudioElement | null = null;
 
-// File Media Component
-function MediaFile({ url, fileName, isAgent }: { url: string; fileName: string; isAgent: boolean }) {
-  const getFileIcon = () => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (['pdf'].includes(ext || '')) return <FileText className="w-5 h-5" />;
-    if (['mp3', 'wav', 'ogg'].includes(ext || '')) return <Music className="w-5 h-5" />;
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return <ImageIcon className="w-5 h-5" />;
-    return <FileText className="w-5 h-5" />;
+function registerAudio(audio: HTMLAudioElement) {
+  if (currentPlayingAudio && currentPlayingAudio !== audio) {
+    currentPlayingAudio.pause();
+  }
+  currentPlayingAudio = audio;
+}
+
+function FilePreviewModal({
+  url,
+  type,
+  onClose,
+}: {
+  url: string;
+  type: 'image' | 'pdf';
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center">
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20"
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
+
+      {type === 'image' ? (
+        <img
+          src={url}
+          className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-xl"
+        />
+      ) : (
+        <iframe
+          src={url}
+          className="w-[90vw] h-[90vh] rounded-lg bg-white"
+        />
+      )}
+    </div>
+  );
+}
+
+function MediaFile({
+  url,
+  fileName,
+  isAgent,
+}: {
+  url: string;
+  fileName: string;
+  isAgent: boolean;
+}) {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+  const isPdf = ext === 'pdf';
+  const isJson = ext === 'json';
+  const isText = ['txt', 'md', 'csv', 'log'].includes(ext || '');
+
+  const { download, progress, isDownloading } = useFileDownload(url);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const { size, loading: sizeLoading } = useFileSize(url);
+
+  const getMeta = (): {
+    icon: ElementType;
+    color: string;
+    label: string;
+  } => {
+    if (isImage)
+      return { icon: ImageIcon, color: 'text-blue-400', label: 'Imagen' };
+
+    if (isPdf)
+      return { icon: FileText, color: 'text-red-400', label: 'PDF' };
+
+    if (['zip', 'rar', '7z'].includes(ext || ''))
+      return { icon: Archive, color: 'text-yellow-400', label: 'ZIP' };
+
+    if (isJson)
+      return { icon: Code, color: 'text-green-400', label: 'JSON' };
+
+    if (isText)
+      return { icon: FileText, color: 'text-gray-400', label: 'Texto' };
+
+
+    return { icon: FileIcon, color: 'text-gray-400', label: 'Archivo' };
   };
 
+
+  const { icon: Icon, color, label } = getMeta();
+
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors ${isAgent
-        ? 'bg-white/10 hover:bg-white/20'
-        : 'bg-gray-700/50 hover:bg-gray-700'
-        }`}
-    >
-      {getFileIcon()}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm truncate">{fileName}</p>
-        <p className="text-xs opacity-60">Click to download</p>
+    <>
+      <div
+        className={`relative group flex items-center gap-3 px-3 py-2.5 rounded-xl transition
+          ${isAgent ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-800 hover:bg-gray-700'}
+        `}
+      >
+        {/* Icon */}
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-black/20 ${color}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{fileName}</p>
+          <p className="text-xs opacity-60 flex items-center gap-1">
+            {label}
+            {!sizeLoading && size !== null && (
+              <span>• {formatFileSize(size)}</span>
+            )}
+          </p>
+
+          {isDownloading && (
+            <div className="mt-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+          {(isImage || isPdf) && (
+            <button
+              onClick={() => setPreviewOpen(true)}
+              className="p-1.5 rounded-md hover:bg-white/10"
+              title="Preview"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            onClick={() => download(fileName)}
+            className="p-1.5 rounded-md hover:bg-white/10"
+            title="Descargar"
+          >
+            {isDownloading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+          </button>
+        </div>
       </div>
-      <Download className="w-4 h-4 opacity-60" />
-    </a>
+
+      {previewOpen && (
+        <FilePreviewModal
+          url={url}
+          type={isImage ? 'image' : 'pdf'}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -1188,3 +1539,4 @@ function MediaSticker({ url }: { url: string }) {
     />
   );
 }
+

@@ -5,6 +5,7 @@
 
 import { User, type IUser } from '../database/index.js';
 import type { TelegramUser, Language } from '../types/index.js';
+import { getUserProfilePhotos } from './telegram.js';
 
 /**
  * Get or create user from Telegram data
@@ -37,9 +38,19 @@ export async function getOrCreateUser(telegramUser: TelegramUser, chatId: number
     firstName: telegramUser.first_name,
     lastName: telegramUser.last_name,
     language,
+    photoFileId: await getTelegramPhoto(telegramUser.id)
   });
   
   return newUser;
+}
+
+export async function getTelegramPhoto(telegramId: number): Promise<string | null> {
+  const photos = await getUserProfilePhotos(telegramId);
+  if (photos && photos.total_count > 0 && photos.photos[0].length > 0) {
+    const photo = photos.photos[0][0]; // Get the smallest size
+    return photo.file_id;
+  }
+  return null;
 }
 
 /**

@@ -44,6 +44,7 @@ export interface User {
   lastName?: string;
   language: 'en' | 'es';
   isSubscriber: boolean;
+  photoFileId?: string;
 }
 
 export interface ChatSession {
@@ -68,7 +69,13 @@ export interface Message {
   _id: string;
   session: string;
   sender: 'user' | 'bot' | 'agent';
-  senderAgent?: { name: string };
+  senderAgent?: { name: string, avatar?: string };
+  senderUser?: {
+    telegramId: number;
+    username?: string;
+    firstName: string;
+    photoFileId?: string;
+  };
   content: string;
   messageType: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'system';
   mediaUrl?: string;
@@ -83,7 +90,7 @@ export interface Message {
   replyToMessage?: {
     _id: string;
     sender: 'user' | 'bot' | 'agent';
-    senderAgent?: { name: string };
+    senderAgent?: { name: string, avatar?: string };
     content: string;
   };
   // Meta
@@ -207,6 +214,7 @@ export interface ContactInfo {
     platform: 'telegram';
     createdAt: string;
     lastActivity: string;
+    photoFileId?: string;
   };
   session: {
     sessionId: string;
