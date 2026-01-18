@@ -25,3 +25,11 @@ Thumbs.db
 # Session data
 sessions/
 *.session
+uploads/
+*.binlog
+*.mp3
+*.webm
+*.jpg
+*.pdf
+*.docx
+*.zip
