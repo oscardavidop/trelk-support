@@ -562,26 +562,43 @@ export async function addMessage(
 }
 
 /**
- * Get messages for a session
+ * Get messages for a session with cursor-based pagination
+ * Returns messages in ascending order (oldest first) for display
+ * When 'before' cursor is provided, gets older messages for infinite scroll up
  */
 export async function getSessionMessages(
   sessionId: string, 
-  limit = 100,
+  limit = 50,
   before?: Date
-): Promise<IMessage[]> {
+): Promise<{ messages: IMessage[]; hasMore: boolean; oldestTimestamp?: Date }> {
   const session = await ChatSession.findOne({ sessionId });
-  if (!session) return [];
+  if (!session) return { messages: [], hasMore: false };
   
   const query: Record<string, unknown> = { session: session._id };
   if (before) {
     query.createdAt = { $lt: before };
   }
   
-  return Message.find(query)
+  // Get limit + 1 to check if there are more messages
+  const messages = await Message.find(query)
     .populate('senderAgent', 'name avatar')
     .populate('replyTo', 'sender content senderAgent')
-    .sort({ createdAt: 1 })
-    .limit(limit);
+    .sort({ createdAt: -1 }) // Newest first for cursor pagination
+    .limit(limit + 1);
+  
+  const hasMore = messages.length > limit;
+  const resultMessages = hasMore ? messages.slice(0, limit) : messages;
+  
+  // Reverse to get ascending order (oldest first) for display
+  resultMessages.reverse();
+  
+  const oldestTimestamp = resultMessages.length > 0 ? resultMessages[0].createdAt : undefined;
+  
+  return { 
+    messages: resultMessages, 
+    hasMore,
+    oldestTimestamp
+  };
 }
 
 /**

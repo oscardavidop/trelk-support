@@ -1,0 +1,109 @@
+{
+  "exportedAt": "2026-01-21T04:14:11.407Z",
+  "exportedBy": "6962dc472ba9a76efed78395",
+  "totalSessions": 4,
+  "sessions": [
+    {
+      "session": {
+        "id": "CS-Q66P-427AB6",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T18:04:41.042Z",
+        "closedAt": "2026-01-18T18:07:23.212Z"
+      },
+      "user": {
+        "id": "696d20b43b948fde67337e3a",
+        "name": "Juan",
+        "telegramId": 6866821292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": []
+    },
+    {
+      "session": {
+        "id": "CS-N8FE-A19BA6",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T18:02:23.978Z",
+        "closedAt": "2026-01-20T14:42:15.398Z",
+        "rating": 1
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": []
+    },
+    {
+      "session": {
+        "id": "CS-V4YW-D2A599",
+        "status": "closed",
+        "category": "feedback",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T04:08:44.265Z",
+        "closedAt": "2026-01-21T02:06:03.561Z",
+        "rating": 5
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [
+        {
+          "id": "696c74f204326521863ef000",
+          "content": "3205131232",
+          "createdBy": "Admin",
+          "createdAt": "2026-01-18T05:51:46.964Z"
+        }
+      ],
+      "transfers": []
+    },
+    {
+      "session": {
+        "id": "CS-LR22-A222F5",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T03:33:26.715Z",
+        "closedAt": "2026-01-18T18:11:25.087Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": []
+    }
+  ]
+}

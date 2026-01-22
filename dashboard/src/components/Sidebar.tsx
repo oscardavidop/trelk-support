@@ -27,7 +27,9 @@ import {
   History,
   ListChecks,
   Server,
-  Languages
+  Languages,
+  Contact,
+  Megaphone
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
@@ -108,6 +110,8 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
   const navItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', requireRole: null },
     { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', badge: stats?.sessions.waiting, requireRole: null },
+    { path: '/dashboard/contacts', icon: Contact, label: 'Contactos', requireRole: null },
+    { path: '/dashboard/broadcast', icon: Megaphone, label: 'Broadcast', requireRole: 'supervisor' as const },
     { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', requireRole: 'supervisor' as const },
     { path: '/dashboard/audit', icon: Activity, label: 'Actividad', requireRole: 'supervisor' as const },
     { path: '/dashboard/exports', icon: Download, label: 'Exportar', requireRole: 'supervisor' as const },

@@ -4,7 +4,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ActivityLog, AuditLog } from '../database/models/index.js';
+import { AuditLog } from '../database/models/index.js';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
 
 interface QueryParams {
@@ -43,6 +43,7 @@ export async function activityRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * GET /api/activity
    * Get activity logs (admin/supervisor only)
+   * Uses AuditLog model which has actorId, actorName, category, etc.
    */
   fastify.get('/', {
     preHandler: requireRole(['admin', 'supervisor']),
@@ -57,30 +58,35 @@ export async function activityRoutes(fastify: FastifyInstance): Promise<void> {
           ...getDateFilter(timeFilter),
         };
         
+        // Filter by category if actionType specified
         if (actionType && actionType !== 'all') {
-          filter.actionType = actionType;
+          filter.category = actionType;
         }
         
         const skip = (page - 1) * limit;
         
-        const logs = await ActivityLog.find(filter)
+        // Use AuditLog which has proper agent info
+        const logs = await AuditLog.find(filter)
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
-          .populate('agent', 'name email')
           .lean();
         
-        // Transform for frontend
+        // Transform to frontend format
         const transformed = logs.map((log: Record<string, unknown>) => ({
           _id: log._id,
-          agentId: (log.agent as { _id?: string })?._id || log.agent,
-          agentName: (log.agent as { name?: string })?.name || 'Unknown',
+          agentId: log.actorId,
+          agentName: log.actorName || 'Sistema',
           action: log.action,
-          actionType: log.actionType,
+          actionType: log.category,
           targetType: log.targetType,
           targetId: log.targetId,
-          metadata: log.metadata,
-          ipAddress: log.ipAddress,
+          metadata: {
+            previousValue: log.previousValue,
+            newValue: log.newValue,
+            severity: log.severity,
+          },
+          ipAddress: log.actorIp,
           createdAt: log.createdAt,
         }));
         
@@ -113,21 +119,39 @@ export async function activityRoutes(fastify: FastifyInstance): Promise<void> {
         const { timeFilter = 'today', page = 1, limit = 50 } = request.query;
         
         const filter = {
-          agent: agentId,
+          actorId: agentId,
           ...getDateFilter(timeFilter),
         };
         
         const skip = (page - 1) * limit;
         
-        const logs = await ActivityLog.find(filter)
+        const logs = await AuditLog.find(filter)
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
           .lean();
         
+        // Transform to frontend format
+        const transformed = logs.map((log: Record<string, unknown>) => ({
+          _id: log._id,
+          agentId: log.actorId,
+          agentName: log.actorName || 'Sistema',
+          action: log.action,
+          actionType: log.category,
+          targetType: log.targetType,
+          targetId: log.targetId,
+          metadata: {
+            previousValue: log.previousValue,
+            newValue: log.newValue,
+            severity: log.severity,
+          },
+          ipAddress: log.actorIp,
+          createdAt: log.createdAt,
+        }));
+        
         return reply.send({
           success: true,
-          data: logs,
+          data: transformed,
         });
       } catch (error) {
         request.log.error(error, 'Error fetching agent activity logs');
@@ -164,19 +188,21 @@ export async function auditRoutes(fastify: FastifyInstance): Promise<void> {
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
-          .populate('performedBy', 'name email')
           .lean();
         
-        // Transform for frontend
+        // Transform to frontend format
         const transformed = logs.map((log: Record<string, unknown>) => ({
           _id: log._id,
-          performedBy: (log.performedBy as { _id?: string })?._id || log.performedBy,
-          performedByName: (log.performedBy as { name?: string })?.name || 'System',
+          performedBy: log.actorId,
+          performedByName: log.actorName || 'Sistema',
           action: log.action,
-          resource: log.resource,
-          resourceId: log.resourceId,
-          changes: log.changes,
-          ipAddress: log.ipAddress,
+          resource: log.targetType,
+          resourceId: log.targetId,
+          changes: {
+            before: log.previousValue,
+            after: log.newValue,
+          },
+          ipAddress: log.actorIp,
           createdAt: log.createdAt,
         }));
         
@@ -212,8 +238,8 @@ export async function auditRoutes(fastify: FastifyInstance): Promise<void> {
         const { page = 1, limit = 50 } = request.query;
         
         const filter = {
-          resource: resourceType,
-          resourceId,
+          targetType: resourceType,
+          targetId: resourceId,
         };
         
         const skip = (page - 1) * limit;
@@ -222,12 +248,27 @@ export async function auditRoutes(fastify: FastifyInstance): Promise<void> {
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
-          .populate('performedBy', 'name email')
           .lean();
+        
+        // Transform to frontend format
+        const transformed = logs.map((log: Record<string, unknown>) => ({
+          _id: log._id,
+          performedBy: log.actorId,
+          performedByName: log.actorName || 'Sistema',
+          action: log.action,
+          resource: log.targetType,
+          resourceId: log.targetId,
+          changes: {
+            before: log.previousValue,
+            after: log.newValue,
+          },
+          ipAddress: log.actorIp,
+          createdAt: log.createdAt,
+        }));
         
         return reply.send({
           success: true,
-          data: logs,
+          data: transformed,
         });
       } catch (error) {
         request.log.error(error, 'Error fetching resource audit logs');

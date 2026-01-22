@@ -123,7 +123,7 @@ export function trackMessage(chatId: number): { allowed: boolean; tooFast: boole
   session.lastMessageTime = now;
   
   // Rate limit: 30 messages per minute
-  if (session.messageCount > 30) {
+  if (session.messageCount > 20) {
     return { allowed: false, tooFast: false };
   }
   

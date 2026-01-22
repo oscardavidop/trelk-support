@@ -243,6 +243,13 @@ export default function AgentComposer({
 
   // ============= FUNCTIONS (Tu lógica original) =============
 
+  const scrollToBottom = () => {
+    const container = containerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight - container.clientHeight;
+    }
+  };
+
   const loadSavedReplies = async () => {
     setIsLoadingReplies(true);
     try {
@@ -285,10 +292,12 @@ export default function AgentComposer({
           setSendStatus('sent');
           onCancelReply?.();
           // Re-focus textarea after sending
-          setTimeout(() => textareaRef.current?.focus(), 50);
+          setTimeout(() => {textareaRef.current?.focus(); scrollToBottom(); }, 50);
+          // añade auto scroll to bottom could be handled by parent component on new message event:
           if (closeAfter) {
             closeSession(session.sessionId, 'Agent closed conversation');
           }
+
         } else {
           setSendStatus('error');
         }
@@ -767,12 +776,32 @@ export default function AgentComposer({
                   onClick={() => setShowSaveModal(true)}
                   disabled={!message.trim()}
                 />
+
+                {/* Footer Hints */}
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-4 text-[12px] text-gray-500">
+                    <span className="hidden sm:inline"><b>Enter</b> enviar</span>
+                    <span className="hidden sm:inline"><b>Shift+Enter</b> línea</span>
+                    <span className="hidden sm:inline"><b>Ctrl+Enter</b> enviar y cerrar</span>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <SendStatusIndicator status={sendStatus} />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    className={`flex items-center gap-1 text-[12px] ${showScheduleModal ? 'text-primary' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    Programar envío
+                  </button>
+                </div>
               </div>
 
               {/* Right Actions (Send) */}
               <div className="flex items-center gap-2">
                 {message.trim().length > 0 && (
-                  <span className="text-[10px] text-gray-500 font-medium mr-2 hidden sm:inline-block">
+                  <span className="text-[12px] text-gray-500 font-medium mr-2 hidden sm:inline-block">
                     {message.length} chars
                   </span>
                 )}
@@ -811,25 +840,6 @@ export default function AgentComposer({
             </div>
           </div>
 
-          {/* Footer Hints */}
-          <div className="flex justify-between items-center mt-2 p-2">
-            <div className="flex gap-3 text-[10px] text-gray-500">
-              <span className="hidden sm:inline"><b>Enter</b> enviar</span>
-              <span className="hidden sm:inline"><b>Shift+Enter</b> línea</span>
-              <span className="hidden sm:inline"><b>Ctrl+Enter</b> enviar y cerrar</span>
-
-              <div className="flex items-center gap-2 ml-4">
-                <SendStatusIndicator status={sendStatus} />
-              </div>
-            </div>
-            <button
-              onClick={() => setShowScheduleModal(true)}
-              className={`flex items-center gap-1 text-[10px] ${showScheduleModal ? 'text-primary' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
-            >
-              <Clock className="w-3 h-3" />
-              Programar envío
-            </button>
-          </div>
         </div>
       )}
 
@@ -901,8 +911,8 @@ const ToolButton: React.FC<ToolButtonProps> = ({ icon, onClick, active, tooltip,
     title={tooltip}
     disabled={disabled}
     className={`p-2 rounded-lg transition-all ${active
-        ? 'text-primary bg-primary/10'
-        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+      ? 'text-primary bg-primary/10'
+      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
       } disabled:opacity-30 disabled:cursor-not-allowed`}
   >
     {icon}
@@ -914,8 +924,8 @@ function SendStatusIndicator({ status }: { status: SendStatus }) {
 
   return (
     <div className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full transition-all ${status === 'sending' ? 'text-gray-400 bg-gray-800' :
-        status === 'sent' ? 'text-green-400 bg-green-900/30' :
-          status === 'error' ? 'text-red-400 bg-red-900/30' : ''
+      status === 'sent' ? 'text-green-400 bg-green-900/30' :
+        status === 'error' ? 'text-red-400 bg-red-900/30' : ''
       }`}>
       {status === 'sending' && (
         <>
@@ -976,8 +986,8 @@ function QuickReplyDropdown({ isLoading, replies, selectedIndex, onSelect }: Qui
               key={reply._id}
               onClick={() => onSelect(reply)}
               className={`w-full text-left px-4 py-3 border-b border-gray-800/50 last:border-b-0 transition-all ${index === selectedIndex
-                  ? 'bg-primary/10 border-l-2 border-l-primary'
-                  : 'hover:bg-gray-800/50 border-l-2 border-l-transparent'
+                ? 'bg-primary/10 border-l-2 border-l-primary'
+                : 'hover:bg-gray-800/50 border-l-2 border-l-transparent'
                 }`}
             >
               <div className="flex items-start justify-between gap-3">

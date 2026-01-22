@@ -28,6 +28,7 @@ export const QUEUE_NAMES = {
   CLEANUP: 'cleanup',
   INACTIVITY: 'inactivity',
   NOTIFICATIONS: 'notifications',
+  BROADCAST: 'broadcast',
 } as const;
 
 type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES];
@@ -115,6 +116,10 @@ export interface InactivityJob {
   sessionId: string;
   chatId: number;
   remainingMinutes?: number;
+}
+
+export interface BroadcastJob {
+  broadcastId: string;
 }
 
 // ============= WORKER CREATION =============
@@ -546,3 +551,10 @@ export async function getAllQueueStats(): Promise<Record<QueueName, any>> {
 export function areQueuesInitialized(): boolean {
   return isInitialized;
 }
+
+// ============= BROADCAST QUEUE HELPER =============
+
+/**
+ * Get broadcast queue instance (for direct access)
+ */
+export const broadcastQueue = getQueue(QUEUE_NAMES.BROADCAST);

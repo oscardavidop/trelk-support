@@ -22,6 +22,11 @@ interface ChatState {
   isLoadingMessages: boolean;
   pinnedMessages: Record<string, Message>; // sessionId -> pinned message
   
+  // Message pagination state
+  hasMoreMessages: boolean;
+  isLoadingOlderMessages: boolean;
+  oldestMessageTimestamp: string | null;
+  
   // Tab state
   activeTab: TabType;
   searchQuery: string;
@@ -43,12 +48,14 @@ interface ChatState {
   removeSession: (sessionId: string) => void;
   moveToClosedSessions: (sessionId: string, session: ChatSession) => void;
   setActiveSession: (session: ChatSession | null) => void;
-  setMessages: (messages: Message[]) => void;
+  setMessages: (messages: Message[], hasMore?: boolean, oldestTimestamp?: string | null) => void;
+  prependMessages: (messages: Message[], hasMore: boolean, oldestTimestamp?: string | null) => void;
   addMessage: (message: Message) => void;
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
   deleteMessage: (messageId: string) => void;
   setStats: (stats: DashboardStats) => void;
   setLoadingMessages: (loading: boolean) => void;
+  setLoadingOlderMessages: (loading: boolean) => void;
   setPinnedMessage: (sessionId: string, message: Message) => void;
   clearPinnedMessage: (sessionId: string) => void;
   
@@ -70,6 +77,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   stats: null,
   isLoadingMessages: false,
   pinnedMessages: {},
+  
+  // Message pagination state
+  hasMoreMessages: false,
+  isLoadingOlderMessages: false,
+  oldestMessageTimestamp: null,
   
   // Tab state defaults
   activeTab: 'open',
@@ -145,14 +157,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const currentSession = get().activeSession;
     // Only clear messages if switching to a different session
     if (session?.sessionId !== currentSession?.sessionId) {
-      set({ activeSession: session, messages: [] });
+      set({ 
+        activeSession: session, 
+        messages: [],
+        hasMoreMessages: false,
+        oldestMessageTimestamp: null 
+      });
     } else {
       // Same session, just update the session data but keep messages
       set({ activeSession: session });
     }
   },
   
-  setMessages: (messages) => set({ messages }),
+  setMessages: (messages, hasMore = false, oldestTimestamp = null) => set({ 
+    messages,
+    hasMoreMessages: hasMore,
+    oldestMessageTimestamp: oldestTimestamp 
+  }),
+  
+  prependMessages: (newMessages, hasMore, oldestTimestamp = null) => {
+    set((state) => ({
+      messages: [...newMessages, ...state.messages],
+      hasMoreMessages: hasMore,
+      oldestMessageTimestamp: oldestTimestamp ?? state.oldestMessageTimestamp,
+    }));
+  },
   
   addMessage: (message) => {
     const { activeSession } = get();
@@ -186,6 +215,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setStats: (stats) => set({ stats }),
   
   setLoadingMessages: (loading) => set({ isLoadingMessages: loading }),
+  
+  setLoadingOlderMessages: (loading) => set({ isLoadingOlderMessages: loading }),
   
   setPinnedMessage: (sessionId, message) => set((state) => ({
     pinnedMessages: { ...state.pinnedMessages, [sessionId]: message },

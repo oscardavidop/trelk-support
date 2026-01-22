@@ -13,6 +13,7 @@ import { Message } from '../database/models/Message.js';
 import { Agent } from '../database/models/Agent.js';
 import { logger } from './logger.js';
 import { logActivity } from './activity-log.service.js';
+import { telegramErrorHandler, getBlockReasonMessage } from './telegram-error-handler.js';
 
 // ============= TRANSFER SERVICE =============
 
@@ -376,11 +377,32 @@ export async function reopenSession(
     throw new Error('Only admin agents can reopen sessions');
   }
 
-  const session = await ChatSession.findOne({ sessionId });
+  const session = await ChatSession.findOne({ sessionId }).populate('user');
   if (!session) return null;
 
   if (session.status !== 'closed') {
     throw new Error('Session is not closed');
+  }
+
+  // Verify user can receive messages before reopening
+  const user = session.user as any;
+  if (user?.telegramId) {
+    const blockStatus = await telegramErrorHandler.canSendToUser(user.telegramId);
+    
+    if (!blockStatus.canSend) {
+      const reasonMessages = getBlockReasonMessage(blockStatus.reason!);
+      throw new Error(`No se puede reabrir: ${reasonMessages.es}`);
+    }
+
+    // If user previously blocked but now can receive, unblock them
+    if (user.hasBlockedBot) {
+      await telegramErrorHandler.markUserUnblocked(user.telegramId);
+      logger.info('chat', {
+        action: 'user_unblocked_on_reopen',
+        userId: user.telegramId,
+        sessionId,
+      });
+    }
   }
 
   // Check if user already has an open session

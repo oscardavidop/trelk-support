@@ -73,6 +73,7 @@ import {
   type ActiveSession,
 } from './session-guard.service.js';
 import { triggerEventMessages } from './scheduledMessage.service.js';
+import { telegramErrorHandler } from './telegram-error-handler.js';
 import type { ChatCategory } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
@@ -133,6 +134,13 @@ export interface ServerToClientEvents {
     closedBy: 'inactivity' | 'user' | 'agent' | 'automation' | 'system';
     closedAt?: string;
     session?: unknown;
+    message?: string;
+  }) => void;
+  'chat:user_blocked': (data: {
+    sessionId: string;
+    reason: string;
+    message: string;
+    messageEn: string;
   }) => void;
 
   // Session guard events (single session/tab enforcement)
@@ -393,6 +401,22 @@ export interface ServerToClientEvents {
     action: 'created' | 'updated' | 'deleted';
     key: string;
     timestamp: string;
+  }) => void;
+
+  // Broadcast events
+  'broadcast:update': (data: {
+    _id: string;
+    status: string;
+    progress: {
+      total: number;
+      sent: number;
+      delivered: number;
+      failed: number;
+      blocked: number;
+    };
+    completedAt?: Date;
+    pausedAt?: Date;
+    cancelledAt?: Date;
   }) => void;
 
   // Errors
@@ -809,8 +833,43 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
             : '👋 Hi! A member of our support team has joined the conversation.\n\nYou can chat normally or close the conversation anytime using the button below 😊'
           : '👋 Hi! A member of our support team has joined the conversation.\n\nYou can chat normally or close the conversation anytime using the button below 😊';
 
-      // Show ReplyKeyboard with close button
-      await sendTelegramMessage(assignedSession.telegramChatId, userMessage);
+      // Show ReplyKeyboard with close button - with error handling for blocked users
+      try {
+        await sendTelegramMessage(assignedSession.telegramChatId, userMessage);
+      } catch (telegramError) {
+        // Check if this is a blocking error (user blocked bot, etc.)
+        const { handled, reason } = await telegramErrorHandler.handleError(
+          telegramError as Error,
+          assignedSession.telegramChatId,
+          sessionId
+        );
+
+        if (handled) {
+          // The telegramErrorHandler already closed the session and notified via socket
+          // Return specific error for blocked user so agent knows what happened
+          const errorMsg = reason === 'bot_blocked'
+            ? 'El usuario bloqueó el bot. El chat ha sido cerrado automáticamente.'
+            : reason === 'user_deactivated'
+              ? 'La cuenta del usuario fue desactivada. El chat ha sido cerrado automáticamente.'
+              : 'No se puede contactar al usuario. El chat ha sido cerrado automáticamente.';
+
+          logger.warn('api', {
+            action: 'session_accept_user_blocked',
+            sessionId,
+            telegramChatId: assignedSession.telegramChatId,
+            reason
+          });
+
+          return callback({
+            ok: false,
+            error: errorMsg,
+            data: { code: 'USER_BLOCKED', reason, sessionClosed: true },
+          });
+        }
+
+        // Re-throw if not a blocking error
+        throw telegramError;
+      }
 
       await broadcastStats();
       callback({ ok: true, data: assignedSession });
@@ -1106,9 +1165,31 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       }
 
       // Send to user via Telegram FIRST to get the telegram message ID
-      const telegramMessageId = await sendMessageWithId(session.telegramChatId, content, {
-        reply_to_message_id: telegramReplyToMessageId,
-      });
+      let telegramMessageId: number | null = null;
+      try {
+        telegramMessageId = await sendMessageWithId(session.telegramChatId, content, {
+          reply_to_message_id: telegramReplyToMessageId,
+        });
+      } catch (telegramError) {
+        // Check if this is a blocking error (user blocked bot, etc.)
+        const { handled, reason } = await telegramErrorHandler.handleError(
+          telegramError as Error,
+          session.telegramChatId,
+          sessionId
+        );
+
+        if (handled) {
+          // Return specific error for blocked user
+          return callback({
+            ok: false,
+            error: `No se puede enviar el mensaje: ${reason === 'bot_blocked' ? 'El usuario bloqueó el bot' : 'Usuario no disponible'}`,
+            data: { code: 'USER_BLOCKED', reason },
+          });
+        }
+
+        // Re-throw if not a blocking error
+        throw telegramError;
+      }
 
       // Save message to DB with telegram message ID (needed for edit/delete)
       const message = await addMessage(sessionId, 'agent', content, {
@@ -1148,7 +1229,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       callback({ ok: true, data: message });
     } catch (error) {
       logger.error('api', { action: 'message_send_error', error: String(error) });
-      callback({ ok: false, error: 'Failed to send message' });
+      callback({ ok: false, error: error instanceof Error ? error.message : 'Failed to send message' });
     }
   });
 
@@ -1172,8 +1253,26 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Get absolute path for the image
       const imagePath = getAbsolutePath(url);
 
-      // Send to Telegram
-      const sent = await sendPhoto(session.telegramChatId, imagePath, { caption });
+      // Send to Telegram with error handling
+      let sent = false;
+      try {
+        sent = await sendPhoto(session.telegramChatId, imagePath, { caption });
+      } catch (telegramError) {
+        const { handled, reason } = await telegramErrorHandler.handleError(
+          telegramError as Error,
+          session.telegramChatId,
+          sessionId
+        );
+
+        if (handled) {
+          return callback({
+            ok: false,
+            error: `No se puede enviar: ${reason === 'bot_blocked' ? 'El usuario bloqueó el bot' : 'Usuario no disponible'}`,
+            data: { code: 'USER_BLOCKED', reason },
+          });
+        }
+        throw telegramError;
+      }
 
       if (!sent) {
         return callback({ ok: false, error: 'Failed to send image to Telegram' });
@@ -1210,7 +1309,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       callback({ ok: true, data: message });
     } catch (error) {
       logger.error('api', { action: 'message_send_image_error', error: String(error) });
-      callback({ ok: false, error: 'Failed to send image' });
+      callback({ ok: false, error: error instanceof Error ? error.message : 'Failed to send image' });
     }
   });
 
@@ -1226,8 +1325,26 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Get absolute path for the file
       const filePath = getAbsolutePath(url);
 
-      // Send to Telegram
-      const sent = await sendDocument(session.telegramChatId, filePath, { caption, fileName: filename });
+      // Send to Telegram with error handling
+      let sent = false;
+      try {
+        sent = await sendDocument(session.telegramChatId, filePath, { caption, fileName: filename });
+      } catch (telegramError) {
+        const { handled, reason } = await telegramErrorHandler.handleError(
+          telegramError as Error,
+          session.telegramChatId,
+          sessionId
+        );
+
+        if (handled) {
+          return callback({
+            ok: false,
+            error: `No se puede enviar: ${reason === 'bot_blocked' ? 'El usuario bloqueó el bot' : 'Usuario no disponible'}`,
+            data: { code: 'USER_BLOCKED', reason },
+          });
+        }
+        throw telegramError;
+      }
 
       if (!sent) {
         return callback({ ok: false, error: 'Failed to send file to Telegram' });
@@ -1266,7 +1383,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       callback({ ok: true, data: message });
     } catch (error) {
       logger.error('api', { action: 'message_send_file_error', error: String(error) });
-      callback({ ok: false, error: 'Failed to send file' });
+      callback({ ok: false, error: error instanceof Error ? error.message : 'Failed to send file' });
     }
   });
 
@@ -1321,7 +1438,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       callback({ ok: true, data: message });
     } catch (error) {
       logger.error('api', { action: 'message_send_voice_error', error: String(error) });
-      callback({ ok: false, error: 'Failed to send voice' });
+      callback({ ok: false, error: error instanceof Error ? error.message : 'Failed to send voice' });
     }
   });
 
@@ -1488,6 +1605,22 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         },
       });
 
+      const addMessageResult = await addMessage(sessionId, 'agent', `Agent ${agent?.name} pinned a message`, {
+        senderAgentId: agentId,
+        messageType: 'system',
+      });
+      
+      const messageData = {
+        _id: addMessageResult && addMessageResult._id ? addMessageResult._id.toString() : '',
+        session: sessionId,
+        sender: 'bot',
+        content: `Agent ${agent?.name} pinned a message`,
+        messageType: 'system' as const,
+        createdAt: addMessageResult && addMessageResult.createdAt ? addMessageResult.createdAt : new Date(),
+      };
+      
+      io.to(`session:${sessionId}`).emit('message:new', messageData);
+      
       logger.info('chat', { action: 'message_pinned', messageId, agentId });
       callback?.({ ok: true });
     } catch (error) {

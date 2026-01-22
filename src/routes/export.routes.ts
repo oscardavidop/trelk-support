@@ -227,16 +227,23 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
         return {
           success: true,
           data: jobs.map(job => ({
+            _id: job._id.toString(),
             id: job._id.toString(),
             type: job.type,
             format: job.format,
             status: job.status,
             progress: job.progress,
             fileSize: job.fileSize,
+            recordCount: job.totalItems,
+            error: job.error,
+            createdAt: job.requestedAt,
             requestedAt: job.requestedAt,
             completedAt: job.completedAt,
             expiresAt: job.expiresAt,
             requestedBy: (job.requestedBy as any)?.name,
+            downloadUrl: job.status === 'completed' && job.fileUrl 
+              ? `/api/exports/jobs/${job._id}/download` 
+              : undefined,
           })),
           pagination: {
             page,

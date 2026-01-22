@@ -383,36 +383,103 @@ export function initializeSocket(): Socket {
     window.dispatchEvent(event);
   });
 
+  // User blocked bot event
+  socket.on('chat:user_blocked', (data: {
+    sessionId: string;
+    reason: string;
+    message: string;
+    messageEn?: string;
+  }) => {
+    console.log('🚫 User blocked bot:', data.sessionId, data.reason);
+    
+    // Show specific toast for blocked user
+    const reasonLabels: Record<string, string> = {
+      bot_blocked: 'El usuario bloqueó el bot',
+      user_deactivated: 'La cuenta del usuario fue desactivada',
+      chat_not_found: 'El chat ya no existe',
+      bot_kicked: 'El bot fue expulsado del chat',
+      cant_initiate: 'No se puede contactar al usuario',
+    };
+    
+    toast.error(
+      'Chat no disponible',
+      reasonLabels[data.reason] || data.message,
+      { 
+        groupKey: `chat:blocked:${data.sessionId}`,
+        sessionId: data.sessionId,
+        duration: 8000
+      }
+    );
+    
+    // Remove session from active list
+    useChatStore.getState().removeSession(data.sessionId);
+    
+    // Dispatch custom event for UI components
+    const event = new CustomEvent('chat:user_blocked', { detail: data });
+    window.dispatchEvent(event);
+  });
   // Chat closed events
   socket.on('chat:closed', (data: { 
     sessionId: string; 
     reason: string; 
-    closedBy: 'inactivity' | 'user' | 'agent';
+    closedBy: 'inactivity' | 'user' | 'agent' | 'system';
     closedAt?: string;
     session?: ChatSession;
   }) => {
     console.log('🔒 Chat closed:', data.sessionId, data.closedBy);
     
     // Toast notification
-    const closedByLabels = {
+    const closedByLabels: Record<string, string> = {
       inactivity: 'por inactividad',
       user: 'por el usuario',
-      agent: 'por el agente'
+      agent: 'por el agente',
+      system: 'automáticamente'
     };
-    toast.info(
-      'Chat cerrado',
-      `Chat cerrado ${closedByLabels[data.closedBy] || ''}`,
-      { 
-        groupKey: `chat:closed:${data.sessionId}`,
-        sessionId: data.sessionId
-      }
-    );
+    
+    // For system closures (like user blocked), show a different toast
+    if (data.closedBy === 'system') {
+      toast.warning(
+        'Chat cerrado',
+        data.reason || 'Chat cerrado automáticamente',
+        { 
+          groupKey: `chat:closed:${data.sessionId}`,
+          sessionId: data.sessionId,
+          duration: 6000
+        }
+      );
+    } else {
+      toast.info(
+        'Chat cerrado',
+        `Chat cerrado ${closedByLabels[data.closedBy] || ''}`,
+        { 
+          groupKey: `chat:closed:${data.sessionId}`,
+          sessionId: data.sessionId
+        }
+      );
+    }
     
     // If we have the full session, move it to closed list
     if (data.session) {
       useChatStore.getState().moveToClosedSessions(data.sessionId, data.session);
     } else {
-      useChatStore.getState().removeSession(data.sessionId);
+      // Try to find the session in local state and update it to closed
+      const state = useChatStore.getState();
+      const existingSession = state.sessions.find(s => s.sessionId === data.sessionId) 
+        || state.queueSessions.find(s => s.sessionId === data.sessionId);
+      
+      if (existingSession) {
+        // Move to closed with updated status
+        const closedSession: ChatSession = {
+          ...existingSession,
+          status: 'closed',
+          closedAt: data.closedAt || new Date().toISOString(),
+          closedByType: data.closedBy === 'system' ? 'system' : data.closedBy === 'user' ? 'user' : 'agent',
+        };
+        state.moveToClosedSessions(data.sessionId, closedSession);
+      } else {
+        // Session not found locally, just remove it
+        state.removeSession(data.sessionId);
+      }
     }
     
     // Dispatch custom event for UI components
@@ -703,7 +770,7 @@ export function getSocket(): Socket | null {
 
 export function acceptSession(
   sessionId: string, 
-  callback?: (result: { ok: boolean; error?: string }) => void
+  callback?: (result: { ok: boolean; error?: string; data?: { code?: string; reason?: string; sessionClosed?: boolean } }) => void
 ): void {
   socket?.emit('session:accept', sessionId, callback || (() => {}));
 }

@@ -1085,9 +1085,7 @@ const SessionItem = memo(({ session, isActive, isNew, currentAgentId, onClick }:
     if (diff < 86400000 && now.getDate() === date.getDate()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
   }, [session.updatedAt, session.closedAt, isClosed]);
-console.log('Rendering SessionItem for sessionId:', session, session.user.photoFileId
 
-);
   return (
     <div
       onClick={onClick}

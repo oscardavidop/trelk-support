@@ -15,6 +15,8 @@ import CustomFieldsPage from './pages/CustomFieldsPage';
 import SystemPage from './pages/SystemPage';
 import SystemControlPage from './pages/SystemControlPage';
 import TextsPage from './pages/TextsPage';
+import ContactsPage from './pages/ContactsPage';
+import BroadcastPage from './pages/BroadcastPage';
 import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -52,6 +54,8 @@ export default function App() {
             <Route path="system" element={<SystemPage />} />
             <Route path="system-control" element={<SystemControlPage />} />
             <Route path="texts" element={<TextsPage />} />
+            <Route path="contacts" element={<ContactsPage />} />
+            <Route path="broadcast" element={<BroadcastPage />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

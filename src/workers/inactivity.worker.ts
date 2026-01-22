@@ -15,6 +15,7 @@ import { logger } from '../services/logger.js';
 import { sendMessage as sendTelegramMessage } from '../services/telegram.js';
 import { emitChatWarning, emitChatClosed, getIO } from '../services/socket.js';
 import { closeSession, getSessionById, addMessage } from '../services/chat.service.js';
+import { telegramErrorHandler, isBlockingError } from '../services/telegram-error-handler.js';
 
 // ============= WORKER PROCESSOR =============
 
@@ -121,10 +122,29 @@ async function handleWarning(
 
     return { success: true, type: 'warning' };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Check if this is a blocking error (user blocked bot)
+    const { isBlocking } = isBlockingError(errorMessage);
+    
+    if (isBlocking) {
+      logger.warn('worker:inactivity', {
+        action: 'warning_blocked_user',
+        sessionId,
+        chatId,
+      });
+      
+      // Handle the blocking error - this will close the session and notify
+      await telegramErrorHandler.handleError(error as Error, chatId, sessionId);
+      
+      // Return success since we handled it appropriately
+      return { success: true, type: 'warning', userBlocked: true };
+    }
+    
     logger.error('worker:inactivity', {
       action: 'warning_failed',
       sessionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage,
     });
     throw error;
   }
@@ -152,7 +172,7 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
   }
 
   try {
-    const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.\n\n✅ Chat closed due to inactivity. Thank you for contacting Trelk Support.`;
+    const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.`;
 
     // Save message in database BEFORE closing the session
     const savedMessage = await addMessage(sessionId, 'bot', 'Se ha cerrado el chat por inactividad.', {

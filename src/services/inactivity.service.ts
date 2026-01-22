@@ -321,7 +321,7 @@ async function autoCloseSessionFallback(
     
     await closeSession(sessionId, agentId, 'Closed due to inactivity', 'system');
     
-    const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.\n\n✅ Chat closed due to inactivity. Thank you for contacting Trelk Support.`;
+    const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.`;
     
     await sendTelegramMessage(telegramChatId, closeMessage, {
       replyMarkup: { remove_keyboard: true },

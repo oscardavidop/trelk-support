@@ -60,6 +60,21 @@ export const CacheKeys = {
   // Tags
   tags: () => `tags:all`,
   
+  // Contacts PRO
+  contact: (telegramId: number) => `contact:${telegramId}`,
+  contactProfile: (telegramId: number) => `contact:profile:${telegramId}`,
+  contactList: (page: number, hash: string) => `contacts:list:${page}:${hash}`,
+  contactStats: () => `contacts:stats`,
+  
+  // Segments
+  segments: () => `segments:all`,
+  segment: (segmentId: string) => `segment:${segmentId}`,
+  segmentContacts: (segmentId: string, page: number) => `segment:${segmentId}:contacts:${page}`,
+  segmentCount: (segmentId: string) => `segment:${segmentId}:count`,
+  
+  // Saved Views
+  savedViews: (userId?: string) => userId ? `views:${userId}` : `views:global`,
+  
   // Stats
   stats: (type: string) => `stats:${type}`,
 } as const;

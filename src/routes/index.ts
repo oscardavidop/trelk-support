@@ -25,6 +25,8 @@ import { registerSettingsRoutes } from './settings.routes.js';
 import { systemRoutes } from './system.routes.js';
 import { adminControlRoutes } from './admin-control.routes.js';
 import { textsRoutes } from './texts.routes.js';
+import { registerContactsProRoutes } from './contacts-pro.routes.js';
+import { broadcastRoutes } from './broadcast.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -111,4 +113,12 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // Text Registry / i18n routes
   await fastify.register(textsRoutes, { prefix: '/api/admin/texts' });
+
+  // Contacts PRO routes (contact management, segments, bulk actions)
+  await fastify.register(async (contactsProRoutes) => {
+    await registerContactsProRoutes(contactsProRoutes);
+  });
+
+  // Broadcast / Mass messaging routes (admin/supervisor only)
+  await fastify.register(broadcastRoutes, { prefix: '/api/broadcast' });
 }

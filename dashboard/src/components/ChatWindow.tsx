@@ -69,11 +69,32 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, targetMessageId }: ChatWindowProps) {
   const agent = useAuthStore((state) => state.agent);
-  const { messages, setMessages, isLoadingMessages, setLoadingMessages, updateMessage, deleteMessage: removeMessage, pinnedMessages, setPinnedMessage, clearPinnedMessage } = useChatStore();
+  const { 
+    messages, 
+    setMessages, 
+    prependMessages,
+    isLoadingMessages, 
+    setLoadingMessages, 
+    isLoadingOlderMessages,
+    setLoadingOlderMessages,
+    hasMoreMessages,
+    oldestMessageTimestamp,
+    updateMessage, 
+    deleteMessage: removeMessage, 
+    pinnedMessages, 
+    setPinnedMessage, 
+    clearPinnedMessage 
+  } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
 
   // Highlighted message state
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  
+  // Flag to track initial load vs new messages
+  const isInitialLoadRef = useRef(true);
+  const shouldScrollToBottomRef = useRef(false);
 
   // Enterprise states
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -110,13 +131,17 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
     let isMounted = true;
 
     // Clear previous messages immediately to avoid showing stale data
-    setMessages([]);
+    setMessages([], false, null);
     clearPinnedMessage(session.sessionId);
+    
+    // Mark as initial load
+    isInitialLoadRef.current = true;
+    shouldScrollToBottomRef.current = true;
 
     const loadSessionMessages = async () => {
       setLoadingMessages(true);
       try {
-        const res = await fetch(`/api/sessions/${session.sessionId}/messages`, {
+        const res = await fetch(`/api/sessions/${session.sessionId}/messages?limit=20`, {
           headers: {
             Authorization: `Bearer ${useAuthStore.getState().token}`,
           },
@@ -130,11 +155,14 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
         // Only update if component is still mounted and session hasn't changed
         if (isMounted && data.ok) {
-          setMessages(data.messages);
+          setMessages(data.messages, data.hasMore, data.oldestTimestamp);
           // Load pinned message if exists
           if (data.pinnedMessage) {
             setPinnedMessage(session.sessionId, data.pinnedMessage);
           }
+          
+          // Schedule scroll to bottom after messages render
+          shouldScrollToBottomRef.current = true;
         } else if (isMounted && !data.ok) {
           console.error('Failed to load messages:', data.error);
           toast.error('Error', 'No se pudieron cargar los mensajes');
@@ -205,10 +233,100 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
     };
   }, [session.sessionId]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on initial load (instant) and new messages (smooth)
+  const prevMessagesLengthRef = useRef(0);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Don't scroll when loading older messages (prepending)
+    if (isLoadingOlderMessages) return;
+    
+    // Check if we should scroll to bottom
+    if (shouldScrollToBottomRef.current && messages.length > 0 && !isLoadingMessages) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        if (messagesContainerRef.current) {
+          // Initial load: instant scroll, no animation
+          if (isInitialLoadRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            isInitialLoadRef.current = false;
+          } else {
+            // New message: smooth scroll
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+        shouldScrollToBottomRef.current = false;
+      });
+    }
+    
+    // Track if new messages were added at the end (not prepended)
+    if (messages.length > prevMessagesLengthRef.current && !isInitialLoadRef.current) {
+      // Check if user is near bottom before auto-scrolling
+      if (messagesContainerRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+        if (isNearBottom) {
+          shouldScrollToBottomRef.current = true;
+        }
+      }
+    }
+    
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length, isLoadingOlderMessages, isLoadingMessages]);
+
+  // Maintain scroll position after loading older messages
+  useEffect(() => {
+    if (scrollPositionRef.current && messagesContainerRef.current && !isLoadingOlderMessages) {
+      const { scrollHeight: prevScrollHeight, scrollTop: prevScrollTop } = scrollPositionRef.current;
+      const newScrollHeight = messagesContainerRef.current.scrollHeight;
+      const scrollDiff = newScrollHeight - prevScrollHeight;
+      messagesContainerRef.current.scrollTop = prevScrollTop + scrollDiff;
+      scrollPositionRef.current = null;
+    }
+  }, [messages, isLoadingOlderMessages]);
+
+  // Load older messages when scrolling up (infinite scroll)
+  const loadOlderMessages = useCallback(async () => {
+    if (isLoadingOlderMessages || !hasMoreMessages || !oldestMessageTimestamp) return;
+    
+    // Save scroll position before loading
+    if (messagesContainerRef.current) {
+      scrollPositionRef.current = {
+        scrollHeight: messagesContainerRef.current.scrollHeight,
+        scrollTop: messagesContainerRef.current.scrollTop
+      };
+    }
+    
+    setLoadingOlderMessages(true);
+    try {
+      const res = await fetch(
+        `/api/sessions/${session.sessionId}/messages?limit=30&before=${encodeURIComponent(oldestMessageTimestamp)}`, 
+        {
+          headers: {
+            Authorization: `Bearer ${useAuthStore.getState().token}`,
+          },
+        }
+      );
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      if (data.ok && data.messages.length > 0) {
+        prependMessages(data.messages, data.hasMore, data.oldestTimestamp);
+      }
+    } catch (error) {
+      console.error('Failed to load older messages:', error);
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [session.sessionId, oldestMessageTimestamp, hasMoreMessages, isLoadingOlderMessages, prependMessages, setLoadingOlderMessages]);
+
+  // Handle scroll event for infinite scroll
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    // Load more when scrolled near top (within 100px)
+    if (target.scrollTop < 100 && hasMoreMessages && !isLoadingOlderMessages) {
+      loadOlderMessages();
+    }
+  }, [hasMoreMessages, isLoadingOlderMessages, loadOlderMessages]);
 
   // Scroll to specific message if URL has hash (e.g. #message-123)
   useEffect(() => {
@@ -406,9 +524,15 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   const pinnedMessage = pinnedMessages[session.sessionId];
 
   const handleAccept = () => {
-    acceptSession(session.sessionId, (result) => {
+    acceptSession(session.sessionId, (result: { ok: boolean; error?: string; data?: { code?: string; reason?: string; sessionClosed?: boolean } }) => {
       if (!result.ok) {
         console.error('Failed to accept session:', result.error);
+        // Check if user blocked the bot
+        if (result.data?.code === 'USER_BLOCKED') {
+          toast.error('Chat no disponible', result.error || 'El usuario bloqueó el bot. El chat ha sido cerrado.');
+        } else {
+          toast.error('Error', result.error || 'No se pudo aceptar la sesión');
+        }
       }
     });
   };
@@ -503,6 +627,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
       {/* Closed Banner */}
       {isClosed && (
+          // hidden banner in mobile view 
         <div className="flex items-center justify-center gap-2 px-4 py-2 border-b border-gray-800 text-gray-400 text-sm bg-gray-950 h-[56px]">
           <Lock className="w-4 h-4" />
           <span>Modo solo lectura</span>
@@ -672,7 +797,29 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-gradient-to-b from-neutral-950/40 to-neutral-900/20">
+      <div 
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-gradient-to-b from-neutral-950/40 to-neutral-900/20"
+      >
+        {/* Load More Indicator */}
+        {hasMoreMessages && (
+          <div className="flex justify-center py-2">
+            {isLoadingOlderMessages ? (
+              <div className="flex items-center gap-2 text-gray-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-xs">Cargando mensajes anteriores...</span>
+              </div>
+            ) : (
+              <button
+                onClick={loadOlderMessages}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-full bg-gray-800/50 hover:bg-gray-800"
+              >
+                Cargar mensajes anteriores
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Pinned Message Bar */}
         {pinnedMessage && (
@@ -924,7 +1071,7 @@ function DateSeparator({ date }: { date: Date }) {
 
   return (
     <div className="flex justify-center my-4 sticky top-1 z-[1]">
-      <span className="px-4 py-1 text-xs font-medium rounded-full bg-gray-800/80 text-gray-400 backdrop-blur border border-gray-700">
+      <span className="px-4 py-1 text-xs font-medium rounded-full bg-gray-800/80 text-gray-400 backdrop-blur border border-gray-700 min-w-[200px] text-center">
         {label}
       </span>
     </div>

@@ -218,13 +218,13 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
   
   // Check if user is blocked
   const blockStatus = await isUserBlocked(from.id);
-  if (blockStatus.blocked) {
-    const blockedMessage = lang === 'es'
-      ? '🚫 Tu cuenta ha sido bloqueada temporalmente. Si crees que esto es un error, contacta con soporte por otro medio.'
-      : '🚫 Your account has been temporarily blocked. If you believe this is an error, please contact support through another channel.';
-    await sendMessage(chat.id, blockedMessage);
-    return;
-  }
+  // if (blockStatus.blocked) {
+  //   const blockedMessage = lang === 'es'
+  //     ? '🚫 Tu cuenta ha sido bloqueada temporalmente. Si crees que esto es un error, contacta con soporte por otro medio.'
+  //     : '🚫 Your account has been temporarily blocked. If you believe this is an error, please contact support through another channel.';
+  //   await sendMessage(chat.id, blockedMessage);
+  //   return;
+  // }
   
   // Rate limiting
   const rateCheck = checkRateLimit(chat.id);

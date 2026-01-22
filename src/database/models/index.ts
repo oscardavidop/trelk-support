@@ -7,7 +7,7 @@
 export { Agent, type IAgent, type AgentRole, MAX_CONCURRENT_CHATS, ROLE_PERMISSIONS, ROLE_HIERARCHY } from './Agent.js';
 export { ChatSession, type IChatSession } from './ChatSession.js';
 export { Message, type IMessage } from './Message.js';
-export { User, type IUser } from './User.js';
+export { User, type IUser, type UserBlockReason } from './User.js';
 export { Note, type INote } from './Note.js';
 export { Tag, type ITag } from './Tag.js';
 export { Transfer, type ITransfer } from './Transfer.js';
@@ -45,3 +45,20 @@ export { ExportJob, type IExportJob, type ExportFormat, type ExportStatus } from
 
 // Enterprise models - AI Copilot
 export { CopilotSuggestion, type ICopilotSuggestion, type SuggestionType } from './CopilotSuggestion.js';
+
+// Contact Management PRO
+export { Segment, type ISegment, type IFilterRule, type IFilterGroup, type FilterOperator, type FilterField } from './Segment.js';
+export { ContactActivity, type IContactActivity, type ContactActivityType, type ActivityActor, ActivityTypes } from './ContactActivity.js';
+export { SavedView, type ISavedView, type IColumnConfig } from './SavedView.js';
+
+// Broadcast / Mass Messaging
+export { 
+  Broadcast, 
+  BroadcastRecipient,
+  type IBroadcast, 
+  type IBroadcastRecipientDoc,
+  type BroadcastStatus, 
+  type BroadcastTargetType, 
+  type BroadcastMessageType,
+  type DeliveryStatus 
+} from './Broadcast.js';

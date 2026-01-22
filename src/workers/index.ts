@@ -8,6 +8,7 @@ import { startScheduledMessagesWorker, migrateExistingScheduledMessages } from '
 import { startFlowExecutionWorker } from './flowExecution.worker.js';
 import { startCleanupWorker, scheduleCleanupJobs } from './cleanup.worker.js';
 import { initializeInactivityWorker, stopInactivityWorker } from './inactivity.worker.js';
+import { registerBroadcastWorker } from '../services/broadcast.worker.js';
 import { logger } from '../services/logger.js';
 
 // ============= LIFECYCLE =============
@@ -37,6 +38,7 @@ export async function initializeWorkers(): Promise<boolean> {
     startFlowExecutionWorker();
     startCleanupWorker();
     initializeInactivityWorker();
+    registerBroadcastWorker();
 
     // Schedule recurring cleanup jobs
     await scheduleCleanupJobs();

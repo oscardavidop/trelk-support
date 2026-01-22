@@ -4,12 +4,12 @@
  */
 
 import { TELEGRAM_API, ENV } from '../config/index.js';
-import type { 
-  SendMessageOptions, 
+import type {
+  SendMessageOptions,
   EditMessageOptions,
   AnswerCallbackQueryOptions,
   ReplyMarkup,
-  InlineKeyboardMarkup, 
+  InlineKeyboardMarkup,
   TelegramUserProfilePhotos
 } from '../types/index.js';
 import { logger } from './logger.js';
@@ -26,13 +26,13 @@ function resolveMediaSource(source: string): { isUrl: boolean; path: string } {
   if (source.startsWith('http://') || source.startsWith('https://')) {
     return { isUrl: true, path: source };
   }
-  
+
   // Local upload URL - convert to file path
   if (source.startsWith('/uploads/')) {
     const localPath = join(process.cwd(), source);
     return { isUrl: false, path: localPath };
   }
-  
+
   // Assume it's already a file path
   return { isUrl: false, path: source };
 }
@@ -41,15 +41,15 @@ function resolveMediaSource(source: string): { isUrl: boolean; path: string } {
 
 async function apiRequest<T>(method: string, body: Record<string, unknown>): Promise<T | null> {
   const url = TELEGRAM_API.getUrl(method);
-  
+
   try {
-    logger.info('api', { 
-      action: 'telegram_api_request', 
-      method, 
+    logger.info('api', {
+      action: 'telegram_api_request',
+      method,
       url,
       body: JSON.stringify(body).substring(0, 200)
     });
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -58,9 +58,9 @@ async function apiRequest<T>(method: string, body: Record<string, unknown>): Pro
 
     const data = await response.json() as { ok: boolean; result?: T; description?: string };
 
-    logger.info('api', { 
-      action: 'telegram_api_response', 
-      method, 
+    logger.info('api', {
+      action: 'telegram_api_response',
+      method,
       ok: data.ok,
       description: data.description,
       hasResult: !!data.result
@@ -68,13 +68,13 @@ async function apiRequest<T>(method: string, body: Record<string, unknown>): Pro
 
     if (!data.ok) {
       logger.error('api', { method, error: data.description });
-      return null;
+      throw new Error(data.description || 'Telegram API error');
     }
 
     return data.result ?? null;
   } catch (error) {
     logger.error('api', { action: 'telegram_api_error', method, url, error: String(error) });
-    return null;
+    throw error;
   }
 }
 
@@ -107,7 +107,7 @@ export async function sendMessage(
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
   }
-  
+
   if (options?.reply_to_message_id) {
     (body as any).reply_to_message_id = options.reply_to_message_id;
   }
@@ -139,7 +139,7 @@ export async function sendMessageWithId(
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
   }
-  
+
   if (options?.reply_to_message_id) {
     (body as any).reply_to_message_id = options.reply_to_message_id;
   }
@@ -196,11 +196,15 @@ export async function sendChatAction(
   chatId: number,
   action: ChatAction = 'typing'
 ): Promise<boolean> {
-  const result = await apiRequest('sendChatAction', {
-    chat_id: chatId,
-    action,
-  });
-  return result !== null;
+  try {
+    const result = await apiRequest('sendChatAction', {
+      chat_id: chatId,
+      action,
+    });
+    return result !== null;
+  } catch (error) {
+    return false;
+  }
 }
 
 // ============= POLLS =============
@@ -295,7 +299,7 @@ export async function getMe(): Promise<{ id: number; username: string } | null> 
 export async function sendPhoto(
   chatId: number,
   photoSource: string,
-  options?: { 
+  options?: {
     caption?: string;
     parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
     replyMarkup?: ReplyMarkup;
@@ -304,7 +308,7 @@ export async function sendPhoto(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(photoSource);
-    
+
     if (isUrl) {
       // Send by URL using JSON API
       const body: Record<string, unknown> = {
@@ -324,11 +328,11 @@ export async function sendPhoto(
       // Send by file upload
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('photo', blob, filename);
@@ -350,9 +354,9 @@ export async function sendPhoto(
         logger.error('api', { method: 'sendPhoto', error: 'Empty response from Telegram' });
         return false;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendPhoto', error: data.description });
         return false;
@@ -373,7 +377,7 @@ export async function sendPhoto(
 export async function sendPhotoWithId(
   chatId: number,
   photoSource: string,
-  options?: { 
+  options?: {
     caption?: string;
     parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
     replyMarkup?: ReplyMarkup;
@@ -382,7 +386,7 @@ export async function sendPhotoWithId(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(photoSource);
-    
+
     if (isUrl) {
       const body: Record<string, unknown> = {
         chat_id: chatId,
@@ -401,11 +405,11 @@ export async function sendPhotoWithId(
       // Send by file upload
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('photo', blob, filename);
@@ -427,9 +431,9 @@ export async function sendPhotoWithId(
         logger.error('api', { method: 'sendPhotoWithId', error: 'Empty response from Telegram' });
         return null;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; result?: TelegramMessage; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendPhotoWithId', error: data.description });
         return null;
@@ -460,7 +464,7 @@ export async function sendDocument(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(documentSource);
-    
+
     if (isUrl) {
       // Send by URL using JSON API
       const body: Record<string, unknown> = {
@@ -480,11 +484,11 @@ export async function sendDocument(
       // Send by file upload
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = options?.fileName || path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('document', blob, filename);
@@ -506,9 +510,9 @@ export async function sendDocument(
         logger.error('api', { method: 'sendDocument', error: 'Empty response from Telegram' });
         return false;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendDocument', error: data.description });
         return false;
@@ -539,7 +543,7 @@ export async function sendDocumentWithId(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(documentSource);
-    
+
     if (isUrl) {
       const body: Record<string, unknown> = {
         chat_id: chatId,
@@ -558,11 +562,11 @@ export async function sendDocumentWithId(
       // Send by file upload
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = options?.fileName || path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('document', blob, filename);
@@ -584,9 +588,9 @@ export async function sendDocumentWithId(
         logger.error('api', { method: 'sendDocumentWithId', error: 'Empty response from Telegram' });
         return null;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; result?: TelegramMessage; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendDocumentWithId', error: data.description });
         return null;
@@ -615,7 +619,7 @@ export async function sendVoice(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(audioSource);
-    
+
     if (isUrl) {
       const body: Record<string, unknown> = {
         chat_id: chatId,
@@ -633,11 +637,11 @@ export async function sendVoice(
     } else {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('voice', blob, filename);
@@ -658,9 +662,9 @@ export async function sendVoice(
         logger.error('api', { method: 'sendVoice', error: 'Empty response from Telegram' });
         return false;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendVoice', error: data.description });
         return false;
@@ -689,7 +693,7 @@ export async function sendAudio(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(audioSource);
-    
+
     if (isUrl) {
       const body: Record<string, unknown> = {
         chat_id: chatId,
@@ -707,11 +711,11 @@ export async function sendAudio(
     } else {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('audio', blob, filename);
@@ -732,9 +736,9 @@ export async function sendAudio(
         logger.error('api', { method: 'sendAudio', error: 'Empty response from Telegram' });
         return false;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendAudio', error: data.description });
         return false;
@@ -768,7 +772,7 @@ export async function sendVideo(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(videoSource);
-    
+
     if (isUrl) {
       const body: Record<string, unknown> = {
         chat_id: chatId,
@@ -785,17 +789,17 @@ export async function sendVideo(
       if (options?.width) body.width = options.width;
       if (options?.height) body.height = options.height;
       if (options?.duration) body.duration = options.duration;
-      
+
       const result = await apiRequest('sendVideo', body);
       return result !== null;
     } else {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('video', blob, filename);
@@ -818,9 +822,9 @@ export async function sendVideo(
         logger.error('api', { method: 'sendVideo', error: 'Empty response from Telegram' });
         return false;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendVideo', error: data.description });
         return false;
@@ -854,7 +858,7 @@ export async function sendVideoWithId(
   try {
     // Resolve the media source (handles /uploads/... URLs)
     const { isUrl, path: resolvedPath } = resolveMediaSource(videoSource);
-    
+
     if (isUrl) {
       const body: Record<string, unknown> = {
         chat_id: chatId,
@@ -871,18 +875,18 @@ export async function sendVideoWithId(
       if (options?.width) body.width = options.width;
       if (options?.height) body.height = options.height;
       if (options?.duration) body.duration = options.duration;
-      
+
       const result = await apiRequest<TelegramMessage>('sendVideo', body);
       return result?.message_id ?? null;
     } else {
       // Send by file upload
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const fileBuffer = await fs.readFile(resolvedPath);
       const filename = path.basename(resolvedPath);
       const blob = new Blob([fileBuffer]);
-      
+
       const form = new FormData();
       form.append('chat_id', chatId.toString());
       form.append('video', blob, filename);
@@ -905,9 +909,9 @@ export async function sendVideoWithId(
         logger.error('api', { method: 'sendVideoWithId', error: 'Empty response from Telegram' });
         return null;
       }
-      
+
       const data = JSON.parse(text) as { ok: boolean; result?: TelegramMessage; description?: string };
-      
+
       if (!data.ok) {
         logger.error('api', { method: 'sendVideoWithId', error: data.description });
         return null;
@@ -1024,14 +1028,14 @@ export async function editMessageReplyMarkup(
     chat_id: chatId,
     message_id: messageId,
   };
-  
+
   if (replyMarkup) {
     body.reply_markup = replyMarkup;
   } else {
     // Empty object to remove keyboard
     body.reply_markup = { inline_keyboard: [] };
   }
-  
+
   const result = await apiRequest('editMessageReplyMarkup', body);
   return result !== null;
 }
@@ -1055,11 +1059,11 @@ export async function editMessageCaption(
     caption,
     parse_mode: options?.parseMode ?? 'HTML',
   };
-  
+
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
   }
-  
+
   const result = await apiRequest('editMessageCaption', body);
   return result !== null;
 }
@@ -1089,11 +1093,11 @@ export async function editMessageMedia(
       parse_mode: media.parseMode ?? 'HTML',
     },
   };
-  
+
   if (replyMarkup) {
     body.reply_markup = replyMarkup;
   }
-  
+
   const result = await apiRequest('editMessageMedia', body);
   return result !== null;
 }
@@ -1116,7 +1120,7 @@ export async function pinChatMessage(
     message_id: messageId,
     disable_notification: options?.disableNotification ?? true,
   };
-  
+
   const result = await apiRequest('pinChatMessage', body);
   return result !== null;
 }
@@ -1132,11 +1136,11 @@ export async function unpinChatMessage(
   const body: Record<string, unknown> = {
     chat_id: chatId,
   };
-  
+
   if (messageId) {
     body.message_id = messageId;
   }
-  
+
   const result = await apiRequest('unpinChatMessage', body);
   return result !== null;
 }
@@ -1210,7 +1214,7 @@ export interface InlineKeyboardButton {
 
 export function buildInlineKeyboard(rows: InlineKeyboardButton[][]): InlineKeyboardMarkup {
   return {
-    inline_keyboard: rows.map(row => 
+    inline_keyboard: rows.map(row =>
       row.map(btn => ({
         text: btn.text,
         callback_data: btn.callbackData,
@@ -1245,20 +1249,20 @@ export async function copyMessage(
     from_chat_id: fromChatId,
     message_id: messageId,
   };
-  
+
   if (options?.caption !== undefined) {
     body.caption = options.caption;
     body.parse_mode = options.parseMode ?? 'HTML';
   }
-  
+
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
   }
-  
+
   if (options?.disableNotification) {
     body.disable_notification = true;
   }
-  
+
   const result = await apiRequest<{ message_id: number }>('copyMessage', body);
   return result?.message_id ?? null;
 }
@@ -1281,15 +1285,15 @@ export async function forwardMessage(
     from_chat_id: fromChatId,
     message_id: messageId,
   };
-  
+
   if (options?.disableNotification) {
     body.disable_notification = true;
   }
-  
+
   if (options?.protectContent) {
     body.protect_content = true;
   }
-  
+
   const result = await apiRequest<TelegramMessage>('forwardMessage', body);
   return result?.message_id ?? null;
 }
@@ -1313,19 +1317,19 @@ export async function sendSticker(
     chat_id: chatId,
     sticker,
   };
-  
+
   if (options?.emoji) {
     body.emoji = options.emoji;
   }
-  
+
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
   }
-  
+
   if (options?.disableNotification) {
     body.disable_notification = true;
   }
-  
+
   const result = await apiRequest<TelegramMessage>('sendSticker', body);
   return result?.message_id ?? null;
 }
@@ -1354,14 +1358,14 @@ export async function sendLocation(
     latitude,
     longitude,
   };
-  
+
   if (options?.horizontalAccuracy) body.horizontal_accuracy = options.horizontalAccuracy;
   if (options?.livePeriod) body.live_period = options.livePeriod;
   if (options?.heading) body.heading = options.heading;
   if (options?.proximityAlertRadius) body.proximity_alert_radius = options.proximityAlertRadius;
   if (options?.replyMarkup) body.reply_markup = options.replyMarkup;
   if (options?.disableNotification) body.disable_notification = true;
-  
+
   const result = await apiRequest<TelegramMessage>('sendLocation', body);
   return result?.message_id ?? null;
 }
@@ -1392,14 +1396,14 @@ export async function sendVenue(
     title,
     address,
   };
-  
+
   if (options?.foursquareId) body.foursquare_id = options.foursquareId;
   if (options?.foursquareType) body.foursquare_type = options.foursquareType;
   if (options?.googlePlaceId) body.google_place_id = options.googlePlaceId;
   if (options?.googlePlaceType) body.google_place_type = options.googlePlaceType;
   if (options?.replyMarkup) body.reply_markup = options.replyMarkup;
   if (options?.disableNotification) body.disable_notification = true;
-  
+
   const result = await apiRequest<TelegramMessage>('sendVenue', body);
   return result?.message_id ?? null;
 }
@@ -1424,12 +1428,12 @@ export async function sendContact(
     phone_number: phoneNumber,
     first_name: firstName,
   };
-  
+
   if (options?.lastName) body.last_name = options.lastName;
   if (options?.vcard) body.vcard = options.vcard;
   if (options?.replyMarkup) body.reply_markup = options.replyMarkup;
   if (options?.disableNotification) body.disable_notification = true;
-  
+
   const result = await apiRequest<TelegramMessage>('sendContact', body);
   return result?.message_id ?? null;
 }
@@ -1452,13 +1456,13 @@ export async function sendDice(
     chat_id: chatId,
     emoji: emoji ?? '🎲',
   };
-  
+
   if (options?.replyMarkup) body.reply_markup = options.replyMarkup;
   if (options?.disableNotification) body.disable_notification = true;
-  
+
   const result = await apiRequest<{ message_id: number; dice: { value: number } }>('sendDice', body);
   if (!result) return null;
-  
+
   return {
     messageId: result.message_id,
     value: result.dice?.value ?? 0,
@@ -1510,11 +1514,11 @@ export async function setChatMenuButton(
   }
 ): Promise<boolean> {
   const body: Record<string, unknown> = {};
-  
+
   if (chatId) {
     body.chat_id = chatId;
   }
-  
+
   if (menuButton) {
     if (menuButton.type === 'web_app' && menuButton.webApp) {
       body.menu_button = {
@@ -1528,7 +1532,7 @@ export async function setChatMenuButton(
       body.menu_button = { type: 'default' };
     }
   }
-  
+
   const result = await apiRequest('setChatMenuButton', body);
   return result !== null;
 }
@@ -1545,10 +1549,10 @@ export async function simulateTyping(
 ): Promise<void> {
   const startTime = Date.now();
   const interval = 4000; // Telegram chat action lasts ~5 seconds
-  
+
   // Send initial action
   await sendChatAction(chatId, 'typing');
-  
+
   // Continue sending until duration is reached
   while (Date.now() - startTime < durationMs - interval) {
     await new Promise(resolve => setTimeout(resolve, interval));
@@ -1556,7 +1560,7 @@ export async function simulateTyping(
       await sendChatAction(chatId, 'typing');
     }
   }
-  
+
   // Wait remaining time
   const remaining = durationMs - (Date.now() - startTime);
   if (remaining > 0) {
@@ -1575,15 +1579,15 @@ export async function getUserProfilePhotos(
   const body: Record<string, unknown> = {
     user_id: userId,
   };
-  
+
   if (options?.offset !== undefined) {
     body.offset = options.offset;
   }
-  
+
   if (options?.limit !== undefined) {
     body.limit = options.limit;
   }
-  
+
   const result = await apiRequest<TelegramUserProfilePhotos>('getUserProfilePhotos', body);
   return result;
 }

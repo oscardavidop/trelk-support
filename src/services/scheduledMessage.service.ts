@@ -12,13 +12,13 @@
 
 import { Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  ScheduledMessage, 
-  IScheduledMessage, 
-  ScheduleType, 
-  TriggerEvent, 
+import {
+  ScheduledMessage,
+  IScheduledMessage,
+  ScheduleType,
+  TriggerEvent,
   ScheduledMessageStatus,
-  MediaType 
+  MediaType
 } from '../database/models/ScheduledMessage.js';
 import { ChatSession } from '../database/models/ChatSession.js';
 import { Agent } from '../database/models/Agent.js';
@@ -31,6 +31,7 @@ import { getIO } from './socket.js';
 // BullMQ integration
 import { scheduleMessage as scheduleWithBullMQ, cancelScheduledMessage as cancelBullMQJob } from '../workers/index.js';
 import { isRedisConnected } from './redis.js';
+import { addMessage } from './chat.service.js';
 
 // Worker instance ID for distributed locking
 const WORKER_ID = `worker-${process.pid}-${uuidv4().slice(0, 8)}`;
@@ -79,7 +80,7 @@ export async function createScheduledMessage(
   // Resolve saved reply if provided
   let messageText = input.message.text;
   let placeholders: Record<string, string> = {};
-  
+
   if (input.message.savedReplyId) {
     const savedReply = await SavedReply.findById(input.message.savedReplyId);
     if (savedReply) {
@@ -102,7 +103,7 @@ export async function createScheduledMessage(
       session: session._id,
       sender: 'user',
     }).sort({ createdAt: -1 });
-    
+
     inactivityStartedAt = lastUserMessage?.createdAt || new Date();
   }
 
@@ -120,14 +121,14 @@ export async function createScheduledMessage(
     message: {
       text: messageText,
       media: input.message.media,
-      savedReplyId: input.message.savedReplyId 
-        ? new Types.ObjectId(input.message.savedReplyId) 
+      savedReplyId: input.message.savedReplyId
+        ? new Types.ObjectId(input.message.savedReplyId)
         : undefined,
       placeholders,
     },
     expiresAt: input.expiresAt,
-    relatedRuleId: input.relatedRuleId 
-      ? new Types.ObjectId(input.relatedRuleId) 
+    relatedRuleId: input.relatedRuleId
+      ? new Types.ObjectId(input.relatedRuleId)
       : undefined,
   });
 
@@ -141,13 +142,13 @@ export async function createScheduledMessage(
         input.chatId,
         input.scheduledAt
       );
-      
+
       if (jobId) {
         // Update the document with the BullMQ job ID for tracking
         await ScheduledMessage.findByIdAndUpdate(scheduled._id, {
           bullmqJobId: jobId,
         });
-        
+
         logger.info('api', {
           action: 'scheduled_message_queued_bullmq',
           scheduledMessageId: scheduled._id.toString(),
@@ -167,7 +168,7 @@ export async function createScheduledMessage(
 
   // Log activity
   await logActivity(
-    input.sessionId, 
+    input.sessionId,
     'scheduled_message_created',
     `Mensaje programado creado para ${input.type === 'fixed_time' ? 'hora fija' : input.type === 'after_inactivity' ? 'después de inactividad' : 'evento'}`,
     {
@@ -229,7 +230,7 @@ export async function cancelScheduledMessage(
     }
 
     await logActivity(
-      message.sessionId, 
+      message.sessionId,
       'scheduled_message_cancelled',
       reason || 'Mensaje programado cancelado',
       {
@@ -240,6 +241,26 @@ export async function cancelScheduledMessage(
     );
 
     emitScheduledMessageEvent('scheduled_message_cancelled', message);
+
+    // emit system message to chat
+    // emitSyst
+    const savedMessage = await addMessage(message.sessionId, 'bot', 'Se canceló un mensaje programado.', {
+      messageType: 'system',
+    });
+
+    // Emit message:new event so it shows in real-time in the dashboard
+    const io = getIO();
+    if (io) {
+      const messageData = {
+        _id: savedMessage._id.toString(),
+        session: message.sessionId,
+        sender: 'bot',
+        content: 'Se canceló un mensaje programado.',
+        messageType: 'system' as const,
+        createdAt: savedMessage.createdAt,
+      };
+      io.to(`session:${message.sessionId}`).emit('message:new', messageData);
+    }
 
     logger.info('api', {
       action: 'scheduled_message_cancelled',
@@ -365,7 +386,7 @@ export async function processScheduledMessages(): Promise<{
   // 4. Process each message
   for (const message of allPending) {
     stats.processed++;
-    
+
     logger.info('api', {
       action: 'scheduled_message_processing',
       messageId: message._id.toString(),
@@ -373,7 +394,7 @@ export async function processScheduledMessages(): Promise<{
       sessionId: message.sessionId,
       chatId: message.chatId,
     });
-    
+
     // Try to acquire lock
     const locked = await acquireLock(message._id);
     if (!locked) {
@@ -407,7 +428,7 @@ export async function processScheduledMessages(): Promise<{
 
       // Send the message
       const result = await sendScheduledMessage(message);
-      
+
       if (result.success) {
         await ScheduledMessage.updateOne(
           { _id: message._id },
@@ -430,7 +451,7 @@ export async function processScheduledMessages(): Promise<{
 
         // Log and emit
         await logActivity(
-          message.sessionId, 
+          message.sessionId,
           'scheduled_message_sent',
           'Mensaje programado enviado exitosamente',
           {
@@ -447,7 +468,7 @@ export async function processScheduledMessages(): Promise<{
         // Handle failure
         const newAttempts = message.attempts + 1;
         const isFinal = newAttempts >= message.maxAttempts;
-        
+
         logger.error('api', {
           action: 'scheduled_message_send_failed',
           messageId: message._id.toString(),
@@ -471,7 +492,7 @@ export async function processScheduledMessages(): Promise<{
         if (isFinal) {
           stats.failed++;
           await logActivity(
-            message.sessionId, 
+            message.sessionId,
             'scheduled_message_failed',
             `Mensaje programado falló después de ${newAttempts} intentos: ${result.error}`,
             {
@@ -512,7 +533,7 @@ export async function triggerEventMessages(
     type: 'on_event',
     triggerEvent: event,
   };
-  
+
   if (sessionId) {
     query.sessionId = sessionId;
   }
@@ -539,7 +560,7 @@ export async function triggerEventMessages(
     if (!locked) continue;
 
     const result = await sendScheduledMessage(message);
-    
+
     if (result.success) {
       await ScheduledMessage.updateOne(
         { _id: message._id },
@@ -583,7 +604,7 @@ export async function getSessionScheduledMessages(
   status?: ScheduledMessageStatus[]
 ): Promise<IScheduledMessage[]> {
   const query: Record<string, unknown> = { sessionId };
-  
+
   if (status && status.length > 0) {
     query.status = { $in: status };
   }
@@ -749,7 +770,7 @@ async function sendScheduledMessage(
 
     // Check if media exists AND has a valid type
     const hasValidMedia = content.media && content.media.type && (content.media.fileId || content.media.url);
-    
+
     if (hasValidMedia) {
       // Send media message
       switch (content.media!.type) {
@@ -836,7 +857,7 @@ async function resolvePlaceholders(
     .populate('user')
     .populate('assignedAgent');
 
-  const agent = agentId !== 'system' 
+  const agent = agentId !== 'system'
     ? await Agent.findById(agentId)
     : null;
 
@@ -892,7 +913,7 @@ function emitScheduledMessageEvent(
 ): void {
   try {
     const io = getIO();
-    
+
     // Emit to session room
     io.to(`session:${message.sessionId}`).emit(event as any, {
       id: message._id.toString(),
@@ -931,7 +952,7 @@ function emitScheduledMessageEvent(
  */
 export async function resetInactivityTimers(sessionId: string): Promise<void> {
   const now = new Date();
-  
+
   // Update inactivityStartedAt for all pending inactivity messages
   await ScheduledMessage.updateMany(
     {

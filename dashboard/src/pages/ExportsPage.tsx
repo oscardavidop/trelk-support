@@ -99,9 +99,9 @@ export default function ExportsPage() {
     
     setLoadingJobs(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
       
-      const res = await fetch(`/api/exports`, {
+      const res = await fetch(`/api/exports/jobs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -115,26 +115,31 @@ export default function ExportsPage() {
     }
   }, [canAccess]);
   
-  // Fetch agents and categories for filters
+  // Fetch agents for filters (categories are static)
   const fetchOptions = useCallback(async () => {
     if (!canAccess) return;
     
     try {
       const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
       
-      const [agentsRes, categoriesRes] = await Promise.all([
-        fetch(`/api/agents`, { headers: { Authorization: `Bearer ${token}` }}),
-        fetch(`/api/categories`, { headers: { Authorization: `Bearer ${token}` }})
-      ]);
+      // Fetch agents
+      const agentsRes = await fetch(`/api/agents`, { 
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       if (agentsRes.ok) {
         const data = await agentsRes.json();
         setAgents(data.data || []);
       }
-      if (categoriesRes.ok) {
-        const data = await categoriesRes.json();
-        setCategories(data.data || []);
-      }
+      
+      // Categories are static based on ChatSession model
+      setCategories([
+        { _id: 'support', name: 'Soporte' },
+        { _id: 'billing', name: 'Facturación' },
+        { _id: 'bug', name: 'Errores' },
+        { _id: 'feedback', name: 'Feedback' },
+        { _id: 'other', name: 'Otros' }
+      ]);
     } catch (error) {
       console.error('Failed to fetch filter options:', error);
     }
@@ -143,20 +148,24 @@ export default function ExportsPage() {
   useEffect(() => {
     fetchJobs();
     fetchOptions();
-    
-    // Poll for job updates
-    const interval = setInterval(fetchJobs, 10000);
-    return () => clearInterval(interval);
   }, [fetchJobs, fetchOptions]);
+  
+  // Poll only when there are pending/processing jobs
+  useEffect(() => {
+    const hasPendingJobs = jobs.some(j => j.status === 'pending' || j.status === 'processing');
+    if (!hasPendingJobs) return;
+    
+    const interval = setInterval(fetchJobs, 5000);
+    return () => clearInterval(interval);
+  }, [jobs, fetchJobs]);
   
   // Create export job
   const handleCreateExport = async () => {
     setCreating(true);
     try {
-      const token = localStorage.getItem('auth_token');
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
       
-      const res = await fetch(`/api/exports`, {
+      const res = await fetch(`/api/exports/batch`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -169,15 +178,17 @@ export default function ExportsPage() {
             dateTo: dateTo || undefined,
             agentIds: selectedAgents.length > 0 ? selectedAgents : undefined,
             categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-            status: selectedStatus.length > 0 ? selectedStatus : undefined,
+            statuses: selectedStatus.length > 0 ? selectedStatus : undefined,
           },
-          options: {
-            includeMessages,
-            includeNotes,
-            includeLogs,
-            includeAgentActions,
-            includeBranding: format === 'pdf' ? includeBranding : undefined,
-          }
+          include: {
+            messages: includeMessages,
+            notes: includeNotes,
+            systemLogs: includeLogs,
+            agentActions: includeAgentActions,
+          },
+          pdfOptions: format === 'pdf' ? {
+            includeBranding: includeBranding,
+          } : undefined
         })
       });
       
@@ -210,10 +221,9 @@ export default function ExportsPage() {
   // Delete export job
   const handleDelete = async (jobId: string) => {
     try {
-      const token = localStorage.getItem('auth_token');
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
       
-      await fetch(`/api/exports/${jobId}`, {
+      await fetch(`/api/exports/jobs/${jobId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -386,6 +396,8 @@ function FormatCard({
 }
 
 function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void }) {
+  const [showDetails, setShowDetails] = useState(false);
+  
   const formatIcons = {
     pdf: <FileText className="w-5 h-5" />,
     json: <FileJson className="w-5 h-5" />,
@@ -449,13 +461,57 @@ function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void
             </a>
           )}
           <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+            title="Ver detalles"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
             onClick={onDelete}
             className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            title="Eliminar"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
+      
+      {/* Details panel */}
+      {showDetails && (
+        <div className="mt-4 pt-4 border-t border-gray-700 grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-gray-500">ID del Job:</span>
+            <p className="text-gray-300 font-mono text-xs">{job._id}</p>
+          </div>
+          <div>
+            <span className="text-gray-500">Formato:</span>
+            <p className="text-gray-300">{job.format.toUpperCase()}</p>
+          </div>
+          <div>
+            <span className="text-gray-500">Creado:</span>
+            <p className="text-gray-300">{new Date(job.createdAt).toLocaleString('es-ES')}</p>
+          </div>
+          {job.completedAt && (
+            <div>
+              <span className="text-gray-500">Completado:</span>
+              <p className="text-gray-300">{new Date(job.completedAt).toLocaleString('es-ES')}</p>
+            </div>
+          )}
+          {job.fileSize && (
+            <div>
+              <span className="text-gray-500">Tamaño:</span>
+              <p className="text-gray-300">{formatFileSize(job.fileSize)}</p>
+            </div>
+          )}
+          {job.recordCount && (
+            <div>
+              <span className="text-gray-500">Registros:</span>
+              <p className="text-gray-300">{job.recordCount}</p>
+            </div>
+          )}
+        </div>
+      )}
       
       {job.error && (
         <p className="mt-2 text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
@@ -714,12 +770,8 @@ function Checkbox({
   label: string;
 }) {
   return (
-    <label className="flex items-center gap-3 cursor-pointer group">
-      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-        checked
-          ? 'bg-emerald-500 border-emerald-500'
-          : 'border-gray-600 group-hover:border-gray-500'
-      }`}>
+    <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(!checked)}>
+      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600 group-hover:border-gray-500'}`}>
         {checked && <CheckCircle className="w-3 h-3 text-white" />}
       </div>
       <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{label}</span>

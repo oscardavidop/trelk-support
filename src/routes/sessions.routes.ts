@@ -177,7 +177,8 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   });
   
   /**
-   * Get session messages (with access control)
+   * Get session messages (with access control and pagination)
+   * Supports infinite scroll with cursor-based pagination
    */
   fastify.get<{ Params: SessionParams; Querystring: MessagesQuery }>(
     '/api/sessions/:sessionId/messages', 
@@ -193,14 +194,14 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
       }
       
-      const messages = await getSessionMessages(
+      const result = await getSessionMessages(
         sessionId, 
-        limit ? parseInt(limit, 10) : 100,
+        limit ? parseInt(limit, 10) : 50,
         before ? new Date(before) : undefined
       );
       
       // Transform messages to include sessionId string instead of ObjectId
-      const transformedMessages = messages.map(msg => ({
+      const transformedMessages = result.messages.map(msg => ({
         _id: msg._id.toString(),
         session: sessionId, // Use sessionId string instead of ObjectId
         sender: msg.sender,
@@ -225,7 +226,13 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
       // Find the pinned message
       const pinnedMessage = transformedMessages.find(m => m.isPinned);
       
-      return { ok: true, messages: transformedMessages, pinnedMessage: pinnedMessage || null };
+      return { 
+        ok: true, 
+        messages: transformedMessages, 
+        pinnedMessage: pinnedMessage || null,
+        hasMore: result.hasMore,
+        oldestTimestamp: result.oldestTimestamp?.toISOString()
+      };
     }
   );
   
