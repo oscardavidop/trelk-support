@@ -4,7 +4,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import {
   getSessionById,
   getSessionsByStatus,
@@ -22,13 +22,19 @@ import {
   getQueuedSessions,
   getQueueCount,
   canAgentAccessSession,
+  canAgentAccessSessionV2,
+  getSessionMessagesV2,
 } from '../services/chat.service.js';
 import {
   getAllSavedReplies,
   searchSavedReplies,
   incrementUsageCount,
+  createSavedReply,
+  updateSavedReply,
+  deleteSavedReply,
 } from '../services/savedReply.service.js';
 import { getSessionTimeline } from '../services/activity-log.service.js';
+import { ChatSession, Message } from '../database/index.js';
 
 interface SessionParams {
   sessionId: string;
@@ -54,23 +60,23 @@ interface FilteredSessionsQuery {
 }
 
 export async function registerSessionRoutes(fastify: FastifyInstance): Promise<void> {
-  
+
   // All routes require authentication
   fastify.addHook('preHandler', authMiddleware);
-  
+
   // ============= SESSION LIST =============
-  
+
   /**
    * Get all active sessions (respects agent visibility)
    */
   fastify.get('/api/sessions', async (request) => {
     const agent = (request as any).agent;
     const isAdmin = agent.role === 'admin';
-    
+
     const sessions = await getVisibleSessionsForAgent(agent._id.toString(), isAdmin);
     return { ok: true, sessions };
   });
-  
+
   /**
    * Get queue - unassigned sessions waiting
    */
@@ -88,7 +94,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
     const { status, search, dateFilter, page, limit } = request.query;
     const agent = (request as any).agent;
     const isAdminOrSupervisor = agent.role === 'admin' || agent.role === 'supervisor';
-    
+
     const result = await getFilteredSessions({
       status: status as 'open' | 'closed' | undefined,
       search,
@@ -98,7 +104,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 50,
     });
-    
+
     return { ok: true, ...result };
   });
 
@@ -111,7 +117,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
     const counts = await getSessionCounts(agent._id.toString(), isAdminOrSupervisor);
     return { ok: true, counts };
   });
-  
+
   /**
    * Get waiting sessions (queue)
    */
@@ -119,7 +125,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
     const sessions = await getWaitingSessions();
     return { ok: true, sessions };
   });
-  
+
   /**
    * Get agent's assigned sessions
    */
@@ -128,21 +134,21 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
     const sessions = await getAgentSessions(agent._id.toString());
     return { ok: true, sessions };
   });
-  
+
   /**
    * Get sessions by status
    */
   fastify.get<{ Params: { status: string } }>('/api/sessions/status/:status', async (request, reply) => {
     const { status } = request.params;
-    
+
     if (!['bot', 'waiting', 'human', 'closed'].includes(status)) {
       return reply.code(400).send({ ok: false, error: 'Invalid status' });
     }
-    
+
     const sessions = await getSessionsByStatus(status as any);
     return { ok: true, sessions };
   });
-  
+
   /**
    * Get session statistics
    */
@@ -150,9 +156,9 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
     const stats = await getSessionStats();
     return { ok: true, stats };
   });
-  
+
   // ============= SINGLE SESSION =============
-  
+
   /**
    * Get single session by ID (with access control)
    */
@@ -160,50 +166,122 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
     const { sessionId } = request.params;
     const agent = (request as any).agent;
     const isAdmin = agent.role === 'admin';
-    
+
     // Check access permission
-    const canAccess = await canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
+    const canAccess = canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
     if (!canAccess) {
       return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
     }
-    
+
     const session = await getSessionById(sessionId);
-    
+
     if (!session) {
       return reply.code(404).send({ ok: false, error: 'Session not found' });
     }
-    
+
     return { ok: true, session };
   });
-  
+
   /**
    * Get session messages (with access control and pagination)
    * Supports infinite scroll with cursor-based pagination
    */
+  // fastify.get<{ Params: SessionParams; Querystring: MessagesQuery }>(
+  //   '/api/sessions/:sessionId/messages', 
+  //   async (request, reply) => {
+  //     const { sessionId } = request.params;
+  //     const { limit, before } = request.query;
+  //     const agent = (request as any).agent;
+  //     const isAdmin = agent.role === 'admin';
+
+  //     // Check access permission
+  //     const canAccess = await canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
+  //     if (!canAccess) {
+  //       return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
+  //     }
+
+  //     const result = await getSessionMessages(
+  //       sessionId, 
+  //       limit ? parseInt(limit, 10) : 50,
+  //       before ? new Date(before) : undefined
+  //     );
+
+  //     // Transform messages to include sessionId string instead of ObjectId
+  //     const transformedMessages = result.messages.map(msg => ({
+  //       _id: msg._id.toString(),
+  //       session: sessionId, // Use sessionId string instead of ObjectId
+  //       sender: msg.sender,
+  //       senderAgent: msg.senderAgent,
+  //       content: msg.content,
+  //       messageType: msg.messageType,
+  //       mediaUrl: msg.mediaUrl,
+  //       telegramMessageId: msg.telegramMessageId,
+  //       isRead: msg.isRead,
+  //       isEdited: msg.isEdited || false,
+  //       editedAt: msg.editedAt,
+  //       isPinned: (msg as any).isPinned || false,
+  //       createdAt: msg.createdAt,
+  //       replyToMessage: (msg as any).replyTo ? {
+  //         _id: (msg as any).replyTo._id?.toString(),
+  //         sender: (msg as any).replyTo.sender,
+  //         senderAgent: (msg as any).replyTo.senderAgent,
+  //         content: (msg as any).replyTo.content,
+  //       } : undefined,
+  //     }));
+
+  //     // Find the pinned message
+  //     const pinnedMessage = transformedMessages.find(m => m.isPinned);
+
+  //     return { 
+  //       ok: true, 
+  //       messages: transformedMessages, 
+  //       pinnedMessage: pinnedMessage || null,
+  //       hasMore: result.hasMore,
+  //       oldestTimestamp: result.oldestTimestamp?.toISOString()
+  //     };
+  //   }
+  // );
   fastify.get<{ Params: SessionParams; Querystring: MessagesQuery }>(
-    '/api/sessions/:sessionId/messages', 
+    '/api/sessions/:sessionId/messages',
     async (request, reply) => {
       const { sessionId } = request.params;
       const { limit, before } = request.query;
       const agent = (request as any).agent;
-      const isAdmin = agent.role === 'admin';
-      
-      // Check access permission
-      const canAccess = await canAgentAccessSession(sessionId, agent._id.toString(), isAdmin);
-      if (!canAccess) {
-        return reply.code(403).send({ ok: false, error: 'Access denied to this session' });
+      const isAdmin = agent.role === 'admin' || agent.role === 'supervisor';
+
+      // 1. OPTIMIZACIÓN: Buscar la sesión UNA sola vez aquí
+      const session = await ChatSession.findOne({ sessionId })
+        .select('_id status assignedAgent closedBy sessionId') // Solo lo necesario
+        .lean();
+
+      if (!session) {
+        return reply.code(404).send({ ok: false, error: 'Session not found' });
       }
-      
-      const result = await getSessionMessages(
-        sessionId, 
-        limit ? parseInt(limit, 10) : 50,
-        before ? new Date(before) : undefined
-      );
-      
-      // Transform messages to include sessionId string instead of ObjectId
-      const transformedMessages = result.messages.map(msg => ({
+
+      // 2. Verificar acceso pasando el OBJETO (Sync, super rápido)
+      if (!canAgentAccessSessionV2(session, agent._id.toString(), isAdmin)) {
+        return reply.code(403).send({ ok: false, error: 'Access denied' });
+      }
+
+      // 3. Obtener mensajes y pinned message en PARALELO
+      const limitNum = limit ? parseInt(limit, 10) : 50;
+      const beforeDate = before ? new Date(before) : undefined;
+
+      const [messagesResult, pinnedMessage] = await Promise.all([
+        // A. Los mensajes paginados
+        getSessionMessagesV2(session._id, limitNum, beforeDate),
+
+        // B. El mensaje fijado (Consulta específica)
+        Message.findOne({ session: session._id, isPinned: true })
+          .populate('senderAgent', 'name avatar')
+          .lean()
+      ]);
+
+      // 4. Transformación (Manteniendo tu lógica)
+      // Nota: Usamos .lean() abajo, así que el mapeo es más directo
+      const transformMsg = (msg: any) => ({
         _id: msg._id.toString(),
-        session: sessionId, // Use sessionId string instead of ObjectId
+        session: sessionId, // String del param
         sender: msg.sender,
         senderAgent: msg.senderAgent,
         content: msg.content,
@@ -213,29 +291,26 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         isRead: msg.isRead,
         isEdited: msg.isEdited || false,
         editedAt: msg.editedAt,
-        isPinned: (msg as any).isPinned || false,
+        isPinned: msg.isPinned || false,
         createdAt: msg.createdAt,
-        replyToMessage: (msg as any).replyTo ? {
-          _id: (msg as any).replyTo._id?.toString(),
-          sender: (msg as any).replyTo.sender,
-          senderAgent: (msg as any).replyTo.senderAgent,
-          content: (msg as any).replyTo.content,
+        replyToMessage: msg.replyTo ? {
+          _id: msg.replyTo._id?.toString(),
+          sender: msg.replyTo.sender,
+          senderAgent: msg.replyTo.senderAgent,
+          content: msg.replyTo.content,
         } : undefined,
-      }));
-      
-      // Find the pinned message
-      const pinnedMessage = transformedMessages.find(m => m.isPinned);
-      
-      return { 
-        ok: true, 
-        messages: transformedMessages, 
-        pinnedMessage: pinnedMessage || null,
-        hasMore: result.hasMore,
-        oldestTimestamp: result.oldestTimestamp?.toISOString()
+      });
+
+      return {
+        ok: true,
+        messages: messagesResult.messages.map(transformMsg),
+        // Ahora SI devolvemos el pinned message aunque sea de hace un año
+        pinnedMessage: pinnedMessage ? transformMsg(pinnedMessage) : null,
+        hasMore: messagesResult.hasMore,
+        oldestTimestamp: messagesResult.oldestTimestamp?.toISOString(),
       };
     }
   );
-  
   /**
    * Get session activity timeline
    * Available to agents (filtered) and supervisors/admins (full)
@@ -255,7 +330,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
 
       try {
         const timeline = await getSessionTimeline(sessionId);
-        
+
         // For regular agents, filter out sensitive activities
         if (!isAdmin) {
           const agentSafeActions = [
@@ -285,33 +360,33 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
       }
     }
   );
-  
+
   /**
    * Accept/assign session to current agent
    */
   fastify.post<{ Params: SessionParams }>('/api/sessions/:sessionId/accept', async (request, reply) => {
     const { sessionId } = request.params;
     const agentId = request.agent!._id.toString();
-    
+
     const session = await assignAgent(sessionId, agentId);
-    
+
     if (!session) {
       return reply.code(404).send({ ok: false, error: 'Session not found' });
     }
-    
+
     return { ok: true, session };
   });
-  
+
   /**
    * Close session
    */
   fastify.post<{ Params: SessionParams; Body: CloseSessionBody }>(
-    '/api/sessions/:sessionId/close', 
+    '/api/sessions/:sessionId/close',
     async (request, reply) => {
       const { sessionId } = request.params;
       const { reason, closedByType = 'agent', closeReason = 'manual' } = request.body;
       const agentId = request.agent!._id.toString();
-      
+
       const session = await closeSessionDetailed(
         sessionId,
         closedByType,
@@ -319,11 +394,11 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         agentId,
         reason
       );
-      
+
       if (!session) {
         return reply.code(404).send({ ok: false, error: 'Session not found' });
       }
-      
+
       return { ok: true, session };
     }
   );
@@ -332,6 +407,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Get all active saved replies (for quick reply dropdown)
+   * Requires: replies.read
    */
   fastify.get('/api/saved-replies', async () => {
     const replies = await getAllSavedReplies(false); // Only active ones
@@ -340,6 +416,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Search saved replies
+   * Requires: replies.read
    */
   fastify.get<{ Querystring: { q: string } }>('/api/saved-replies/search', async (request) => {
     const { q } = request.query;
@@ -349,18 +426,122 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Increment usage count for a saved reply
+   * Requires: replies.use
    */
   fastify.post<{ Params: { replyId: string } }>(
-    '/api/saved-replies/:replyId/use', 
+    '/api/saved-replies/:replyId/use',
     async (request, reply) => {
       const { replyId } = request.params;
-      
+
       try {
         await incrementUsageCount(replyId);
         return { ok: true };
       } catch {
         return reply.code(404).send({ ok: false, error: 'Saved reply not found' });
       }
+    }
+  );
+
+  /**
+   * Get all saved replies (including inactive) - for management
+   * Requires: replies.write permission
+   */
+  fastify.get(
+    '/api/saved-replies/manage',
+    { preHandler: requirePermission('replies.write') },
+    async () => {
+      const replies = await getAllSavedReplies(true); // Include inactive
+      return { ok: true, replies };
+    }
+  );
+
+  /**
+   * Create a new saved reply
+   * Requires: replies.write permission
+   */
+  fastify.post<{
+    Body: {
+      title: string;
+      content: string;
+      category?: string;
+      shortcut?: string;
+      isActive?: boolean;
+    };
+  }>(
+    '/api/saved-replies/manage',
+    { preHandler: requirePermission('replies.write') },
+    async (request, reply) => {
+      const { title, content, category, shortcut, isActive } = request.body;
+
+      if (!title || !content) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Title and content are required',
+        });
+      }
+
+      const savedReply = await createSavedReply(
+        {
+          title,
+          content,
+          category,
+          shortcut,
+          isActive,
+        },
+        request.agent!._id.toString()
+      );
+
+      return { ok: true, reply: savedReply };
+    }
+  );
+
+  /**
+   * Update a saved reply
+   * Requires: replies.write permission
+   */
+  fastify.put<{
+    Params: { replyId: string };
+    Body: {
+      title?: string;
+      content?: string;
+      category?: string;
+      shortcut?: string;
+      isActive?: boolean;
+    };
+  }>(
+    '/api/saved-replies/manage/:replyId',
+    { preHandler: requirePermission('replies.write') },
+    async (request, reply) => {
+      const { replyId } = request.params;
+      const updates = request.body;
+
+      const savedReply = await updateSavedReply(replyId, updates);
+
+      if (!savedReply) {
+        return reply.code(404).send({ ok: false, error: 'Saved reply not found' });
+      }
+
+      return { ok: true, reply: savedReply };
+    }
+  );
+
+  /**
+   * Delete a saved reply
+   * Requires: replies.write permission
+   */
+  fastify.delete<{ Params: { replyId: string } }>(
+    '/api/saved-replies/manage/:replyId',
+    { preHandler: requirePermission('replies.write') },
+    async (request, reply) => {
+      const { replyId } = request.params;
+
+      const deleted = await deleteSavedReply(replyId);
+
+      if (!deleted) {
+        return reply.code(404).send({ ok: false, error: 'Saved reply not found' });
+      }
+
+      return { ok: true };
     }
   );
 }

@@ -123,6 +123,9 @@ export async function markWhisperAsRead(whisperId: string): Promise<ApiResponse<
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
+      body: JSON.stringify({ 
+        readAt: new Date().toISOString(), 
+      }),
     });
     const data = await res.json();
     return {

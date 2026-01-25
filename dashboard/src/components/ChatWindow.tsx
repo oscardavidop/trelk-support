@@ -45,7 +45,8 @@ import {
   Eye,
   Volume2,
   VolumeX,
-  Code
+  Code,
+  CheckCheck
 } from 'lucide-react';
 import {
   File as FileIcon,
@@ -54,7 +55,7 @@ import type { ChatSession, Message, TypingEvent, ChatCategory } from '../types';
 import AgentComposer from './AgentComposer';
 import { TypingIndicator, TransferModal, BlockUserModal, CategorySelector, ReopenChatButton, SurveyDisplay } from './enterprise';
 import MessageContextMenu from './MessageContextMenu';
-import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal, TagSelectorModal } from './MessageActionModals';
+import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal, TagSelectorModal, PinnedMessageConfirmationModal } from './MessageActionModals';
 import { WhisperDisplay } from './chat/WhisperDisplay';
 import { useSupervisorStore } from '../stores/supervisorStore';
 import { markWhisperAsRead as markWhisperReadApi } from '../services/socket';
@@ -69,21 +70,21 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, targetMessageId }: ChatWindowProps) {
   const agent = useAuthStore((state) => state.agent);
-  const { 
-    messages, 
-    setMessages, 
+  const {
+    messages,
+    setMessages,
     prependMessages,
-    isLoadingMessages, 
-    setLoadingMessages, 
+    isLoadingMessages,
+    setLoadingMessages,
     isLoadingOlderMessages,
     setLoadingOlderMessages,
     hasMoreMessages,
     oldestMessageTimestamp,
-    updateMessage, 
-    deleteMessage: removeMessage, 
-    pinnedMessages, 
-    setPinnedMessage, 
-    clearPinnedMessage 
+    updateMessage,
+    deleteMessage: removeMessage,
+    pinnedMessages,
+    setPinnedMessage,
+    clearPinnedMessage
   } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -91,7 +92,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
   // Highlighted message state
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
-  
+
   // Flag to track initial load vs new messages
   const isInitialLoadRef = useRef(true);
   const shouldScrollToBottomRef = useRef(false);
@@ -114,7 +115,9 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   const [saveQuickReplyModal, setSaveQuickReplyModal] = useState<{ message: Message } | null>(null);
   const [addNoteModal, setAddNoteModal] = useState<{ message: Message } | null>(null);
   const [tagSelectorModal, setTagSelectorModal] = useState<{ message: Message } | null>(null);
+  const [pinnedMessageConfirmation, setPinnedMessageConfirmation] = useState<{ message: Message } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [pinForUser, setPinForUser] = useState<boolean>(false);
 
   // Whispers from supervisor
   const { whispers, markWhisperAsRead: markWhisperReadStore } = useSupervisorStore();
@@ -133,7 +136,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
     // Clear previous messages immediately to avoid showing stale data
     setMessages([], false, null);
     clearPinnedMessage(session.sessionId);
-    
+
     // Mark as initial load
     isInitialLoadRef.current = true;
     shouldScrollToBottomRef.current = true;
@@ -160,7 +163,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           if (data.pinnedMessage) {
             setPinnedMessage(session.sessionId, data.pinnedMessage);
           }
-          
+
           // Schedule scroll to bottom after messages render
           shouldScrollToBottomRef.current = true;
         } else if (isMounted && !data.ok) {
@@ -238,7 +241,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   useEffect(() => {
     // Don't scroll when loading older messages (prepending)
     if (isLoadingOlderMessages) return;
-    
+
     // Check if we should scroll to bottom
     if (shouldScrollToBottomRef.current && messages.length > 0 && !isLoadingMessages) {
       // Use requestAnimationFrame to ensure DOM is updated
@@ -256,7 +259,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         shouldScrollToBottomRef.current = false;
       });
     }
-    
+
     // Track if new messages were added at the end (not prepended)
     if (messages.length > prevMessagesLengthRef.current && !isInitialLoadRef.current) {
       // Check if user is near bottom before auto-scrolling
@@ -268,7 +271,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         }
       }
     }
-    
+
     prevMessagesLengthRef.current = messages.length;
   }, [messages.length, isLoadingOlderMessages, isLoadingMessages]);
 
@@ -286,7 +289,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   // Load older messages when scrolling up (infinite scroll)
   const loadOlderMessages = useCallback(async () => {
     if (isLoadingOlderMessages || !hasMoreMessages || !oldestMessageTimestamp) return;
-    
+
     // Save scroll position before loading
     if (messagesContainerRef.current) {
       scrollPositionRef.current = {
@@ -294,11 +297,11 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         scrollTop: messagesContainerRef.current.scrollTop
       };
     }
-    
+
     setLoadingOlderMessages(true);
     try {
       const res = await fetch(
-        `/api/sessions/${session.sessionId}/messages?limit=30&before=${encodeURIComponent(oldestMessageTimestamp)}`, 
+        `/api/sessions/${session.sessionId}/messages?limit=30&before=${encodeURIComponent(oldestMessageTimestamp)}`,
         {
           headers: {
             Authorization: `Bearer ${useAuthStore.getState().token}`,
@@ -398,11 +401,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   }, [session.sessionId, closeContextMenu]);
 
   const handlePin = useCallback((message: Message) => {
-    pinMessage(message._id, session.sessionId, (result) => {
-      if (result.ok) {
-        setPinnedMessage(session.sessionId, message);
-      }
-    });
+    setPinnedMessageConfirmation({ message });
     closeContextMenu();
   }, [session.sessionId, setPinnedMessage, closeContextMenu]);
 
@@ -529,9 +528,9 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         console.error('Failed to accept session:', result.error);
         // Check if user blocked the bot
         if (result.data?.code === 'USER_BLOCKED') {
-          toast.error('Chat no disponible', result.error || 'El usuario bloqueó el bot. El chat ha sido cerrado.');
+          toast.error('Chat no disponible', result.error || 'El usuario bloqueó el bot. El chat ha sido cerrado.', { duration: 8000 });
         } else {
-          toast.error('Error', result.error || 'No se pudo aceptar la sesión');
+          toast.error('Error', result.error || 'No se pudo aceptar la sesión', { duration: 5000 });
         }
       }
     });
@@ -627,7 +626,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
       {/* Closed Banner */}
       {isClosed && (
-          // hidden banner in mobile view 
+        // hidden banner in mobile view 
         <div className="flex items-center justify-center gap-2 px-4 py-2 border-b border-gray-800 text-gray-400 text-sm bg-gray-950 h-[56px]">
           <Lock className="w-4 h-4" />
           <span>Modo solo lectura</span>
@@ -797,10 +796,10 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       </div>
 
       {/* Messages */}
-      <div 
+      <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-gradient-to-b from-neutral-950/40 to-neutral-900/20"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-neutral-950 bg-[radial-gradient(#3f3f4630_1px,transparent_1px)] [background-size:16px_16px]"
       >
         {/* Load More Indicator */}
         {hasMoreMessages && (
@@ -1024,6 +1023,24 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         />
       )}
 
+      {pinnedMessageConfirmation && (
+        <PinnedMessageConfirmationModal
+          isOpen={true}
+          message={pinnedMessageConfirmation.message}
+          pinForUser={pinForUser}
+          onPinForUserChange={setPinForUser}
+          onCancel={() => setPinnedMessageConfirmation(null)}
+          onConfirm={() => {
+            pinMessage(pinnedMessageConfirmation.message._id, session.sessionId, pinForUser, (result) => {
+              if (result.ok) {
+                setPinnedMessage(session.sessionId, pinnedMessageConfirmation.message);
+              }
+            });
+            setPinnedMessageConfirmation(null);
+          }}
+        />
+      )}
+
       {saveQuickReplyModal && (
         <SaveQuickReplyModal
           isOpen={true}
@@ -1230,6 +1247,8 @@ function MessageBubble({
               })}
             </span>
             {(message as any).isEdited && <span>(editado)</span>}
+            {isAgent && <CheckCheck className="w-3 h-3 opacity-80" />}
+
             {isPinned && <Pin className="w-3 h-3" />}
           </div>
         </div>

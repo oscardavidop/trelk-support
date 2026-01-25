@@ -76,7 +76,8 @@ export async function getUserNotes(userId: string, limit = 50): Promise<NoteWith
     .sort({ createdAt: -1 })
     .limit(limit)
     .populate('createdBy', 'name')
-    .populate('session', 'sessionId');
+    .populate('session', 'sessionId')
+    .lean();
 
   return notes.map(n => ({
     id: n._id!.toString(),
@@ -94,7 +95,7 @@ export async function getUserNotes(userId: string, limit = 50): Promise<NoteWith
  * Delete a note
  */
 export async function deleteNote(noteId: string, agentId: string): Promise<boolean> {
-  const result = await Note.deleteOne({ _id: noteId });
+  const result = await Note.deleteOne({ _id: noteId }).lean();
   return result.deletedCount > 0;
 }
 

@@ -3,8 +3,10 @@
  * Provides unified contact information for the sidebar
  */
 
-import { User, IUser, ChatSession, IChatSession, Note, INote, Tag, UserTag, 
-  CustomFieldDefinition, UserCustomField, Message } from '../database/index.js';
+import {
+  User, IUser, ChatSession, IChatSession, Note, INote, Tag, UserTag,
+  CustomFieldDefinition, UserCustomField, Message
+} from '../database/index.js';
 import mongoose from 'mongoose';
 
 // ============= TYPES =============
@@ -102,14 +104,14 @@ export async function getContactInfo(sessionId: string): Promise<ContactInfo | n
     customFieldValues,
     customFieldDefs,
   ] = await Promise.all([
-    Message.countDocuments({ session: session._id }),
-    ChatSession.countDocuments({ user: userId }),
-    ChatSession.findOne({ user: userId }).sort({ createdAt: 1 }).select('createdAt'),
-    UserTag.find({ user: userId }).populate('tag', 'name color'),
-    Note.countDocuments({ user: userId }),
-    Note.findOne({ user: userId }).sort({ createdAt: -1 }).populate('createdBy', 'name'),
-    UserCustomField.find({ user: userId }).populate('field'),
-    CustomFieldDefinition.find({ isActive: true }).sort({ order: 1 }),
+    Message.countDocuments({ session: session._id }).lean(),
+    ChatSession.countDocuments({ user: userId }).lean(),
+    ChatSession.findOne({ user: userId }).sort({ createdAt: 1 }).select('createdAt').lean(),
+    UserTag.find({ user: userId }).populate('tag', 'name color').lean(),
+    Note.countDocuments({ user: userId }).lean(),
+    Note.findOne({ user: userId }).sort({ createdAt: -1 }).populate('createdBy', 'name').lean(),
+    UserCustomField.find({ user: userId }).populate('field').lean(),
+    CustomFieldDefinition.find({ isActive: true }).sort({ order: 1 }).lean(),
   ]);
 
   // Calculate chat duration

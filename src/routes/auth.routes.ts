@@ -6,7 +6,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { loginAgent, logoutAgent, refreshToken } from '../services/auth.service.js';
 import { createAgent } from '../services/agent.service.js';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import { ENV } from '../config/index.js';
 
 interface LoginBody {
@@ -54,6 +54,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       ok: true,
       agent: result.agent,
       token: result.token,
+      permissions: result.permissions,
     };
   });
   
@@ -99,6 +100,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       ok: true,
       agent: result.agent,
       token: result.token,
+      permissions: result.permissions,
     };
   });
   
@@ -115,11 +117,12 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
   // ============= ADMIN ROUTES =============
   
   /**
-   * Register new agent (admin only)
+   * Register new agent
+   * Requires: agents.write
    */
   fastify.post<{ Body: RegisterBody }>(
     '/api/auth/register', 
-    { preHandler: adminMiddleware }, 
+    { preHandler: requirePermission('agents.write') }, 
     async (request, reply) => {
       const { name, email, password, role } = request.body;
       

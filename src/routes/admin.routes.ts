@@ -1,10 +1,11 @@
 /**
  * Admin Routes
  * Protected routes for admin operations (agents CRUD, settings)
+ * Now uses RBAC permissions instead of role-based admin check
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import { Agent } from '../database/index.js';
 import {
   createAgent,
@@ -87,88 +88,105 @@ interface UpdateSavedReplyBody {
 
 export async function registerAdminRoutes(fastify: FastifyInstance): Promise<void> {
   
-  // All admin routes require authentication and admin role
+  // All admin routes require authentication (but NOT admin role - we use RBAC permissions)
   fastify.addHook('preHandler', authMiddleware);
-  fastify.addHook('preHandler', adminMiddleware);
   
   // ============= AGENT MANAGEMENT =============
+  // Permission: agents.read, agents.write, agents.delete
   
   /**
    * Get all agents with extended info
+   * Requires: agents.read
    */
-  fastify.get('/api/admin/agents', async () => {
-    const agents = await Agent.find()
-      .select('-password')
-      .sort({ name: 1 });
-    
-    return { ok: true, agents };
-  });
+  fastify.get(
+    '/api/admin/agents',
+    { preHandler: requirePermission('agents.read') },
+    async () => {
+      const agents = await Agent.find()
+        .select('-password')
+        .sort({ name: 1 });
+      
+      return { ok: true, agents };
+    }
+  );
   
   /**
    * Create new agent
+   * Requires: agents.write
    */
-  fastify.post<{ Body: CreateAgentBody }>('/api/admin/agents', async (request, reply) => {
-    const { name, email, password, role } = request.body;
-    
-    // Validation
-    if (!name || !email || !password) {
-      return reply.code(400).send({ 
-        ok: false, 
-        error: 'Name, email and password are required' 
+  fastify.post<{ Body: CreateAgentBody }>(
+    '/api/admin/agents',
+    { preHandler: requirePermission('agents.write') },
+    async (request, reply) => {
+      const { name, email, password, role } = request.body;
+      
+      // Validation
+      if (!name || !email || !password) {
+        return reply.code(400).send({ 
+          ok: false, 
+          error: 'Name, email and password are required' 
+        });
+      }
+      
+      if (password.length < 8) {
+        return reply.code(400).send({ 
+          ok: false, 
+          error: 'Password must be at least 8 characters' 
+        });
+      }
+      
+      // Check if email already exists
+      const existing = await Agent.findOne({ email: email.toLowerCase() });
+      if (existing) {
+        return reply.code(409).send({ 
+          ok: false, 
+          error: 'An agent with this email already exists' 
+        });
+      }
+      
+      const agent = await createAgent({ name, email, password, role });
+      
+      logger.info('api', { 
+        action: 'agent_created', 
+        agentId: agent._id.toString(),
+        createdBy: request.agent!._id.toString(),
       });
+      
+      // Return without password
+      const agentData = agent.toObject();
+      const { password: _, ...safeAgent } = agentData;
+      
+      return { ok: true, agent: safeAgent };
     }
-    
-    if (password.length < 8) {
-      return reply.code(400).send({ 
-        ok: false, 
-        error: 'Password must be at least 8 characters' 
-      });
-    }
-    
-    // Check if email already exists
-    const existing = await Agent.findOne({ email: email.toLowerCase() });
-    if (existing) {
-      return reply.code(409).send({ 
-        ok: false, 
-        error: 'An agent with this email already exists' 
-      });
-    }
-    
-    const agent = await createAgent({ name, email, password, role });
-    
-    logger.info('api', { 
-      action: 'agent_created', 
-      agentId: agent._id.toString(),
-      createdBy: request.agent!._id.toString(),
-    });
-    
-    // Return without password
-    const agentData = agent.toObject();
-    const { password: _, ...safeAgent } = agentData;
-    
-    return { ok: true, agent: safeAgent };
-  });
+  );
   
   /**
    * Get single agent
+   * Requires: agents.read
    */
-  fastify.get<{ Params: AgentParams }>('/api/admin/agents/:agentId', async (request, reply) => {
-    const { agentId } = request.params;
-    
-    const agent = await findAgentById(agentId);
-    
-    if (!agent) {
-      return reply.code(404).send({ ok: false, error: 'Agent not found' });
+  fastify.get<{ Params: AgentParams }>(
+    '/api/admin/agents/:agentId',
+    { preHandler: requirePermission('agents.read') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      
+      const agent = await findAgentById(agentId);
+      
+      if (!agent) {
+        return reply.code(404).send({ ok: false, error: 'Agent not found' });
+      }
+      
+      return { ok: true, agent };
     }
-    
-    return { ok: true, agent };
-  });
+  );
   
   /**
    * Update agent
+   * Requires: agents.write
    */
   fastify.patch<{ Params: AgentParams; Body: UpdateAgentBody }>(
     '/api/admin/agents/:agentId',
+    { preHandler: requirePermission('agents.write') },
     async (request, reply) => {
       const { agentId } = request.params;
       const { name, role, isActive } = request.body;
@@ -215,9 +233,11 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
   
   /**
    * Reset agent password
+   * Requires: agents.write
    */
   fastify.post<{ Params: AgentParams; Body: ResetPasswordBody }>(
     '/api/admin/agents/:agentId/reset-password',
+    { preHandler: requirePermission('agents.write') },
     async (request, reply) => {
       const { agentId } = request.params;
       const { newPassword } = request.body;
@@ -249,9 +269,11 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
   
   /**
    * Delete agent (soft delete - sets isActive to false)
+   * Requires: agents.delete
    */
   fastify.delete<{ Params: AgentParams }>(
     '/api/admin/agents/:agentId',
+    { preHandler: requirePermission('agents.delete') },
     async (request, reply) => {
       const { agentId } = request.params;
       
@@ -286,9 +308,11 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
   
   /**
    * Permanently delete agent (hard delete)
+   * Requires: agents.delete
    */
   fastify.delete<{ Params: AgentParams }>(
     '/api/admin/agents/:agentId/permanent',
+    { preHandler: requirePermission('agents.delete') },
     async (request, reply) => {
       const { agentId } = request.params;
       
@@ -317,131 +341,180 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
   );
   
   // ============= SETTINGS =============
+  // Permission: settings.read, settings.write
   
   /**
    * Get all settings
+   * Requires: settings.read
    */
-  fastify.get('/api/admin/settings', async () => {
-    const settings = await getCachedSettings();
-    // Format for frontend compatibility
-    return { ok: true, settings: formatSettingsForClient(settings) };
-  });
+  fastify.get(
+    '/api/admin/settings',
+    { preHandler: requirePermission('settings.read') },
+    async () => {
+      const settings = await getCachedSettings();
+      // Format for frontend compatibility
+      return { ok: true, settings: formatSettingsForClient(settings) };
+    }
+  );
   
   /**
    * Update settings (partial or full)
+   * Requires: settings.write
    */
-  fastify.patch<{ Body: UpdateSettingsBody }>('/api/admin/settings', async (request, reply) => {
-    const { bot, chat, agents, security, notifications } = request.body as {
-      bot?: Record<string, unknown>;
-      chat?: Record<string, unknown>;
-      agents?: Record<string, unknown>;
-      security?: Record<string, unknown>;
-      notifications?: Record<string, unknown>;
-    };
-    const agentId = request.agent!._id.toString();
-    
-    const settings = await updateAllCachedSettings(
-      { bot, chat, agents, security, notifications },
-      agentId
-    );
-    
-    logger.info('api', { 
-      action: 'settings_updated', 
-      updatedBy: agentId,
-      sections: Object.keys(request.body),
-    });
-    
-    return { ok: true, settings: formatSettingsForClient(settings) };
-  });
+  fastify.patch<{ Body: UpdateSettingsBody }>(
+    '/api/admin/settings',
+    { preHandler: requirePermission('settings.write') },
+    async (request, reply) => {
+      const { bot, chat, agents, security, notifications } = request.body as {
+        bot?: Record<string, unknown>;
+        chat?: Record<string, unknown>;
+        agents?: Record<string, unknown>;
+        security?: Record<string, unknown>;
+        notifications?: Record<string, unknown>;
+      };
+      const agentId = request.agent!._id.toString();
+      
+      const settings = await updateAllCachedSettings(
+        { bot, chat, agents, security, notifications },
+        agentId
+      );
+      
+      logger.info('api', { 
+        action: 'settings_updated', 
+        updatedBy: agentId,
+        sections: Object.keys(request.body),
+      });
+      
+      return { ok: true, settings: formatSettingsForClient(settings) };
+    }
+  );
   
   /**
    * Update bot settings
+   * Requires: settings.write
    */
-  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/bot', async (request) => {
-    const settings = await updateAllCachedSettings({ bot: request.body }, request.agent!._id.toString());
-    return { ok: true, settings: formatSettingsForClient(settings) };
-  });
+  fastify.patch<{ Body: Record<string, unknown> }>(
+    '/api/admin/settings/bot',
+    { preHandler: requirePermission('settings.write') },
+    async (request) => {
+      const settings = await updateAllCachedSettings({ bot: request.body }, request.agent!._id.toString());
+      return { ok: true, settings: formatSettingsForClient(settings) };
+    }
+  );
   
   /**
    * Update chat settings
+   * Requires: settings.write
    */
-  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/chat', async (request) => {
-    const settings = await updateAllCachedSettings({ chat: request.body }, request.agent!._id.toString());
-    return { ok: true, settings: formatSettingsForClient(settings) };
-  });
+  fastify.patch<{ Body: Record<string, unknown> }>(
+    '/api/admin/settings/chat',
+    { preHandler: requirePermission('settings.write') },
+    async (request) => {
+      const settings = await updateAllCachedSettings({ chat: request.body }, request.agent!._id.toString());
+      return { ok: true, settings: formatSettingsForClient(settings) };
+    }
+  );
   
   /**
    * Update agent rules
+   * Requires: settings.write
    */
-  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/agent-rules', async (request) => {
-    const settings = await updateAllCachedSettings({ agents: request.body }, request.agent!._id.toString());
-    return { ok: true, settings: formatSettingsForClient(settings) };
-  });
+  fastify.patch<{ Body: Record<string, unknown> }>(
+    '/api/admin/settings/agent-rules',
+    { preHandler: requirePermission('settings.write') },
+    async (request) => {
+      const settings = await updateAllCachedSettings({ agents: request.body }, request.agent!._id.toString());
+      return { ok: true, settings: formatSettingsForClient(settings) };
+    }
+  );
   
   /**
    * Update security settings
+   * Requires: settings.write
    */
-  fastify.patch<{ Body: Record<string, unknown> }>('/api/admin/settings/security', async (request) => {
-    const settings = await updateAllCachedSettings({ security: request.body }, request.agent!._id.toString());
-    return { ok: true, settings: formatSettingsForClient(settings) };
-  });
+  fastify.patch<{ Body: Record<string, unknown> }>(
+    '/api/admin/settings/security',
+    { preHandler: requirePermission('settings.write') },
+    async (request) => {
+      const settings = await updateAllCachedSettings({ security: request.body }, request.agent!._id.toString());
+      return { ok: true, settings: formatSettingsForClient(settings) };
+    }
+  );
   
   /**
    * Reset settings to defaults
+   * Requires: settings.write
    */
-  fastify.post('/api/admin/settings/reset', async (request) => {
-    const settings = await resetCachedSettings(request.agent!._id.toString());
-    
-    logger.info('api', { 
-      action: 'settings_reset', 
-      resetBy: request.agent!._id.toString(),
-    });
-    
-    return { ok: true, settings: formatSettingsForClient(settings), message: 'Settings reset to defaults' };
-  });
+  fastify.post(
+    '/api/admin/settings/reset',
+    { preHandler: requirePermission('settings.write') },
+    async (request) => {
+      const settings = await resetCachedSettings(request.agent!._id.toString());
+      
+      logger.info('api', { 
+        action: 'settings_reset', 
+        resetBy: request.agent!._id.toString(),
+      });
+      
+      return { ok: true, settings: formatSettingsForClient(settings), message: 'Settings reset to defaults' };
+    }
+  );
   
   /**
    * Force logout all agents (invalidates all sessions)
+   * Requires: system.admin (critical operation)
    */
-  fastify.post('/api/admin/force-logout', async (request) => {
-    // Set all agents to offline
-    await Agent.updateMany({}, { onlineStatus: 'offline' });
-    
-    logger.info('api', { 
-      action: 'force_logout_all', 
-      triggeredBy: request.agent!._id.toString(),
-    });
-    
-    // Note: This doesn't invalidate JWT tokens, just sets status to offline
-    // For full logout, you'd need a token blacklist or short-lived tokens
-    
-    return { ok: true, message: 'All agents set to offline' };
-  });
+  fastify.post(
+    '/api/admin/force-logout',
+    { preHandler: requirePermission('system.admin') },
+    async (request) => {
+      // Set all agents to offline
+      await Agent.updateMany({}, { onlineStatus: 'offline' });
+      
+      logger.info('api', { 
+        action: 'force_logout_all', 
+        triggeredBy: request.agent!._id.toString(),
+      });
+      
+      // Note: This doesn't invalidate JWT tokens, just sets status to offline
+      // For full logout, you'd need a token blacklist or short-lived tokens
+      
+      return { ok: true, message: 'All agents set to offline' };
+    }
+  );
 
   // ============= SAVED REPLIES =============
+  // Permission: replies.read, replies.write
 
   /**
    * Get all saved replies
+   * Requires: replies.read
    */
-  fastify.get('/api/admin/saved-replies', async () => {
-    const replies = await getAllSavedReplies(true); // Include inactive
-    const categories = await getCategories();
-    const stats = await getUsageStats();
-    
-    return { 
-      ok: true, 
-      replies, 
-      categories,
-      stats,
-      placeholders: PLACEHOLDERS,
-    };
-  });
+  fastify.get(
+    '/api/admin/saved-replies',
+    { preHandler: requirePermission('replies.read') },
+    async () => {
+      const replies = await getAllSavedReplies(true); // Include inactive
+      const categories = await getCategories();
+      const stats = await getUsageStats();
+      
+      return { 
+        ok: true, 
+        replies, 
+        categories,
+        stats,
+        placeholders: PLACEHOLDERS,
+      };
+    }
+  );
 
   /**
    * Get saved reply by ID
+   * Requires: replies.read
    */
   fastify.get<{ Params: SavedReplyParams }>(
     '/api/admin/saved-replies/:replyId',
+    { preHandler: requirePermission('replies.read') },
     async (request, reply) => {
       const { replyId } = request.params;
       
@@ -457,9 +530,11 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
 
   /**
    * Create saved reply
+   * Requires: replies.write
    */
   fastify.post<{ Body: CreateSavedReplyBody }>(
     '/api/admin/saved-replies',
+    { preHandler: requirePermission('replies.write') },
     async (request, reply) => {
       const { title, content, category, shortcut, isActive } = request.body;
       
@@ -487,9 +562,11 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
 
   /**
    * Update saved reply
+   * Requires: replies.write
    */
   fastify.patch<{ Params: SavedReplyParams; Body: UpdateSavedReplyBody }>(
     '/api/admin/saved-replies/:replyId',
+    { preHandler: requirePermission('replies.write') },
     async (request, reply) => {
       const { replyId } = request.params;
       const updates = request.body;
@@ -516,9 +593,11 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
 
   /**
    * Delete saved reply
+   * Requires: replies.write
    */
   fastify.delete<{ Params: SavedReplyParams }>(
     '/api/admin/saved-replies/:replyId',
+    { preHandler: requirePermission('replies.write') },
     async (request, reply) => {
       const { replyId } = request.params;
       
@@ -540,8 +619,13 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
 
   /**
    * Get placeholders info
+   * Requires: replies.read
    */
-  fastify.get('/api/admin/saved-replies/placeholders', async () => {
-    return { ok: true, placeholders: PLACEHOLDERS };
-  });
+  fastify.get(
+    '/api/admin/saved-replies/placeholders',
+    { preHandler: requirePermission('replies.read') },
+    async () => {
+      return { ok: true, placeholders: PLACEHOLDERS };
+    }
+  );
 }

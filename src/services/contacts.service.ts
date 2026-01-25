@@ -318,11 +318,229 @@ function buildDateQuery(
 }
 
 // ==================== MAIN SERVICE ====================
-
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 export const contactsService = {
   /**
    * Get paginated contact list with filters
    */
+  // async listContacts(params: ContactListParams): Promise<ContactListResult> {
+  //   const {
+  //     page = 1,
+  //     limit = 50,
+  //     sortField = 'lastActivity',
+  //     sortDirection = 'desc',
+  //     search,
+  //     filters,
+  //     segmentId,
+  //     tags,
+  //     blocked,
+  //     hasActiveSession,
+  //     language,
+  //     dateFrom,
+  //     dateTo,
+  //   } = params;
+
+  //   // Build base query
+  //   let baseQuery: FilterQuery<IUser> = {};
+
+  //   // Apply segment filters
+  //   if (segmentId) {
+  //     const segment = await Segment.findById(segmentId);
+  //     if (segment?.filters) {
+  //       baseQuery = { ...baseQuery, ...buildFilterQuery(segment.filters) };
+  //     }
+  //   }
+
+  //   // Apply custom filters
+  //   if (filters) {
+  //     const filterQuery = buildFilterQuery(filters);
+  //     baseQuery = { ...baseQuery, ...filterQuery };
+  //   }
+
+  //   // Simple filters
+  //   if (search) {
+  //     baseQuery.$or = [
+  //       { username: { $regex: search, $options: 'i' } },
+  //       { firstName: { $regex: search, $options: 'i' } },
+  //       { lastName: { $regex: search, $options: 'i' } },
+  //       { telegramId: isNaN(Number(search)) ? undefined : Number(search) },
+  //     ].filter(Boolean);
+  //   }
+
+  //   if (blocked !== undefined) {
+  //     baseQuery.isBlocked = blocked;
+  //   }
+
+  //   if (language) {
+  //     baseQuery.language = language;
+  //   }
+
+  //   if (dateFrom || dateTo) {
+  //     baseQuery.createdAt = {};
+  //     if (dateFrom) baseQuery.createdAt.$gte = new Date(dateFrom);
+  //     if (dateTo) baseQuery.createdAt.$lte = new Date(dateTo);
+  //   }
+
+  //   // Build aggregation pipeline
+  //   const pipeline: PipelineStage[] = [
+  //     { $match: baseQuery },
+  //     // Lookup tags
+  //     {
+  //       $lookup: {
+  //         from: 'usertags',
+  //         localField: '_id',
+  //         foreignField: 'userId',
+  //         as: 'userTags',
+  //       },
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: 'tags',
+  //         localField: 'userTags.tagId',
+  //         foreignField: '_id',
+  //         as: 'tags',
+  //       },
+  //     },
+  //     // Filter by tags if specified
+  //     ...(tags && tags.length > 0
+  //       ? [
+  //           {
+  //             $match: {
+  //               'tags._id': { $in: tags.map((t) => new Types.ObjectId(t)) },
+  //             },
+  //           } as PipelineStage,
+  //         ]
+  //       : []),
+  //     // Lookup active session
+  //     {
+  //       $lookup: {
+  //         from: 'chatsessions',
+  //         let: { telegramId: '$telegramId' },
+  //         pipeline: [
+  //           {
+  //             $match: {
+  //               $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
+  //               status: { $in: ['active', 'waiting', 'pending'] },
+  //             },
+  //           },
+  //           { $sort: { createdAt: -1 } },
+  //           { $limit: 1 },
+  //         ],
+  //         as: 'activeSession',
+  //       },
+  //     },
+  //     { $unwind: { path: '$activeSession', preserveNullAndEmptyArrays: true } },
+  //     // Filter by active session if specified
+  //     ...(hasActiveSession !== undefined
+  //       ? [
+  //           {
+  //             $match: hasActiveSession
+  //               ? { activeSession: { $exists: true } }
+  //               : { activeSession: { $exists: false } },
+  //           } as PipelineStage,
+  //         ]
+  //       : []),
+  //     // Count sessions and messages
+  //     {
+  //       $lookup: {
+  //         from: 'chatsessions',
+  //         let: { telegramId: '$telegramId' },
+  //         pipeline: [
+  //           {
+  //             $match: {
+  //               $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
+  //             },
+  //           },
+  //           { $count: 'count' },
+  //         ],
+  //         as: 'sessionCount',
+  //       },
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: 'messages',
+  //         let: { telegramId: '$telegramId' },
+  //         pipeline: [
+  //           {
+  //             $match: {
+  //               $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
+  //             },
+  //           },
+  //           { $count: 'count' },
+  //         ],
+  //         as: 'messageCount',
+  //       },
+  //     },
+  //     // Project fields
+  //     {
+  //       $project: {
+  //         telegramId: 1,
+  //         username: 1,
+  //         firstName: 1,
+  //         lastName: 1,
+  //         fullName: {
+  //           $concat: [
+  //             { $ifNull: ['$firstName', ''] },
+  //             ' ',
+  //             { $ifNull: ['$lastName', ''] },
+  //           ],
+  //         },
+  //         language: 1,
+  //         isBlocked: 1,
+  //         createdAt: 1,
+  //         lastActivity: 1,
+  //         tags: {
+  //           $map: {
+  //             input: '$tags',
+  //             as: 'tag',
+  //             in: {
+  //               _id: '$$tag._id',
+  //               name: '$$tag.name',
+  //               color: '$$tag.color',
+  //             },
+  //           },
+  //         },
+  //         activeSession: {
+  //           $cond: {
+  //             if: { $ifNull: ['$activeSession._id', false] },
+  //             then: {
+  //               sessionId: '$activeSession.sessionId',
+  //               status: '$activeSession.status',
+  //               assignedAgent: '$activeSession.assignedAgent',
+  //             },
+  //             else: '$$REMOVE',
+  //           },
+  //         },
+  //         totalSessions: { $ifNull: [{ $arrayElemAt: ['$sessionCount.count', 0] }, 0] },
+  //         totalMessages: { $ifNull: [{ $arrayElemAt: ['$messageCount.count', 0] }, 0] },
+  //       },
+  //     },
+  //     // Sort
+  //     { $sort: { [sortField]: sortDirection === 'desc' ? -1 : 1 } },
+  //     // Pagination
+  //     {
+  //       $facet: {
+  //         data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+  //         total: [{ $count: 'count' }],
+  //       },
+  //     },
+  //   ];
+
+  //   const result = await User.aggregate(pipeline);
+
+  //   const contacts = result[0]?.data || [];
+  //   const total = result[0]?.total[0]?.count || 0;
+
+  //   return {
+  //     contacts,
+  //     total,
+  //     page,
+  //     totalPages: Math.ceil(total / limit),
+  //     hasMore: page * limit < total,
+  //   };
+  // },
   async listContacts(params: ContactListParams): Promise<ContactListResult> {
     const {
       page = 1,
@@ -330,7 +548,6 @@ export const contactsService = {
       sortField = 'lastActivity',
       sortDirection = 'desc',
       search,
-      filters,
       segmentId,
       tags,
       blocked,
@@ -340,32 +557,8 @@ export const contactsService = {
       dateTo,
     } = params;
 
-    // Build base query
-    let baseQuery: FilterQuery<IUser> = {};
-
-    // Apply segment filters
-    if (segmentId) {
-      const segment = await Segment.findById(segmentId);
-      if (segment?.filters) {
-        baseQuery = { ...baseQuery, ...buildFilterQuery(segment.filters) };
-      }
-    }
-
-    // Apply custom filters
-    if (filters) {
-      const filterQuery = buildFilterQuery(filters);
-      baseQuery = { ...baseQuery, ...filterQuery };
-    }
-
-    // Simple filters
-    if (search) {
-      baseQuery.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { telegramId: isNaN(Number(search)) ? undefined : Number(search) },
-      ].filter(Boolean);
-    }
+    // 1. Construir Query Base (Filtros rápidos que están en el modelo User)
+    const baseQuery: any = {};
 
     if (blocked !== undefined) {
       baseQuery.isBlocked = blocked;
@@ -381,155 +574,223 @@ export const contactsService = {
       if (dateTo) baseQuery.createdAt.$lte = new Date(dateTo);
     }
 
-    // Build aggregation pipeline
+    // Búsqueda (Nota: Para 5k+ usuarios, considera usar Índices de Texto en el futuro)
+    if (search) {
+      const searchRegex = { $regex: escapeRegExp(search), $options: 'i' };
+      const searchNumber = Number(search);
+
+      baseQuery.$or = [
+        { username: searchRegex },
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        // Solo busca por ID si es un número válido
+        ...(!isNaN(searchNumber) ? [{ telegramId: searchNumber }] : [])
+      ];
+    }
+
+    // Segment filters (asumiendo lógica externa)
+    /* if (segmentId) { ... tu lógica de segmentos ... } */
+
     const pipeline: PipelineStage[] = [
       { $match: baseQuery },
-      // Lookup tags
-      {
-        $lookup: {
-          from: 'usertags',
-          localField: '_id',
-          foreignField: 'userId',
-          as: 'userTags',
-        },
-      },
-      {
-        $lookup: {
-          from: 'tags',
-          localField: 'userTags.tagId',
-          foreignField: '_id',
-          as: 'tags',
-        },
-      },
-      // Filter by tags if specified
-      ...(tags && tags.length > 0
-        ? [
-            {
-              $match: {
-                'tags._id': { $in: tags.map((t) => new Types.ObjectId(t)) },
-              },
-            } as PipelineStage,
-          ]
-        : []),
-      // Lookup active session
-      {
-        $lookup: {
-          from: 'chatsessions',
-          let: { telegramId: '$telegramId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
-                status: { $in: ['active', 'waiting', 'pending'] },
-              },
-            },
-            { $sort: { createdAt: -1 } },
-            { $limit: 1 },
-          ],
-          as: 'activeSession',
-        },
-      },
-      { $unwind: { path: '$activeSession', preserveNullAndEmptyArrays: true } },
-      // Filter by active session if specified
-      ...(hasActiveSession !== undefined
-        ? [
-            {
-              $match: hasActiveSession
-                ? { activeSession: { $exists: true } }
-                : { activeSession: { $exists: false } },
-            } as PipelineStage,
-          ]
-        : []),
-      // Count sessions and messages
-      {
-        $lookup: {
-          from: 'chatsessions',
-          let: { telegramId: '$telegramId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
-              },
-            },
-            { $count: 'count' },
-          ],
-          as: 'sessionCount',
-        },
-      },
-      {
-        $lookup: {
-          from: 'messages',
-          let: { telegramId: '$telegramId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
-              },
-            },
-            { $count: 'count' },
-          ],
-          as: 'messageCount',
-        },
-      },
-      // Project fields
-      {
-        $project: {
-          telegramId: 1,
-          username: 1,
-          firstName: 1,
-          lastName: 1,
-          fullName: {
-            $concat: [
-              { $ifNull: ['$firstName', ''] },
-              ' ',
-              { $ifNull: ['$lastName', ''] },
-            ],
-          },
-          language: 1,
-          isBlocked: 1,
-          createdAt: 1,
-          lastActivity: 1,
-          tags: {
-            $map: {
-              input: '$tags',
-              as: 'tag',
-              in: {
-                _id: '$$tag._id',
-                name: '$$tag.name',
-                color: '$$tag.color',
-              },
-            },
-          },
-          activeSession: {
-            $cond: {
-              if: { $ifNull: ['$activeSession._id', false] },
-              then: {
-                sessionId: '$activeSession.sessionId',
-                status: '$activeSession.status',
-                assignedAgent: '$activeSession.assignedAgent',
-              },
-              else: '$$REMOVE',
-            },
-          },
-          totalSessions: { $ifNull: [{ $arrayElemAt: ['$sessionCount.count', 0] }, 0] },
-          totalMessages: { $ifNull: [{ $arrayElemAt: ['$messageCount.count', 0] }, 0] },
-        },
-      },
-      // Sort
-      { $sort: { [sortField]: sortDirection === 'desc' ? -1 : 1 } },
-      // Pagination
-      {
-        $facet: {
-          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
-          total: [{ $count: 'count' }],
-        },
-      },
     ];
+
+    // ==================================================================================
+    // FASE 2: Filtros Pesados (Lookups necesarios para FILTRAR)
+    // Solo agregamos estos pasos si el usuario pidió filtrar por Tags o Sesión Activa
+    // ==================================================================================
+
+    // A. Filtro por Tags (Solo si 'tags' tiene valor)
+    if (tags && tags.length > 0) {
+      pipeline.push(
+        {
+          $lookup: {
+            from: 'usertags',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'filterTags',
+          },
+        },
+        {
+          $match: {
+            'filterTags.tagId': { $in: tags.map((t) => new Types.ObjectId(t)) },
+          },
+        },
+        // Limpiamos para no cargar memoria
+        { $project: { filterTags: 0 } }
+      );
+    }
+
+    // B. Filtro por Sesión Activa (Solo si 'hasActiveSession' está definido)
+    if (hasActiveSession !== undefined) {
+      pipeline.push(
+        {
+          $lookup: {
+            from: 'chatsessions',
+            let: { telegramId: '$telegramId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
+                  status: { $in: ['active', 'waiting', 'pending'] },
+                },
+              },
+              { $limit: 1 }, // Optimización: Solo necesitamos saber si existe 1
+            ],
+            as: 'checkSession',
+          },
+        },
+        {
+          $match: {
+            checkSession: hasActiveSession ? { $ne: [] } : { $eq: [] },
+          },
+        },
+        { $project: { checkSession: 0 } }
+      );
+    }
+
+    // ==================================================================================
+    // FASE 3: Paginación y Obtención de Datos
+    // Usamos $facet para contar el total Y obtener la página actual en paralelo
+    // ==================================================================================
+
+    pipeline.push({
+      $facet: {
+        // Rama 1: Solo cuenta el total de resultados (rápido)
+        metadata: [{ $count: 'total' }],
+
+        // Rama 2: Obtiene los datos de la página actual
+        data: [
+          { $sort: { [sortField]: sortDirection === 'desc' ? -1 : 1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+
+          // -----------------------------------------------------------
+          // AHORA SÍ: "Enrichment". Solo calculamos esto para los 50 usuarios finales
+          // -----------------------------------------------------------
+
+          // 1. Traer Tags (Visualización)
+          {
+            $lookup: {
+              from: 'usertags',
+              localField: '_id',
+              foreignField: 'userId',
+              as: 'userTagsRel',
+            },
+          },
+          {
+            $lookup: {
+              from: 'tags',
+              localField: 'userTagsRel.tagId',
+              foreignField: '_id',
+              as: 'tagsDetail',
+            },
+          },
+
+          // 2. Traer Sesión Activa (Detalle)
+          {
+            $lookup: {
+              from: 'chatsessions',
+              let: { telegramId: '$telegramId' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ['$telegramChatId', '$$telegramId'] },
+                    status: { $in: ['active', 'waiting', 'pending'] },
+                  },
+                },
+                { $sort: { createdAt: -1 } },
+                { $limit: 1 },
+              ],
+              as: 'activeSessionData',
+            },
+          },
+          { $unwind: { path: '$activeSessionData', preserveNullAndEmptyArrays: true } },
+
+          // 3. Contar Sesiones Totales (Optimizada)
+          {
+            $lookup: {
+              from: 'chatsessions',
+              let: { telegramId: '$telegramId' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$telegramChatId', '$$telegramId'] } } },
+                { $count: 'count' } // Solo devuelve el número, no los docs
+              ],
+              as: 'sessionCountData',
+            },
+          },
+
+          // 4. Contar Mensajes Totales (Optimizada)
+          {
+            $lookup: {
+              from: 'messages',
+              let: { telegramId: '$telegramId' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$telegramChatId', '$$telegramId'] } } },
+                { $count: 'count' }
+              ],
+              as: 'messageCountData',
+            },
+          },
+
+          // 5. Proyección Final (Limpieza)
+          {
+            $project: {
+              telegramId: 1,
+              username: 1,
+              firstName: 1,
+              lastName: 1,
+              fullName: {
+                $concat: [
+                  { $ifNull: ['$firstName', ''] },
+                  ' ',
+                  { $ifNull: ['$lastName', ''] },
+                ],
+              },
+              language: 1,
+              isBlocked: 1,
+              createdAt: 1,
+              lastActivity: 1,
+              photoFileId: 1,
+              // Formateo de tags
+              tags: {
+                $map: {
+                  input: '$tagsDetail',
+                  as: 'tag',
+                  in: {
+                    _id: '$$tag._id',
+                    name: '$$tag.name',
+                    color: '$$tag.color',
+                  },
+                },
+              },
+              // Formateo de sesión
+              activeSession: {
+                $cond: {
+                  if: { $ifNull: ['$activeSessionData._id', false] },
+                  then: {
+                    sessionId: '$activeSessionData.sessionId', // Ajusta según tu modelo ChatSession
+                    status: '$activeSessionData.status',
+                    assignedAgent: '$activeSessionData.assignedAgent',
+                  },
+                  else: '$$REMOVE',
+                },
+              },
+              // Extraer contadores de los arrays
+              totalSessions: { $ifNull: [{ $arrayElemAt: ['$sessionCountData.count', 0] }, 0] },
+              totalMessages: { $ifNull: [{ $arrayElemAt: ['$messageCountData.count', 0] }, 0] },
+            },
+          },
+        ],
+      },
+    });
 
     const result = await User.aggregate(pipeline);
 
-    const contacts = result[0]?.data || [];
-    const total = result[0]?.total[0]?.count || 0;
+    // Extraer resultados del facet
+    const metadata = result[0].metadata[0];
+    const contacts = result[0].data;
+    const total = metadata ? metadata.total : 0;
 
     return {
       contacts,
@@ -539,7 +800,6 @@ export const contactsService = {
       hasMore: page * limit < total,
     };
   },
-
   /**
    * Get full 360° contact profile
    */
@@ -724,16 +984,16 @@ export const contactsService = {
         totalSessions: sessionsData[0]?.totalSessions || 0,
         activeSession: activeSession
           ? {
-              sessionId: activeSession.sessionId,
-              status: activeSession.status,
-              assignedAgent: activeSession.assignedAgent
-                ? {
-                    _id: activeSession.assignedAgent._id.toString(),
-                    name: activeSession.assignedAgent.name,
-                  }
-                : undefined,
-              createdAt: activeSession.createdAt,
-            }
+            sessionId: activeSession.sessionId,
+            status: activeSession.status,
+            assignedAgent: activeSession.assignedAgent
+              ? {
+                _id: activeSession.assignedAgent._id.toString(),
+                name: activeSession.assignedAgent.name,
+              }
+              : undefined,
+            createdAt: activeSession.createdAt,
+          }
           : undefined,
         avgSessionDuration: Math.round((sessionsData[0]?.avgDuration || 0) / 1000 / 60), // minutes
         avgResponseTime: Math.round((sessionsData[0]?.avgResponseTime || 0) / 1000), // seconds

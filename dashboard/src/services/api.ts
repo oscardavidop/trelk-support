@@ -78,6 +78,35 @@ async function request<T>(
     throw new Error('Unauthorized');
   }
 
+  // Handle 403 - forbidden (permission denied)
+  if (response.status === 403) {
+    // Intentar refrescar permisos del usuario
+    try {
+      const { usePermissionStore } = await import('../stores/permissionStore');
+      const permissionStore = usePermissionStore.getState();
+      
+      // Refrescar permisos desde el servidor
+      await permissionStore.refreshPermissions();
+      
+      // Emitir evento personalizado para que la UI reaccione
+      window.dispatchEvent(new CustomEvent('permission:denied', {
+        detail: {
+          url,
+          method,
+          message: 'No tienes permiso para realizar esta acción'
+        }
+      }));
+    } catch (e) {
+      console.error('Error refreshing permissions after 403:', e);
+    }
+    
+    // Obtener mensaje de error del servidor si existe
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData?.message || errorData?.error || 'Permiso denegado';
+    
+    throw new Error(errorMessage);
+  }
+
   const responseData = await response.json().catch(() => ({}));
   
   return {

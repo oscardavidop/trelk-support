@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Agent } from '../types';
+import { usePermissionStore } from './permissionStore';
 
 interface AuthState {
   agent: Agent | null;
@@ -44,6 +45,15 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
             });
+            
+            // Store permissions from login response
+            if (data.permissions) {
+              usePermissionStore.getState().setPermissions(
+                data.permissions,
+                data.agent?.permissionVersion || 1
+              );
+            }
+            
             return true;
           }
 
@@ -68,6 +78,9 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
+          // Clear permissions on logout
+          usePermissionStore.getState().clearPermissions();
+          
           set({
             agent: null,
             token: null,
@@ -113,7 +126,21 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
             });
+            
+            // Refresh permissions on auth check
+            if (data.permissions) {
+              usePermissionStore.getState().setPermissions(
+                data.permissions,
+                data.agent?.permissionVersion || 1
+              );
+            } else {
+              // Fetch permissions if not in response
+              usePermissionStore.getState().refreshPermissions();
+            }
           } else {
+            // Clear permissions on auth failure
+            usePermissionStore.getState().clearPermissions();
+            
             set({
               agent: null,
               token: null,
@@ -122,6 +149,8 @@ export const useAuthStore = create<AuthState>()(
             });
           }
         } catch {
+          usePermissionStore.getState().clearPermissions();
+          
           set({
             agent: null,
             token: null,

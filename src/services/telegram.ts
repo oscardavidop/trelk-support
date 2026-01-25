@@ -47,7 +47,7 @@ async function apiRequest<T>(method: string, body: Record<string, unknown>): Pro
       action: 'telegram_api_request',
       method,
       url,
-      body: JSON.stringify(body).substring(0, 200)
+      body: JSON.stringify(body)
     });
 
     const response = await fetch(url, {
@@ -63,7 +63,8 @@ async function apiRequest<T>(method: string, body: Record<string, unknown>): Pro
       method,
       ok: data.ok,
       description: data.description,
-      hasResult: !!data.result
+      hasResult: !!data.result,
+      message_id: (data.result as any)?.message_id,
     });
 
     if (!data.ok) {
@@ -748,7 +749,7 @@ export async function sendAudio(
     }
   } catch (error) {
     logger.error('api', { method: 'sendAudio', error: String(error) });
-    return false;
+    throw error;
   }
 }
 
@@ -1568,7 +1569,12 @@ export async function simulateTyping(
   }
 }
 
+// ============= USER PROFILE PHOTOS =============
 
+/**
+ * Get user profile photos
+ * Telegram API: getUserProfilePhotos
+ */
 export async function getUserProfilePhotos(
   userId: number,
   options?: {

@@ -1,10 +1,11 @@
 /**
  * Agent Management Routes
  * API endpoints for agent CRUD operations
+ * Uses RBAC permissions for access control
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import {
   getAllAgents,
   findAgentById,
@@ -153,11 +154,12 @@ export async function registerAgentRoutes(fastify: FastifyInstance): Promise<voi
   // ============= ADMIN ROUTES =============
   
   /**
-   * Delete agent (admin only)
+   * Delete agent
+   * Requires: agents.delete
    */
   fastify.delete<{ Params: AgentParams }>(
     '/api/agents/:agentId', 
-    { preHandler: adminMiddleware },
+    { preHandler: requirePermission('agents.delete') },
     async (request, reply) => {
       const { agentId } = request.params;
       

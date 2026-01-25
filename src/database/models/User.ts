@@ -32,6 +32,7 @@ export interface IUser extends Document {
   lastActivity: Date;
   photoFileId?: string;
   metadata?: Record<string, unknown>;
+  fake?: boolean;            // Flag to identify fake users
 }
 
 const UserSchema = new Schema<IUser>(
@@ -87,6 +88,11 @@ const UserSchema = new Schema<IUser>(
     metadata: {
       type: Schema.Types.Mixed,
       default: {},
+    },
+    fake: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
   },
   {

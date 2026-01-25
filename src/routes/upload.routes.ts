@@ -200,6 +200,7 @@ export async function registerUploadRoutes(fastify: FastifyInstance): Promise<vo
               url: `/uploads/${mediaType}/${filename}`,
               size: stats.size,
               createdAt: stats.birthtime.toISOString(),
+              
             };
           })
         );

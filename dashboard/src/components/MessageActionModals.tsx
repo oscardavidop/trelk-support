@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { X, AlertTriangle, Save, Pencil, Star, FileText, Tag } from 'lucide-react';
+import { X, AlertTriangle, Save, Pencil, Star, FileText, Tag, CheckCircle } from 'lucide-react';
 import type { Message } from '../types';
 
 // ============= BASE MODAL =============
@@ -19,33 +19,33 @@ interface BaseModalProps {
 
 function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
   }, [isOpen, onClose]);
-  
+
   if (!isOpen) return null;
-  
+
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div 
+      <div
         ref={modalRef}
         className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md mx-4 animate-modal-in"
       >
@@ -59,12 +59,12 @@ function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps)
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
         {/* Content */}
         <div className="p-4">
           {children}
         </div>
-        
+
         {/* Footer */}
         {footer && (
           <div className="px-4 py-3 border-t border-gray-700 flex justify-end gap-2">
@@ -89,23 +89,23 @@ export function EditMessageModal({ isOpen, onClose, message, onSave }: EditMessa
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
   useEffect(() => {
     if (message) {
       setContent(message.content);
     }
   }, [message]);
-  
+
   useEffect(() => {
     if (isOpen && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(content.length, content.length);
     }
   }, [isOpen]);
-  
+
   const handleSave = async () => {
     if (!message || !content.trim() || content === message.content) return;
-    
+
     setIsSaving(true);
     try {
       await onSave(message._id, content.trim());
@@ -114,9 +114,9 @@ export function EditMessageModal({ isOpen, onClose, message, onSave }: EditMessa
       setIsSaving(false);
     }
   };
-  
+
   const hasChanges = message && content.trim() !== message.content;
-  
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -181,10 +181,10 @@ interface DeleteMessageModalProps {
 
 export function DeleteMessageModal({ isOpen, onClose, message, onConfirm }: DeleteMessageModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const handleDelete = async () => {
     if (!message) return;
-    
+
     setIsDeleting(true);
     try {
       await onConfirm(message._id);
@@ -193,7 +193,7 @@ export function DeleteMessageModal({ isOpen, onClose, message, onConfirm }: Dele
       setIsDeleting(false);
     }
   };
-  
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -231,7 +231,7 @@ export function DeleteMessageModal({ isOpen, onClose, message, onConfirm }: Dele
             Esta acción no se puede deshacer. El mensaje será reemplazado por "Mensaje eliminado por el agente".
           </div>
         </div>
-        
+
         {message && (
           <div className="p-3 bg-gray-800 rounded-lg">
             <p className="text-sm text-gray-400 mb-1">Mensaje a eliminar:</p>
@@ -268,7 +268,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
   const [category, setCategory] = useState('General');
   const [shortcut, setShortcut] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  
+
   useEffect(() => {
     if (message) {
       setContent(message.content);
@@ -276,10 +276,10 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
       setShortcut('');
     }
   }, [message]);
-  
+
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) return;
-    
+
     setIsSaving(true);
     try {
       await onSave({
@@ -293,9 +293,9 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
       setIsSaving(false);
     }
   };
-  
+
   const isValid = title.trim() && content.trim();
-  
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -334,7 +334,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
           <Star className="w-4 h-4" />
           Guarda este mensaje para usarlo rápidamente con /atajo
         </div>
-        
+
         {/* Title */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -348,7 +348,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
             placeholder="Ej: Saludo inicial"
           />
         </div>
-        
+
         {/* Category */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -364,7 +364,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
             ))}
           </select>
         </div>
-        
+
         {/* Shortcut */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -381,7 +381,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
             />
           </div>
         </div>
-        
+
         {/* Content */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -410,10 +410,10 @@ interface AddNoteModalProps {
 export function AddNoteModal({ isOpen, onClose, onSave }: AddNoteModalProps) {
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const handleSave = async () => {
     if (!content.trim()) return;
-    
+
     setIsSaving(true);
     try {
       await onSave(content.trim());
@@ -423,7 +423,7 @@ export function AddNoteModal({ isOpen, onClose, onSave }: AddNoteModalProps) {
       setIsSaving(false);
     }
   };
-  
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -494,12 +494,12 @@ const PREDEFINED_TAGS = [
 
 export function TagSelectorModal({ isOpen, onClose, onSelect, existingTags = [] }: TagSelectorModalProps) {
   const [customTag, setCustomTag] = useState('');
-  
+
   const handleSelectTag = (tagId: string) => {
     onSelect(tagId);
     onClose();
   };
-  
+
   const handleAddCustom = () => {
     if (customTag.trim()) {
       onSelect(customTag.trim().toLowerCase());
@@ -507,7 +507,7 @@ export function TagSelectorModal({ isOpen, onClose, onSelect, existingTags = [] 
       onClose();
     }
   };
-  
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -519,7 +519,7 @@ export function TagSelectorModal({ isOpen, onClose, onSelect, existingTags = [] 
           <Tag className="w-4 h-4" />
           Selecciona o crea una etiqueta para este usuario.
         </div>
-        
+
         {/* Predefined tags */}
         <div className="flex flex-wrap gap-2">
           {PREDEFINED_TAGS.map((tag) => (
@@ -539,7 +539,7 @@ export function TagSelectorModal({ isOpen, onClose, onSelect, existingTags = [] 
             </button>
           ))}
         </div>
-        
+
         {/* Custom tag input */}
         <div className="flex gap-2">
           <input
@@ -586,5 +586,80 @@ export function ReplyPreview({ message, onClear }: ReplyPreviewProps) {
         <X className="w-4 h-4" />
       </button>
     </div>
+  );
+}
+
+// ============= PINNED MESSAGE MODAL CONFIRMATION COMPONENT =============
+interface PinnedMessageConfirmationModalProps {
+  isOpen: boolean;
+  message: Message;
+  onConfirm: () => void;
+  onCancel: () => void;
+  pinForUser: boolean;
+  onPinForUserChange: (value: boolean) => void;
+}
+
+export function PinnedMessageConfirmationModal({ isOpen, message, onConfirm, onCancel, pinForUser, onPinForUserChange }: PinnedMessageConfirmationModalProps) {
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onCancel}
+      title="Confirmar mensaje fijado"
+      footer={
+        <>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-primary hover:bg-primary-light text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            Confirmar
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {message && (
+          <>
+            <div className="p-3 bg-gray-800 rounded-lg">
+              <p className="text-sm text-gray-400 mb-1">Mensaje a fijar:</p>
+              <p className="text-white text-sm">{message.content}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={pinForUser}
+                onChange={onPinForUserChange}
+                label="Fijar también para el usuario"
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </BaseModal>
+  );
+
+}
+
+
+function Checkbox({ 
+  checked, 
+  onChange, 
+  label 
+}: { 
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(!checked)}>
+      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600 group-hover:border-gray-500'}`}>
+        {checked && <CheckCircle className="w-3 h-3 text-white" />}
+      </div>
+      <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{label}</span>
+    </label>
   );
 }

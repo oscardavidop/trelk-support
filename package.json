@@ -11,8 +11,10 @@
     "build": "tsc",
     "build:dashboard": "cd dashboard && npm run build",
     "build:all": "npm run build && npm run build:dashboard",
+    "start:all": "npm run start & cd dashboard && npm run start",
     "start": "node dist/server.js",
     "setup": "tsx scripts/setup.ts",
+    "mock": "tsx scripts/mock.ts",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "nginx-conf": "sudo cp scripts/trelk.site.conf /etc/nginx/sites-available/trelk.site && sudo ln -sf /etc/nginx/sites-available/trelk.site /etc/nginx/sites-enabled/trelk.site && sudo nginx -t && sudo systemctl reload nginx"
@@ -30,6 +32,7 @@
   "author": "Trelk Team",
   "license": "MIT",
   "dependencies": {
+    "@faker-js/faker": "^10.2.0",
     "@fastify/cookie": "^10.0.0",
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^9.0.0",
@@ -42,7 +45,7 @@
     "fastify": "^5.0.0",
     "ioredis": "^5.9.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^8.5.0",
+    "mongoose": "^8.21.1",
     "socket.io": "^4.7.5",
     "uuid": "^9.0.1"
   },

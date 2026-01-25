@@ -6,10 +6,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Navigate } from 'react-router-dom';
-import { 
-  Download, 
-  FileText, 
-  FileJson, 
+import {
+  Download,
+  FileText,
+  FileJson,
   FileSpreadsheet,
   Calendar,
   Filter,
@@ -66,14 +66,14 @@ interface Category {
 
 export default function ExportsPage() {
   const { agent } = useAuthStore();
-  
+
   // Access control
   const canAccess = agent?.role === 'admin' || agent?.role === 'supervisor';
-  
+
   // Export jobs list
   const [jobs, setJobs] = useState<ExportJob[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
-  
+
   // New export form
   const [showForm, setShowForm] = useState(false);
   const [format, setFormat] = useState<ExportFormat>('pdf');
@@ -88,19 +88,19 @@ export default function ExportsPage() {
   const [includeAgentActions, setIncludeAgentActions] = useState(false);
   const [includeBranding, setIncludeBranding] = useState(true);
   const [creating, setCreating] = useState(false);
-  
+
   // Available options
   const [agents, setAgents] = useState<Agent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  
+
   // Fetch export jobs
   const fetchJobs = useCallback(async () => {
     if (!canAccess) return;
-    
+
     setLoadingJobs(true);
     try {
       const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
-      
+
       const res = await fetch(`/api/exports/jobs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -114,24 +114,24 @@ export default function ExportsPage() {
       setLoadingJobs(false);
     }
   }, [canAccess]);
-  
+
   // Fetch agents for filters (categories are static)
   const fetchOptions = useCallback(async () => {
     if (!canAccess) return;
-    
+
     try {
       const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
-      
+
       // Fetch agents
-      const agentsRes = await fetch(`/api/agents`, { 
+      const agentsRes = await fetch(`/api/agents`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (agentsRes.ok) {
         const data = await agentsRes.json();
         setAgents(data.data || []);
       }
-      
+
       // Categories are static based on ChatSession model
       setCategories([
         { _id: 'support', name: 'Soporte' },
@@ -144,27 +144,27 @@ export default function ExportsPage() {
       console.error('Failed to fetch filter options:', error);
     }
   }, [canAccess]);
-  
+
   useEffect(() => {
     fetchJobs();
     fetchOptions();
   }, [fetchJobs, fetchOptions]);
-  
+
   // Poll only when there are pending/processing jobs
   useEffect(() => {
     const hasPendingJobs = jobs.some(j => j.status === 'pending' || j.status === 'processing');
     if (!hasPendingJobs) return;
-    
+
     const interval = setInterval(fetchJobs, 5000);
     return () => clearInterval(interval);
   }, [jobs, fetchJobs]);
-  
+
   // Create export job
   const handleCreateExport = async () => {
     setCreating(true);
     try {
       const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
-      
+
       const res = await fetch(`/api/exports/batch`, {
         method: 'POST',
         headers: {
@@ -191,7 +191,7 @@ export default function ExportsPage() {
           } : undefined
         })
       });
-      
+
       if (res.ok) {
         setShowForm(false);
         resetForm();
@@ -203,7 +203,7 @@ export default function ExportsPage() {
       setCreating(false);
     }
   };
-  
+
   const resetForm = () => {
     setFormat('pdf');
     setDateFrom('');
@@ -217,27 +217,27 @@ export default function ExportsPage() {
     setIncludeAgentActions(false);
     setIncludeBranding(true);
   };
-  
+
   // Delete export job
   const handleDelete = async (jobId: string) => {
     try {
       const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
-      
+
       await fetch(`/api/exports/jobs/${jobId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       await fetchJobs();
     } catch (error) {
       console.error('Failed to delete export:', error);
     }
   };
-  
+
   if (!canAccess) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
       {/* Header */}
@@ -251,7 +251,7 @@ export default function ExportsPage() {
             <p className="text-sm text-gray-400">Exporta conversaciones y datos en múltiples formatos</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             onClick={fetchJobs}
@@ -269,7 +269,7 @@ export default function ExportsPage() {
           </button>
         </div>
       </div>
-      
+
       {/* Content */}
       <div className="flex-1 overflow-auto p-6">
         {/* Format Cards */}
@@ -296,11 +296,11 @@ export default function ExportsPage() {
             color="green"
           />
         </div>
-        
+
         {/* Export Jobs List */}
         <div>
           <h2 className="text-lg font-semibold text-white mb-4">Historial de Exportaciones</h2>
-          
+
           {loadingJobs ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
@@ -316,9 +316,9 @@ export default function ExportsPage() {
           ) : (
             <div className="space-y-3">
               {jobs.map(job => (
-                <ExportJobCard 
-                  key={job._id} 
-                  job={job} 
+                <ExportJobCard
+                  key={job._id}
+                  job={job}
                   onDelete={() => handleDelete(job._id)}
                 />
               ))}
@@ -326,7 +326,7 @@ export default function ExportsPage() {
           )}
         </div>
       </div>
-      
+
       {/* Export Form Modal */}
       {showForm && (
         <ExportFormModal
@@ -365,13 +365,13 @@ export default function ExportsPage() {
 
 // Sub-components
 
-function FormatCard({ 
-  format, 
-  icon, 
-  title, 
-  description, 
-  color 
-}: { 
+function FormatCard({
+  format,
+  icon,
+  title,
+  description,
+  color
+}: {
   format: ExportFormat;
   icon: React.ReactNode;
   title: string;
@@ -383,7 +383,7 @@ function FormatCard({
     yellow: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     green: 'bg-green-500/20 text-green-400 border-green-500/30',
   };
-  
+
   return (
     <div className={`p-4 rounded-xl border ${colors[color]}`}>
       <div className="flex items-center gap-3 mb-2">
@@ -397,35 +397,35 @@ function FormatCard({
 
 function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void }) {
   const [showDetails, setShowDetails] = useState(false);
-  
+
   const formatIcons = {
     pdf: <FileText className="w-5 h-5" />,
     json: <FileJson className="w-5 h-5" />,
     csv: <FileSpreadsheet className="w-5 h-5" />,
   };
-  
+
   const formatColors = {
     pdf: 'bg-red-500/20 text-red-400',
     json: 'bg-yellow-500/20 text-yellow-400',
     csv: 'bg-green-500/20 text-green-400',
   };
-  
+
   const statusConfig = {
     pending: { icon: <Clock className="w-4 h-4" />, color: 'text-gray-400', label: 'Pendiente' },
     processing: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-blue-400', label: 'Procesando' },
     completed: { icon: <CheckCircle className="w-4 h-4" />, color: 'text-green-400', label: 'Completado' },
     failed: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-400', label: 'Error' },
   };
-  
+
   const status = statusConfig[job.status];
-  
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '--';
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
-  
+
   return (
     <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-gray-600 transition-colors">
       <div className="flex items-center justify-between">
@@ -448,7 +448,7 @@ function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {job.status === 'completed' && job.downloadUrl && (
             <a
@@ -476,7 +476,7 @@ function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void
           </button>
         </div>
       </div>
-      
+
       {/* Details panel */}
       {showDetails && (
         <div className="mt-4 pt-4 border-t border-gray-700 grid grid-cols-2 gap-4 text-sm">
@@ -512,7 +512,7 @@ function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void
           )}
         </div>
       )}
-      
+
       {job.error && (
         <p className="mt-2 text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
           {job.error}
@@ -582,7 +582,7 @@ function ExportFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
+
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-auto bg-gray-900 rounded-2xl shadow-2xl border border-gray-700">
         {/* Header */}
         <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
@@ -591,7 +591,7 @@ function ExportFormModal({
             ✕
           </button>
         </div>
-        
+
         <div className="p-6 space-y-6">
           {/* Format Selection */}
           <div>
@@ -601,11 +601,10 @@ function ExportFormModal({
                 <button
                   key={f}
                   onClick={() => setFormat(f)}
-                  className={`p-3 rounded-xl border-2 transition-colors ${
-                    format === f
+                  className={`p-3 rounded-xl border-2 transition-colors ${format === f
                       ? 'border-emerald-500 bg-emerald-500/10'
                       : 'border-gray-700 hover:border-gray-600'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     {f === 'pdf' && <FileText className="w-5 h-5 text-red-400" />}
@@ -617,7 +616,7 @@ function ExportFormModal({
               ))}
             </div>
           </div>
-          
+
           {/* Content Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">Contenido a incluir</label>
@@ -651,7 +650,7 @@ function ExportFormModal({
               )}
             </div>
           </div>
-          
+
           {/* Date Range */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
@@ -679,7 +678,7 @@ function ExportFormModal({
               </div>
             </div>
           </div>
-          
+
           {/* Agent Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
@@ -698,7 +697,7 @@ function ExportFormModal({
             </select>
             <p className="text-xs text-gray-500 mt-1">Ctrl+click para seleccionar múltiples. Deja vacío para todos.</p>
           </div>
-          
+
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
@@ -716,11 +715,10 @@ function ExportFormModal({
                       setSelectedStatus([...selectedStatus, s]);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    selectedStatus.includes(s)
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedStatus.includes(s)
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500'
                       : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600'
-                  }`}
+                    }`}
                 >
                   {s === 'human' ? 'Activo' : s === 'closed' ? 'Cerrado' : s === 'queued' ? 'En cola' : 'Esperando'}
                 </button>
@@ -728,7 +726,7 @@ function ExportFormModal({
             </div>
           </div>
         </div>
-        
+
         {/* Footer */}
         <div className="sticky bottom-0 bg-gray-900 border-t border-gray-700 px-6 py-4 flex justify-end gap-3">
           <button
@@ -760,11 +758,11 @@ function ExportFormModal({
   );
 }
 
-function Checkbox({ 
-  checked, 
-  onChange, 
-  label 
-}: { 
+function Checkbox({
+  checked,
+  onChange,
+  label
+}: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;

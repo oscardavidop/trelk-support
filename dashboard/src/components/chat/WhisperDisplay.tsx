@@ -74,8 +74,9 @@ function WhisperCard({ whisper, onDismiss, onRead }: WhisperCardProps) {
 
   const timeAgo = getTimeAgo(whisper.createdAt);
 
+  // sticket top 
   return (
-    <div className="relative bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 animate-in slide-in-from-top duration-300">
+    <div className="relative bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 animate-in slide-in-from-top duration-300 sticky top-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">

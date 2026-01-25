@@ -3,7 +3,8 @@
  */
 
 export { User, type IUser } from './models/User.js';
-export { Agent, type IAgent, type AgentRole, type OnlineStatus, type IAgentMetrics } from './models/Agent.js';
+export { Agent, type IAgent, type AgentRole, type OnlineStatus, type IAgentMetrics, type IPermissionsOverride } from './models/Agent.js';
+export { Role, type IRole, initializeSystemRoles, ALL_PERMISSIONS, PERMISSION_CATEGORIES, DEFAULT_ROLE_PERMISSIONS } from './models/Role.js';
 export { AgentPreferences, type IAgentPreferences, getOrCreatePreferences } from './models/AgentPreferences.js';
 export { AgentSession, type IAgentSession, createSession, getActiveSessions, invalidateSession, invalidateAllSessionsExcept } from './models/AgentSession.js';
 export { AgentActivity, type IAgentActivity, type ActivityType, logActivity, getRecentActivities } from './models/AgentActivity.js';
@@ -31,4 +32,5 @@ export {
   type IUserCustomField,
   type CustomFieldType 
 } from './models/CustomField.js';
+export { AuditLog, type IAuditLog, type AuditCategory, type AuditSeverity } from './models/AuditLog.js';
 export { connectDatabase, disconnectDatabase } from './connection.js';

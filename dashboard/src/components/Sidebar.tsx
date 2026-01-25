@@ -2,6 +2,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useConnectionStore } from '../stores/connectionStore';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   MessageCircle,
   LayoutDashboard,
@@ -29,7 +30,8 @@ import {
   Server,
   Languages,
   Contact,
-  Megaphone
+  Megaphone,
+  KeyRound
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
@@ -93,6 +95,10 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
     localStorage.setItem('sidebar-collapsed', String(newState));
   };
 
+  // Use permission-based access instead of role-based
+  const { can, canAny } = usePermissions();
+  
+  // Legacy role checks (for backward compatibility)
   const isAdmin = agent?.role === 'admin';
   const isSupervisor = agent?.role === 'supervisor';
   const canSupervise = isAdmin || isSupervisor;
@@ -107,27 +113,29 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
   const availabilityStatus = agent?.availability || getAvailabilityStatus();
 
+  // Navigation items with permission-based filtering
   const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', requireRole: null },
-    { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', badge: stats?.sessions.waiting, requireRole: null },
-    { path: '/dashboard/contacts', icon: Contact, label: 'Contactos', requireRole: null },
-    { path: '/dashboard/broadcast', icon: Megaphone, label: 'Broadcast', requireRole: 'supervisor' as const },
-    { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', requireRole: 'supervisor' as const },
-    { path: '/dashboard/audit', icon: Activity, label: 'Actividad', requireRole: 'supervisor' as const },
-    { path: '/dashboard/exports', icon: Download, label: 'Exportar', requireRole: 'supervisor' as const },
-    { path: '/dashboard/system', icon: Server, label: 'Sistema', requireRole: 'supervisor' as const },
-    { path: '/dashboard/system-control', icon: Shield, label: 'Control', requireRole: 'admin' as const, danger: true },
-    { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', requireRole: 'admin' as const },
-    { path: '/dashboard/flows', icon: GitBranch, label: 'Flows', requireRole: 'admin' as const },
-    { path: '/dashboard/texts', icon: Languages, label: 'Textos i18n', requireRole: 'admin' as const },
-    { path: '/dashboard/custom-fields', icon: ListChecks, label: 'Campos', requireRole: 'admin' as const },
-    { path: '/dashboard/agents', icon: Users, label: 'Agents', requireRole: 'admin' as const },
-    { path: '/dashboard/settings', icon: Settings, label: 'Settings', requireRole: 'admin' as const },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', permission: null },
+    { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', badge: stats?.sessions.waiting, permission: 'chats.read' },
+    { path: '/dashboard/contacts', icon: Contact, label: 'Contactos', permission: 'contacts.read' },
+    { path: '/dashboard/broadcast', icon: Megaphone, label: 'Broadcast', permission: 'broadcast.read' },
+    { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', permission: 'supervisor.monitor' },
+    { path: '/dashboard/audit', icon: Activity, label: 'Actividad', permission: 'system.audit' },
+    { path: '/dashboard/exports', icon: Download, label: 'Exportar', permission: 'exports.create' },
+    { path: '/dashboard/system', icon: Server, label: 'Sistema', permission: 'system.read' },
+    { path: '/dashboard/system-control', icon: Shield, label: 'Control', permission: 'system.destructive', danger: true },
+    { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', permission: 'replies.write' },
+    { path: '/dashboard/flows', icon: GitBranch, label: 'Flows', permission: 'flows.read' },
+    { path: '/dashboard/texts', icon: Languages, label: 'Textos i18n', permission: 'settings.write' },
+    { path: '/dashboard/custom-fields', icon: ListChecks, label: 'Campos', permission: 'customFields.read' },
+    { path: '/dashboard/agents', icon: Users, label: 'Agents', permission: 'agents.read' },
+    { path: '/dashboard/permissions', icon: KeyRound, label: 'Permisos', permission: 'agents.permissions' },
+    { path: '/dashboard/settings', icon: Settings, label: 'Settings', permission: 'settings.read' },
   ].filter(item => {
-    if (item.requireRole === null) return true;
-    if (item.requireRole === 'admin') return isAdmin;
-    if (item.requireRole === 'supervisor') return canSupervise;
-    return false;
+    // No permission required
+    if (item.permission === null) return true;
+    // Check permission
+    return can(item.permission);
   });
 
   const statusColors = {
@@ -216,7 +224,9 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       </div>
 
       {/* Navigation - Scrollable */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      {/* ui scrollll bar */}
+      
+      <nav className="flex-1 p-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const isDanger = 'danger' in item && item.danger;
@@ -226,12 +236,12 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
               to={item.path}
               title={isCollapsed ? item.label : undefined}
               className={`flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
-                  ? isDanger 
-                    ? 'bg-danger/20 text-danger'
-                    : 'bg-primary/10 text-primary'
-                  : isDanger
-                    ? 'text-danger/70 hover:text-danger hover:bg-danger/10'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? isDanger
+                  ? 'bg-danger/20 text-danger'
+                  : 'bg-primary/10 text-primary'
+                : isDanger
+                  ? 'text-danger/70 hover:text-danger hover:bg-danger/10'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
                 }`}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -345,7 +355,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
                   <span className="ml-auto text-xs text-gray-400">{agent?.activeChats}/{MAX_CONCURRENT_CHATS} chats</span>
                 </div>
               )}
-              
+
               {/* Settings Section */}
               <div className="border-t border-gray-700">
                 <div className="px-3 py-2 border-b border-gray-700">

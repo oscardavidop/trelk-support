@@ -1,10 +1,11 @@
 /**
  * Contacts PRO Routes
  * API endpoints for contact management, bulk actions, and segmentation
+ * Uses RBAC permissions for access control
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import { contactsService, type ContactListParams } from '../services/contacts.service.js';
 import { segmentService, type CreateSegmentParams, type UpdateSegmentParams } from '../services/segment.service.js';
 import { SavedView, type IColumnConfig } from '../database/models/index.js';
@@ -223,10 +224,11 @@ export async function registerContactsProRoutes(fastify: FastifyInstance): Promi
   /**
    * DELETE /api/contacts/:contactId
    * Delete contact (soft delete)
+   * Requires: contacts.delete
    */
   fastify.delete<{ Params: ContactIdParam }>(
     '/api/contacts/:contactId',
-    { preHandler: adminMiddleware }, // Requires admin
+    { preHandler: requirePermission('contacts.delete') },
     async (request, reply) => {
       const { contactId } = request.params;
 
@@ -348,12 +350,13 @@ export async function registerContactsProRoutes(fastify: FastifyInstance): Promi
   /**
    * POST /api/contacts/bulk/block
    * Block multiple contacts
+   * Requires: contacts.block
    */
   fastify.post<{
     Body: { contactIds: string[]; reason: string };
   }>(
     '/api/contacts/bulk/block',
-    { preHandler: adminMiddleware },
+    { preHandler: requirePermission('contacts.block') },
     async (request, reply) => {
       const { contactIds, reason } = request.body;
 
@@ -374,12 +377,13 @@ export async function registerContactsProRoutes(fastify: FastifyInstance): Promi
   /**
    * POST /api/contacts/bulk/unblock
    * Unblock multiple contacts
+   * Requires: contacts.block
    */
   fastify.post<{
     Body: { contactIds: string[] };
   }>(
     '/api/contacts/bulk/unblock',
-    { preHandler: adminMiddleware },
+    { preHandler: requirePermission('contacts.block') },
     async (request, reply) => {
       const { contactIds } = request.body;
 
@@ -396,12 +400,13 @@ export async function registerContactsProRoutes(fastify: FastifyInstance): Promi
   /**
    * POST /api/contacts/bulk/delete
    * Delete multiple contacts
+   * Requires: contacts.delete
    */
   fastify.post<{
     Body: { contactIds: string[] };
   }>(
     '/api/contacts/bulk/delete',
-    { preHandler: adminMiddleware },
+    { preHandler: requirePermission('contacts.delete') },
     async (request, reply) => {
       const { contactIds } = request.body;
 
@@ -625,8 +630,9 @@ export async function registerContactsProRoutes(fastify: FastifyInstance): Promi
   /**
    * POST /api/segments/refresh
    * Refresh all segment counts
+   * Requires: segments.write
    */
-  fastify.post('/api/segments/refresh', { preHandler: adminMiddleware }, async (request, reply) => {
+  fastify.post('/api/segments/refresh', { preHandler: requirePermission('segments.write') }, async (request, reply) => {
     await segmentService.refreshAllCounts();
     return { ok: true };
   });

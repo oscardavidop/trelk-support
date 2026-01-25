@@ -86,6 +86,15 @@ export interface IAgentMetrics {
   satisfactionNegative?: number;
 }
 
+/**
+ * Permission overrides for individual agents
+ * Allows granting/revoking specific permissions beyond their role
+ */
+export interface IPermissionsOverride {
+  allow: string[];   // Additional permissions granted
+  deny: string[];    // Permissions explicitly denied
+}
+
 export interface IAgent extends Document {
   _id: Types.ObjectId;
   name: string;
@@ -112,6 +121,19 @@ export interface IAgent extends Document {
   // Supervisor-specific
   isSupervisingEnabled?: boolean;
   watchingSessions?: string[];
+  
+  // RBAC: Custom role reference (if using custom roles)
+  roleId?: Types.ObjectId;
+  
+  // RBAC: Permission overrides per user
+  permissionsOverride?: IPermissionsOverride;
+  
+  // RBAC: Cached effective permissions (for quick lookup)
+  // This is populated at login and refreshed when permissions change
+  _effectivePermissions?: string[];
+  
+  // Permission version for cache invalidation
+  permissionVersion?: number;
   
   createdAt: Date;
   updatedAt: Date;
@@ -190,6 +212,28 @@ const AgentSchema = new Schema<IAgent>(
     watchingSessions: [{
       type: String,
     }],
+    // RBAC: Custom role reference
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Role',
+      index: true,
+    },
+    // RBAC: Permission overrides
+    permissionsOverride: {
+      allow: [{
+        type: String,
+        trim: true,
+      }],
+      deny: [{
+        type: String,
+        trim: true,
+      }],
+    },
+    // RBAC: Permission version for cache invalidation
+    permissionVersion: {
+      type: Number,
+      default: 1,
+    },
     // Survey metrics
     metrics: {
       averageRating: {

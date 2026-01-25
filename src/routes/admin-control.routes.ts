@@ -1,11 +1,11 @@
 /**
  * Admin Control Routes (Fastify)
  * Secure endpoints for system administration
- * Requires admin role and re-authentication for destructive actions
+ * Requires system.admin permission and re-authentication for destructive actions
  */
 
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import * as AdminControl from '../services/admin-control.service.js';
 import { Agent } from '../database/models/Agent.js';
 import bcrypt, { compare } from 'bcryptjs';
@@ -66,9 +66,9 @@ function checkAdminRole(request: FastifyRequest, reply: FastifyReply): boolean {
 // ============= ROUTES =============
 
 export const adminControlRoutes: FastifyPluginAsync = async (fastify) => {
-  // All routes require authentication and admin role
+  // All routes require authentication and system.admin permission
   fastify.addHook('onRequest', authMiddleware);
-  fastify.addHook('onRequest', adminMiddleware);
+  fastify.addHook('onRequest', requirePermission('system.admin'));
 
   // ============= PASSWORD VERIFICATION =============
   

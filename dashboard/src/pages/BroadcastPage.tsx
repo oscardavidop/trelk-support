@@ -6,9 +6,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Navigate } from 'react-router-dom';
-import { 
-  Send, 
-  Users, 
+import {
+  Send,
+  Users,
   Target,
   CheckCircle,
   Loader2,
@@ -25,7 +25,9 @@ import {
   Filter,
   ChevronDown,
   AlertTriangle,
-  BarChart3
+  BarChart3,
+  ChevronLeft, ChevronRight, CheckCircle2, XCircle, Slash, MessageSquare,
+  Calendar
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { BroadcastCreateSidebar } from '../components/broadcast/BroadcastCreateSidebar';
@@ -99,51 +101,51 @@ interface BroadcastStats {
 
 function getStatusConfig(status: BroadcastStatus) {
   const configs: Record<BroadcastStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-    draft: { 
-      label: 'Borrador', 
-      color: 'text-gray-400', 
+    draft: {
+      label: 'Borrador',
+      color: 'text-gray-400',
       bg: 'bg-gray-500/20',
       icon: <Clock className="w-4 h-4" />
     },
-    scheduled: { 
-      label: 'Programado', 
-      color: 'text-blue-400', 
+    scheduled: {
+      label: 'Programado',
+      color: 'text-blue-400',
       bg: 'bg-blue-500/20',
       icon: <Clock className="w-4 h-4" />
     },
-    pending: { 
-      label: 'Pendiente', 
-      color: 'text-yellow-400', 
+    pending: {
+      label: 'Pendiente',
+      color: 'text-yellow-400',
       bg: 'bg-yellow-500/20',
       icon: <Clock className="w-4 h-4" />
     },
-    sending: { 
-      label: 'Enviando', 
-      color: 'text-cyan-400', 
+    sending: {
+      label: 'Enviando',
+      color: 'text-cyan-400',
       bg: 'bg-cyan-500/20',
       icon: <Loader2 className="w-4 h-4 animate-spin" />
     },
-    paused: { 
-      label: 'Pausado', 
-      color: 'text-orange-400', 
+    paused: {
+      label: 'Pausado',
+      color: 'text-orange-400',
       bg: 'bg-orange-500/20',
       icon: <Pause className="w-4 h-4" />
     },
-    completed: { 
-      label: 'Completado', 
-      color: 'text-emerald-400', 
+    completed: {
+      label: 'Completado',
+      color: 'text-emerald-400',
       bg: 'bg-emerald-500/20',
       icon: <CheckCircle className="w-4 h-4" />
     },
-    cancelled: { 
-      label: 'Cancelado', 
-      color: 'text-gray-400', 
+    cancelled: {
+      label: 'Cancelado',
+      color: 'text-gray-400',
       bg: 'bg-gray-500/20',
       icon: <StopCircle className="w-4 h-4" />
     },
-    failed: { 
-      label: 'Fallido', 
-      color: 'text-red-400', 
+    failed: {
+      label: 'Fallido',
+      color: 'text-red-400',
       bg: 'bg-red-500/20',
       icon: <AlertCircle className="w-4 h-4" />
     },
@@ -168,23 +170,23 @@ function formatNumber(n: number): string {
 
 export default function BroadcastPage() {
   const { agent, token } = useAuthStore();
-  
+
   // Access control - only admin/supervisor
   const canAccess = agent?.role === 'admin' || agent?.role === 'supervisor';
-  
+
   // State
   const [broadcasts, setBroadcasts] = useState<BroadcastJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState<BroadcastJob | null>(null);
-  
+
   // Stats
   const [stats, setStats] = useState<BroadcastStats | null>(null);
-  
+
   // Segments for targeting
   const [segments, setSegments] = useState<Segment[]>([]);
-  
+
   // Detail view
   const [selectedBroadcast, setSelectedBroadcast] = useState<BroadcastJob | null>(null);
   const [recipients, setRecipients] = useState<BroadcastRecipient[]>([]);
@@ -193,15 +195,15 @@ export default function BroadcastPage() {
   const [recipientsFilter, setRecipientsFilter] = useState<DeliveryStatus | ''>('');
   const [errors, setErrors] = useState<ErrorSummary[]>([]);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
-  
+
   // Socket ref
   const socketRef = useRef<Socket | null>(null);
 
   // ============= API FUNCTIONS =============
-  
+
   const fetchBroadcasts = useCallback(async () => {
     if (!canAccess) return;
-    
+
     setLoading(true);
     try {
       const res = await fetch('/api/broadcast', {
@@ -217,10 +219,10 @@ export default function BroadcastPage() {
       setLoading(false);
     }
   }, [canAccess, token]);
-  
+
   const fetchStats = useCallback(async () => {
     if (!canAccess) return;
-    
+
     try {
       const res = await fetch('/api/broadcast/stats', {
         headers: { Authorization: `Bearer ${token}` }
@@ -233,10 +235,10 @@ export default function BroadcastPage() {
       console.error('Failed to fetch stats:', error);
     }
   }, [canAccess, token]);
-  
+
   const fetchSegments = useCallback(async () => {
     if (!canAccess) return;
-    
+
     try {
       const res = await fetch('/api/segments', {
         headers: { Authorization: `Bearer ${token}` }
@@ -249,7 +251,7 @@ export default function BroadcastPage() {
       console.error('Failed to fetch segments:', error);
     }
   }, [canAccess, token]);
-  
+
   const fetchBroadcastDetail = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/broadcast/${id}`, {
@@ -263,13 +265,13 @@ export default function BroadcastPage() {
       console.error('Failed to fetch broadcast detail:', error);
     }
   }, [token]);
-  
+
   const fetchRecipients = useCallback(async (id: string, page = 1, status?: DeliveryStatus) => {
     setLoadingRecipients(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (status) params.set('status', status);
-      
+
       const res = await fetch(`/api/broadcast/${id}/recipients?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -284,7 +286,7 @@ export default function BroadcastPage() {
       setLoadingRecipients(false);
     }
   }, [token]);
-  
+
   const fetchErrors = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/broadcast/${id}/errors`, {
@@ -300,20 +302,20 @@ export default function BroadcastPage() {
   }, [token]);
 
   // ============= ACTIONS =============
-  
+
   // handleBroadcastCreated - Called after sidebar creates a broadcast
   const handleBroadcastCreated = async () => {
     await fetchBroadcasts();
     await fetchStats();
   };
-  
+
   const handleStartBroadcast = async (id: string) => {
     try {
       const res = await fetch(`/api/broadcast/${id}/start`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (res.ok) {
         setShowConfirm(null);
         await fetchBroadcasts();
@@ -322,7 +324,7 @@ export default function BroadcastPage() {
       console.error('Failed to start broadcast:', error);
     }
   };
-  
+
   const handlePauseBroadcast = async (id: string) => {
     try {
       await fetch(`/api/broadcast/${id}/pause`, {
@@ -334,7 +336,7 @@ export default function BroadcastPage() {
       console.error('Failed to pause broadcast:', error);
     }
   };
-  
+
   const handleResumeBroadcast = async (id: string) => {
     try {
       await fetch(`/api/broadcast/${id}/resume`, {
@@ -346,12 +348,12 @@ export default function BroadcastPage() {
       console.error('Failed to resume broadcast:', error);
     }
   };
-  
+
   const handleCancelBroadcast = async (id: string) => {
     if (!confirm('¿Estás seguro de cancelar este broadcast? Los mensajes ya enviados no se pueden deshacer.')) {
       return;
     }
-    
+
     try {
       await fetch(`/api/broadcast/${id}/cancel`, {
         method: 'POST',
@@ -363,12 +365,12 @@ export default function BroadcastPage() {
       console.error('Failed to cancel broadcast:', error);
     }
   };
-  
+
   const handleDeleteBroadcast = async (id: string) => {
     if (!confirm('¿Eliminar este broadcast? Esta acción no se puede deshacer.')) {
       return;
     }
-    
+
     try {
       await fetch(`/api/broadcast/${id}`, {
         method: 'DELETE',
@@ -380,7 +382,7 @@ export default function BroadcastPage() {
       console.error('Failed to delete broadcast:', error);
     }
   };
-  
+
   const openDetail = async (broadcast: BroadcastJob) => {
     setShowDetail(broadcast._id);
     setSelectedBroadcast(broadcast);
@@ -394,72 +396,72 @@ export default function BroadcastPage() {
   };
 
   // ============= EFFECTS =============
-  
+
   useEffect(() => {
     fetchBroadcasts();
     fetchStats();
     fetchSegments();
   }, [fetchBroadcasts, fetchStats, fetchSegments]);
-  
+
   // Real-time updates via Socket.IO
   useEffect(() => {
     if (!token) return;
-    
+
     const socket = io({
       auth: { token },
       transports: ['websocket'],
     });
-    
+
     socket.on('connect', () => {
       socket.emit('join', 'admin');
     });
-    
+
     socket.on('broadcast:update', (data) => {
-      setBroadcasts(prev => 
+      setBroadcasts(prev =>
         prev.map(b => b._id === data._id ? { ...b, ...data } : b)
       );
-      
+
       if (selectedBroadcast?._id === data._id) {
         setSelectedBroadcast(prev => prev ? { ...prev, ...data } : null);
       }
     });
-    
+
     socketRef.current = socket;
-    
+
     return () => {
       socket.disconnect();
     };
   }, [token, selectedBroadcast?._id]);
-  
+
   // Polling for active broadcasts
   useEffect(() => {
     const hasActive = broadcasts.some(b => b.status === 'sending' || b.status === 'pending');
     if (!hasActive) return;
-    
+
     const interval = setInterval(() => {
       fetchBroadcasts();
     }, 5000);
-    
+
     return () => clearInterval(interval);
   }, [broadcasts, fetchBroadcasts]);
-  
+
   // Fetch recipients when filter changes
   useEffect(() => {
     if (showDetail) {
       fetchRecipients(showDetail, recipientsPage, recipientsFilter || undefined);
     }
   }, [showDetail, recipientsPage, recipientsFilter, fetchRecipients]);
-  
+
   if (!canAccess) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   // Calculate progress percentage
   const getProgress = (p: BroadcastProgress) => {
     if (!p.total) return 0;
     return Math.round(((p.sent + p.failed + p.blocked) / p.total) * 100);
   };
-  
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
       {/* Header */}
@@ -473,7 +475,7 @@ export default function BroadcastPage() {
             <p className="text-sm text-gray-400">Envía mensajes masivos a tus usuarios</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             onClick={() => { fetchBroadcasts(); fetchStats(); }}
@@ -491,7 +493,7 @@ export default function BroadcastPage() {
           </button>
         </div>
       </div>
-      
+
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 px-6 py-4 border-b border-gray-800">
@@ -525,7 +527,7 @@ export default function BroadcastPage() {
           </div>
         </div>
       )}
-      
+
       {/* Content */}
       <div className="flex-1 overflow-auto p-6">
         {loading && broadcasts.length === 0 ? (
@@ -555,7 +557,7 @@ export default function BroadcastPage() {
           </div>
         )}
       </div>
-      
+
       {/* Create Broadcast Sidebar */}
       <BroadcastCreateSidebar
         isOpen={showForm}
@@ -563,7 +565,7 @@ export default function BroadcastPage() {
         onCreated={handleBroadcastCreated}
         segments={segments}
       />
-      
+
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -582,17 +584,17 @@ export default function BroadcastPage() {
                 </span>
                 . Esta acción no se puede deshacer.
               </p>
-              
+
               <div className="bg-gray-800 rounded-lg p-4 mb-6">
                 <p className="text-sm text-gray-400 mb-1">Vista previa:</p>
                 <p className="text-white whitespace-pre-wrap text-sm">
-                  {showConfirm.message.length > 200 
-                    ? showConfirm.message.slice(0, 200) + '...' 
+                  {showConfirm.message.length > 200
+                    ? showConfirm.message.slice(0, 200) + '...'
                     : showConfirm.message
                   }
                 </p>
               </div>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConfirm(null)}
@@ -612,7 +614,7 @@ export default function BroadcastPage() {
           </div>
         </div>
       )}
-      
+
       {/* Detail Modal */}
       {showDetail && selectedBroadcast && (
         <BroadcastDetailModal
@@ -651,144 +653,172 @@ interface BroadcastCardProps {
 
 function BroadcastCard({ broadcast, onView, onStart, onPause, onResume, onCancel, onDelete }: BroadcastCardProps) {
   const status = getStatusConfig(broadcast.status);
-  const progress = broadcast.progress.total > 0
+  
+  // Cálculo de porcentajes seguro
+  const total = broadcast.progress.total || 1; // Evitar división por cero
+  const sentPct = (broadcast.progress.sent / total) * 100;
+  const failedPct = (broadcast.progress.failed / total) * 100;
+  const blockedPct = (broadcast.progress.blocked / total) * 100;
+  
+  const progressPercent = broadcast.progress.total > 0
     ? Math.round(((broadcast.progress.sent + broadcast.progress.failed + broadcast.progress.blocked) / broadcast.progress.total) * 100)
     : 0;
-  
+
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-medium text-white truncate">{broadcast.title}</h3>
-            <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${status.bg} ${status.color}`}>
-              {status.icon}
-              {status.label}
-            </span>
+    <div className="group relative bg-gray-900/40 backdrop-blur-sm border border-gray-800 rounded-xl p-5 hover:border-gray-700 hover:shadow-lg hover:shadow-violet-900/5 transition-all duration-300">
+      
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-start justify-between">
+        
+        {/* Info Principal */}
+        <div className="flex-1 min-w-0 space-y-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-100 truncate tracking-tight">
+              {broadcast.title}
+            </h3>
+            <StatusBadge status={status} />
           </div>
           
-          <p className="text-sm text-gray-400 truncate mb-3">
-            {broadcast.message ? (broadcast.message.length > 100 ? broadcast.message.slice(0, 100) + '...' : broadcast.message) : '(Sin mensaje)'}
+          <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed max-w-2xl">
+            {broadcast.message || <span className="italic opacity-50">Sin mensaje configurado</span>}
           </p>
           
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <Target className="w-4 h-4" />
-              {getTargetLabel(broadcast.targetType)}
-              {broadcast.segmentName && `: ${broadcast.segmentName}`}
-            </span>
-            <span className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              {formatNumber(broadcast.progress.total)} usuarios
-            </span>
-            <span>
-              {new Date(broadcast.createdAt).toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </span>
+          {/* Metadatos - Grid para mejor alineación */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium text-gray-500 pt-1">
+            <div className="flex items-center gap-1.5 bg-gray-800/50 px-2.5 py-1 rounded-md">
+              <Target className="w-3.5 h-3.5 text-violet-400" />
+              <span className="text-gray-300">
+                {getTargetLabel(broadcast.targetType)}
+                {broadcast.segmentName && <span className="text-gray-500"> • {broadcast.segmentName}</span>}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              <span>{formatNumber(broadcast.progress.total)} destinatarios</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="capitalize">
+                {new Date(broadcast.createdAt).toLocaleDateString('es-ES', {
+                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                })}
+              </span>
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 ml-4">
-          {broadcast.status === 'draft' && (
-            <button
-              onClick={onStart}
-              className="p-2 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg text-emerald-400 transition-colors"
-              title="Iniciar"
-            >
-              <Play className="w-4 h-4" />
-            </button>
-          )}
-          {broadcast.status === 'sending' && (
-            <button
-              onClick={onPause}
-              className="p-2 bg-orange-500/20 hover:bg-orange-500/30 rounded-lg text-orange-400 transition-colors"
-              title="Pausar"
-            >
-              <Pause className="w-4 h-4" />
-            </button>
-          )}
-          {broadcast.status === 'paused' && (
-            <button
-              onClick={onResume}
-              className="p-2 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-lg text-cyan-400 transition-colors"
-              title="Reanudar"
-            >
-              <Play className="w-4 h-4" />
-            </button>
-          )}
-          {['draft', 'pending', 'sending', 'paused'].includes(broadcast.status) && (
-            <button
-              onClick={onCancel}
-              className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-colors"
-              title="Cancelar"
-            >
-              <StopCircle className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={onView}
-            className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors"
-            title="Ver detalles"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          {['completed', 'cancelled', 'failed', 'draft'].includes(broadcast.status) && (
-            <button
-              onClick={onDelete}
-              className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
-              title="Eliminar"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+        {/* Acciones - Separadas visualmente */}
+        <div className="flex items-center gap-2 sm:pl-4 sm:ml-2 pt-4 sm:pt-0 self-start sm:self-center">
+          <ActionButtons 
+            status={broadcast.status} 
+            actions={{ onStart, onPause, onResume, onCancel, onView, onDelete }} 
+          />
         </div>
       </div>
       
-      {/* Progress bar */}
+      {/* Barra de Progreso - Solo visible cuando es relevante */}
       {['sending', 'paused', 'completed', 'cancelled'].includes(broadcast.status) && (
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-gray-400">
-              {formatNumber(broadcast.progress.sent)} enviados
-              {broadcast.progress.failed > 0 && (
-                <span className="text-red-400 ml-2">
-                  {formatNumber(broadcast.progress.failed)} fallidos
-                </span>
-              )}
-              {broadcast.progress.blocked > 0 && (
-                <span className="text-orange-400 ml-2">
-                  {formatNumber(broadcast.progress.blocked)} bloqueados
-                </span>
-              )}
-            </span>
-            <span className="text-gray-400">{progress}%</span>
-          </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full transition-all duration-500 flex"
-            >
-              <div 
-                className="h-full bg-emerald-500" 
-                style={{ width: `${(broadcast.progress.sent / Math.max(1, broadcast.progress.total)) * 100}%` }}
-              />
-              <div 
-                className="h-full bg-red-500" 
-                style={{ width: `${(broadcast.progress.failed / Math.max(1, broadcast.progress.total)) * 100}%` }}
-              />
-              <div 
-                className="h-full bg-orange-500" 
-                style={{ width: `${(broadcast.progress.blocked / Math.max(1, broadcast.progress.total)) * 100}%` }}
-              />
+        <div className="mt-5 pt-4 border-t border-gray-800/50">
+          <div className="flex justify-between items-end mb-2 text-xs">
+            <div className="flex gap-4">
+              <StatLabel color="text-emerald-400" label="Enviados" value={broadcast.progress.sent} />
+              {broadcast.progress.failed > 0 && <StatLabel color="text-red-400" label="Fallidos" value={broadcast.progress.failed} />}
+              {broadcast.progress.blocked > 0 && <StatLabel color="text-orange-400" label="Bloqueados" value={broadcast.progress.blocked} />}
             </div>
+            <span className="font-mono font-medium text-gray-400">{progressPercent}%</span>
+          </div>
+
+          <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden flex">
+            <div className="h-full bg-emerald-500 transition-all duration-700 ease-out" style={{ width: `${sentPct}%` }} />
+            <div className="h-full bg-red-500 transition-all duration-700 ease-out" style={{ width: `${failedPct}%` }} />
+            <div className="h-full bg-orange-500 transition-all duration-700 ease-out" style={{ width: `${blockedPct}%` }} />
           </div>
         </div>
       )}
     </div>
   );
+}
+
+const StatusBadge = ({ status }: { status: any }) => (
+  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${status.bg} ${status.border || 'border-transparent'} ${status.color}`}>
+    {status.icon}
+    {status.label}
+  </span>
+);
+
+const StatLabel = ({ color, label, value }: { color: string, label: string, value: number }) => (
+  <span className="flex items-center gap-1.5 text-gray-400">
+    <span className={`w-1.5 h-1.5 rounded-full ${color.replace('text-', 'bg-')}`} />
+    {label} <span className={`font-medium ${color}`}>{formatNumber(value)}</span>
+  </span>
+);
+
+const ActionButtons = ({ status, actions }: { status: string, actions: any }) => {
+  return (
+    <>
+      {/* Controles de Estado (Play/Pause/Cancel) */}
+      <div className="flex gap-1 mr-1">
+        {status === 'draft' && (
+          <ActionButton onClick={actions.onStart} icon={Play} title="Iniciar" colorClass="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:scale-105" />
+        )}
+        {status === 'sending' && (
+          <ActionButton onClick={actions.onPause} icon={Pause} title="Pausar" colorClass="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20" />
+        )}
+        {status === 'paused' && (
+          <ActionButton onClick={actions.onResume} icon={Play} title="Reanudar" colorClass="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" />
+        )}
+        {['draft', 'pending', 'sending', 'paused'].includes(status) && (
+          <ActionButton onClick={actions.onCancel} icon={StopCircle} title="Cancelar" colorClass="bg-red-500/10 text-red-500 hover:bg-red-500/20" />
+        )}
+      </div>
+
+      {/* Acciones de Gestión (Ver/Borrar) */}
+      <div className="flex gap-1 pl-2 border-l border-gray-800">
+        <ActionButton onClick={actions.onView} icon={Eye} title="Ver detalles" colorClass="text-gray-400 hover:text-white hover:bg-gray-800" />
+        {['completed', 'cancelled', 'failed', 'draft'].includes(status) && (
+          <ActionButton onClick={actions.onDelete} icon={Trash2} title="Eliminar" colorClass="text-gray-500 hover:text-red-400 hover:bg-red-500/10" />
+        )}
+      </div>
+    </>
+  );
+};
+
+
+function getDeliveryStatusConfig(status: DeliveryStatus) {
+  const configs: Record<DeliveryStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+    pending: {
+      label: 'Pendiente',
+      color: 'text-gray-400',
+      bg: 'bg-gray-500/20',
+      icon: <Clock className="w-3 h-3" />
+    },
+    sent: {
+      label: 'Enviado',
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/20',
+      icon: <CheckCircle className="w-3 h-3" />
+    },
+    delivered: {
+      label: 'Entregado',
+      color: 'text-cyan-400',
+      bg: 'bg-cyan-500/20',
+      icon: <CheckCircle className="w-3 h-3" />
+    },
+    failed: {
+      label: 'Fallido',
+      color: 'text-red-400',
+      bg: 'bg-red-500/20',
+      icon: <AlertCircle className="w-3 h-3" />
+    },
+    blocked: {
+      label: 'Bloqueado',
+      color: 'text-orange-400',
+      bg: 'bg-orange-500/20',
+      icon: <StopCircle className="w-3 h-3" />
+    },
+  };
+  return configs[status] || configs.pending;
 }
 
 interface BroadcastDetailModalProps {
@@ -805,7 +835,7 @@ interface BroadcastDetailModalProps {
   onRefresh: () => void;
 }
 
-function BroadcastDetailModal({
+export function BroadcastDetailModal({
   broadcast,
   recipients,
   recipientsTotal,
@@ -820,230 +850,322 @@ function BroadcastDetailModal({
 }: BroadcastDetailModalProps) {
   const status = getStatusConfig(broadcast.status);
   const totalPages = Math.ceil(recipientsTotal / 50);
-  
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-gray-900 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
-          <div>
-            <h2 className="text-lg font-bold text-white">{broadcast.title}</h2>
-            <div className="flex items-center gap-3 mt-1">
-              <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${status.bg} ${status.color}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+      {/* Backdrop con Blur */}
+      <div
+        className="absolute inset-0 bg-gray-950/80 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Modal Content */}
+      <div className="relative w-full max-w-6xl bg-gray-900 ring-1 ring-white/10 rounded-xl shadow-2xl flex flex-col max-h-[100vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+        {/* HEADER */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-800 bg-gray-900/50">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-white tracking-tight">{broadcast.title}</h2>
+              <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.bg} ${status.color} border-transparent bg-opacity-50`}>
                 {status.icon}
                 {status.label}
               </span>
-              <span className="text-sm text-gray-400">
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <span className="flex items-center gap-1.5 bg-gray-800/50 px-2 py-0.5 rounded">
+                <Users className="w-3.5 h-3.5" />
                 {getTargetLabel(broadcast.targetType)}
-                {broadcast.segmentName && ` • ${broadcast.segmentName}`}
               </span>
+              {broadcast.segmentName && (
+                <>
+                  <span className="text-gray-600">•</span>
+                  <span className="text-gray-400">{broadcast.segmentName}</span>
+                </>
+              )}
             </div>
           </div>
+
           <div className="flex items-center gap-2">
-            <button
-              onClick={onRefresh}
-              className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <ActionButton onClick={onRefresh} icon={RefreshCw} title="Actualizar datos" />
+            <div className="w-px h-6 bg-gray-800 mx-1" />
+            <ActionButton onClick={onClose} icon={X} title="Cerrar" hoverColor="hover:text-red-400 hover:bg-red-500/10" />
           </div>
         </div>
-        
-        {/* Stats */}
-        <div className="grid grid-cols-5 gap-4 p-6 border-b border-gray-800">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-white">{formatNumber(broadcast.progress.total)}</div>
-            <div className="text-xs text-gray-400">Total</div>
+
+        {/* SCROLLABLE CONTENT AREA */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+
+          {/* STATS CARDS */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-6 bg-gray-900/50">
+            <StatCard
+              label="Total"
+              value={broadcast.progress.total}
+              icon={Users}
+              color="text-gray-200"
+              bg="bg-gray-800"
+            />
+            <StatCard
+              label="Enviados"
+              value={broadcast.progress.sent}
+              icon={Send}
+              color="text-emerald-400"
+              bg="bg-emerald-500/10"
+            />
+            <StatCard
+              label="Entregados"
+              value={broadcast.progress.delivered}
+              icon={CheckCircle2}
+              color="text-cyan-400"
+              bg="bg-cyan-500/10"
+            />
+            <StatCard
+              label="Fallidos"
+              value={broadcast.progress.failed}
+              icon={AlertCircle}
+              color="text-red-400"
+              bg="bg-red-500/10"
+            />
+            <StatCard
+              label="Bloqueados"
+              value={broadcast.progress.blocked}
+              icon={Slash}
+              color="text-orange-400"
+              bg="bg-orange-500/10"
+            />
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-400">{formatNumber(broadcast.progress.sent)}</div>
-            <div className="text-xs text-gray-400">Enviados</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-cyan-400">{formatNumber(broadcast.progress.delivered)}</div>
-            <div className="text-xs text-gray-400">Entregados</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">{formatNumber(broadcast.progress.failed)}</div>
-            <div className="text-xs text-gray-400">Fallidos</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-400">{formatNumber(broadcast.progress.blocked)}</div>
-            <div className="text-xs text-gray-400">Bloqueados</div>
-          </div>
-        </div>
-        
-        {/* Message preview */}
-        <div className="p-6 border-b border-gray-800">
-          <h3 className="text-sm font-medium text-gray-300 mb-2">Mensaje</h3>
-          <div className="bg-gray-800 rounded-lg p-4 max-h-32 overflow-auto">
-            <p className="text-white whitespace-pre-wrap text-sm">{broadcast.message || '(Sin mensaje)'}</p>
-          </div>
-        </div>
-        
-        {/* Errors summary */}
-        {errors.length > 0 && (
-          <div className="p-6 border-b border-gray-800">
-            <h3 className="text-sm font-medium text-gray-300 mb-2">Resumen de errores</h3>
-            <div className="flex flex-wrap gap-2">
-              {errors.map((err) => (
-                <div 
-                  key={err.errorCode}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-sm"
-                >
-                  <AlertCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-red-400">{err.errorCode}</span>
-                  <span className="text-gray-400">×{err.count}</span>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 pb-6">
+
+            {/* COLUMN 1: MESSAGE & ERRORS */}
+            <div className="space-y-6">
+              {/* Message Preview */}
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Mensaje
+                </h3>
+                <div className="bg-gray-950 rounded-lg border border-gray-800 p-4 relative group">
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Placeholder para botón copiar si quisieras */}
+                  </div>
+                  <p className="text-gray-300 whitespace-pre-wrap text-sm leading-relaxed font-sans">
+                    {broadcast.message || <span className="italic text-gray-600">Sin contenido de texto</span>}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Recipients */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
-            <h3 className="text-sm font-medium text-gray-300">
-              Destinatarios ({formatNumber(recipientsTotal)})
-            </h3>
-            <select
-              value={recipientsFilter}
-              onChange={(e) => {
-                onFilterChange(e.target.value as DeliveryStatus | '');
-                onPageChange(1);
-              }}
-              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
-            >
-              <option value="">Todos</option>
-              <option value="pending">Pendientes</option>
-              <option value="sent">Enviados</option>
-              <option value="failed">Fallidos</option>
-              <option value="blocked">Bloqueados</option>
-            </select>
-          </div>
-          
-          <div className="flex-1 overflow-auto">
-            {loadingRecipients ? (
-              <div className="flex items-center justify-center p-8">
-                <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
               </div>
-            ) : recipients.length === 0 ? (
-              <div className="flex items-center justify-center p-8 text-gray-500">
-                No hay destinatarios
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-gray-800 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs text-gray-400 font-medium">Usuario</th>
-                    <th className="px-4 py-2 text-left text-xs text-gray-400 font-medium">Telegram ID</th>
-                    <th className="px-4 py-2 text-left text-xs text-gray-400 font-medium">Estado</th>
-                    <th className="px-4 py-2 text-left text-xs text-gray-400 font-medium">Enviado</th>
-                    <th className="px-4 py-2 text-left text-xs text-gray-400 font-medium">Error</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-800">
-                  {recipients.map((r) => {
-                    const rStatus = getDeliveryStatusConfig(r.status);
-                    return (
-                      <tr key={r._id} className="hover:bg-gray-800/50">
-                        <td className="px-4 py-2">
-                          <div className="text-sm text-white">
-                            {r.firstName || r.username || 'Usuario'}
-                          </div>
-                          {r.username && (
-                            <div className="text-xs text-gray-500">@{r.username}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-400">{r.telegramId}</td>
-                        <td className="px-4 py-2">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${rStatus.bg} ${rStatus.color}`}>
-                            {rStatus.icon}
-                            {rStatus.label}
+
+              {/* Errors Summary */}
+              {errors.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Errores Frecuentes
+                  </h3>
+                  <div className="space-y-2">
+                    {errors.map((err) => (
+                      <div key={err.errorCode} className="flex items-center justify-between p-2.5 bg-red-500/5 border border-red-500/10 rounded-md hover:bg-red-500/10 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span className="text-xs text-red-300 font-medium truncate" title={err.errorCode}>
+                            {err.errorCode}
                           </span>
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-400">
-                          {r.sentAt ? new Date(r.sentAt).toLocaleTimeString('es-ES') : '-'}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-red-400 truncate max-w-xs" title={r.errorMessage}>
-                          {r.errorMessage || '-'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t border-gray-800">
-              <span className="text-sm text-gray-400">
-                Página {recipientsPage} de {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onPageChange(recipientsPage - 1)}
-                  disabled={recipientsPage <= 1}
-                  className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={() => onPageChange(recipientsPage + 1)}
-                  disabled={recipientsPage >= totalPages}
-                  className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white"
-                >
-                  Siguiente
-                </button>
-              </div>
+                        </div>
+                        <span className="text-xs font-mono bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded">
+                          {err.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* COLUMN 2 (Wider): RECIPIENTS TABLE */}
+            <div className="lg:col-span-2 flex flex-col min-h-[400px] max-h-[400px] bg-gray-950/30 rounded-xl border border-gray-800 overflow-hidden">
+
+              {/* Table Toolbar */}
+              <div className="flex items-center justify-between p-3 border-b border-gray-800 bg-gray-900/40">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-300">Destinatarios</span>
+                  <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
+                    {formatNumber(recipientsTotal)}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <Filter className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <select
+                    value={recipientsFilter}
+                    onChange={(e) => {
+                      onFilterChange(e.target.value as DeliveryStatus | '');
+                      onPageChange(1);
+                    }}
+                    className="pl-8 pr-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-transparent hover:border-gray-600 rounded-md text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendientes</option>
+                    <option value="sent">Enviados</option>
+                    <option value="delivered">Entregados</option>
+                    <option value="failed">Fallidos</option>
+                    <option value="blocked">Bloqueados</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Table Content */}
+              <div className="flex-1 relative overflow-auto custom-scrollbar">
+                {loadingRecipients ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900/20 backdrop-blur-[1px]">
+                    <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+                  </div>
+                ) : recipients.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2 p-8">
+                    <Users className="w-8 h-8 opacity-20" />
+                    <p className="text-sm">No se encontraron destinatarios</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-900/90 text-xs font-medium text-gray-500 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
+                      <tr>
+                        <th className="px-4 py-3 w-[30%]">Usuario</th>
+                        <th className="px-4 py-3 w-[20%]">ID Telegram</th>
+                        <th className="px-4 py-3 w-[15%]">Estado</th>
+                        <th className="px-4 py-3 w-[15%]">Hora</th>
+                        <th className="px-4 py-3 w-[20%]">Detalle</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/50 text-sm">
+                      {recipients.map((r) => {
+                        const rStatus = getDeliveryStatusConfig(r.status);
+                        return (
+                          <tr key={r._id} className="hover:bg-white/[0.02] transition-colors group">
+                            <td className="px-4 py-2.5">
+                              <div className="flex flex-col">
+                                <span className="text-gray-200 font-medium truncate max-w-[150px]">
+                                  {r.firstName || r.username || 'Desconocido'}
+                                </span>
+                                {r.username && (
+                                  <span className="text-xs text-gray-500 group-hover:text-violet-400 transition-colors">
+                                    @{r.username}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="font-mono text-xs text-gray-500 bg-gray-900 px-1.5 py-0.5 rounded border border-gray-800">
+                                {r.telegramId}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${rStatus.bg} ${rStatus.color} bg-opacity-10 border border-current border-opacity-20`}>
+                                {rStatus.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs text-gray-400 tabular-nums">
+                              {r.sentAt ? (
+                                <span className="flex items-center gap-1">
+                                  {new Date(r.sentAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {r.errorMessage ? (
+                                <span className="text-xs text-red-400 truncate block max-w-[140px]" title={r.errorMessage}>
+                                  {r.errorMessage}
+                                </span>
+                              ) : (
+                                <span className="text-gray-700">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Pagination Footer */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between p-3 border-t border-gray-800 bg-gray-900/40 text-xs">
+                  <span className="text-gray-500">
+                    Página <span className="text-gray-300 font-medium">{recipientsPage}</span> de {totalPages}
+                  </span>
+                  <div className="flex gap-1">
+                    <PaginationButton
+                      onClick={() => onPageChange(recipientsPage - 1)}
+                      disabled={recipientsPage <= 1}
+                      icon={ChevronLeft}
+                    />
+                    <PaginationButton
+                      onClick={() => onPageChange(recipientsPage + 1)}
+                      disabled={recipientsPage >= totalPages}
+                      icon={ChevronRight}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function getDeliveryStatusConfig(status: DeliveryStatus) {
-  const configs: Record<DeliveryStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-    pending: { 
-      label: 'Pendiente', 
-      color: 'text-gray-400', 
-      bg: 'bg-gray-500/20',
-      icon: <Clock className="w-3 h-3" />
-    },
-    sent: { 
-      label: 'Enviado', 
-      color: 'text-emerald-400', 
-      bg: 'bg-emerald-500/20',
-      icon: <CheckCircle className="w-3 h-3" />
-    },
-    delivered: { 
-      label: 'Entregado', 
-      color: 'text-cyan-400', 
-      bg: 'bg-cyan-500/20',
-      icon: <CheckCircle className="w-3 h-3" />
-    },
-    failed: { 
-      label: 'Fallido', 
-      color: 'text-red-400', 
-      bg: 'bg-red-500/20',
-      icon: <AlertCircle className="w-3 h-3" />
-    },
-    blocked: { 
-      label: 'Bloqueado', 
-      color: 'text-orange-400', 
-      bg: 'bg-orange-500/20',
-      icon: <StopCircle className="w-3 h-3" />
-    },
-  };
-  return configs[status] || configs.pending;
-}
+// const ActionButton = ({ onClick, icon: Icon, title, hoverColor = "hover:text-white hover:bg-gray-800" }: {
+//   onClick: () => void;
+//   icon: React.ComponentType<any>;
+//   title: string;
+//   hoverColor?: string;
+// }) => (
+//   <button
+//     onClick={onClick}
+//     className={`p-2 rounded-lg text-gray-400 transition-all duration-200 ${hoverColor}`}
+//     title={title}
+//   >
+//     <Icon className="w-5 h-5" />
+//   </button>
+// );
+
+const ActionButton = ({ onClick, icon: Icon, colorClass, title }: any) => (
+  <button
+    onClick={onClick}
+    className={`p-2 rounded-lg transition-all duration-200 ${colorClass}`}
+    title={title}
+  >
+    <Icon className="w-4 h-4" />
+  </button>
+);
+
+const StatCard = ({ label, value, icon: Icon, color, bg }: {
+  label: string;
+  value: number;
+  icon: React.ComponentType<any>;
+  color: string;
+  bg: string;
+}) => (
+  <div className={`flex flex-col items-center justify-center p-3 rounded-xl border border-gray-800/50 ${bg} bg-opacity-5 hover:bg-opacity-10 transition-colors`}>
+    <div className={`mb-1 ${color}`}>
+      <Icon className="w-5 h-5 opacity-80" />
+    </div>
+    <span className="text-2xl font-bold text-white tracking-tight">{formatNumber(value)}</span>
+    <span className="text-[10px] uppercase font-semibold text-gray-500 tracking-wider mt-0.5">{label}</span>
+  </div>
+);
+
+const PaginationButton = ({ onClick, disabled, icon: Icon }: {
+  onClick: () => void;
+  disabled: boolean;
+  icon: React.ComponentType<any>;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="p-1.5 rounded-md bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 transition-colors border border-gray-700/50"
+  >
+    <Icon className="w-4 h-4" />
+  </button>
+);

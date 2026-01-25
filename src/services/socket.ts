@@ -37,7 +37,7 @@ import {
   addToQueue,
 } from './chat.service.js';
 import { getAgentStats } from './agent.service.js';
-import { sendMessage as sendTelegramMessage, sendMessageWithId, sendPhoto, sendDocument, sendVoice, sendChatAction, editMessage as editTelegramMessage, deleteMessage as deleteTelegramMessage } from './telegram.js';
+import { sendMessage as sendTelegramMessage, sendMessageWithId, sendPhoto, sendDocument, sendVoice, sendChatAction, editMessage as editTelegramMessage, deleteMessage as deleteTelegramMessage, pinChatMessage } from './telegram.js';
 import { logger } from './logger.js';
 import { startInactivityTimer, closeByAgent, clearQueuedTimer } from './inactivity.service.js';
 import { getAbsolutePath } from './upload.service.js';
@@ -103,7 +103,7 @@ export interface ServerToClientEvents {
   'message:read': (data: { sessionId: string; messageId: string }) => void;
   'message:updated': (message: MessageData) => void;
   'message:deleted': (data: { messageId: string; sessionId: string }) => void;
-  'message:pinned': (data: { messageId: string; sessionId: string; message: MessageData }) => void;
+  'message:pinned': (data: { messageId: string; sessionId: string; message: MessageData, pinForUser: boolean }) => void;
   'message:unpinned': (data: { sessionId: string }) => void;
 
   // Typing indicators
@@ -396,6 +396,25 @@ export interface ServerToClientEvents {
     settings: Record<string, unknown>;
   }) => void;
 
+  // Permission/RBAC events
+  'permissions:updated': (data: {
+    agentId: string;
+    permissions: string[];
+    role: string;
+    permissionVersion: number;
+    updatedBy: { id: string; name: string };
+    timestamp: string;
+  }) => void;
+  'permissions:role_changed': (data: {
+    agentId: string;
+    oldRole: string;
+    newRole: string;
+    permissions: string[];
+    permissionVersion: number;
+    updatedBy: { id: string; name: string };
+    timestamp: string;
+  }) => void;
+
   // Text Registry events
   'texts:updated': (data: {
     action: 'created' | 'updated' | 'deleted';
@@ -454,7 +473,7 @@ export interface ClientToServerEvents {
   'message:read': (data: { sessionId: string; messageId: string }) => void;
   'message:edit': (data: { messageId: string; sessionId: string; newContent: string }, callback?: (result: ResultData) => void) => void;
   'message:delete': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
-  'message:pin': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
+  'message:pin': (data: { messageId: string; sessionId: string, pinForUser: boolean }, callback?: (result: ResultData) => void) => void;
   'message:unpin': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
   'message:reportSpam': (data: { messageId: string; sessionId: string }, callback?: (result: ResultData) => void) => void;
 
@@ -1571,7 +1590,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   });
 
   // Pin message
-  socket.on('message:pin', async ({ messageId, sessionId }, callback?) => {
+  socket.on('message:pin', async ({ messageId, sessionId, pinForUser }, callback?) => {
     try {
       const message = await Message.findById(messageId);
 
@@ -1596,6 +1615,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       io.to(`session:${sessionId}`).emit('message:pinned', {
         messageId,
         sessionId,
+        pinForUser,
         message: {
           _id: message._id.toString(),
           session: sessionId,
@@ -1620,6 +1640,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       };
       
       io.to(`session:${sessionId}`).emit('message:new', messageData);
+
+      if (pinForUser && message && message.telegramMessageId) {
+        const session = await getSessionById(sessionId);
+        if (session?.telegramChatId) {
+          await pinChatMessage(session.telegramChatId, message?.telegramMessageId);
+        }
+      }
       
       logger.info('chat', { action: 'message_pinned', messageId, agentId });
       callback?.({ ok: true });
@@ -2610,4 +2637,80 @@ export function emitSystemWorkerOffline(workerId: string, queue: string): void {
 export function emitSystemRedisStatus(connected: boolean, latencyMs?: number): void {
   if (!io) return;
   io.emit('system:redis:status', { connected, latencyMs });
+}
+
+/**
+ * Emit permissions updated event to a specific agent
+ * Used when an agent's permission overrides are changed
+ */
+export async function emitPermissionsUpdated(
+  agentId: string,
+  data: {
+    permissions: string[];
+    role: string;
+    permissionVersion: number;
+    updatedBy: { id: string; name: string };
+  }
+): Promise<void> {
+  if (!io) return;
+  
+  const eventData = {
+    agentId,
+    permissions: data.permissions,
+    role: data.role,
+    permissionVersion: data.permissionVersion,
+    updatedBy: data.updatedBy,
+    timestamp: new Date().toISOString(),
+  };
+  
+  // Find the agent's socket by their agentId in socket.data
+  const sockets = await io.fetchSockets();
+  const agentSocket = sockets.find(s => s.data.agentId === agentId);
+  
+  if (agentSocket) {
+    // Emit directly to the agent's socket
+    agentSocket.emit('permissions:updated', eventData);
+  }
+  
+  // Also emit to admin room for monitoring
+  io.to('admin').emit('permissions:updated', eventData);
+}
+
+/**
+ * Emit role changed event to a specific agent
+ * Used when an agent's role is changed (affects base permissions)
+ */
+export async function emitRoleChanged(
+  agentId: string,
+  data: {
+    oldRole: string;
+    newRole: string;
+    permissions: string[];
+    permissionVersion: number;
+    updatedBy: { id: string; name: string };
+  }
+): Promise<void> {
+  if (!io) return;
+  
+  const eventData = {
+    agentId,
+    oldRole: data.oldRole,
+    newRole: data.newRole,
+    permissions: data.permissions,
+    permissionVersion: data.permissionVersion,
+    updatedBy: data.updatedBy,
+    timestamp: new Date().toISOString(),
+  };
+  
+  // Find the agent's socket by their agentId in socket.data
+  const sockets = await io.fetchSockets();
+  const agentSocket = sockets.find(s => s.data.agentId === agentId);
+  
+  if (agentSocket) {
+    // Emit directly to the agent's socket
+    agentSocket.emit('permissions:role_changed', eventData);
+  }
+  
+  // Also emit to admin room for monitoring
+  io.to('admin').emit('permissions:role_changed', eventData);
 }

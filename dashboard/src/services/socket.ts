@@ -574,6 +574,114 @@ export function initializeSocket(): Socket {
     window.dispatchEvent(event);
   });
 
+  // ============= PERMISSION EVENTS (RBAC) =============
+  
+  // Permission overrides updated for agent
+  socket.on('permissions:updated', async (data: { 
+    agentId: string; 
+    permissions: string[];
+    role: string;
+    permissionVersion: number;
+    updatedBy: { id: string; name: string };
+    timestamp: string;
+  }) => {
+    console.log('🔐 Permissions updated for:', data.agentId, 'by:', data.updatedBy.name);
+    
+    const currentAgent = useAuthStore.getState().agent;
+    if (!currentAgent) return;
+    
+    // Only process if it's for the current agent
+    if (data.agentId !== currentAgent._id && data.agentId !== currentAgent.id) {
+      // If we're an admin viewing the PermissionsPage, dispatch event for UI update
+      const event = new CustomEvent('permissions:updated:other', { detail: data });
+      window.dispatchEvent(event);
+      return;
+    }
+    
+    try {
+      // Import dynamically to avoid circular deps
+      const { usePermissionStore } = await import('../stores/permissionStore');
+      const permissionStore = usePermissionStore.getState();
+      
+      // Update permissions directly from event data
+      permissionStore.setPermissions(data.permissions, data.permissionVersion);
+      
+      // Update agent role in auth store if changed
+      if (currentAgent.role !== data.role) {
+        useAuthStore.getState().updateAgentFields({ role: data.role as any });
+      }
+      
+      // Show toast notification
+      toast.info(
+        'Permisos actualizados',
+        `${data.updatedBy.name} modificó tus permisos`,
+        { 
+          groupKey: 'permissions:updated',
+          priority: 'high',
+          duration: 5000
+        }
+      );
+      
+      // Dispatch custom event for components that need to react
+      const event = new CustomEvent('permissions:updated', { detail: data });
+      window.dispatchEvent(event);
+      
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+    }
+  });
+
+  // Role changed for agent
+  socket.on('permissions:role_changed', async (data: { 
+    agentId: string;
+    oldRole: string;
+    newRole: string;
+    permissions: string[];
+    permissionVersion: number;
+    updatedBy: { id: string; name: string };
+    timestamp: string;
+  }) => {
+    console.log('🔐 Role changed for:', data.agentId, `${data.oldRole} → ${data.newRole}`);
+    
+    const currentAgent = useAuthStore.getState().agent;
+    if (!currentAgent) return;
+    
+    // Only process if it's for the current agent
+    if (data.agentId !== currentAgent._id && data.agentId !== currentAgent.id) {
+      // If we're an admin viewing the PermissionsPage, dispatch event for UI update
+      const event = new CustomEvent('permissions:role_changed:other', { detail: data });
+      window.dispatchEvent(event);
+      return;
+    }
+    
+    try {
+      const { usePermissionStore } = await import('../stores/permissionStore');
+      const permissionStore = usePermissionStore.getState();
+      
+      // Update permissions and role
+      permissionStore.setPermissions(data.permissions, data.permissionVersion);
+      useAuthStore.getState().updateAgentFields({ role: data.newRole as any });
+      
+      // Show prominent toast for role change
+      toast.warning(
+        'Rol actualizado',
+        `${data.updatedBy.name} cambió tu rol de ${data.oldRole} a ${data.newRole}`,
+        { 
+          groupKey: 'role:changed',
+          priority: 'critical',
+          duration: 8000
+        }
+      );
+      
+      // Dispatch event
+      const event = new CustomEvent('permissions:role_changed', { detail: data });
+      window.dispatchEvent(event);
+      
+    } catch (error) {
+      console.error('Error updating role:', error);
+    }
+  });
+
   // ============= SUPERVISOR & WHISPER EVENTS =============
   
   // Whisper received from supervisor
@@ -913,9 +1021,10 @@ export function deleteMessage(
 export function pinMessage(
   messageId: string,
   sessionId: string,
+  pinForUser: boolean,
   callback?: (result: { ok: boolean; error?: string }) => void
 ): void {
-  socket?.emit('message:pin', { messageId, sessionId }, callback || (() => {}));
+  socket?.emit('message:pin', { messageId, sessionId, pinForUser }, callback || (() => {}));
 }
 
 export function unpinMessage(

@@ -27,6 +27,7 @@ import { adminControlRoutes } from './admin-control.routes.js';
 import { textsRoutes } from './texts.routes.js';
 import { registerContactsProRoutes } from './contacts-pro.routes.js';
 import { broadcastRoutes } from './broadcast.routes.js';
+import { registerPermissionRoutes } from './permissions.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -121,4 +122,9 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // Broadcast / Mass messaging routes (admin/supervisor only)
   await fastify.register(broadcastRoutes, { prefix: '/api/broadcast' });
+
+  // Permission management routes (RBAC administration)
+  await fastify.register(async (permissionRoutes) => {
+    await registerPermissionRoutes(permissionRoutes);
+  });
 }
