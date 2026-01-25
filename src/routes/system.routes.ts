@@ -131,16 +131,13 @@ function isValidQueueName(name: string): boolean {
 // ============= ROUTES =============
 
 export const systemRoutes: FastifyPluginAsync = async (fastify) => {
-  // All routes require authentication first, then admin/supervisor role
-  fastify.addHook('preHandler', authMiddleware);
-  fastify.addHook('preHandler', requireAdminOrSupervisor);
-
-  // ============= HEALTH =============
-
+  // ============= HEALTH (Available to all authenticated users) =============
+  
   /**
    * GET /api/system/health - Overall system health
+   * This endpoint only requires authentication, not admin/supervisor role
    */
-  fastify.get('/health', async (_request, reply) => {
+  fastify.get('/health', { preHandler: authMiddleware }, async (_request, reply) => {
     try {
       const startTime = Date.now();
       
@@ -220,12 +217,18 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  // ============= ADMIN/SUPERVISOR PROTECTED ROUTES =============
+  // All routes below require admin or supervisor role
+  fastify.register(async (adminRoutes) => {
+    adminRoutes.addHook('preHandler', authMiddleware);
+    adminRoutes.addHook('preHandler', requireAdminOrSupervisor);
+
   // ============= QUEUES =============
 
   /**
    * GET /api/system/queues - All queue stats
    */
-  fastify.get('/queues', async (_request, reply) => {
+  adminRoutes.get('/queues', async (_request, reply) => {
     try {
       if (!isRedisConnected()) {
         return reply.send({ queues: [], redisConnected: false });
@@ -259,7 +262,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/system/queues/:name - Specific queue stats with jobs
    */
-  fastify.get<{ Params: { name: string }; Querystring: { status?: string; limit?: number } }>(
+  adminRoutes.get<{ Params: { name: string }; Querystring: { status?: string; limit?: number } }>(
     '/queues/:name',
     async (request, reply) => {
       const { name } = request.params;
@@ -325,7 +328,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/system/queues/:name/pause - Pause a queue
    */
-  fastify.post<{ Params: { name: string } }>('/queues/:name/pause', async (request, reply) => {
+  adminRoutes.post<{ Params: { name: string } }>('/queues/:name/pause', async (request, reply) => {
     const { name } = request.params;
     const agent = request.agent;
 
@@ -357,7 +360,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/system/queues/:name/resume - Resume a queue
    */
-  fastify.post<{ Params: { name: string } }>('/queues/:name/resume', async (request, reply) => {
+  adminRoutes.post<{ Params: { name: string } }>('/queues/:name/resume', async (request, reply) => {
     const { name } = request.params;
     const agent = request.agent;
 
@@ -389,7 +392,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/system/queues/:name/clean - Clean completed/failed jobs
    */
-  fastify.post<{ Params: { name: string }; Body: { type: 'completed' | 'failed' | 'all'; grace?: number } }>(
+  adminRoutes.post<{ Params: { name: string }; Body: { type: 'completed' | 'failed' | 'all'; grace?: number } }>(
     '/queues/:name/clean',
     async (request, reply) => {
       const { name } = request.params;
@@ -436,7 +439,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/system/queues/:name/retry-failed - Retry all failed jobs
    */
-  fastify.post<{ Params: { name: string } }>('/queues/:name/retry-failed', async (request, reply) => {
+  adminRoutes.post<{ Params: { name: string } }>('/queues/:name/retry-failed', async (request, reply) => {
     const { name } = request.params;
     const agent = request.agent;
 
@@ -482,7 +485,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
    * GET /api/system/workers - Get worker status
    * Note: BullMQ doesn't expose worker info directly, we track via Redis
    */
-  fastify.get('/workers', async (_request, reply) => {
+  adminRoutes.get('/workers', async (_request, reply) => {
     try {
       if (!isRedisConnected()) {
         return reply.send({ workers: [], redisConnected: false });
@@ -524,7 +527,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/system/flows - Flow execution stats
    */
-  fastify.get('/flows', async (_request, reply) => {
+  adminRoutes.get('/flows', async (_request, reply) => {
     try {
       // Get all flows with their execution stats
       const flows = await Flow.find({})
@@ -562,7 +565,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/system/scheduled - Scheduled messages stats
    */
-  fastify.get<{ Querystring: { status?: string; limit?: number } }>(
+  adminRoutes.get<{ Querystring: { status?: string; limit?: number } }>(
     '/scheduled',
     async (request, reply) => {
       const { status, limit = 50 } = request.query;
@@ -617,7 +620,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/system/errors - Recent errors from queues and activity log
    */
-  fastify.get<{ Querystring: { queue?: string; limit?: number; hours?: number } }>(
+  adminRoutes.get<{ Querystring: { queue?: string; limit?: number; hours?: number } }>(
     '/errors',
     async (request, reply) => {
       const { queue, limit = 50, hours = 24 } = request.query;
@@ -698,7 +701,7 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/system/metrics - Time-series metrics
    */
-  fastify.get<{ Querystring: { hours?: number } }>('/metrics', async (request, reply) => {
+  adminRoutes.get<{ Querystring: { hours?: number } }>('/metrics', async (request, reply) => {
     const { hours = 24 } = request.query;
 
     try {
@@ -753,6 +756,8 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(500).send({ error: 'Failed to get metrics' });
     }
   });
+
+  }); // End of adminRoutes register
 };
 
 // ============= HELPERS =============

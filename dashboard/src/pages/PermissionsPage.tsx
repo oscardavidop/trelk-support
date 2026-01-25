@@ -27,7 +27,14 @@ import {
   KeyRound,
   UserCog,
   Settings2,
-  X
+  X,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Ban,
+  Unlock,
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 import { toast } from '../stores/toastStore';
 
@@ -68,6 +75,34 @@ interface Role {
   color: string;
   priority: number;
   isSystem: boolean;
+}
+
+interface PermissionRequestItem {
+  permission: string;
+  reason: string;
+  page?: string;
+  requestedAt: string;
+}
+
+interface PermissionRequest {
+  _id: string;
+  agent: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  permissions: PermissionRequestItem[];
+  status: 'pending' | 'approved' | 'rejected' | 'partial';
+  blockedPermissions: string[];
+  reviewedBy?: {
+    _id: string;
+    name: string;
+  };
+  reviewedAt?: string;
+  reviewNotes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ==================== CONSTANTS ====================
@@ -118,6 +153,7 @@ export default function PermissionsPage() {
   const [agents, setAgents] = useState<AgentWithPermissions[]>([]);
   const [categories, setCategories] = useState<Record<string, PermissionCategory>>({});
   const [roles, setRoles] = useState<Role[]>([]);
+  const [permissionRequests, setPermissionRequests] = useState<PermissionRequest[]>([]);
 
   // UI state
   const [isLoading, setIsLoading] = useState(true);
@@ -127,10 +163,31 @@ export default function PermissionsPage() {
 
   // Selection state
   const [selectedAgent, setSelectedAgent] = useState<AgentWithPermissions | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<PermissionRequest | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'agents' | 'roles'>('agents');
+  const [activeTab, setActiveTab] = useState<'agents' | 'roles' | 'requests'>('agents');
   const [roleFilter, setRoleFilter] = useState<string>('');
+  const [requestFilter, setRequestFilter] = useState<'pending' | 'all'>('pending');
+
+  // Review form state
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [blockOnReject, setBlockOnReject] = useState(false);
+  // Track individual permission decisions: 'pending' | 'approve' | 'reject'
+  const [permissionDecisions, setPermissionDecisions] = useState<Record<string, 'pending' | 'approve' | 'reject'>>({});
+
+  // Reset decisions when selecting a new request
+  const handleSelectRequest = useCallback((request: PermissionRequest) => {
+    setSelectedRequest(request);
+    setReviewNotes('');
+    setBlockOnReject(false);
+    // Initialize all permissions as pending
+    const decisions: Record<string, 'pending' | 'approve' | 'reject'> = {};
+    request.permissions.forEach(p => {
+      decisions[p.permission] = 'pending';
+    });
+    setPermissionDecisions(decisions);
+  }, []);
 
   // ==================== API CALLS ====================
 
@@ -187,16 +244,37 @@ export default function PermissionsPage() {
     }
   }, [token]);
 
+  const fetchPermissionRequests = useCallback(async () => {
+    if (!token) return;
+    try {
+      const endpoint = requestFilter === 'pending' 
+        ? '/api/permission-requests/pending'
+        : '/api/permission-requests/all';
+      
+      const response = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPermissionRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error('Error fetching permission requests:', err);
+    }
+  }, [token, requestFilter]);
+
   // Load all data
   const loadData = useCallback(async () => {
     const [agentsData] = await Promise.all([
       fetchAgents(),
       fetchCategories(),
       fetchRoles(),
+      fetchPermissionRequests(),
     ]);
     setAgents(agentsData);
     return agentsData;
-  }, [fetchAgents, fetchCategories, fetchRoles]);
+  }, [fetchAgents, fetchCategories, fetchRoles, fetchPermissionRequests]);
 
   // Initial load
   useEffect(() => {
@@ -207,6 +285,13 @@ export default function PermissionsPage() {
     };
     init();
   }, [loadData]);
+
+  // Reload requests when filter changes
+  useEffect(() => {
+    if (!isLoading) {
+      fetchPermissionRequests();
+    }
+  }, [requestFilter, fetchPermissionRequests, isLoading]);
 
   // Refresh handler
   const handleRefresh = async () => {
@@ -396,6 +481,174 @@ export default function PermissionsPage() {
     }
   };
 
+  // ==================== PERMISSION REQUEST ACTIONS ====================
+
+  // Handle individual permission decision
+  const handlePermissionDecision = (permission: string, decision: 'approve' | 'reject') => {
+    setPermissionDecisions(prev => ({
+      ...prev,
+      [permission]: prev[permission] === decision ? 'pending' : decision
+    }));
+  };
+
+  // Submit all decisions for a request
+  const handleSubmitReview = async () => {
+    if (!token || !selectedRequest) return;
+    
+    const approved = Object.entries(permissionDecisions)
+      .filter(([_, decision]) => decision === 'approve')
+      .map(([perm]) => perm);
+    
+    const rejected = Object.entries(permissionDecisions)
+      .filter(([_, decision]) => decision === 'reject')
+      .map(([perm]) => perm);
+    
+    // Check if all decisions are made
+    const pending = Object.values(permissionDecisions).filter(d => d === 'pending').length;
+    if (pending > 0) {
+      toast.error('Decisiones pendientes', `Faltan ${pending} permiso(s) por revisar`);
+      return;
+    }
+    
+    // Validate rejection reason if there are rejections
+    if (rejected.length > 0 && !reviewNotes.trim()) {
+      toast.error('Razón requerida', 'Debes proporcionar una razón para los permisos rechazados');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      // Determine action based on decisions
+      let action: 'approve' | 'reject' | 'approve_partial';
+      if (approved.length === selectedRequest.permissions.length) {
+        action = 'approve';
+      } else if (rejected.length === selectedRequest.permissions.length) {
+        action = 'reject';
+      } else {
+        action = 'approve_partial';
+      }
+      
+      const response = await fetch(`/api/permission-requests/${selectedRequest._id}/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action,
+          rejectionReason: rejected.length > 0 ? reviewNotes : undefined,
+          approvedPermissions: approved,
+          blockPermissions: blockOnReject && rejected.length > 0,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to review request');
+      }
+
+      const message = action === 'approve' 
+        ? 'Todos los permisos han sido aprobados'
+        : action === 'reject'
+          ? 'Todos los permisos han sido rechazados'
+          : `${approved.length} aprobado(s), ${rejected.length} rechazado(s)`;
+      
+      toast.success('Revisión completada', message);
+      
+      // Refresh data
+      await Promise.all([fetchPermissionRequests(), fetchAgents()]);
+      
+      // Clear selection and form
+      setSelectedRequest(null);
+      setReviewNotes('');
+      setBlockOnReject(false);
+      setPermissionDecisions({});
+    } catch (err: any) {
+      toast.error('Error', err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Quick approve/reject all
+  const handleQuickAction = (action: 'approve' | 'reject') => {
+    if (!selectedRequest) return;
+    const decisions: Record<string, 'approve' | 'reject'> = {};
+    selectedRequest.permissions.forEach(p => {
+      decisions[p.permission] = action;
+    });
+    setPermissionDecisions(decisions);
+  };
+
+  const handleUnblockPermission = async (agentId: string, permission: string) => {
+    if (!token) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/permission-requests/unblock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ agentId, permission }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to unblock permission');
+      }
+
+      toast.success('Permiso desbloqueado', 'El agente puede volver a solicitar este permiso');
+      
+      // Refresh requests
+      await fetchPermissionRequests();
+    } catch (err: any) {
+      toast.error('Error', err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!token) return;
+    if (!confirm('¿Eliminar esta solicitud?')) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/permission-requests/${requestId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete request');
+      }
+
+      toast.success('Solicitud eliminada', 'La solicitud ha sido eliminada');
+      
+      // Refresh and clear selection
+      await fetchPermissionRequests();
+      if (selectedRequest?._id === requestId) {
+        setSelectedRequest(null);
+      }
+    } catch (err: any) {
+      toast.error('Error', err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Get permission label from categories
+  const getPermissionLabel = useCallback((permKey: string): string => {
+    for (const cat of Object.values(categories)) {
+      const perm = cat.permissions.find(p => p.key === permKey);
+      if (perm) return perm.label;
+    }
+    return permKey;
+  }, [categories]);
+
   // ==================== RENDER ====================
 
   if (isLoading) {
@@ -467,6 +720,18 @@ export default function PermissionsPage() {
               <span className="text-amber-400 font-medium">{Object.keys(categories).length}</span>
               <span className="text-gray-400 text-sm">categorías</span>
             </div>
+            {permissionRequests.filter(r => r.status === 'pending').length > 0 && (
+              <>
+                <div className="h-4 w-px bg-gray-700" />
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-orange-500/20 rounded-lg">
+                    <Clock className="w-4 h-4 text-orange-400" />
+                  </div>
+                  <span className="text-orange-400 font-medium">{permissionRequests.filter(r => r.status === 'pending').length}</span>
+                  <span className="text-gray-400 text-sm">solicitudes pendientes</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -497,6 +762,22 @@ export default function PermissionsPage() {
                 <Shield className="w-4 h-4 inline mr-2" />
                 Roles
               </button>
+              <button
+                onClick={() => setActiveTab('requests')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
+                  activeTab === 'requests'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
+                }`}
+              >
+                <FileText className="w-4 h-4 inline mr-2" />
+                Solicitudes
+                {permissionRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {permissionRequests.filter(r => r.status === 'pending').length}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Right: Search & Filters */}
@@ -522,6 +803,19 @@ export default function PermissionsPage() {
                   <option value="supervisor">Supervisor</option>
                   <option value="support">Support</option>
                   <option value="junior">Junior</option>
+                </select>
+              </div>
+            )}
+            
+            {activeTab === 'requests' && (
+              <div className="flex items-center gap-3">
+                <select
+                  value={requestFilter}
+                  onChange={(e) => setRequestFilter(e.target.value as 'pending' | 'all')}
+                  className="px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                >
+                  <option value="pending">Solo pendientes</option>
+                  <option value="all">Todas</option>
                 </select>
               </div>
             )}
@@ -794,6 +1088,392 @@ export default function PermissionsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Permission Requests Tab */}
+          {activeTab === 'requests' && (
+            <div className="flex h-full">
+              {/* Request List */}
+              <div className="w-96 border-r border-gray-800 overflow-y-auto custom-scrollbar">
+                <div className="p-4 space-y-2">
+                  {permissionRequests.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400">
+                      <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No hay solicitudes {requestFilter === 'pending' ? 'pendientes' : ''}</p>
+                    </div>
+                  ) : (
+                    permissionRequests.map((request) => (
+                      <button
+                        key={request._id}
+                        onClick={() => handleSelectRequest(request)}
+                        className={`w-full p-4 rounded-lg border text-left transition-all ${
+                          selectedRequest?._id === request._id
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-gray-700 hover:border-gray-600 bg-gray-800/50 hover:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-white truncate">
+                              {request.agent.name}
+                            </div>
+                            <div className="text-sm text-gray-400 truncate">
+                              {request.agent.email}
+                            </div>
+                          </div>
+                          
+                          {/* Status Badge */}
+                          <span className={`shrink-0 px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                            request.status === 'pending' 
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              : request.status === 'approved'
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                : request.status === 'rejected'
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {request.status === 'pending' && <Clock className="w-3 h-3" />}
+                            {request.status === 'approved' && <CheckCircle className="w-3 h-3" />}
+                            {request.status === 'rejected' && <XCircle className="w-3 h-3" />}
+                            {request.status === 'partial' && <AlertTriangle className="w-3 h-3" />}
+                            {request.status === 'pending' ? 'Pendiente' : 
+                             request.status === 'approved' ? 'Aprobada' :
+                             request.status === 'rejected' ? 'Rechazada' : 'Parcial'}
+                          </span>
+                        </div>
+                        
+                        {/* Permissions count */}
+                        <div className="mt-2 text-xs text-gray-500">
+                          {request.permissions.length} permiso{request.permissions.length !== 1 ? 's' : ''} solicitado{request.permissions.length !== 1 ? 's' : ''}
+                        </div>
+                        
+                        {/* Timestamp */}
+                        <div className="mt-1 text-xs text-gray-500">
+                          {new Date(request.createdAt).toLocaleDateString('es', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Request Detail Panel */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {selectedRequest ? (
+                  <div className="p-6">
+                    {/* Request Header */}
+                    <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-800">
+                      <div>
+                        <h2 className="text-xl font-semibold text-white">{selectedRequest.agent.name}</h2>
+                        <p className="text-sm text-gray-400">{selectedRequest.agent.email}</p>
+                        <span className={`inline-block mt-2 px-2 py-0.5 rounded text-xs font-medium ${ROLE_COLORS[selectedRequest.agent.role] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+                          {selectedRequest.agent.role}
+                        </span>
+                      </div>
+                      
+                      {selectedRequest.status !== 'pending' && (
+                        <button
+                          onClick={() => handleDeleteRequest(selectedRequest._id)}
+                          disabled={isSaving}
+                          className="px-3 py-1.5 text-sm font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          <X className="w-4 h-4 inline mr-1" />
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Requested Permissions */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <KeyRound className="w-4 h-4" />
+                          Permisos Solicitados
+                        </span>
+                        {selectedRequest.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleQuickAction('reject')}
+                              className="text-xs px-2 py-1 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                            >
+                              Rechazar todos
+                            </button>
+                            <button
+                              onClick={() => handleQuickAction('approve')}
+                              className="text-xs px-2 py-1 text-green-400 hover:bg-green-500/10 rounded transition-colors"
+                            >
+                              Aprobar todos
+                            </button>
+                          </div>
+                        )}
+                      </h3>
+                      <div className="space-y-3">
+                        {selectedRequest.permissions.map((perm, idx) => {
+                          const decision = permissionDecisions[perm.permission] || 'pending';
+                          return (
+                          <div 
+                            key={idx} 
+                            className={`rounded-lg p-4 border transition-colors ${
+                              decision === 'approve' 
+                                ? 'bg-green-900/20 border-green-500/30'
+                                : decision === 'reject'
+                                  ? 'bg-red-900/20 border-red-500/30'
+                                  : 'bg-gray-800/50 border-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm text-purple-400">{perm.permission}</span>
+                                {decision === 'approve' && (
+                                  <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs rounded flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Aprobar
+                                  </span>
+                                )}
+                                {decision === 'reject' && (
+                                  <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs rounded flex items-center gap-1">
+                                    <XCircle className="w-3 h-3" />
+                                    Rechazar
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {new Date(perm.requestedAt).toLocaleDateString('es', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-300 mb-2">{getPermissionLabel(perm.permission)}</p>
+                            {perm.page && (
+                              <div className="text-xs text-gray-500 mb-2">
+                                Desde: <span className="text-gray-400">{perm.page}</span>
+                              </div>
+                            )}
+                            <div className="bg-gray-700/50 rounded p-2 mb-3">
+                              <p className="text-xs text-gray-400 flex items-start gap-2">
+                                <MessageSquare className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                <span className="italic">"{perm.reason}"</span>
+                              </p>
+                            </div>
+                            
+                            {/* Individual permission actions */}
+                            {selectedRequest.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handlePermissionDecision(perm.permission, 'reject')}
+                                  disabled={isSaving}
+                                  className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                                    decision === 'reject'
+                                      ? 'bg-red-500 text-white'
+                                      : 'text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30'
+                                  }`}
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  Rechazar
+                                </button>
+                                <button
+                                  onClick={() => handlePermissionDecision(perm.permission, 'approve')}
+                                  disabled={isSaving}
+                                  className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                                    decision === 'approve'
+                                      ? 'bg-green-500 text-white'
+                                      : 'text-green-400 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30'
+                                  }`}
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  Aprobar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Blocked Permissions */}
+                    {selectedRequest.blockedPermissions.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                          <Ban className="w-4 h-4 text-red-400" />
+                          Permisos Bloqueados
+                        </h3>
+                        <div className="space-y-2">
+                          {selectedRequest.blockedPermissions.map((perm, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-red-900/20 rounded-lg p-3 border border-red-500/20">
+                              <span className="font-mono text-sm text-red-400">{perm}</span>
+                              <button
+                                onClick={() => handleUnblockPermission(selectedRequest.agent._id, perm)}
+                                disabled={isSaving}
+                                className="px-2 py-1 text-xs font-medium text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 rounded transition-colors disabled:opacity-50 flex items-center gap-1"
+                              >
+                                <Unlock className="w-3 h-3" />
+                                Desbloquear
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Review Section (only for pending) */}
+                    {selectedRequest.status === 'pending' && (
+                      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <h3 className="text-sm font-medium text-white mb-4">Confirmar Revisión</h3>
+                        
+                        {/* Decision Summary */}
+                        <div className="mb-4 p-3 bg-gray-900/50 rounded-lg">
+                          <div className="flex items-center justify-between text-sm mb-2">
+                            <span className="text-gray-400">Resumen de decisiones:</span>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-green-400">
+                              ✓ {Object.values(permissionDecisions).filter(d => d === 'approve').length} aprobar
+                            </span>
+                            <span className="text-red-400">
+                              ✗ {Object.values(permissionDecisions).filter(d => d === 'reject').length} rechazar
+                            </span>
+                            <span className="text-amber-400">
+                              ○ {Object.values(permissionDecisions).filter(d => d === 'pending').length} pendiente
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Rejection Reason - required when there are rejections */}
+                        {Object.values(permissionDecisions).some(d => d === 'reject') && (
+                          <div className="mb-4">
+                            <label className="block text-xs font-medium text-red-400 mb-1.5">
+                              Razón del rechazo <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                              value={reviewNotes}
+                              onChange={(e) => setReviewNotes(e.target.value)}
+                              placeholder="Explica por qué se rechazan estos permisos..."
+                              className={`w-full px-3 py-2 bg-gray-900 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 resize-none ${
+                                !reviewNotes.trim() 
+                                  ? 'border-red-500/50 focus:ring-red-500/50' 
+                                  : 'border-gray-600 focus:ring-purple-500/50'
+                              }`}
+                              rows={2}
+                            />
+                            {!reviewNotes.trim() && (
+                              <p className="mt-1 text-xs text-red-400">
+                                La razón es obligatoria cuando se rechazan permisos
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Notes - optional when only approving */}
+                        {!Object.values(permissionDecisions).some(d => d === 'reject') && (
+                          <div className="mb-4">
+                            <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                              Notas (opcional)
+                            </label>
+                            <textarea
+                              value={reviewNotes}
+                              onChange={(e) => setReviewNotes(e.target.value)}
+                              placeholder="Agregar notas sobre la revisión..."
+                              className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                              rows={2}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Block on reject checkbox - only show if there are rejections */}
+                        {Object.values(permissionDecisions).some(d => d === 'reject') && (
+                          <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={blockOnReject}
+                              onChange={(e) => setBlockOnReject(e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-600 bg-gray-900 text-purple-500 focus:ring-purple-500/50"
+                            />
+                            <span className="text-sm text-gray-300">
+                              Bloquear permisos rechazados (no podrá volver a solicitar)
+                            </span>
+                          </label>
+                        )}
+                        
+                        {/* Submit Button */}
+                        <button
+                          onClick={handleSubmitReview}
+                          disabled={
+                            isSaving || 
+                            Object.values(permissionDecisions).some(d => d === 'pending') ||
+                            (Object.values(permissionDecisions).some(d => d === 'reject') && !reviewNotes.trim())
+                          }
+                          className="w-full px-4 py-2.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isSaving ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                          {Object.values(permissionDecisions).some(d => d === 'pending')
+                            ? 'Decide todos los permisos primero'
+                            : Object.values(permissionDecisions).some(d => d === 'reject') && !reviewNotes.trim()
+                              ? 'Proporciona una razón de rechazo'
+                              : 'Enviar Revisión'
+                          }
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Review Info (for reviewed requests) */}
+                    {selectedRequest.status !== 'pending' && selectedRequest.reviewedBy && (
+                      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <h3 className="text-sm font-medium text-gray-300 mb-3">Información de Revisión</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400">Revisado por:</span>
+                            <span className="text-white">{selectedRequest.reviewedBy.name}</span>
+                          </div>
+                          {selectedRequest.reviewedAt && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-400">Fecha:</span>
+                              <span className="text-white">
+                                {new Date(selectedRequest.reviewedAt).toLocaleDateString('es', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {selectedRequest.reviewNotes && (
+                            <div className="mt-3 pt-3 border-t border-gray-700">
+                              <span className="text-gray-400 block mb-1">Notas:</span>
+                              <p className="text-gray-300 italic">"{selectedRequest.reviewNotes}"</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <FileText className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-white mb-2">
+                        Selecciona una solicitud
+                      </h3>
+                      <p className="text-gray-400 max-w-md">
+                        Selecciona una solicitud de la lista para ver los detalles y aprobar o rechazar
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

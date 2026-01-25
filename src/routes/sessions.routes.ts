@@ -379,9 +379,11 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Close session
+   * Requires: chats.close permission
    */
   fastify.post<{ Params: SessionParams; Body: CloseSessionBody }>(
     '/api/sessions/:sessionId/close',
+    { preHandler: requirePermission('chats.close') },
     async (request, reply) => {
       const { sessionId } = request.params;
       const { reason, closedByType = 'agent', closeReason = 'manual' } = request.body;

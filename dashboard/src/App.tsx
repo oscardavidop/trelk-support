@@ -18,7 +18,6 @@ import TextsPage from './pages/TextsPage';
 import ContactsPage from './pages/ContactsPage';
 import BroadcastPage from './pages/BroadcastPage';
 import PermissionsPage from './pages/PermissionsPage';
-import AccessDeniedPage from './pages/AccessDeniedPage';
 import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -46,49 +45,49 @@ export default function App() {
             
             {/* Chat - requiere chats.read */}
             <Route path="chat" element={
-              <ProtectedRoute permission="chats.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="chats.read">
                 <ChatPage />
               </ProtectedRoute>
             } />
             
             {/* Supervisor - requiere supervisor.monitor */}
             <Route path="supervisor" element={
-              <ProtectedRoute permission="supervisor.monitor" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="supervisor.monitor">
                 <SupervisorPage />
               </ProtectedRoute>
             } />
             
             {/* Audit - requiere system.audit */}
             <Route path="audit" element={
-              <ProtectedRoute permission="system.audit" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="system.audit">
                 <AuditPage />
               </ProtectedRoute>
             } />
             
             {/* Exports - requiere exports.create */}
             <Route path="exports" element={
-              <ProtectedRoute permission="exports.create" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="exports.create">
                 <ExportsPage />
               </ProtectedRoute>
             } />
             
             {/* Saved Replies - requiere replies.read */}
             <Route path="saved-replies" element={
-              <ProtectedRoute permission="replies.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="replies.read">
                 <SavedRepliesPage />
               </ProtectedRoute>
             } />
             
             {/* Agents - requiere agents.read */}
             <Route path="agents" element={
-              <ProtectedRoute permission="agents.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="agents.read">
                 <AgentsPage />
               </ProtectedRoute>
             } />
             
             {/* Settings - requiere settings.read */}
             <Route path="settings" element={
-              <ProtectedRoute permission="settings.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="settings.read">
                 <SettingsPage />
               </ProtectedRoute>
             } />
@@ -99,66 +98,64 @@ export default function App() {
             
             {/* Flows - requiere flows.read */}
             <Route path="flows" element={
-              <ProtectedRoute permission="flows.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="flows.read">
                 <FlowsPage />
               </ProtectedRoute>
             } />
             <Route path="flows/:flowId" element={
-              <ProtectedRoute permission="flows.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="flows.read">
                 <FlowsPage />
               </ProtectedRoute>
             } />
             
             {/* Custom Fields - requiere customFields.read */}
             <Route path="custom-fields" element={
-              <ProtectedRoute permission="customFields.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="customFields.read">
                 <CustomFieldsPage />
               </ProtectedRoute>
             } />
             
             {/* System - requiere system.read */}
             <Route path="system" element={
-              <ProtectedRoute permission="system.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="system.read">
                 <SystemPage />
               </ProtectedRoute>
             } />
             
             {/* System Control - requiere system.manage */}
             <Route path="system-control" element={
-              <ProtectedRoute permission="system.manage" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="system.manage">
                 <SystemControlPage />
               </ProtectedRoute>
             } />
             
             {/* Texts - requiere settings.write */}
             <Route path="texts" element={
-              <ProtectedRoute permission="settings.write" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="settings.write">
                 <TextsPage />
               </ProtectedRoute>
             } />
             
             {/* Contacts - requiere contacts.read */}
             <Route path="contacts" element={
-              <ProtectedRoute permission="contacts.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="contacts.read">
                 <ContactsPage />
               </ProtectedRoute>
             } />
             
             {/* Broadcast - requiere broadcasts.read */}
             <Route path="broadcast" element={
-              <ProtectedRoute permission="broadcasts.read" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="broadcasts.read">
                 <BroadcastPage />
               </ProtectedRoute>
             } />
             
             {/* Permissions - requiere agents.permissions */}
             <Route path="permissions" element={
-              <ProtectedRoute permission="agents.permissions" fallback={<AccessDeniedPage />}>
+              <ProtectedRoute permission="agents.permissions">
                 <PermissionsPage />
               </ProtectedRoute>
             } />
-            
-            <Route path="access-denied" element={<AccessDeniedPage />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

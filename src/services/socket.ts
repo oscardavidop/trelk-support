@@ -74,6 +74,7 @@ import {
 } from './session-guard.service.js';
 import { triggerEventMessages } from './scheduledMessage.service.js';
 import { telegramErrorHandler } from './telegram-error-handler.js';
+import { hasPermission } from './permission.service.js';
 import type { ChatCategory } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
@@ -901,6 +902,12 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Close session
   socket.on('session:close', async ({ sessionId, reason }, callback) => {
     try {
+      // Permission check: chats.close
+      const canClose = await hasPermission(agentId, 'chats.close');
+      if (!canClose) {
+        return callback({ ok: false, error: 'No tienes permiso para cerrar chats (chats.close)' });
+      }
+
       const session = await closeSessionDetailed(
         sessionId,
         'agent',
@@ -1153,6 +1160,12 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send message to user
   socket.on('message:send', async ({ sessionId, content, replyToMessageId }, callback) => {
     try {
+      // Permission check: chats.respond
+      const canRespond = await hasPermission(agentId, 'chats.respond');
+      if (!canRespond) {
+        return callback({ ok: false, error: 'No tienes permiso para responder en los chats (chats.respond)' });
+      }
+
       const session = await getSessionById(sessionId);
 
       if (!session) {
@@ -1263,6 +1276,12 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send image to user
   socket.on('message:sendImage', async ({ sessionId, url, caption }, callback) => {
     try {
+      // Permission check: chats.respond
+      const canRespond = await hasPermission(agentId, 'chats.respond');
+      if (!canRespond) {
+        return callback({ ok: false, error: 'No tienes permiso para responder en los chats (chats.respond)' });
+      }
+
       const session = await getSessionById(sessionId);
 
       if (!session) {
@@ -1335,6 +1354,12 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send file/document to user
   socket.on('message:sendFile', async ({ sessionId, url, filename, caption }, callback) => {
     try {
+      // Permission check: chats.respond
+      const canRespond = await hasPermission(agentId, 'chats.respond');
+      if (!canRespond) {
+        return callback({ ok: false, error: 'No tienes permiso para responder en los chats (chats.respond)' });
+      }
+
       const session = await getSessionById(sessionId);
 
       if (!session) {
@@ -1409,6 +1434,12 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send voice message to user
   socket.on('message:sendVoice', async ({ sessionId, url }, callback) => {
     try {
+      // Permission check: chats.respond
+      const canRespond = await hasPermission(agentId, 'chats.respond');
+      if (!canRespond) {
+        return callback({ ok: false, error: 'No tienes permiso para responder en los chats (chats.respond)' });
+      }
+
       const session = await getSessionById(sessionId);
 
       if (!session) {
@@ -1740,6 +1771,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
   socket.on('session:transfer', async ({ sessionId, toAgentId, reason }, callback?) => {
     try {
+      // Permission check: chats.transfer
+      const canTransfer = await hasPermission(agentId, 'chats.transfer');
+      if (!canTransfer) {
+        callback?.({ ok: false, error: 'No tienes permiso para transferir chats (chats.transfer)' });
+        return;
+      }
+
       const result = await transferSession({
         sessionId,
         fromAgentId: agentId,
@@ -1798,6 +1836,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
   socket.on('session:reopen', async ({ sessionId }, callback?) => {
     try {
+      // Permission check: chats.reopen
+      const canReopen = await hasPermission(agentId, 'chats.reopen');
+      if (!canReopen) {
+        callback?.({ ok: false, error: 'No tienes permiso para reabrir chats (chats.reopen)' });
+        return;
+      }
+
       const { role } = socket.data;
       const session = await reopenSession(sessionId, agentId, role);
 

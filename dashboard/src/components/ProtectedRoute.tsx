@@ -67,15 +67,33 @@ export function ProtectedRoute({
     return null;
   }
 
-  // Determine if access is allowed
+  // Determine if access is allowed and collect denied permissions
   let hasAccess = false;
+  const deniedPermissions: string[] = [];
 
   if (permission) {
     // Single permission check
     hasAccess = can(permission);
+    if (!hasAccess) {
+      deniedPermissions.push(permission);
+    }
   } else if (permissions && permissions.length > 0) {
     // Multiple permissions check
-    hasAccess = requireAll ? canAll(permissions) : canAny(permissions);
+    if (requireAll) {
+      hasAccess = canAll(permissions);
+      if (!hasAccess) {
+        // Find which permissions are missing
+        permissions.forEach(p => {
+          if (!can(p)) deniedPermissions.push(p);
+        });
+      }
+    } else {
+      hasAccess = canAny(permissions);
+      if (!hasAccess) {
+        // All permissions are denied
+        deniedPermissions.push(...permissions);
+      }
+    }
   } else {
     // No permission specified = allow access
     hasAccess = true;
@@ -93,8 +111,13 @@ export function ProtectedRoute({
       return <>{fallback}</>;
     }
 
-    // Default: AccessDeniedPage
-    return <AccessDeniedPage />;
+    // Default: AccessDeniedPage with permission info
+    return (
+      <AccessDeniedPage 
+        requiredPermissions={deniedPermissions}
+        currentPage={location.pathname}
+      />
+    );
   }
 
   // Access granted

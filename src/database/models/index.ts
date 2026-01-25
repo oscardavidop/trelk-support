@@ -62,3 +62,11 @@ export {
   type BroadcastMessageType,
   type DeliveryStatus 
 } from './Broadcast.js';
+
+// Permission Request System
+export { 
+  PermissionRequest, 
+  type IPermissionRequest, 
+  type IPermissionItem, 
+  type RequestStatus 
+} from './PermissionRequest.js';

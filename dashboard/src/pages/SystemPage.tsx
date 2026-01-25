@@ -58,18 +58,27 @@ export default function SystemPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const loadHealth = useCallback(async () => {
+    // Skip if access was denied (403)
+    if (accessDenied) return;
+    
     const result = await getSystemHealth();
     if (result.ok && result.data) {
       setHealth(result.data);
       setLastUpdate(new Date());
       setError(null);
     } else {
+      // Check for 403 to stop polling
+      if (result.error?.includes('403') || result.error?.includes('access required') || result.error?.includes('Access denied')) {
+        setAccessDenied(true);
+        setAutoRefresh(false);
+      }
       setError(result.error || 'Error loading system health');
     }
     setLoading(false);
-  }, []);
+  }, [accessDenied]);
 
   // Initial load
   useEffect(() => {

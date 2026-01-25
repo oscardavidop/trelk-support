@@ -26,11 +26,13 @@ import {
   FileText,
   Trash2,
   Upload,
-  Clock
+  Clock,
+  Lock
 } from 'lucide-react';
 
 // Tus imports originales intactos
 import { useAuthStore } from '../stores/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   sendMessage,
   sendImage,
@@ -111,6 +113,11 @@ export default function AgentComposer({
 }: AgentComposerProps) {
   const agent = useAuthStore((state) => state.agent);
   const token = useAuthStore((state) => state.token);
+  const { can } = usePermissions();
+  
+  // Permission checks
+  const canRespond = can('chats.respond');
+  const canClose = can('chats.close');
 
   // State original
   const [message, setMessage] = useState('');
@@ -277,6 +284,9 @@ export default function AgentComposer({
 
   const handleSend = async (closeAfter = false) => {
     if (!message.trim() || sendStatus === 'sending') return;
+    
+    // Si quiere cerrar pero no tiene permiso, solo enviar sin cerrar
+    const shouldClose = closeAfter && canClose;
 
     const processedMessage = replacePlaceholders(message.trim(), getPlaceholderContext());
 
@@ -294,7 +304,7 @@ export default function AgentComposer({
           // Re-focus textarea after sending
           setTimeout(() => {textareaRef.current?.focus(); scrollToBottom(); }, 50);
           // añade auto scroll to bottom could be handled by parent component on new message event:
-          if (closeAfter) {
+          if (shouldClose) {
             closeSession(session.sessionId, 'Agent closed conversation');
           }
 
@@ -561,6 +571,21 @@ export default function AgentComposer({
   const hasContent = message.trim().length > 0 || previewImage || pendingFile;
 
   // ============= NUEVA UI MEJORADA (Misma lógica, mejor diseño) =============
+
+  // Si no tiene permiso para responder, mostrar mensaje de bloqueo
+  if (!canRespond) {
+    return (
+      <div className="relative w-full border-t border-gray-800 bg-gray-900/95 backdrop-blur-md">
+        <div className="flex items-center justify-center gap-3 px-4 py-6 bg-amber-900/10 border-t border-amber-600/20">
+          <div className="flex items-center gap-2 text-amber-500">
+            <Lock className="w-5 h-5" />
+            <span className="text-sm font-medium">No tienes permiso para enviar mensajes en los chats</span>
+          </div>
+          <span className="text-xs text-gray-500">(chats.respond)</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

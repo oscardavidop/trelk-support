@@ -28,6 +28,7 @@ import { textsRoutes } from './texts.routes.js';
 import { registerContactsProRoutes } from './contacts-pro.routes.js';
 import { broadcastRoutes } from './broadcast.routes.js';
 import { registerPermissionRoutes } from './permissions.routes.js';
+import { registerPermissionRequestRoutes } from './permissionRequest.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -127,4 +128,9 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   await fastify.register(async (permissionRoutes) => {
     await registerPermissionRoutes(permissionRoutes);
   });
+
+  // Permission Request routes (agents request access, admins approve/reject)
+  await fastify.register(async (permRequestRoutes) => {
+    await registerPermissionRequestRoutes(permRequestRoutes);
+  }, { prefix: '/api/permission-requests' });
 }

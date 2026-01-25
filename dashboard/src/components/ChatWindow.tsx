@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import type { ElementType } from 'react';
 
 import {
@@ -70,6 +71,13 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, targetMessageId }: ChatWindowProps) {
   const agent = useAuthStore((state) => state.agent);
+  const { can } = usePermissions();
+  
+  // Permission checks for chat actions
+  const canClose = can('chats.close');
+  const canTransfer = can('chats.transfer');
+  const canReopen = can('chats.reopen');
+  
   const {
     messages,
     setMessages,
@@ -725,14 +733,14 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
               </button>
             )}
 
-            {isClosed && (
+            {isClosed && canReopen && (
               <ReopenChatButton
                 sessionId={session.sessionId}
                 reopenCount={(session as any).reopenCount || 0}
               />
             )}
 
-            {session.status === 'human' && isMySession && (
+            {session.status === 'human' && isMySession && canClose && (
               <button
                 onClick={handleClose}
                 className="group flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 hover:border-gray-600 text-xs font-medium rounded-lg transition-all active:scale-95"
@@ -759,7 +767,9 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                 />
               </div>
 
-              <IconButton onClick={() => setShowTransferModal(true)} icon={<ArrowRightLeft className="w-4 h-4" />} tooltip="Transferir Agente" />
+              {canTransfer && (
+                <IconButton onClick={() => setShowTransferModal(true)} icon={<ArrowRightLeft className="w-4 h-4" />} tooltip="Transferir Agente" />
+              )}
               <IconButton onClick={() => setShowBlockModal(true)} icon={<Ban className="w-4 h-4" />} tooltip="Bloquear Usuario" danger />
             </div>
           )}

@@ -155,7 +155,7 @@ export async function hasPermission(
   agentId: string, 
   permission: string
 ): Promise<PermissionCheckResult> {
-  const agent = await Agent.findById(agentId);
+  const agent = await Agent.findById(agentId).select('+isActive +permissionsOverride +roleId');
   if (!agent) {
     return { allowed: false, reason: 'Agent not found' };
   }
