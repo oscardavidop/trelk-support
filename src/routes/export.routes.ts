@@ -204,12 +204,12 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
         const skip = (page - 1) * limit;
 
         const query: Record<string, unknown> = {};
-        
+
         // Admins/supervisors can see all jobs, others only their own
         if (!['admin', 'supervisor'].includes(agent.role)) {
           query.requestedBy = agent._id;
         }
-        
+
         if (status) {
           query.status = status;
         }
@@ -241,9 +241,15 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
             completedAt: job.completedAt,
             expiresAt: job.expiresAt,
             requestedBy: (job.requestedBy as any)?.name,
-            downloadUrl: job.status === 'completed' && job.fileUrl 
-              ? `/api/exports/jobs/${job._id}/download` 
+            downloadUrl: job.status === 'completed' && job.fileUrl
+              ? `/api/exports/jobs/${job._id}/download`
               : undefined,
+            filters: job.filters,
+            options: {
+              includeMessages: job.include.messages,
+              includeNotes: job.include.notes,
+              includeSystemLogs: job.include.systemLogs,
+            }
           })),
           pagination: {
             page,
@@ -340,7 +346,7 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
         // Get file info
         const job = await ExportJob.findById(jobId);
         const fileName = job?.fileName || path.basename(filePath);
-        
+
         // Set content type based on format
         let contentType = 'application/octet-stream';
         if (fileName.endsWith('.json')) contentType = 'application/json';

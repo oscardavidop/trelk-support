@@ -12,7 +12,7 @@ import {
   getSessionTransfers,
   isUserBlocked,
 } from '../services/enterprise.service.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requirePermission } from '../middleware/auth.js';
 
 export async function registerEnterpriseRoutes(fastify: FastifyInstance): Promise<void> {
   // Apply auth to all routes
@@ -46,6 +46,7 @@ export async function registerEnterpriseRoutes(fastify: FastifyInstance): Promis
    */
   fastify.get<{ Params: { sessionId: string } }>(
     '/api/sessions/:sessionId/survey',
+    { preHandler: requirePermission('analytics.read') },
     async (request, reply) => {
       const survey = await getSessionSurvey(request.params.sessionId);
       return { ok: true, survey };
@@ -88,6 +89,7 @@ export async function registerEnterpriseRoutes(fastify: FastifyInstance): Promis
    */
   fastify.get<{ Params: { sessionId: string } }>(
     '/api/sessions/:sessionId/transfers',
+    { preHandler: requirePermission('chats.read') },
     async (request, reply) => {
       const transfers = await getSessionTransfers(request.params.sessionId);
       return { ok: true, transfers };

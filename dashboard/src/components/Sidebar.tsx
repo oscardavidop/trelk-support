@@ -1,36 +1,12 @@
-// Sidebar component
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useConnectionStore } from '../stores/connectionStore';
 import { usePermissions } from '../hooks/usePermissions';
 import {
-  MessageCircle,
-  LayoutDashboard,
-  Users,
-  Settings,
-  LogOut,
-  Circle,
-  ChevronDown,
-  MessageSquare,
-  Wifi,
-  WifiOff,
-  Loader2,
-  Eye,
-  Activity,
-  Download,
-  GitBranch,
-  ChevronLeft,
-  ChevronRight,
-  User,
-  Sliders,
-  Bell,
-  Shield,
-  History,
-  ListChecks,
-  Server,
-  Languages,
-  Contact,
-  Megaphone,
+  MessageCircle, LayoutDashboard, Users, Settings, LogOut, Circle,
+  ChevronDown, MessageSquare, Wifi, WifiOff, Loader2, Eye, Activity,
+  Download, GitBranch, ChevronLeft, ChevronRight, User, Sliders, Bell,
+  Shield, History, ListChecks, Server, Languages, Contact, Megaphone,
   KeyRound
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
@@ -42,8 +18,8 @@ interface SidebarProps {
   stats: DashboardStats | null;
 }
 
-// Routes where sidebar should be collapsed by default
-const COLLAPSED_ROUTES = ['/dashboard/flows'];
+const COLLAPSED_ROUTES = ['/dashboard/flows', '/dashboard/chat'];
+const HIDDEN_ROUTES = ['/dashboard/chat'];
 
 export default function Sidebar({ agent, stats }: SidebarProps) {
   const location = useLocation();
@@ -53,40 +29,32 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  if (HIDDEN_ROUTES.some(route => location.pathname.startsWith(route))) {
+    return null;
+  }
+
+  // Close dropdown logic
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowStatusMenu(false);
       }
     };
-
-    if (showStatusMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (showStatusMenu) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showStatusMenu]);
 
-  // Collapsed state - check localStorage for user preference
+  // Collapse logic
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     if (saved !== null) return saved === 'true';
-    // Default: collapsed on specific routes
     return COLLAPSED_ROUTES.some(route => location.pathname.startsWith(route));
   });
 
-  // Auto-collapse on specific routes (only on first navigation)
   useEffect(() => {
     const shouldAutoCollapse = COLLAPSED_ROUTES.some(route => location.pathname.startsWith(route));
     const userPreference = localStorage.getItem('sidebar-collapsed');
-
-    // Only auto-collapse if user hasn't set a preference
-    if (shouldAutoCollapse && userPreference === null) {
-      setIsCollapsed(true);
-    }
+    if (shouldAutoCollapse && userPreference === null) setIsCollapsed(true);
   }, [location.pathname]);
 
   const toggleCollapse = () => {
@@ -95,16 +63,10 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
     localStorage.setItem('sidebar-collapsed', String(newState));
   };
 
-  // Use permission-based access instead of role-based
-  const { can, canAny } = usePermissions();
-  
-  // Legacy role checks (for backward compatibility)
-  const isAdmin = agent?.role === 'admin';
-  const isSupervisor = agent?.role === 'supervisor';
-  const canSupervise = isAdmin || isSupervisor;
-
-  // Calculate availability status based on activeChats
+  // Permissions & Status Logic
+  const { can } = usePermissions();
   const MAX_CONCURRENT_CHATS = 5;
+
   const getAvailabilityStatus = (): AvailabilityStatus => {
     if (!agent || agent.onlineStatus === 'offline') return 'offline';
     if ((agent.activeChats || 0) >= MAX_CONCURRENT_CHATS) return 'busy';
@@ -113,304 +75,298 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
   const availabilityStatus = agent?.availability || getAvailabilityStatus();
 
-  // Navigation items with permission-based filtering
-  const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', permission: null },
-    { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', badge: stats?.sessions.waiting, permission: 'chats.read' },
-    { path: '/dashboard/contacts', icon: Contact, label: 'Contactos', permission: 'contacts.read' },
-    { path: '/dashboard/broadcast', icon: Megaphone, label: 'Broadcast', permission: 'broadcast.read' },
-    { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', permission: 'supervisor.monitor' },
-    { path: '/dashboard/audit', icon: Activity, label: 'Actividad', permission: 'system.audit' },
-    { path: '/dashboard/exports', icon: Download, label: 'Exportar', permission: 'exports.create' },
-    { path: '/dashboard/system', icon: Server, label: 'Sistema', permission: 'system.read' },
-    { path: '/dashboard/system-control', icon: Shield, label: 'Control', permission: 'system.destructive', danger: true },
-    { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Saved Replies', permission: 'replies.write' },
-    { path: '/dashboard/flows', icon: GitBranch, label: 'Flows', permission: 'flows.read' },
-    { path: '/dashboard/texts', icon: Languages, label: 'Textos i18n', permission: 'settings.write' },
-    { path: '/dashboard/custom-fields', icon: ListChecks, label: 'Campos', permission: 'customFields.read' },
-    { path: '/dashboard/agents', icon: Users, label: 'Agents', permission: 'agents.read' },
-    { path: '/dashboard/permissions', icon: KeyRound, label: 'Permisos', permission: 'agents.permissions' },
-    { path: '/dashboard/settings', icon: Settings, label: 'Settings', permission: 'settings.read' },
-  ].filter(item => {
-    // No permission required
-    if (item.permission === null) return true;
-    // Check permission
-    return can(item.permission);
-  });
-
-  const statusColors = {
-    online: 'bg-secondary',
-    away: 'bg-warning',
-    offline: 'bg-gray-500',
-  };
-
-  const availabilityColors = {
-    available: 'text-secondary',
-    busy: 'text-warning',
-    offline: 'text-gray-500',
-  };
-
-  const availabilityLabels = {
-    available: 'Available',
-    busy: 'Busy',
-    offline: 'Offline',
-  };
-
   const handleStatusChange = (status: 'online' | 'away' | 'offline') => {
     updateAgentStatus(status);
     setShowStatusMenu(false);
   };
 
+  // Navigation Item Type
+  type NavItem = {
+    path: string;
+    icon: React.ForwardRefExoticComponent<any>;
+    label: string;
+    permission: string | null;
+    badge?: number;
+  };
+  
+  // Navigation Config
+  const navItems: {
+    section: string;
+    items: NavItem[];
+  }[] = [
+    {
+      section: 'Principal', items: [
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', permission: null },
+        { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', permission: 'chats.read' },
+        { path: '/dashboard/contacts', icon: Contact, label: 'Contactos', permission: 'contacts.read' },
+      ]
+    },
+    {
+      section: 'Operaciones', items: [
+        { path: '/dashboard/broadcast', icon: Megaphone, label: 'Broadcast', permission: 'broadcast.read' },
+        { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', permission: 'supervisor.monitor' },
+        { path: '/dashboard/flows', icon: GitBranch, label: 'Flow Builder', permission: 'flows.read' },
+      ]
+    },
+    {
+      section: 'Gestión', items: [
+        { path: '/dashboard/agents', icon: Users, label: 'Agentes', permission: 'agents.read' },
+        { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Respuestas', permission: 'replies.write' },
+        { path: '/dashboard/custom-fields', icon: ListChecks, label: 'Campos', permission: 'customFields.read' },
+        { path: '/dashboard/texts', icon: Languages, label: 'Textos', permission: 'settings.write' },
+      ]
+    },
+    {
+      section: 'Sistema', items: [
+        { path: '/dashboard/audit', icon: Activity, label: 'Actividad', permission: 'system.audit' },
+        { path: '/dashboard/exports', icon: Download, label: 'Exportar', permission: 'exports.create' },
+        { path: '/dashboard/system', icon: Server, label: 'Monitor', permission: 'system.read' },
+        {path: '/dashboard/system-control', icon: Sliders, label: 'Control', permission: 'system.admin' },
+        { path: '/dashboard/permissions', icon: KeyRound, label: 'Permisos', permission: 'agents.permissions' },
+        { path: '/dashboard/settings', icon: Settings, label: 'Ajustes', permission: 'settings.read' },
+      ]
+    }
+  ];
+
+  // Helper colors
+  const statusConfig = {
+    online: { color: 'text-emerald-500', bg: 'bg-emerald-500', ring: 'ring-emerald-500/20' },
+    away: { color: 'text-amber-500', bg: 'bg-amber-500', ring: 'ring-amber-500/20' },
+    offline: { color: 'text-zinc-500', bg: 'bg-zinc-500', ring: 'ring-zinc-500/20' },
+  };
+
+  const availabilityColors = {
+    available: 'text-emerald-500',
+    busy: 'text-amber-500',
+    offline: 'text-zinc-500',
+  };
+
+  const currentStatusStyle = statusConfig[agent?.onlineStatus || 'offline'];
+
   return (
-    <aside className={`${isCollapsed ? 'w-16' : 'w-64'} bg-gray-950 border-r border-gray-800 flex flex-col transition-all duration-300 relative`}>
-      {/* Collapse Toggle Button */}
+    <aside
+      className={`${isCollapsed ? 'w-[72px]' : 'w-72'} bg-zinc-950 border-r border-zinc-800 flex flex-col transition-all duration-300 relative z-50`}
+    >
+      {/* Toggle Button */}
       <button
         onClick={toggleCollapse}
-        className="absolute -right-3 top-20 z-10 w-6 h-6 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-        title={isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+        className="absolute -right-3 top-11 z-50 w-6 h-6 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shadow-lg"
       >
-        {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
 
-      {/* Logo */}
-      <div className="p-3 border-b border-gray-800 h-[56px]">
-        <div className="flex items-center gap-3">
-          {
-            isCollapsed ? (
-              <img src="/assets/img/logo-small-dark.png" alt="Logo" className="rounded-sm" />
-            ) : (
-              <div className="flex items-center gap-2 text-white font-semibold">
-                <img src="/assets/img/logo-dark.png" alt="Logo" className="rounded-sm" style={{ maxHeight: '35px' }} />
-                Support
-              </div>
-            )
-          }
+      {/* 1. Header & Logo (RESTAURADO) */}
+      <div className="h-[56px] flex items-center px-4 border-b border-zinc-800/50 bg-zinc-950">
+        <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center w-full' : ''}`}>
+          {isCollapsed ? (
+            <img src="/assets/img/logo-small-dark.png" alt="Logo" className="w-8 h-8 rounded-sm object-contain" />
+          ) : (
+            <div className="flex items-center gap-2 text-white font-semibold">
+              <img src="/assets/img/logo-dark.png" alt="Logo" className="rounded-sm object-contain h-8 w-auto" />
+              <span className="font-bold text-zinc-100 text-sm tracking-wide">Support</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Connection & Availability Status */}
-      <div className="px-4 py-2 border-b border-gray-800">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} text-xs`}>
-          {/* Connection Status */}
-          <div className="flex items-center gap-1.5" title={connectionStatus === 'ready' ? 'Connected' : connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}>
+      {/* 2. Connection Status (RESTAURADO & ESTILIZADO) */}
+      <div className="">
+        <div className={`flex items-center ${isCollapsed ? 'justify-center flex-col gap-2' : 'justify-between'} text-xs bg-zinc-900/50 p-2`}>
+
+          {/* Connection Icon/Text */}
+          <div className="flex items-center gap-2" title={connectionStatus === 'ready' ? 'System Connected' : 'Disconnected'}>
             {connectionStatus === 'ready' ? (
               <>
-                <Wifi className="w-3.5 h-3.5 text-secondary" />
-                {!isCollapsed && <span className="text-secondary">Connected</span>}
+                <Wifi className="w-3.5 h-3.5 text-emerald-500" />
+                {!isCollapsed && <span className="text-emerald-500 font-medium">Conectado</span>}
               </>
             ) : connectionStatus === 'reconnecting' ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 text-warning animate-spin" />
-                {!isCollapsed && <span className="text-warning">Reconnecting...</span>}
+                <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                {!isCollapsed && <span className="text-amber-500 font-medium">Reconectando...</span>}
               </>
             ) : (
               <>
-                <WifiOff className="w-3.5 h-3.5 text-danger" />
-                {!isCollapsed && <span className="text-danger">Disconnected</span>}
+                <WifiOff className="w-3.5 h-3.5 text-red-500" />
+                {!isCollapsed && <span className="text-red-500 font-medium">Sin Conexión</span>}
               </>
             )}
           </div>
 
-          {/* Availability Status */}
-          {agent && !isCollapsed && (
-            <div className={`flex items-center gap-1.5 ${availabilityColors[availabilityStatus]}`}>
-              <span className="font-medium">{availabilityLabels[availabilityStatus]}</span>
-              {availabilityStatus === 'busy' && (
-                <span className="text-gray-500">({agent.activeChats || 0}/{MAX_CONCURRENT_CHATS})</span>
-              )}
-            </div>
+          {/* Availability Status (Only visible when expanded or via dot when collapsed) */}
+          {agent && (
+            isCollapsed ? (
+              // Collapsed: Small dot indicating agent availability
+              <div className={`w-2 h-2 rounded-full ${availabilityStatus === 'available' ? 'bg-emerald-500' : availabilityStatus === 'busy' ? 'bg-amber-500' : 'bg-zinc-600'}`} title={availabilityStatus} />
+            ) : (
+              // Expanded: Full Text
+              <div className={`flex items-center gap-1.5 ${availabilityColors[availabilityStatus]}`}>
+                <span className="font-medium capitalize">{availabilityStatus}</span>
+                {availabilityStatus === 'busy' && (
+                  <span className="text-zinc-500">({agent.activeChats || 0}/{MAX_CONCURRENT_CHATS})</span>
+                )}
+              </div>
+            )
           )}
         </div>
       </div>
 
-      {/* Navigation - Scrollable */}
-      {/* ui scrollll bar */}
-      
-      <nav className="flex-1 p-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const isDanger = 'danger' in item && item.danger;
+      {/* 3. Navigation */}
+      <nav className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-6">
+        {navItems.map((group, groupIdx) => {
+          const visibleItems = group.items.filter(item => item.permission === null || can(item.permission));
+          if (visibleItems.length === 0) return null;
+
           return (
-            <Link
-              key={item.path}
-              to={item.path}
-              title={isCollapsed ? item.label : undefined}
-              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
-                ? isDanger
-                  ? 'bg-danger/20 text-danger'
-                  : 'bg-primary/10 text-primary'
-                : isDanger
-                  ? 'text-danger/70 hover:text-danger hover:bg-danger/10'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                }`}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span className="font-medium">{item.label}</span>}
-              {item.badge && !isCollapsed ? (
-                <span className="ml-auto px-2 py-0.5 bg-warning text-gray-900 text-xs font-bold rounded-full">
-                  {item.badge}
-                </span>
-              ) : item.badge && isCollapsed ? (
-                <span className="absolute right-2 top-1 w-2 h-2 bg-warning rounded-full" />
-              ) : null}
-            </Link>
+            <div key={groupIdx}>
+              {!isCollapsed && (
+                <h3 className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                  {group.section}
+                </h3>
+              ) || (
+                groupIdx > 0 && <div className="border-t border-zinc-800 my-2" />
+              )}
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`
+                        relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group
+                        ${isActive
+                          ? 'bg-zinc-800/80 text-white shadow-inner'
+                          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
+                        }
+                        ${isCollapsed ? 'justify-center' : ''}
+                      `}
+                    >
+                      <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-indigo-400' : 'text-zinc-500 group-hover:text-zinc-300'}`} />
+
+                      {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+
+                      {/* Active Indicator Line */}
+                      {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-r-full" />}
+
+                      {/* Badge */}
+                      {item.badge && item.badge > 0 && (
+                        <div className={`
+                          flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold 
+                          ${isCollapsed ? 'absolute -top-1 -right-1 border border-zinc-950' : 'ml-auto'}
+                          bg-indigo-500 text-white
+                        `}>
+                          {item.badge}
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
 
-      {/* Stats Summary - Fixed */}
-      {stats && (
-        <div className="px-4 py-3 border-t border-gray-800 flex-shrink-0">
-          {isCollapsed ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-8 h-8 bg-gray-800/50 rounded-lg flex items-center justify-center" title={`${stats.sessions.human} Active`}>
-                <span className="text-xs font-bold text-white">{stats.sessions.human}</span>
-              </div>
-              <div className="w-8 h-8 bg-gray-800/50 rounded-lg flex items-center justify-center" title={`${stats.sessions.waiting} Waiting`}>
-                <span className="text-xs font-bold text-warning">{stats.sessions.waiting}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="p-2 bg-gray-800/50 rounded-lg">
-                <p className="text-lg font-bold text-white">{stats.sessions.human}</p>
-                <p className="text-xs text-gray-500">Active</p>
-              </div>
-              <div className="p-2 bg-gray-800/50 rounded-lg">
-                <p className="text-lg font-bold text-warning">{stats.sessions.waiting}</p>
-                <p className="text-xs text-gray-500">Waiting</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Agent Profile - Fixed at bottom */}
-      <div className="p-4 border-t border-gray-800 flex-shrink-0 mt-auto">
-        <div className="relative" ref={dropdownRef}>
+      {/* 4. User Profile Footer */}
+      <div className="p-3 border-t border-zinc-800 bg-zinc-950" ref={dropdownRef}>
+        <div className="relative">
           <button
             onClick={() => setShowStatusMenu(!showStatusMenu)}
-            className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 p-2 rounded-lg hover:bg-gray-800 transition-colors`}
-            title={isCollapsed ? agent?.name : undefined}
+            className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all border border-transparent hover:border-zinc-800 hover:bg-zinc-900 ${isCollapsed ? 'justify-center' : ''}`}
           >
-            <div className="relative flex-shrink-0">
-              {agent?.avatar ? (
-                <img
-                  src={agent.avatar}
-                  alt={agent.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-medium">
-                  {agent?.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-gray-950 ${statusColors[agent?.onlineStatus || 'offline']}`} />
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300 font-bold border border-zinc-700">
+                {agent?.name.charAt(0).toUpperCase()}
+              </div>
+              <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-zinc-950 ${currentStatusStyle.bg}`} />
             </div>
+
             {!isCollapsed && (
-              <>
-                <div className="flex-1 text-left overflow-hidden">
-                  <p className="text-sm font-medium text-white truncate">{agent?.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{agent?.onlineStatus}</p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              </>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-zinc-200 truncate">{agent?.name}</p>
+                <p className={`text-xs truncate ${currentStatusStyle.color} capitalize`}>{agent?.onlineStatus}</p>
+              </div>
             )}
+
+            {!isCollapsed && <ChevronDown className="w-4 h-4 text-zinc-600" />}
           </button>
 
-          {/* Status Menu */}
+          {/* Popup Menu */}
           {showStatusMenu && (
-            <div className={`absolute bottom-full mb-2 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl z-50 ${isCollapsed ? 'left-full ml-2 w-64' : 'left-0 right-0'}`}>
-              {/* Status Section */}
-              <div className="px-3 py-2 border-b border-gray-700">
-                <p className="text-xs text-gray-500 uppercase font-semibold">Status</p>
-              </div>
-              <button
-                onClick={() => handleStatusChange('online')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors ${agent?.onlineStatus === 'online' ? 'bg-gray-700/50' : ''}`}
-              >
-                <Circle className="w-3 h-3 fill-secondary text-secondary" />
-                <span className="text-sm text-white">Online</span>
-                {agent?.onlineStatus === 'online' && <span className="ml-auto text-xs text-secondary">✓</span>}
-              </button>
-              <button
-                onClick={() => handleStatusChange('away')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors ${agent?.onlineStatus === 'away' ? 'bg-gray-700/50' : ''}`}
-              >
-                <Circle className="w-3 h-3 fill-warning text-warning" />
-                <span className="text-sm text-white">Away</span>
-                <span className="ml-auto text-xs text-gray-500">No new chats</span>
-              </button>
-              <button
-                onClick={() => handleStatusChange('offline')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors ${agent?.onlineStatus === 'offline' ? 'bg-gray-700/50' : ''}`}
-              >
-                <Circle className="w-3 h-3 fill-gray-500 text-gray-500" />
-                <span className="text-sm text-white">Offline</span>
-              </button>
-              {availabilityStatus === 'busy' && (
-                <div className="flex items-center gap-3 px-4 py-2 bg-warning/10 border-t border-gray-700">
-                  <Circle className="w-3 h-3 fill-warning text-warning animate-pulse" />
-                  <span className="text-sm text-warning">Busy</span>
-                  <span className="ml-auto text-xs text-gray-400">{agent?.activeChats}/{MAX_CONCURRENT_CHATS} chats</span>
-                </div>
-              )}
+            <div className={`absolute bottom-full mb-3 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden p-1 w-64 z-50 ${isCollapsed ? 'left-14' : 'left-0 right-0'}`}>
 
-              {/* Settings Section */}
-              <div className="border-t border-gray-700">
-                <div className="px-3 py-2 border-b border-gray-700">
-                  <p className="text-xs text-gray-500 uppercase font-semibold">Settings</p>
+              {/* Profile Header in Menu */}
+              <div className="p-3 border-b border-zinc-800/50 mb-1">
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Estado</p>
+                <div className="space-y-1">
+                  <StatusButton
+                    status="online"
+                    label="En línea"
+                    active={agent?.onlineStatus === 'online'}
+                    onClick={() => handleStatusChange('online')}
+                    color="bg-emerald-500"
+                  />
+                  <StatusButton
+                    status="away"
+                    label="Ausente"
+                    active={agent?.onlineStatus === 'away'}
+                    onClick={() => handleStatusChange('away')}
+                    color="bg-amber-500"
+                  />
+                  <StatusButton
+                    status="offline"
+                    label="Desconectado"
+                    active={agent?.onlineStatus === 'offline'}
+                    onClick={() => handleStatusChange('offline')}
+                    color="bg-zinc-500"
+                  />
                 </div>
-                <button
-                  onClick={() => { navigate('/dashboard/my-settings/account'); setShowStatusMenu(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors"
-                >
-                  <User className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-white">My Account</span>
-                </button>
-                <button
-                  onClick={() => { navigate('/dashboard/my-settings/preferences'); setShowStatusMenu(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors"
-                >
-                  <Sliders className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-white">Preferences</span>
-                </button>
-                <button
-                  onClick={() => { navigate('/dashboard/my-settings/notifications'); setShowStatusMenu(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors"
-                >
-                  <Bell className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-white">Notifications</span>
-                </button>
-                <button
-                  onClick={() => { navigate('/dashboard/my-settings/security'); setShowStatusMenu(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors"
-                >
-                  <Shield className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-white">Security</span>
-                </button>
-                <button
-                  onClick={() => { navigate('/dashboard/my-settings/activity'); setShowStatusMenu(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors"
-                >
-                  <History className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-white">Activity</span>
-                </button>
               </div>
 
-              {/* Sign Out */}
-              <div className="border-t border-gray-700" />
-              <button
-                onClick={logout}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors text-danger"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm">Sign out</span>
-              </button>
+              {/* Menu Links */}
+              <div className="space-y-0.5 p-1">
+                <MenuLink icon={User} label="Mi Cuenta" onClick={() => navigate('/dashboard/my-settings/account')} />
+                <MenuLink icon={Settings} label="Preferencias" onClick={() => navigate('/dashboard/my-settings/preferences')} />
+                <div className="h-px bg-zinc-800 my-1 mx-2" />
+                <MenuLink icon={LogOut} label="Cerrar Sesión" onClick={logout} danger />
+              </div>
             </div>
           )}
         </div>
       </div>
     </aside>
+  );
+}
+
+// ============= SUB-COMPONENTS =============
+
+function StatusButton({ status, label, active, onClick, color }: { status: string; label: string; active: boolean; onClick: () => void; color: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${active ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+        }`}
+    >
+      <div className={`w-2.5 h-2.5 rounded-full ${color} ${active ? 'ring-2 ring-white/10' : ''}`} />
+      <span>{label}</span>
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50" />}
+    </button>
+  );
+}
+
+function MenuLink({ icon: Icon, label, onClick, danger }: { icon: React.ComponentType<any>; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${danger
+          ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
+          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+        }`}
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+    </button>
   );
 }

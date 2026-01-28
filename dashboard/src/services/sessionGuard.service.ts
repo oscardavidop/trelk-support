@@ -47,15 +47,28 @@ function generateTabId(): string {
 
 // ============= BROWSER SESSION ID =============
 
+/**
+ * Get or create a browser session ID
+ * Uses localStorage so all tabs in the same browser share the same session ID
+ * This allows multiple tabs without triggering session replacement
+ */
 export function getBrowserSessionId(): string {
-  let sessionId = sessionStorage.getItem('trelk-browser-session-id');
+  // Use localStorage so all tabs share the same session ID
+  let sessionId = localStorage.getItem('trelk-browser-session-id');
   
   if (!sessionId) {
     sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 12)}`;
-    sessionStorage.setItem('trelk-browser-session-id', sessionId);
+    localStorage.setItem('trelk-browser-session-id', sessionId);
   }
   
   return sessionId;
+}
+
+/**
+ * Clear the browser session ID (call on logout)
+ */
+export function clearBrowserSessionId(): void {
+  localStorage.removeItem('trelk-browser-session-id');
 }
 
 export function getDeviceInfo(): string {

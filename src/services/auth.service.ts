@@ -1,13 +1,17 @@
 /**
  * Authentication Service
  * JWT-based authentication for dashboard agents
- * Includes permission-aware login responses
+ * Includes permission-aware login responses and session management
  */
 
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { ENV } from '../config/index.js';
 import { findAgentByEmail, findAgentById, updateLastLogin, updateAgentStatus } from './agent.service.js';
 import { getEffectivePermissions, getAgentPermissionsSummary } from './permission.service.js';
+import { getSecuritySettings } from './settings-cache.service.js';
+import { createSession, enforceSessionLimit } from '../database/models/AgentSession.js';
+import { logger } from './logger.js';
 import type { IAgent } from '../database/index.js';
 
 export interface TokenPayload {
@@ -23,12 +27,30 @@ export interface AuthResult {
   token?: string;
   permissions?: string[];
   error?: string;
+  sessionsInvalidated?: number;
+}
+
+/**
+ * Generate a hash from a JWT token for session tracking
+ */
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 /**
  * Login agent with email and password
  */
-export async function loginAgent(email: string, password: string): Promise<AuthResult> {
+export async function loginAgent(
+  email: string, 
+  password: string,
+  deviceInfo?: {
+    deviceType?: string;
+    browser?: string;
+    os?: string;
+    ip: string;
+    location?: string;
+  }
+): Promise<AuthResult> {
   try {
     // Find agent by email (include password field)
     const agent = await findAgentByEmail(email);
@@ -49,8 +71,35 @@ export async function loginAgent(email: string, password: string): Promise<AuthR
       return { success: false, error: 'Invalid credentials' };
     }
     
+    // Get security settings for session limit
+    const securitySettings = await getSecuritySettings();
+    const maxSessions = securitySettings.maxSessionsPerAgent ?? 3;
+    
+    // Enforce session limit - invalidate oldest sessions if needed
+    let sessionsInvalidated = 0;
+    if (maxSessions > 0) {
+      sessionsInvalidated = await enforceSessionLimit(agent._id.toString(), maxSessions);
+      if (sessionsInvalidated > 0) {
+        logger.info('admin', {
+          action: 'sessions_invalidated',
+          agentId: agent._id.toString(),
+          count: sessionsInvalidated,
+          reason: 'session_limit_exceeded',
+          maxSessions,
+        });
+      }
+    }
+    
     // Generate JWT token
     const token = generateToken(agent);
+    const tokenHash = hashToken(token);
+    
+    // Create session record
+    if (deviceInfo) {
+      await createSession(agent._id.toString(), tokenHash, deviceInfo);
+    } else {
+      await createSession(agent._id.toString(), tokenHash, { ip: 'unknown' });
+    }
     
     // Update last login and set online
     await updateLastLogin(agent._id.toString());
@@ -67,6 +116,7 @@ export async function loginAgent(email: string, password: string): Promise<AuthR
       agent: agentData!,
       token,
       permissions,
+      sessionsInvalidated,
     };
   } catch (error) {
     console.error('Login error:', error);

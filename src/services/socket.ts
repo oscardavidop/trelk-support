@@ -2015,13 +2015,24 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         socket.handshake.address ||
         'unknown';
 
-      // IMPORTANT: Get old socket BEFORE registering (it was stored before this handler)
-      // We need to find the old socket by checking all sockets for this agent
+      // Store browserSessionId in socket data FIRST
+      socket.data.browserSessionId = browserSessionId;
+
+      // Find old sockets from DIFFERENT browser sessions (not just different tabs)
+      // Multiple tabs in the same browser share the same browserSessionId
       let oldSocketToDisconnect: typeof socket | null = null;
 
-      // Find any other socket for this agent that isn't the current one
       for (const [, s] of io.sockets.sockets) {
-        if (s.data.agentId === agentId && s.id !== socket.id) {
+        // Only disconnect if:
+        // 1. Same agent
+        // 2. Different socket
+        // 3. DIFFERENT browserSessionId (different browser/device, not just different tab)
+        if (
+          s.data.agentId === agentId && 
+          s.id !== socket.id &&
+          s.data.browserSessionId && 
+          s.data.browserSessionId !== browserSessionId
+        ) {
           oldSocketToDisconnect = s as typeof socket;
           break;
         }
@@ -2033,16 +2044,15 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         ip: Array.isArray(ip) ? ip[0] : ip,
       });
 
-      // Store browserSessionId in socket data for validation
-      socket.data.browserSessionId = browserSessionId;
-
-      // If there's an old socket, notify and disconnect it
+      // If there's an old socket from a DIFFERENT browser session, notify and disconnect it
       if (oldSocketToDisconnect) {
         logger.info('api', {
           action: 'forcing_old_session_disconnect',
           agentId,
           oldSocketId: oldSocketToDisconnect.id,
+          oldBrowserSession: oldSocketToDisconnect.data.browserSessionId,
           newSocketId: socket.id,
+          newBrowserSession: browserSessionId,
         });
 
         // Emit to the old socket

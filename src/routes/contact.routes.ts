@@ -96,6 +96,9 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.get<{ Params: UserParams }>(
     '/api/users/:userId/notes',
+    {
+      preHandler: requirePermission('notes.read')
+    },
     async (request, reply) => {
       const { userId } = request.params;
       if (!isValidObjectId(userId)) {
@@ -114,6 +117,9 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
     Body: { content: string; sessionId?: string }
   }>(
     '/api/users/:userId/notes',
+    {
+      preHandler: requirePermission('notes.write')
+    },
     async (request, reply) => {
       const { userId } = request.params;
       const { content, sessionId } = request.body;
@@ -138,6 +144,7 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.put<{ Params: NoteParams; Body: { content: string } }>(
     '/api/notes/:noteId',
+      { preHandler: requirePermission('notes.write') },
     async (request, reply) => {
       const { noteId } = request.params;
       const { content } = request.body;
@@ -161,6 +168,7 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.delete<{ Params: NoteParams }>(
     '/api/notes/:noteId',
+    { preHandler: requirePermission('notes.delete') },
     async (request, reply) => {
       const { noteId } = request.params;
       const deleted = await deleteNote(noteId, request.agent!._id.toString());
@@ -188,6 +196,9 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.get<{ Querystring: { q: string } }>(
     '/api/tags/search',
+    {
+      preHandler: requirePermission('tags.read')
+    },
     async (request) => {
       const tags = await searchTags(request.query.q || '');
       return { ok: true, tags };
@@ -200,7 +211,7 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.post<{ Body: { name: string; color: string; description?: string } }>(
     '/api/tags',
-    { preHandler: requirePermission('contacts.write') },
+    { preHandler: requirePermission('tags.write') },
     async (request, reply) => {
       const { name, color, description } = request.body;
 
@@ -227,11 +238,11 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Update a tag
-   * Requires: contacts.write
+   * Requires: tags.write
    */
   fastify.put<{ Params: TagParams; Body: { name?: string; color?: string; description?: string } }>(
     '/api/tags/:tagId',
-    { preHandler: requirePermission('contacts.write') },
+    { preHandler: requirePermission('tags.write') },
     async (request, reply) => {
       const { tagId } = request.params;
       const tag = await updateTag(tagId, request.body);
@@ -246,11 +257,11 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Delete a tag
-   * Requires: contacts.write
+   * Requires: tags.write
    */
   fastify.delete<{ Params: TagParams }>(
     '/api/tags/:tagId',
-    { preHandler: requirePermission('contacts.write') },
+    { preHandler: requirePermission('tags.delete') },
     async (request, reply) => {
       const { tagId } = request.params;
       const deleted = await deleteTag(tagId);
@@ -268,6 +279,7 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.get<{ Params: UserParams }>(
     '/api/users/:userId/tags',
+    { preHandler: requirePermission('tags.read') },
     async (request) => {
       const { userId } = request.params;
       const tags = await getUserTags(userId);
@@ -280,6 +292,7 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.post<{ Params: UserParams; Body: { tagId: string } }>(
     '/api/users/:userId/tags',
+    { preHandler: requirePermission('tags.write') },
     async (request, reply) => {
       const { userId } = request.params;
       const { tagId } = request.body;
@@ -303,6 +316,7 @@ export async function registerContactRoutes(fastify: FastifyInstance): Promise<v
    */
   fastify.delete<{ Params: UserParams & TagParams }>(
     '/api/users/:userId/tags/:tagId',
+    { preHandler: requirePermission('tags.delete') },
     async (request, reply) => {
       const { userId, tagId } = request.params;
       const removed = await removeTagFromUser(userId, tagId);

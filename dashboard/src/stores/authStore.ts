@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Agent } from '../types';
 import { usePermissionStore } from './permissionStore';
+import { clearBrowserSessionId } from '../services/sessionGuard.service';
 
 interface AuthState {
   agent: Agent | null;
@@ -80,6 +81,9 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           // Clear permissions on logout
           usePermissionStore.getState().clearPermissions();
+          
+          // Clear browser session ID so next login gets a new session
+          clearBrowserSessionId();
           
           set({
             agent: null,

@@ -1,8 +1,7 @@
-// Login Page
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { MessageCircle, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -20,65 +19,80 @@ export default function LoginPage() {
 
     try {
       const success = await login(email, password);
-      
       if (success) {
         navigate('/dashboard');
       } else {
-        setError('Invalid email or password');
+        setError('Credenciales inválidas');
       }
     } catch {
-      setError('Connection error. Please try again.');
+      setError('Error de conexión. Inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden selection:bg-indigo-500/30">
+      
+      {/* Background Ambience */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
+        
+        {/* Logo Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4 w-50">
-            <img src="/assets/img/logo-dark.png" alt="Trelk Logo" />
+          <div className="inline-flex items-center justify-center mb-6">
+            <img src="/assets/img/logo-dark.png" alt="Trelk Logo" className="h-20 w-auto" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Trelk Support</h1>
-          <p className="text-gray-400 mt-2">Agent Dashboard</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Bienvenido de nuevo</h1>
+          <p className="text-zinc-400 text-sm">Ingresa a tu cuenta de agente para continuar</p>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Login Card */}
+        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-8 shadow-2xl">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            
+            {/* Error Message */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
+              <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm animate-in slide-in-from-top-2">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium">{error}</span>
               </div>
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email
+            {/* Email Input */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-xs font-bold text-zinc-500 uppercase tracking-wider pl-1">
+                Correo Electrónico
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-indigo-500 transition-colors">
+                  <Mail className="w-5 h-5" />
+                </div>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="agent@trelk.site"
+                  placeholder="ejemplo@trelk.com"
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  className="block w-full pl-11 pr-4 py-3.5 bg-zinc-950/50 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all sm:text-sm"
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            {/* Password Input */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pl-1">
+                <label htmlFor="password" className="block text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                  Contraseña
+                </label>
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-indigo-500 transition-colors">
+                  <Lock className="w-5 h-5" />
+                </div>
                 <input
                   id="password"
                   type="password"
@@ -86,31 +100,35 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  className="block w-full pl-11 pr-4 py-3.5 bg-zinc-950/50 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all sm:text-sm"
                 />
               </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Signing in...
+                  <span>Iniciando sesión...</span>
                 </>
               ) : (
-                'Sign in'
+                <>
+                  <span>Ingresar</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
               )}
             </button>
           </form>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-6">
-          Trelk Support Platform v2.0
+        <p className="text-center text-zinc-600 text-xs mt-8">
+          © {new Date().getFullYear()} Trelk Support Platform v2.4.0
         </p>
       </div>
     </div>

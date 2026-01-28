@@ -756,6 +756,9 @@ export async function registerContactsProRoutes(fastify: FastifyInstance): Promi
    */
   fastify.get<{ Params: ContactIdParam }>(
     '/api/contacts/:contactId/notes',
+    {
+      preHandler: requirePermission('notes.read')
+    },
     async (request, reply) => {
       const { contactId } = request.params;
       

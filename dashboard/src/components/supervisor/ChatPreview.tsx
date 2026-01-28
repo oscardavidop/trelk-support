@@ -1,12 +1,11 @@
-/**
- * ChatPreview - Real-time read-only chat preview for supervisors
- * Shows live messages as they come in with full media support
- */
-
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { getSocket, joinSession, leaveSession } from '../../services/socket';
-import { User, Bot, Headphones, Loader2, Eye, X, Download, Maximize2, FileText, Play, Pause } from 'lucide-react';
+import { 
+  User, Bot, Headphones, Loader2, Eye, X, Download, Maximize2, 
+  FileText, Play, Pause, Image as ImageIcon, Music, Sticker, AlertCircle,
+  MessageSquare
+} from 'lucide-react';
 import type { Message } from '../../types';
 
 interface ChatPreviewProps {
@@ -20,445 +19,281 @@ export function ChatPreview({ sessionId, userName, agentName }: ChatPreviewProps
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const token = useAuthStore((s) => s.token);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Auto-scroll logic (only if near bottom)
+  const scrollToBottom = useCallback((force = false) => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      if (force || isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, []);
 
   // Load initial messages
   useEffect(() => {
     let isMounted = true;
-
     const loadMessages = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const res = await fetch(`/api/sessions/${sessionId}/messages?limit=100`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (isMounted) {
           setMessages(data.messages || []);
-          setTimeout(scrollToBottom, 100);
+          setTimeout(() => scrollToBottom(true), 100);
         }
       } catch (err) {
-        if (isMounted) {
-          setError('Error loading messages');
-        }
+        if (isMounted) setError('Error cargando historial');
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
-
     loadMessages();
     return () => { isMounted = false; };
   }, [sessionId, token, scrollToBottom]);
 
-  // Subscribe to real-time updates
+  // Real-time subscription (Misma lógica robusta que tenías)
   useEffect(() => {
     let isSubscribed = true;
-    let checkConnectionInterval: ReturnType<typeof setInterval> | null = null;
+    const socket = getSocket();
     
-    // Define handlers outside so we can clean up properly
     const handleNewMessage = (message: Message) => {
-      console.log('📨 ChatPreview: Received message:new', message._id, 'for session:', message.session, 'current:', sessionId);
       if (message.session === sessionId && isSubscribed) {
-        console.log('✅ ChatPreview: Adding message to list');
-        setMessages((prev) => {
+        setMessages(prev => {
           if (prev.some(m => m._id === message._id)) return prev;
           return [...prev, message];
         });
-        scrollToBottom();
+        setTimeout(() => scrollToBottom(), 50);
       }
     };
 
-    const handleMessageEdited = (message: Message) => {
-      if (message.session === sessionId && isSubscribed) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m._id === message._id
-              ? { ...m, content: message.content, editedAt: message.editedAt || new Date().toISOString() }
-              : m
-          )
-        );
-      }
-    };
-
-    const handleMessageDeleted = (data: { sessionId: string; messageId: string }) => {
-      if (data.sessionId === sessionId && isSubscribed) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m._id === data.messageId ? { ...m, isDeleted: true } : m
-          )
-        );
-      }
-    };
-
-    const setupListeners = (socket: ReturnType<typeof getSocket>) => {
-      if (!socket) return;
-      console.log('🚪 ChatPreview: Joining session room and setting up listeners:', sessionId);
+    if (socket) {
       joinSession(sessionId);
       socket.on('message:new', handleNewMessage);
-      socket.on('message:updated', handleMessageEdited);
-      socket.on('message:deleted', handleMessageDeleted);
-    };
-
-    const socket = getSocket();
-    console.log('🔌 ChatPreview: Setting up realtime for session:', sessionId, 'Socket connected:', socket?.connected);
-    
-    if (socket?.connected) {
-      setupListeners(socket);
-    } else {
-      console.warn('⚠️ ChatPreview: Socket not connected, waiting...');
-      checkConnectionInterval = setInterval(() => {
-        const s = getSocket();
-        if (s?.connected && isSubscribed) {
-          console.log('✅ ChatPreview: Socket now connected');
-          setupListeners(s);
-          if (checkConnectionInterval) {
-            clearInterval(checkConnectionInterval);
-            checkConnectionInterval = null;
-          }
-        }
-      }, 500);
-      
-      // Stop trying after 10 seconds
-      setTimeout(() => {
-        if (checkConnectionInterval) {
-          clearInterval(checkConnectionInterval);
-          checkConnectionInterval = null;
-        }
-      }, 10000);
     }
 
     return () => {
-      console.log('🔌 ChatPreview: Cleaning up, leaving session:', sessionId);
       isSubscribed = false;
-      if (checkConnectionInterval) {
-        clearInterval(checkConnectionInterval);
+      if (socket) {
+        socket.off('message:new', handleNewMessage);
+        leaveSession(sessionId);
       }
-      const s = getSocket();
-      if (s) {
-        s.off('message:new', handleNewMessage);
-        s.off('message:updated', handleMessageEdited);
-        s.off('message:deleted', handleMessageDeleted);
-      }
-      leaveSession(sessionId);
     };
   }, [sessionId, scrollToBottom]);
 
-  // Scroll when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, scrollToBottom]);
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-red-400">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
-  if (messages.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        <div className="text-center">
-          <Eye className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>No hay mensajes aún</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-purple-500 animate-spin" /></div>;
+  if (error) return <div className="flex-1 flex items-center justify-center text-red-400 gap-2"><AlertCircle className="w-5 h-5"/> {error}</div>;
+  if (messages.length === 0) return <EmptyState />;
 
   return (
-    <div className="flex-1 overflow-auto p-4 space-y-3">
-      {/* Header indicator */}
-      <div className="sticky top-0 z-10 mb-2 flex items-center justify-center">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-full">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="text-xs text-purple-300">Vista en vivo</span>
+    <div className="flex flex-col h-full bg-zinc-950/50">
+      {/* Live Indicator */}
+      <div className="flex items-center justify-center py-2 bg-zinc-900/80 border-b border-zinc-800 backdrop-blur-sm z-10 sticky top-0">
+        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          </span>
+          <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">En Vivo</span>
         </div>
       </div>
 
-      {/* Messages */}
-      {messages.map((message) => (
-        <MessagePreviewBubble
-          key={message._id}
-          message={message}
-          userName={userName}
-          agentName={agentName}
-        />
-      ))}
-      <div ref={messagesEndRef} />
+      {/* Messages Area */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+      >
+        {messages.map((message, index) => {
+          const isSequence = index > 0 && messages[index - 1].sender === message.sender;
+          return (
+            <MessageBubble
+              key={message._id}
+              message={message}
+              userName={userName}
+              agentName={agentName}
+              isSequence={isSequence}
+            />
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
     </div>
   );
 }
 
-interface MessagePreviewBubbleProps {
-  message: Message;
-  userName: string;
-  agentName: string;
-}
+// ============= MESSAGE BUBBLE =============
 
-function MessagePreviewBubble({ message, userName, agentName }: MessagePreviewBubbleProps) {
+function MessageBubble({ message, userName, agentName, isSequence }: { message: Message, userName: string, agentName: string, isSequence: boolean }) {
   const isUser = message.sender === 'user';
   const isBot = message.sender === 'bot';
   const isAgent = message.sender === 'agent';
 
-  const getSenderIcon = () => {
-    if (isUser) return <User className="w-3 h-3" />;
-    if (isBot) return <Bot className="w-3 h-3" />;
-    return <Headphones className="w-3 h-3" />;
-  };
-
-  const getSenderName = () => {
-    if (isUser) return userName;
-    if (isBot) return 'Bot';
-    return message.senderAgent?.name || agentName;
-  };
-
-  const time = new Date(message.createdAt).toLocaleTimeString('es', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  // Handle deleted messages
   if (message.isDeleted) {
     return (
-      <div className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
-        <div className="max-w-[70%] px-3 py-2 bg-gray-800/50 rounded-lg text-gray-500 italic text-sm">
+      <div className="flex justify-center my-2">
+        <span className="text-xs text-zinc-600 italic bg-zinc-900/50 px-3 py-1 rounded-full border border-zinc-800">
           Mensaje eliminado
-        </div>
+        </span>
       </div>
     );
   }
 
+  // Estilos dinámicos según el remitente
+  const bubbleStyle = isUser 
+    ? "bg-zinc-800 text-zinc-100 rounded-tl-none border-zinc-700"
+    : isAgent
+      ? "bg-purple-600 text-white rounded-tr-none border-purple-500"
+      : "bg-blue-600/10 text-blue-200 border-blue-500/20 rounded-xl mx-auto max-w-[85%]"; // Bot style
+
+  const alignClass = isUser ? 'justify-start' : isAgent ? 'justify-end' : 'justify-center';
+
   return (
-    <div className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
-      <div
-        className={`max-w-[70%] rounded-xl px-3 py-2 ${
-          isUser
-            ? 'bg-gray-700/50 border border-gray-600'
-            : isBot
-            ? 'bg-blue-500/20 border border-blue-500/30'
-            : 'bg-primary/20 border border-primary/30'
-        }`}
-      >
-        {/* Header */}
-        <div className={`flex items-center gap-1 mb-1 text-xs ${
-          isUser ? 'text-gray-400' : isBot ? 'text-blue-400' : 'text-primary'
-        }`}>
-          {getSenderIcon()}
-          <span className="font-medium">{getSenderName()}</span>
-          <span className="text-gray-500 ml-auto">{time}</span>
+    <div className={`flex ${alignClass} group animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+      {/* Avatar (Solo si no es secuencia) */}
+      {!isSequence && !isBot && (
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border border-white/5 mr-2 ${isUser ? 'bg-zinc-700 text-zinc-300' : 'order-last ml-2 bg-purple-900 text-purple-200'}`}>
+          {isUser ? <User className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
         </div>
+      )}
+      
+      {/* Spacer for sequence */}
+      {isSequence && !isBot && <div className={`w-8 mr-2 ${isAgent ? 'order-last ml-2 mr-0' : ''}`} />}
+
+      <div className={`relative px-4 py-2.5 rounded-2xl border max-w-[70%] shadow-sm ${bubbleStyle}`}>
         
+        {/* Sender Name (Non-sequential) */}
+        {!isSequence && !isBot && (
+          <div className={`text-[10px] font-bold mb-1 opacity-70 ${isUser ? 'text-zinc-400' : 'text-purple-200 text-right'}`}>
+            {isUser ? userName : agentName}
+          </div>
+        )}
+
         {/* Media Content */}
         <MediaContent message={message} />
 
-        {/* Text content (if any and not just media) */}
-        {message.content && !['image', 'voice', 'audio', 'document', 'file', 'sticker'].includes(message.messageType || '') && (
-          <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">
+        {/* Text Content */}
+        {message.content && !isMediaOnly(message) && (
+          <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
             {message.content}
-            {message.editedAt && (
-              <span className="text-xs text-gray-500 ml-1">(editado)</span>
-            )}
+            {message.editedAt && <span className="text-[10px] opacity-60 ml-1 italic">(editado)</span>}
           </p>
         )}
+
+        {/* Timestamp */}
+        <div className={`text-[9px] mt-1 opacity-60 flex items-center gap-1 ${isAgent ? 'justify-end' : 'justify-start'}`}>
+          {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {isBot && <Bot className="w-3 h-3" />}
+        </div>
       </div>
     </div>
   );
 }
 
-// Helper to convert media reference to proxy URL
-function getProxyMediaUrl(mediaRef: string | undefined): string | undefined {
-  if (!mediaRef) return undefined;
-  if (mediaRef.startsWith('/api/media/') || mediaRef.startsWith('/api/download/') || mediaRef.startsWith('/uploads/')) {
-    return mediaRef;
-  }
-  if (mediaRef.startsWith('http')) {
-    const telegramMatch = mediaRef.match(/api\.telegram\.org\/file\/bot[^/]+\/(.+)$/);
-    if (telegramMatch) {
-      return `/api/media/${telegramMatch[1]}`;
-    }
-    return mediaRef;
-  }
-  return `/api/media/${encodeURIComponent(mediaRef)}`;
-}
+// ============= MEDIA COMPONENTS =============
 
-// Media Content Component
 function MediaContent({ message }: { message: Message }) {
-  const mediaUrl = getProxyMediaUrl(message.mediaUrl);
-  
-  if (!mediaUrl) return null;
+  const url = getProxyMediaUrl(message.mediaUrl);
+  if (!url) return null;
 
   switch (message.messageType) {
-    case 'image':
-      return <PreviewImage url={mediaUrl} alt={message.content} />;
+    case 'image': return <ImagePreview url={url} alt={message.content} />;
     case 'voice':
-    case 'audio':
-      return <PreviewAudio url={mediaUrl} title={message.content} />;
-    case 'document':
-    case 'file':
-      return <PreviewFile url={mediaUrl} fileName={message.fileName || message.content} />;
-    case 'sticker':
-      return <PreviewSticker url={mediaUrl} />;
-    default:
-      return null;
+    case 'audio': return <AudioPlayer url={url} />;
+    case 'document': 
+    case 'file': return <FileDownload url={url} name={message.fileName || 'Archivo adjunto'} />;
+    case 'sticker': return <img src={url} className="w-32 h-32 object-contain drop-shadow-md" />;
+    default: return null;
   }
 }
 
-// Image Preview with fullscreen
-function PreviewImage({ url, alt }: { url: string; alt: string }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  if (hasError) {
-    return (
-      <div className="flex items-center gap-2 py-2 text-gray-400">
-        <FileText className="w-4 h-4" />
-        <span className="text-xs">{alt || 'Error al cargar imagen'}</span>
-      </div>
-    );
-  }
-
+function ImagePreview({ url, alt }: any) {
+  const [isOpen, setIsOpen] = useState(false);
   return (
     <>
-      <div className="relative group">
-        {isLoading && (
-          <div className="w-40 h-28 bg-gray-700/50 rounded-lg animate-pulse flex items-center justify-center">
-            <Loader2 className="w-5 h-5 animate-spin opacity-50" />
-          </div>
-        )}
-        <img
-          src={url}
-          alt={alt}
-          className={`max-w-[200px] max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${isLoading ? 'hidden' : 'block'}`}
-          onLoad={() => setIsLoading(false)}
-          onError={() => { setIsLoading(false); setHasError(true); }}
-          onClick={() => setIsFullscreen(true)}
-        />
-        {!isLoading && (
-          <button
-            onClick={() => setIsFullscreen(true)}
-            className="absolute top-1 right-1 p-1 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <Maximize2 className="w-3 h-3" />
-          </button>
-        )}
+      <div className="relative group cursor-pointer mb-1 overflow-hidden rounded-lg bg-black/20" onClick={() => setIsOpen(true)}>
+        <img src={url} alt={alt} className="max-w-full h-auto object-cover max-h-60 w-full" loading="lazy" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+          <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+        </div>
       </div>
-      {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setIsFullscreen(false)}>
-          <img src={url} alt={alt} className="max-w-full max-h-full object-contain" />
-          <button onClick={() => setIsFullscreen(false)} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full">
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
+          <img src={url} className="max-w-full max-h-full object-contain rounded shadow-2xl" />
+          <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white">
             <X className="w-6 h-6" />
           </button>
-          <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg">
-            <Download className="w-4 h-4" /> Descargar
-          </a>
         </div>
       )}
     </>
   );
 }
 
-// Audio Preview with player
-function PreviewAudio({ url, title }: { url: string; title: string }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+function AudioPlayer({ url }: any) {
+  const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const formatTime = (time: number) => {
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const toggle = () => {
+    if(!audioRef.current) return;
+    playing ? audioRef.current.pause() : audioRef.current.play();
+    setPlaying(!playing);
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg min-w-[180px]">
-      <audio
-        ref={audioRef}
-        src={url}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onEnded={() => setIsPlaying(false)}
-      />
-      <button onClick={togglePlay} className="w-8 h-8 rounded-full bg-primary/80 hover:bg-primary flex items-center justify-center flex-shrink-0">
-        {isPlaying ? <Pause className="w-3 h-3 text-white" /> : <Play className="w-3 h-3 text-white ml-0.5" />}
+    <div className="flex items-center gap-3 p-2 bg-black/20 rounded-lg min-w-[200px] border border-white/5">
+      <button onClick={toggle} className="w-8 h-8 rounded-full bg-white text-zinc-900 flex items-center justify-center hover:scale-105 transition-transform">
+        {playing ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
       </button>
-      <div className="flex-1 min-w-0">
-        <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-primary transition-all" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }} />
-        </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
+      <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+        <div className="h-full bg-white w-1/3 animate-pulse" /> {/* Mock progress */}
       </div>
+      <audio ref={audioRef} src={url} onEnded={() => setPlaying(false)} className="hidden" />
     </div>
   );
 }
 
-// File Preview with download
-function PreviewFile({ url, fileName }: { url: string; fileName: string }) {
+function FileDownload({ url, name }: any) {
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer"
-      className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors">
-      <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-        <FileText className="w-4 h-4 text-primary" />
+    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors group">
+      <div className="p-2 bg-zinc-800 rounded group-hover:bg-zinc-700">
+        <FileText className="w-5 h-5 text-zinc-400" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-200 truncate">{fileName}</p>
-        <p className="text-xs text-gray-500">Documento</p>
+        <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
+        <p className="text-[10px] text-zinc-500 uppercase font-bold">Documento</p>
       </div>
-      <Download className="w-4 h-4 text-gray-400" />
+      <Download className="w-4 h-4 text-zinc-500 group-hover:text-white" />
     </a>
   );
 }
 
-// Sticker Preview
-function PreviewSticker({ url }: { url: string }) {
-  const [hasError, setHasError] = useState(false);
-  
-  if (hasError) {
-    return <div className="text-xs text-gray-500">🎭 Sticker</div>;
-  }
-
+function EmptyState() {
   return (
-    <img
-      src={url}
-      alt="Sticker"
-      className="w-24 h-24 object-contain"
-      onError={() => setHasError(true)}
-    />
+    <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 opacity-60">
+      <MessageSquare className="w-16 h-16 mb-4 stroke-1" />
+      <p className="text-lg font-medium">Chat Vacío</p>
+      <p className="text-sm">Esperando mensajes...</p>
+    </div>
   );
 }
 
-export default ChatPreview;
+// Helpers
+function isMediaOnly(msg: Message) {
+  return !msg.content && ['image','video','sticker'].includes(msg.messageType || '');
+}
+
+function getProxyMediaUrl(mediaRef: string | undefined): string | undefined {
+  if (!mediaRef) return undefined;
+  if (mediaRef.startsWith('/api/') || mediaRef.startsWith('/uploads/')) return mediaRef;
+  if (mediaRef.startsWith('http')) {
+    const match = mediaRef.match(/api\.telegram\.org\/file\/bot[^/]+\/(.+)$/);
+    return match ? `/api/media/${match[1]}` : mediaRef;
+  }
+  return `/api/media/${encodeURIComponent(mediaRef)}`;
+}

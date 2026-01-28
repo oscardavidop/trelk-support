@@ -1,14 +1,8 @@
-/**
- * Message Context Menu
- * Floating menu with dynamic actions based on message type and sender
- * UI Style: Modern Glassmorphism
- */
-
 import { useRef, useEffect, useLayoutEffect } from 'react';
 import {
   Reply, Copy, Pin, Link2, Pencil, Trash2,
   Star, Ban, Tag, FileText, AlertTriangle,
-  Quote // Icono añadido para el preview
+  Quote, PinOff
 } from 'lucide-react';
 import type { Message } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -22,7 +16,6 @@ export interface MessageAction {
   onClick: () => void;
   variant?: 'default' | 'danger' | 'warning';
   disabled?: boolean;
-  separator?: boolean; // Prop opcional para lógica futura de separación
 }
 
 interface MessageContextMenuProps {
@@ -83,18 +76,29 @@ export default function MessageContextMenu({
 
   const actions: MessageAction[] = [];
 
+  // cuando se hace scroll, el menu se cierra
+  useEffect(() => {
+    const handleScroll = () => {
+      onClose();
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [onClose]);
+
   // 1. Interactions
   if (!isSystemMessage) {
     actions.push({ id: 'reply', label: 'Responder', icon: <Reply className="w-4 h-4" />, onClick: () => { onReply(message); onClose(); } });
   }
-  actions.push({ id: 'copy', label: 'Copiar', icon: <Copy className="w-4 h-4" />, onClick: () => { onCopy(message); onClose(); } });
+  actions.push({ id: 'copy', label: 'Copiar texto', icon: <Copy className="w-4 h-4" />, onClick: () => { onCopy(message); onClose(); } });
 
   // 2. Organization
   if (!isSystemMessage) {
     actions.push({
       id: isPinned ? 'unpin' : 'pin',
       label: isPinned ? 'Desfijar' : 'Fijar',
-      icon: <Pin className="w-4 h-4" />,
+      icon: isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />,
       onClick: () => { (isPinned ? onUnpin : onPin)(message); onClose(); }
     });
   }
@@ -105,7 +109,7 @@ export default function MessageContextMenu({
       actions.push({ id: 'edit', label: 'Editar', icon: <Pencil className="w-4 h-4" />, onClick: () => { onEdit(message); onClose(); } });
     }
     if (onSaveQuickReply) {
-      actions.push({ id: 'save-reply', label: 'Guardar Respuesta', icon: <Star className="w-4 h-4" />, onClick: () => { onSaveQuickReply(message); onClose(); } });
+      actions.push({ id: 'save-reply', label: 'Guardar', icon: <Star className="w-4 h-4" />, onClick: () => { onSaveQuickReply(message); onClose(); } });
     }
     if (onDelete) {
       actions.push({ id: 'delete', label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { onDelete(message); onClose(); }, variant: 'danger' });
@@ -115,14 +119,13 @@ export default function MessageContextMenu({
   // 4. User Tools
   if (isUserMessage) {
     if (onAddTag) actions.push({ id: 'tag', label: 'Etiquetar', icon: <Tag className="w-4 h-4" />, onClick: () => { onAddTag(message); onClose(); } });
-    if (onAddNote) actions.push({ id: 'note', label: 'Crear Nota', icon: <FileText className="w-4 h-4" />, onClick: () => { onAddNote(message); onClose(); } });
-    actions.push({ id: 'link', label: 'Copiar Link', icon: <Link2 className="w-4 h-4" />, onClick: () => { onCopyLink(message); onClose(); } });
+    if (onAddNote) actions.push({ id: 'note', label: 'Crear nota', icon: <FileText className="w-4 h-4" />, onClick: () => { onAddNote(message); onClose(); } });
+    actions.push({ id: 'link', label: 'Copiar enlace', icon: <Link2 className="w-4 h-4" />, onClick: () => { onCopyLink(message); onClose(); } });
 
     // Danger Zone
     if (onReportSpam) actions.push({ id: 'spam', label: 'Reportar Spam', icon: <AlertTriangle className="w-4 h-4" />, onClick: () => { onReportSpam(message); onClose(); }, variant: 'warning' });
     if (onBlockUser) actions.push({ id: 'block', label: 'Bloquear Usuario', icon: <Ban className="w-4 h-4" />, onClick: () => { onBlockUser(message); onClose(); }, variant: 'danger' });
   }
-
 
   // ============= EFFECTS =============
 
@@ -134,7 +137,6 @@ export default function MessageContextMenu({
       if (e.key === 'Escape') onClose();
     };
 
-    // Tiny delay to prevent immediate close on trigger click
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
@@ -147,7 +149,6 @@ export default function MessageContextMenu({
     };
   }, [onClose]);
 
-  // Use LayoutEffect to prevent visual jitter when positioning
   useLayoutEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
@@ -157,19 +158,12 @@ export default function MessageContextMenu({
       let top = position.y;
       let left = position.x;
 
-      // Flip horizontal if overflow right
-      if (left + rect.width > viewportWidth) {
-        left = left - rect.width;
-      }
-
-      // Flip vertical if overflow bottom
-      if (top + rect.height > viewportHeight) {
-        top = top - rect.height;
-      }
+      if (left + rect.width > viewportWidth) left = left - rect.width;
+      if (top + rect.height > viewportHeight) top = top - rect.height;
 
       menuRef.current.style.top = `${top}px`;
       menuRef.current.style.left = `${left}px`;
-      menuRef.current.style.opacity = '1'; // Reveal after position calc
+      menuRef.current.style.opacity = '1';
     }
   }, [position]);
 
@@ -178,51 +172,50 @@ export default function MessageContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] min-w-[220px] flex flex-col p-1.5 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-100 opacity-0"
+      className="fixed z-[9999] min-w-[240px] flex flex-col bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-150 opacity-0 overflow-hidden"
       style={{ top: position.y, left: position.x }}
       onClick={(e) => e.stopPropagation()}
-      onContextMenu={(e) => e.preventDefault()} // Prevent native menu inside custom menu
+      onContextMenu={(e) => e.preventDefault()}
     >
       {/* Header Preview */}
-      <div className="px-3 py-2 mb-1 border-b border-white/5">
-        <div className="flex items-center gap-2 mb-1">
-          <Quote className="w-3 h-3 text-gray-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+      {/* <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/50">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className={`p-1 rounded-md ${message.sender === 'user' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+            <Quote className="w-3 h-3" />
+          </div>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
             {message.sender === 'user' ? 'Usuario' : 'Agente'}
           </span>
         </div>
-        <p className="text-xs text-gray-300 line-clamp-2 italic opacity-80">
-          "{message.content}"
+        <p className="text-xs text-zinc-300 line-clamp-2 italic font-medium">
+          "{message.content || 'Adjunto'}"
         </p>
-      </div>
+      </div> */}
 
       {/* Actions List */}
-      <div className="flex flex-col gap-0.5">
+      <div className="p-1.5 flex flex-col gap-0.5">
         {actions.map((action) => (
           <button
             key={action.id}
             onClick={action.onClick}
             disabled={action.disabled}
             className={`
-              group flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200
+              group flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 w-full text-left
               ${action.variant === 'danger'
                 ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
                 : action.variant === 'warning'
                   ? 'text-amber-400 hover:bg-amber-500/10 hover:text-amber-300'
-                  : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
               }
               ${action.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
           >
             <div className="flex items-center gap-3">
-              <span className={`opacity-70 group-hover:opacity-100 transition-opacity ${action.variant === 'danger' ? 'text-red-400' : 'text-gray-400 group-hover:text-white'
-                }`}>
+              <span className={`transition-opacity ${action.variant === 'danger' ? 'text-red-500' : 'text-zinc-500 group-hover:text-current'}`}>
                 {action.icon}
               </span>
               <span className="font-medium">{action.label}</span>
             </div>
-
-            {/* Optional: Add keyboard shortcuts hints here if you have them */}
           </button>
         ))}
       </div>

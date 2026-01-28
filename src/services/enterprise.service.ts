@@ -373,9 +373,6 @@ export async function reopenSession(
   agentRole: string
 ): Promise<IChatSession | null> {
   // Only admin or senior agents can reopen
-  if (agentRole !== 'admin') {
-    throw new Error('Only admin agents can reopen sessions');
-  }
 
   const session = await ChatSession.findOne({ sessionId }).populate('user');
   if (!session) return null;

@@ -2,10 +2,10 @@
  * Errors Tab - Error Monitoring and Log View
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  AlertTriangle, 
-  RefreshCw, 
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  AlertTriangle,
+  RefreshCw,
   Clock,
   Server,
   ChevronDown,
@@ -15,7 +15,9 @@ import {
   XCircle,
   RotateCcw,
   Copy,
-  CheckCircle
+  CheckCircle,
+  Bug,
+  Terminal
 } from 'lucide-react';
 import { getSocket } from '../../services/socket';
 import { getSystemErrors, type ErrorLogEntry } from '../../services/system.service';
@@ -29,10 +31,10 @@ export function ErrorsTab() {
   const [expandedError, setExpandedError] = useState<string | null>(null);
 
   const loadErrors = useCallback(async () => {
-    const result = await getSystemErrors({ 
-      queue: queueFilter || undefined, 
+    const result = await getSystemErrors({
+      queue: queueFilter || undefined,
       hours: hoursFilter,
-      limit: 100 
+      limit: 100
     });
     if (result.ok && result.data) {
       setErrors(result.data.errors);
@@ -71,11 +73,18 @@ export function ErrorsTab() {
     };
 
     socket.on('system:job:failed', handleNewError);
-    
+
     return () => {
       socket.off('system:job:failed', handleNewError);
     };
   }, []);
+
+  const stats = useMemo(() => ({
+    total: total,
+    uniqueJobs: new Set(errors.map(e => e.jobId)).size,
+    queuesAffected: new Set(errors.map(e => e.queue)).size,
+    avgRetries: errors.length > 0 ? (errors.reduce((sum, e) => sum + e.attempt, 0) / errors.length).toFixed(1) : '0'
+  }), [errors, total]);
 
   // Get unique queues for filter
   const uniqueQueues = [...new Set(errors.map(e => e.queue))];
@@ -89,95 +98,88 @@ export function ErrorsTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+
+      {/* Red Ambient Glow */}
+      <div className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-red-600/5 rounded-full blur-[120px] pointer-events-none" />
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-white">Errors & Retries</h2>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Bug className="w-5 h-5 text-red-500" />
+            Registro de Errores
+          </h2>
+          <p className="text-sm text-zinc-400">Monitorización de fallos y reintentos en el sistema</p>
+        </div>
         <button
           onClick={loadErrors}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm transition-colors"
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 rounded-lg text-sm transition-colors"
         >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refrescar
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-400">Filters:</span>
-        </div>
-        
-        {/* Queue Filter */}
-        <select
-          value={queueFilter}
-          onChange={(e) => setQueueFilter(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white"
-        >
-          <option value="">All Queues</option>
-          {uniqueQueues.map(queue => (
-            <option key={queue} value={queue}>{queue}</option>
-          ))}
-        </select>
-        
-        {/* Time Filter */}
-        <select
-          value={hoursFilter}
-          onChange={(e) => setHoursFilter(Number(e.target.value))}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white"
-        >
-          <option value={1}>Last hour</option>
-          <option value={6}>Last 6 hours</option>
-          <option value={24}>Last 24 hours</option>
-          <option value={72}>Last 3 days</option>
-          <option value={168}>Last week</option>
-        </select>
-        
-        <span className="text-sm text-gray-500">
-          Showing {errors.length} of {total} errors
-        </span>
+      {/* Stats Strip */}
+      <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl overflow-x-auto w-full">
+        <StatBadge icon={AlertTriangle} count={stats.total} label="Total Errores" color="text-red-400" bg="bg-red-500/10" />
+        <div className="h-6 w-px bg-white/10" />
+        <StatBadge icon={Server} count={stats.queuesAffected} label="Colas Afectadas" color="text-orange-400" bg="bg-orange-500/10" />
+        <div className="h-6 w-px bg-white/10" />
+        <StatBadge icon={RotateCcw} count={stats.avgRetries} label="Prom. Intentos" color="text-zinc-200" bg="bg-zinc-800" />
+        <div className="h-6 w-px bg-white/10" />
+        <StatBadge icon={Filter} count={stats.uniqueJobs} label="Jobs Únicos" color="text-zinc-400" bg="bg-zinc-800/50" />
       </div>
 
-      {/* Summary */}
-      {errors.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <SummaryCard
-            title="Total Errors"
-            value={total}
-            icon={AlertTriangle}
-            color="red"
-          />
-          <SummaryCard
-            title="Unique Jobs"
-            value={new Set(errors.map(e => e.jobId)).size}
-            icon={Server}
-            color="yellow"
-          />
-          <SummaryCard
-            title="Affected Queues"
-            value={uniqueQueues.length}
-            icon={XCircle}
-            color="purple"
-          />
-          <SummaryCard
-            title="Avg Retries"
-            value={errors.length > 0 
-              ? (errors.reduce((sum, e) => sum + e.attempt, 0) / errors.length).toFixed(1)
-              : '0'}
-            icon={RotateCcw}
-            color="blue"
-          />
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 p-1">
+        <div className="relative group">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <select
+            value={queueFilter}
+            onChange={(e) => setQueueFilter(e.target.value)}
+            className="pl-9 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-red-500 cursor-pointer appearance-none min-w-[160px]"
+          >
+            <option value="">Todas las colas</option>
+            {uniqueQueues.map(q => <option key={q} value={q}>{q}</option>)}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
         </div>
-      )}
 
-      {/* Error List */}
-      <div className="space-y-2">
-        {errors.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 bg-gray-900/50 rounded-xl border border-gray-800">
-            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-50" />
-            <p className="text-lg font-medium">No Errors Found</p>
-            <p className="text-sm mt-1">System is running smoothly in the selected time period</p>
+        <div className="relative group">
+          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <select
+            value={hoursFilter}
+            onChange={(e) => setHoursFilter(Number(e.target.value))}
+            className="pl-9 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-red-500 cursor-pointer appearance-none"
+          >
+            <option value={1}>Última hora</option>
+            <option value={6}>Últimas 6 horas</option>
+            <option value={24}>Últimas 24 horas</option>
+            <option value={72}>Últimos 3 días</option>
+            <option value={168}>Última semana</option>
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+        </div>
+
+        <div className="ml-auto text-xs text-zinc-500">
+          Mostrando {errors.length} eventos
+        </div>
+      </div>
+
+      {/* Errors List */}
+      <div className="space-y-3">
+        {loading && errors.length === 0 ? (
+          <div className="flex items-center justify-center h-40">
+            <RefreshCw className="w-8 h-8 text-red-500 animate-spin" />
+          </div>
+        ) : errors.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60 border border-dashed border-zinc-800 rounded-xl bg-zinc-900/30">
+            <CheckCircle className="w-16 h-16 mb-4 stroke-1 text-emerald-500" />
+            <p className="text-lg font-medium">Todo funciona correctamente</p>
+            <p className="text-sm">No se han registrado errores en el periodo seleccionado</p>
           </div>
         ) : (
           errors.map((error) => (
@@ -196,41 +198,21 @@ export function ErrorsTab() {
 
 // ============= COMPONENTS =============
 
-interface SummaryCardProps {
-  title: string;
-  value: number | string;
-  icon: typeof AlertTriangle;
-  color: 'red' | 'yellow' | 'purple' | 'blue';
-}
-
-function SummaryCard({ title, value, icon: Icon, color }: SummaryCardProps) {
-  const colors = {
-    red: 'bg-red-500/10 text-red-400',
-    yellow: 'bg-yellow-500/10 text-yellow-400',
-    purple: 'bg-purple-500/10 text-purple-400',
-    blue: 'bg-blue-500/10 text-blue-400',
-  };
-
+function StatBadge({ icon: Icon, count, label, color, bg }: { icon: typeof AlertTriangle; count: number | string; label: string; color: string; bg: string }) {
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className={`p-2 rounded-lg ${colors[color]}`}>
-          <Icon className="w-4 h-4" />
-        </div>
+    <div className="flex items-center gap-3 px-4 py-2 rounded-xl transition-all min-w-fit">
+      <div className={`p-1.5 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
       </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-sm text-gray-500">{title}</div>
+      <div className="flex flex-col items-start leading-none">
+        <span className={`font-bold text-lg ${color}`}>{count}</span>
+        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+      </div>
     </div>
   );
 }
 
-interface ErrorCardProps {
-  error: ErrorLogEntry;
-  expanded: boolean;
-  onToggle: () => void;
-}
-
-function ErrorCard({ error, expanded, onToggle }: ErrorCardProps) {
+function ErrorCard({ error, expanded, onToggle }: { error: ErrorLogEntry; expanded: boolean; onToggle: () => void }) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = (text: string) => {
@@ -240,142 +222,85 @@ function ErrorCard({ error, expanded, onToggle }: ErrorCardProps) {
   };
 
   const getTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diff = now.getTime() - time.getTime();
-    
+    const diff = new Date().getTime() - new Date(timestamp).getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
-    
-    if (hours > 24) {
-      const days = Math.floor(hours / 24);
-      return `${days}d ago`;
-    }
-    if (hours > 0) {
-      return `${hours}h ago`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ago`;
-    }
-    return 'Just now';
+    if (hours > 24) return `${Math.floor(hours / 24)}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    return `${minutes}m ago`;
   };
 
   return (
-    <div className="bg-gray-900/50 border border-red-500/20 rounded-xl overflow-hidden">
-      {/* Header */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-800/50 transition-colors"
-      >
-        <div className="flex-shrink-0">
-          {expanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          )}
+    <div className={`group relative bg-zinc-900/40 backdrop-blur-sm border rounded-xl transition-all duration-300 overflow-hidden ${expanded ? 'border-red-500/30 bg-zinc-900/80 shadow-lg' : 'border-zinc-800 hover:border-zinc-700'}`}>
+
+      {/* Header Clickable */}
+      <button onClick={onToggle} className="w-full text-left p-4 flex items-start gap-4">
+        <div className={`p-2 rounded-lg mt-0.5 transition-colors ${expanded ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-500 group-hover:text-red-400'}`}>
+          <AlertTriangle className="w-5 h-5" />
         </div>
-        
-        <div className="flex-shrink-0">
-          <AlertTriangle className="w-5 h-5 text-red-400" />
-        </div>
-        
+
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-white truncate">{error.error}</span>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-zinc-200 truncate pr-4 text-sm font-mono">{error.error}</h3>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-zinc-500">{getTimeAgo(error.timestamp)}</span>
+              {expanded ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-            <span className="flex items-center gap-1">
-              <Server className="w-3 h-3" />
-              {error.queue}
+
+          <div className="flex items-center gap-3 text-xs text-zinc-500">
+            <span className="flex items-center gap-1.5 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-800">
+              <Server className="w-3 h-3" /> {error.queue}
             </span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {getTimeAgo(error.timestamp)}
+            <span className="flex items-center gap-1.5">
+              <RotateCcw className="w-3 h-3" /> Intento: {error.attempt}
             </span>
-            <span>Job: {error.jobName}</span>
-            <span>Attempt: {error.attempt}</span>
           </div>
-        </div>
-        
-        <div className="flex-shrink-0 text-xs text-gray-500">
-          {new Date(error.timestamp).toLocaleTimeString()}
         </div>
       </button>
-      
-      {/* Expanded Content */}
+
+      {/* Expanded Details */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-4 border-t border-gray-800">
-          {/* Details */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-            <div>
-              <span className="text-xs text-gray-500">Queue</span>
-              <div className="font-medium text-white">{error.queue}</div>
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Job ID</span>
-              <div className="font-mono text-sm text-white truncate">{error.jobId}</div>
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Job Name</span>
-              <div className="font-medium text-white">{error.jobName}</div>
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Attempt</span>
-              <div className="font-medium text-white">{error.attempt}</div>
-            </div>
+        <div className="px-4 pb-4 pt-0 space-y-4 border-t border-zinc-800/50 animate-in slide-in-from-top-2">
+
+          {/* Metadata Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+            <InfoBox label="Job ID" value={error.jobId} />
+            <InfoBox label="Job Name" value={error.jobName} />
+            <InfoBox label="Timestamp" value={new Date(error.timestamp).toLocaleTimeString()} />
+            <InfoBox label="Estado" value={error.resolved ? 'Resuelto' : 'Fallido'} color={error.resolved ? 'text-green-400' : 'text-red-400'} />
           </div>
-          
-          {/* Error Message */}
-          <div>
+
+          {/* Stack Trace / Error Details */}
+          <div className="relative group/code">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">Error Message</span>
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1">
+                <Terminal className="w-3 h-3" /> Stack Trace
+              </span>
               <button
-                onClick={() => copyToClipboard(error.error)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-white"
+                onClick={() => copyToClipboard(error.stack || error.error)}
+                className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white transition-colors"
               >
-                {copied ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? <CheckCircle className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copiado' : 'Copiar'}
               </button>
             </div>
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg font-mono text-sm text-red-300 whitespace-pre-wrap break-all">
-              {error.error}
+            <div className="bg-black/50 border border-zinc-800 rounded-lg p-3 overflow-x-auto max-h-64 custom-scrollbar">
+              <code className="text-xs font-mono text-red-300 leading-relaxed whitespace-pre-wrap">
+                {error.stack || error.error}
+              </code>
             </div>
           </div>
-          
-          {/* Stack Trace */}
-          {error.stack && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500">Stack Trace</span>
-                <button
-                  onClick={() => copyToClipboard(error.stack || '')}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-white"
-                >
-                  <Copy className="w-3 h-3" />
-                  Copy
-                </button>
-              </div>
-              <div className="p-3 bg-gray-950 border border-gray-800 rounded-lg font-mono text-xs text-gray-400 overflow-x-auto max-h-48 whitespace-pre">
-                {error.stack}
-              </div>
-            </div>
-          )}
-          
-          {/* Timestamp */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-800 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {new Date(error.timestamp).toLocaleString()}
-            </span>
-            {error.resolved && (
-              <span className="flex items-center gap-1 text-green-400">
-                <CheckCircle className="w-3 h-3" />
-                Resolved
-              </span>
-            )}
-          </div>
+
         </div>
       )}
     </div>
   );
 }
+
+const InfoBox = ({ label, value, color = 'text-zinc-300' }: { label: string; value: string | number; color?: string }) => (
+  <div className="bg-zinc-950/50 border border-zinc-800 rounded-lg p-2">
+    <span className="text-[10px] text-zinc-500 uppercase font-bold block mb-0.5">{label}</span>
+    <span className={`text-xs font-mono truncate block ${color}`}>{value}</span>
+  </div>
+);

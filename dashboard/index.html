@@ -1,28 +1,38 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8"/>
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>
       Support Dashboard - Trelk Bot
     </title>
     <script>
       // Prevent flash of wrong theme - apply before CSS loads
-      (function() {
+      (function () {
         try {
           var stored = localStorage.getItem('trelk-theme');
           var theme = 'dark'; // default
           if (stored) {
             var parsed = JSON.parse(stored);
-            theme = parsed.state?.theme || 'dark';
+            theme = parsed.state
+              ?.theme || 'dark';
           }
           if (theme === 'system') {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            theme = window
+              .matchMedia('(prefers-color-scheme: dark)')
+              .matches
+                ? 'dark'
+                : 'light';
           }
-          document.documentElement.setAttribute('data-theme', theme);
+          document
+            .documentElement
+            .setAttribute('data-theme', theme);
         } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'dark');
+          document
+            .documentElement
+            .setAttribute('data-theme', 'dark');
         }
       })();
     </script>

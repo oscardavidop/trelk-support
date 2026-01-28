@@ -47,6 +47,7 @@ export interface AgentWithPermissions {
   email: string;
   role: AgentRole;
   permissions: string[];
+  canRequestPermissions: boolean;
   permissionsOverride?: {
     allow: string[];
     deny: string[];
@@ -900,6 +901,11 @@ export function getPermissionCategories(): Record<string, {
     'chats.delete_all': { label: 'Eliminar todos', description: '⚠️ Eliminar todos los chats' },
     'chats.monitor': { label: 'Monitorear', description: 'Monitoreo en tiempo real' },
     'chats.export': { label: 'Exportar', description: 'Exportar transcripciones' },
+
+    // Uploads
+    'uploads.upload': { label: 'Subir archivos', description: 'Subir archivos en chats' },
+    'uploads.delete': { label: 'Eliminar archivos', description: 'Eliminar archivos subidos' },
+    
     
     // Contacts
     'contacts.read': { label: 'Ver contactos', description: 'Ver información de contactos' },
@@ -951,5 +957,6 @@ export async function getAgentPermissionsSummary(agentId: string): Promise<Agent
     role: agent.role,
     permissions: effectivePermissions,
     permissionsOverride: agent.permissionsOverride,
+    canRequestPermissions: agent.canRequestPermissions !== false,
   };
 }

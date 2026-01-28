@@ -27,7 +27,8 @@ import {
   Trash2,
   Upload,
   Clock,
-  Lock
+  Lock,
+  Tag
 } from 'lucide-react';
 
 // Tus imports originales intactos
@@ -114,7 +115,7 @@ export default function AgentComposer({
   const agent = useAuthStore((state) => state.agent);
   const token = useAuthStore((state) => state.token);
   const { can } = usePermissions();
-  
+
   // Permission checks
   const canRespond = can('chats.respond');
   const canClose = can('chats.close');
@@ -250,12 +251,15 @@ export default function AgentComposer({
 
   // ============= FUNCTIONS (Tu lógica original) =============
 
-  const scrollToBottom = () => {
-    const container = containerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight - container.clientHeight;
-    }
-  };
+const scrollToBottom = () => {
+  const container = containerRef.current;
+  if (container) {
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth' // Esto hace la transición fluida
+    });
+  }
+};
 
   const loadSavedReplies = async () => {
     setIsLoadingReplies(true);
@@ -284,7 +288,7 @@ export default function AgentComposer({
 
   const handleSend = async (closeAfter = false) => {
     if (!message.trim() || sendStatus === 'sending') return;
-    
+
     // Si quiere cerrar pero no tiene permiso, solo enviar sin cerrar
     const shouldClose = closeAfter && canClose;
 
@@ -302,7 +306,7 @@ export default function AgentComposer({
           setSendStatus('sent');
           onCancelReply?.();
           // Re-focus textarea after sending
-          setTimeout(() => {textareaRef.current?.focus(); scrollToBottom(); }, 50);
+          setTimeout(() => { textareaRef.current?.focus(); scrollToBottom(); scrollToBottom(); }, 50);
           // añade auto scroll to bottom could be handled by parent component on new message event:
           if (shouldClose) {
             closeSession(session.sessionId, 'Agent closed conversation');
@@ -590,7 +594,7 @@ export default function AgentComposer({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full transition-all duration-200 ease-in-out border-t border-gray-800 bg-gray-900/95 backdrop-blur-md ${isDragging ? 'bg-primary/5 ring-2 ring-primary/50' : ''
+      className={`relative w-full transition-all duration-200 ease-in-out border-t border-gray-800 bg-zinc-900/95 backdrop-blur-md ${isDragging ? 'bg-zinc-800/5 ring-2 ring-primary/50' : ''
         }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -601,7 +605,7 @@ export default function AgentComposer({
       {/* Reply Preview */}
       {replyTo && (
         <div className="px-4 pt-3 pb-1 animate-in slide-in-from-bottom-2 fade-in duration-200">
-          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-gray-800/60 border-l-4 border-primary rounded-r-lg">
+          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-zinc-800/60 border-l-4 border-primary rounded-r-lg">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-xs font-bold text-primary">
@@ -725,7 +729,7 @@ export default function AgentComposer({
       {/* Solo se muestra si no estamos en modo "Solo Preview" (con botones dedicados) */}
       {!previewImage && !pendingFile && (
         <div className="">
-          <div className={`relative flex flex-col bg-gray-800/50 transition-all duration-200 ${isFocused ? 'border-primary/50 bg-gray-800' : ''
+          <div className={`relative flex flex-col bg-zinc-800/50 transition-all duration-200 ${isFocused ? 'border-zinc/50 bg-zinc-800' : ''
             }`}>
 
             {/* 2.1 Textarea (Auto-growing) */}
@@ -748,23 +752,27 @@ export default function AgentComposer({
 
               {/* Left Tools */}
               <div className="flex items-center gap-0.5">
-                <ToolButton icon={<ImageIcon className="w-4 h-4" />} tooltip="Imagen" onClick={() => imageInputRef.current?.click()} />
-                <ToolButton icon={<Paperclip className="w-4 h-4" />} tooltip="Archivo" onClick={() => fileInputRef.current?.click()} />
+                {
+                  can('uploads.upload') && (
+                    <>
+                      <ToolButton icon={<ImageIcon className="w-4 h-4" />} tooltip="Imagen" onClick={() => imageInputRef.current?.click()} />
+                      <ToolButton icon={<Paperclip className="w-4 h-4" />} tooltip="Archivo" onClick={() => fileInputRef.current?.click()} />
+                      <ToolButton
+                        icon={<Mic className="w-4 h-4" />}
+                        tooltip="Audio"
+                        onClick={() => setShowAudioRecorder(true)}
+                        active={showAudioRecorder}
+                      />
+                      <div className="w-px h-4 bg-gray-700 mx-1.5" /> {/* Separator */}
+                    </>
+                  )
+                }
                 <ToolButton
                   icon={<Smile className="w-4 h-4" />}
                   tooltip="Emoji"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   active={showEmojiPicker}
                 />
-                <ToolButton
-                  icon={<Mic className="w-4 h-4" />}
-                  tooltip="Audio"
-                  onClick={() => setShowAudioRecorder(true)}
-                  active={showAudioRecorder}
-                />
-
-                <div className="w-px h-4 bg-gray-700 mx-1.5" /> {/* Separator */}
-
                 {/* Variables Dropdown */}
                 <div className="relative group">
                   <button
@@ -813,13 +821,17 @@ export default function AgentComposer({
                       <SendStatusIndicator status={sendStatus} />
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowScheduleModal(true)}
-                    className={`flex items-center gap-1 text-[12px] ${showScheduleModal ? 'text-primary' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    Programar envío
-                  </button>
+                  {
+                    can('scheduled.write') && (
+                      <button
+                        onClick={() => setShowScheduleModal(true)}
+                        className={`flex items-center gap-1 text-[12px] ${showScheduleModal ? 'text-primary' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
+                      >
+                        <Clock className="w-3 h-3" />
+                        Programar envío
+                      </button>
+                    )
+                  }
                 </div>
               </div>
 
@@ -973,7 +985,6 @@ function SendStatusIndicator({ status }: { status: SendStatus }) {
     </div>
   );
 }
-
 interface QuickReplyDropdownProps {
   isLoading: boolean;
   replies: SavedReply[];
@@ -983,26 +994,30 @@ interface QuickReplyDropdownProps {
 
 function QuickReplyDropdown({ isLoading, replies, selectedIndex, onSelect }: QuickReplyDropdownProps) {
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-2">
-      <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between bg-gray-900/90">
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Zap className="w-4 h-4 text-primary" />
+    <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 bg-zinc-900/95 backdrop-blur-md border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-2 duration-200">
+
+      {/* Header */}
+      <div className="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900">
+        <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">
+          <Zap className="w-3 h-3 text-amber-500" />
           <span>Respuestas Rápidas</span>
         </div>
-        <span className="text-xs text-gray-600">
-          Enter Seleccionar • Esc Cerrar
-        </span>
+        <div className="flex gap-2 text-[10px] text-zinc-600 font-mono">
+          <span>↵ SELECCIONAR</span>
+          <span>ESC CERRAR</span>
+        </div>
       </div>
 
-      <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+      {/* List Content */}
+      <div className="max-h-64 overflow-y-auto custom-scrollbar">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
           </div>
         ) : replies.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No se encontraron respuestas</p>
+          <div className="text-center py-8 text-zinc-500">
+            <Zap className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm font-medium">No se encontraron respuestas</p>
           </div>
         ) : (
           replies.map((reply, index) => (
@@ -1010,25 +1025,31 @@ function QuickReplyDropdown({ isLoading, replies, selectedIndex, onSelect }: Qui
               type="button"
               key={reply._id}
               onClick={() => onSelect(reply)}
-              className={`w-full text-left px-4 py-3 border-b border-gray-800/50 last:border-b-0 transition-all ${index === selectedIndex
-                ? 'bg-primary/10 border-l-2 border-l-primary'
-                : 'hover:bg-gray-800/50 border-l-2 border-l-transparent'
+              className={`w-full text-left px-4 py-3 border-l-2 transition-all duration-150 group ${index === selectedIndex
+                  ? 'bg-zinc-800 border-indigo-500'
+                  : 'hover:bg-zinc-800/50 border-transparent'
                 }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-white text-sm truncate">{reply.title}</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-sm font-medium truncate ${index === selectedIndex ? 'text-white' : 'text-zinc-300'}`}>
+                      {reply.title}
+                    </span>
                     {reply.shortcut && (
-                      <code className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded border border-gray-700">
+                      <code className="text-[10px] bg-zinc-950 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-800 font-mono">
                         /{reply.shortcut}
                       </code>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{reply.content}</p>
+                  <p className="text-xs text-zinc-500 truncate pr-2 group-hover:text-zinc-400 transition-colors">
+                    {reply.content}
+                  </p>
                 </div>
+
                 {reply.category && (
-                  <span className="text-[10px] bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded shrink-0 border border-gray-700">
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800 whitespace-nowrap">
+                    <Tag className="w-2.5 h-2.5" />
                     {reply.category}
                   </span>
                 )}

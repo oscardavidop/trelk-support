@@ -155,6 +155,7 @@ export async function registerPermissionRoutes(fastify: FastifyInstance): Promis
             permissions,
             permissionsOverride: agent.permissionsOverride,
             permissionVersion: agent.permissionVersion,
+            canRequestPermissions: agent.canRequestPermissions !== false,
           };
         })
       );

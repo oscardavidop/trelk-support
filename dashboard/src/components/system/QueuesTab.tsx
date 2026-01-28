@@ -3,19 +3,20 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Server, 
-  Play, 
-  Pause, 
-  RefreshCw, 
-  Trash2, 
+import {
+  Server,
+  Play,
+  Pause,
+  RefreshCw,
+  Trash2,
   ChevronDown,
   ChevronRight,
   Clock,
   AlertTriangle,
   CheckCircle,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  MoreVertical
 } from 'lucide-react';
 import { getSocket } from '../../services/socket';
 import {
@@ -76,13 +77,13 @@ export function QueuesTab() {
     if (!socket) return;
 
     const handleQueueUpdate = (data: QueueInfo) => {
-      setQueues(prev => prev.map(q => 
+      setQueues(prev => prev.map(q =>
         q.name === data.name ? { ...q, ...data } : q
       ));
     };
 
     socket.on('system:queue:update', handleQueueUpdate);
-    
+
     return () => {
       socket.off('system:queue:update', handleQueueUpdate);
     };
@@ -168,77 +169,42 @@ export function QueuesTab() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* Header & Actions */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-white">BullMQ Queues</h2>
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Server className="w-5 h-5 text-purple-500" />
+            Colas de Procesamiento
+          </h2>
+          <p className="text-sm text-zinc-400">Estado en tiempo real de BullMQ</p>
+        </div>
         <button
           onClick={loadQueues}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 rounded-lg text-sm transition-colors"
         >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
+          <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
 
-      {/* Queue Table */}
-      <div className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3 w-8"></th>
-              <th className="px-4 py-3">Queue</th>
-              <th className="px-4 py-3 text-center">Waiting</th>
-              <th className="px-4 py-3 text-center">Active</th>
-              <th className="px-4 py-3 text-center">Delayed</th>
-              <th className="px-4 py-3 text-center">Failed</th>
-              <th className="px-4 py-3 text-center">Completed</th>
-              <th className="px-4 py-3 text-center">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-800">
-            {queues.map((queue) => (
-              <QueueRow
-                key={queue.name}
-                queue={queue}
-                expanded={expandedQueue === queue.name}
-                jobs={expandedQueue === queue.name ? queueJobs : []}
-                jobsLoading={jobsLoading && expandedQueue === queue.name}
-                actionLoading={actionLoading}
-                onToggle={() => setExpandedQueue(expandedQueue === queue.name ? null : queue.name)}
-                onPause={() => handlePause(queue.name)}
-                onResume={() => handleResume(queue.name)}
-                onClean={(type) => handleClean(queue.name, type)}
-                onRetryFailed={() => handleRetryFailed(queue.name)}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-gray-500">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <span>Waiting</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-          <span>Active</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-          <span>Delayed</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <span>Failed</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span>Completed</span>
-        </div>
+      {/* Queues List */}
+      <div className="space-y-4">
+        {queues.map((queue) => (
+          <QueueCard
+            key={queue.name}
+            queue={queue}
+            expanded={expandedQueue === queue.name}
+            jobs={expandedQueue === queue.name ? queueJobs : []}
+            jobsLoading={jobsLoading && expandedQueue === queue.name}
+            actionLoading={actionLoading}
+            onToggle={() => setExpandedQueue(expandedQueue === queue.name ? null : queue.name)}
+            onPause={() => handlePause(queue.name)}
+            onResume={() => handleResume(queue.name)}
+            onClean={(type) => handleClean(queue.name, type)}
+            onRetryFailed={() => handleRetryFailed(queue.name)}
+          />
+        ))}
       </div>
     </div>
   );
@@ -259,263 +225,178 @@ interface QueueRowProps {
   onRetryFailed: () => void;
 }
 
-function QueueRow({ 
-  queue, 
-  expanded, 
-  jobs, 
-  jobsLoading,
-  actionLoading,
-  onToggle, 
-  onPause, 
-  onResume, 
-  onClean,
-  onRetryFailed
-}: QueueRowProps) {
-  const [showCleanMenu, setShowCleanMenu] = useState(false);
+function QueueCard({ queue, expanded, jobs, jobsLoading, actionLoading, onToggle, onPause, onResume, onClean, onRetryFailed }: QueueRowProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const totalJobs = queue.waiting + queue.active + queue.delayed + queue.failed + queue.completed;
+
+  // Calculate percentages for progress bar
+  const getPercent = (val: number) => totalJobs > 0 ? (val / totalJobs) * 100 : 0;
 
   return (
-    <>
-      <tr className="hover:bg-gray-800/50 transition-colors">
-        {/* Expand Toggle */}
-        <td className="px-4 py-3">
-          <button onClick={onToggle} className="text-gray-400 hover:text-white">
-            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </td>
-        
-        {/* Queue Name */}
-        <td className="px-4 py-3">
+    <div className={`bg-zinc-900/50 border transition-all duration-300 overflow-hidden rounded-xl ${expanded ? 'border-purple-500/30 bg-zinc-900/80' : 'border-zinc-800 hover:border-zinc-700'}`}>
+
+      {/* Card Header (Always Visible) */}
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <button onClick={onToggle} className="p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 transition-colors">
+              {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold text-zinc-100 text-lg">{queue.name}</h3>
+                {queue.paused ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
+                    <Pause className="w-3 h-3" /> Paused
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
+                    <Play className="w-3 h-3" /> Running
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">Total Jobs: {totalJobs.toLocaleString()}</p>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-gray-400" />
-            <span className="font-medium text-white">{queue.name}</span>
-          </div>
-        </td>
-        
-        {/* Stats */}
-        <td className="px-4 py-3 text-center">
-          <StatBadge value={queue.waiting} color="yellow" />
-        </td>
-        <td className="px-4 py-3 text-center">
-          <StatBadge value={queue.active} color="blue" />
-        </td>
-        <td className="px-4 py-3 text-center">
-          <StatBadge value={queue.delayed} color="purple" />
-        </td>
-        <td className="px-4 py-3 text-center">
-          <StatBadge value={queue.failed} color="red" />
-        </td>
-        <td className="px-4 py-3 text-center">
-          <StatBadge value={queue.completed} color="green" />
-        </td>
-        
-        {/* Status */}
-        <td className="px-4 py-3 text-center">
-          {queue.paused ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-xs">
-              <Pause className="w-3 h-3" />
-              Paused
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/10 text-green-400 rounded text-xs">
-              <Play className="w-3 h-3" />
-              Running
-            </span>
-          )}
-        </td>
-        
-        {/* Actions */}
-        <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end gap-2">
-            {/* Pause/Resume */}
+            {/* Quick Actions */}
             {queue.paused ? (
-              <button
-                onClick={onResume}
-                disabled={actionLoading === `resume-${queue.name}`}
-                className="p-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 rounded-lg transition-colors disabled:opacity-50"
-                title="Resume queue"
-              >
-                {actionLoading === `resume-${queue.name}` ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Play className="w-4 h-4" />
-                )}
-              </button>
+              <IconButton onClick={onResume} loading={actionLoading === `resume-${queue.name}`} icon={Play} color="text-emerald-400" bg="hover:bg-emerald-500/10" tooltip="Resume" />
             ) : (
-              <button
-                onClick={onPause}
-                disabled={actionLoading === `pause-${queue.name}`}
-                className="p-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-lg transition-colors disabled:opacity-50"
-                title="Pause queue"
-              >
-                {actionLoading === `pause-${queue.name}` ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Pause className="w-4 h-4" />
-                )}
-              </button>
+              <IconButton onClick={onPause} loading={actionLoading === `pause-${queue.name}`} icon={Pause} color="text-amber-400" bg="hover:bg-amber-500/10" tooltip="Pause" />
             )}
-            
-            {/* Retry Failed */}
+
             {queue.failed > 0 && (
-              <button
-                onClick={onRetryFailed}
-                disabled={actionLoading === `retry-${queue.name}`}
-                className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors disabled:opacity-50"
-                title="Retry all failed jobs"
-              >
-                {actionLoading === `retry-${queue.name}` ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="w-4 h-4" />
-                )}
-              </button>
+              <IconButton onClick={onRetryFailed} loading={actionLoading === `retry-${queue.name}`} icon={RotateCcw} color="text-blue-400" bg="hover:bg-blue-500/10" tooltip="Retry Failed" />
             )}
-            
-            {/* Clean */}
+
             <div className="relative">
-              <button
-                onClick={() => setShowCleanMenu(!showCleanMenu)}
-                disabled={!!actionLoading?.startsWith('clean-')}
-                className="p-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors disabled:opacity-50"
-                title="Clean jobs"
-              >
-                {actionLoading === `clean-${queue.name}` ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-              </button>
-              
-              {showCleanMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-10 py-1 min-w-[140px]">
-                  <button
-                    onClick={() => { onClean('completed'); setShowCleanMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
-                  >
-                    Clean Completed
-                  </button>
-                  <button
-                    onClick={() => { onClean('failed'); setShowCleanMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
-                  >
-                    Clean Failed
-                  </button>
-                  <button
-                    onClick={() => { onClean('all'); setShowCleanMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-700"
-                  >
-                    Clean All
-                  </button>
-                </div>
+              <IconButton onClick={() => setShowMenu(!showMenu)} icon={MoreVertical} color="text-zinc-400" bg="hover:bg-zinc-800" />
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-20 py-1 min-w-[160px] animate-in fade-in zoom-in-95">
+                    <MenuItem onClick={() => { onClean('completed'); setShowMenu(false); }} label="Clean Completed" />
+                    <MenuItem onClick={() => { onClean('failed'); setShowMenu(false); }} label="Clean Failed" />
+                    <div className="h-px bg-zinc-800 my-1" />
+                    <MenuItem onClick={() => { onClean('all'); setShowMenu(false); }} label="Clean All" danger />
+                  </div>
+                </>
               )}
             </div>
-          </div>
-        </td>
-      </tr>
-      
-      {/* Expanded Jobs List */}
-      {expanded && (
-        <tr>
-          <td colSpan={9} className="px-4 py-0 bg-gray-950">
-            <div className="py-4">
-              {jobsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
-                </div>
-              ) : !jobs || jobs.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No jobs in queue
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-80 overflow-auto">
-                  {jobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-// ============= HELPER COMPONENTS =============
-
-function StatBadge({ value, color }: { value: number; color: string }) {
-  const colors: Record<string, string> = {
-    yellow: 'bg-yellow-500/10 text-yellow-400',
-    blue: 'bg-blue-500/10 text-blue-400',
-    purple: 'bg-purple-500/10 text-purple-400',
-    red: 'bg-red-500/10 text-red-400',
-    green: 'bg-green-500/10 text-green-400',
-  };
-  
-  if (value === 0) {
-    return <span className="text-gray-600">0</span>;
-  }
-  
-  return (
-    <span className={`inline-block px-2 py-0.5 rounded text-sm font-medium ${colors[color]}`}>
-      {value.toLocaleString()}
-    </span>
-  );
-}
-
-function JobCard({ job }: { job: QueueJob }) {
-  const getStatusIcon = () => {
-    switch (job.status) {
-      case 'waiting':
-        return <Clock className="w-4 h-4 text-yellow-400" />;
-      case 'active':
-        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
-      case 'delayed':
-        return <Clock className="w-4 h-4 text-purple-400" />;
-      case 'failed':
-        return <AlertTriangle className="w-4 h-4 text-red-400" />;
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-400" />;
-      default:
-        return null;
-    }
-  };
-  
-  const getStatusBg = () => {
-    switch (job.status) {
-      case 'waiting': return 'border-yellow-500/20';
-      case 'active': return 'border-blue-500/20';
-      case 'delayed': return 'border-purple-500/20';
-      case 'failed': return 'border-red-500/20';
-      case 'completed': return 'border-green-500/20';
-      default: return 'border-gray-700';
-    }
-  };
-
-  return (
-    <div className={`bg-gray-900/50 border ${getStatusBg()} rounded-lg p-3`}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          {getStatusIcon()}
-          <div>
-            <span className="font-medium text-white text-sm">{job.name}</span>
-            <span className="text-gray-500 text-xs ml-2">#{job.id}</span>
           </div>
         </div>
-        <div className="text-xs text-gray-500">
-          {job.timestamp && new Date(job.timestamp).toLocaleTimeString()}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-5 gap-2 mb-4">
+          <StatBox label="Waiting" value={queue.waiting} color="bg-yellow-500" textColor="text-yellow-400" />
+          <StatBox label="Active" value={queue.active} color="bg-blue-500" textColor="text-blue-400" />
+          <StatBox label="Delayed" value={queue.delayed} color="bg-purple-500" textColor="text-purple-400" />
+          <StatBox label="Failed" value={queue.failed} color="bg-red-500" textColor="text-red-400" />
+          <StatBox label="Completed" value={queue.completed} color="bg-emerald-500" textColor="text-emerald-400" />
+        </div>
+
+        {/* Multi-color Progress Bar */}
+        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden flex">
+          <div className="h-full bg-yellow-500 transition-all duration-500" style={{ width: `${getPercent(queue.waiting)}%` }} />
+          <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${getPercent(queue.active)}%` }} />
+          <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${getPercent(queue.delayed)}%` }} />
+          <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${getPercent(queue.failed)}%` }} />
+          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${getPercent(queue.completed)}%` }} />
         </div>
       </div>
-      
+
+      {/* Expanded Jobs List */}
+      {expanded && (
+        <div className="border-t border-zinc-800 bg-black/20">
+          <div className="p-4">
+            {jobsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+              </div>
+            ) : !jobs || jobs.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500">No jobs in queue</div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                {jobs.map((job: any) => <JobCard key={job.id} job={job} />)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// ============= HELPER COMPONENTS =============
+
+const IconButton = ({ onClick, loading, icon: Icon, color, bg, tooltip }: any) => (
+  <button
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+    disabled={loading}
+    className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${color} ${bg}`}
+    title={tooltip}
+  >
+    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
+  </button>
+);
+
+const MenuItem = ({ onClick, label, danger }: any) => (
+  <button
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+    className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-800 transition-colors ${danger ? 'text-red-400 hover:text-red-300' : 'text-zinc-300 hover:text-white'}`}
+  >
+    {label}
+  </button>
+);
+
+const StatBox = ({ label, value, color, textColor }: any) => (
+  <div className="flex flex-col items-center p-2 rounded-lg bg-zinc-950/50 border border-zinc-800">
+    <span className={`text-lg font-bold ${textColor}`}>{value.toLocaleString()}</span>
+    <div className="flex items-center gap-1.5 mt-1">
+      <div className={`w-1.5 h-1.5 rounded-full ${color}`} />
+      <span className="text-[10px] uppercase font-bold text-zinc-500">{label}</span>
+    </div>
+  </div>
+);
+
+function JobCard({ job }: { job: QueueJob }) {
+  const statusConfig = {
+    waiting: { icon: Clock, color: 'text-yellow-400' },
+    active: { icon: Loader2, color: 'text-blue-400', spin: true },
+    delayed: { icon: Clock, color: 'text-purple-400' },
+    failed: { icon: AlertTriangle, color: 'text-red-400' },
+    completed: { icon: CheckCircle, color: 'text-emerald-400' },
+  }[job.status] || { icon: Server, color: 'text-zinc-400' };
+
+  const Icon = statusConfig.icon;
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 hover:border-zinc-700 transition-colors">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2.5">
+          <Icon className={`w-4 h-4 ${statusConfig.color} ${statusConfig.spin ? 'animate-spin' : ''}`} />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-zinc-200 text-sm">{job.name}</span>
+              <span className="text-zinc-500 text-xs font-mono bg-zinc-950 px-1.5 rounded">#{job.id}</span>
+            </div>
+          </div>
+        </div>
+        <span className="text-[10px] text-zinc-500 font-mono">
+          {job.timestamp ? new Date(job.timestamp).toLocaleTimeString() : '-'}
+        </span>
+      </div>
+
       {job.failedReason && (
-        <div className="mt-2 p-2 bg-red-500/10 rounded text-xs text-red-400 font-mono">
+        <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-300 font-mono break-all">
           {job.failedReason}
         </div>
       )}
-      
-      <div className="mt-2 text-xs text-gray-500">
-        Attempts: {job.attemptsMade}
-        {job.delay && <span className="ml-3">Delay: {job.delay}ms</span>}
+
+      <div className="mt-2 flex items-center gap-4 text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+        <span>Intentos: <span className="text-zinc-300">{job.attemptsMade}</span></span>
+        {job && job.delay !== undefined && job.delay > 0 && <span>Delay: <span className="text-zinc-300">{job.delay}ms</span></span>}
       </div>
     </div>
   );

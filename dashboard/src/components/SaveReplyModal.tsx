@@ -1,6 +1,5 @@
-// Save Reply Modal - Save current message as a quick reply
 import { useState } from 'react';
-import { X, Bookmark, Loader2, Check, AlertCircle, Zap } from 'lucide-react';
+import { X, Bookmark, Loader2, Check, AlertCircle, Zap, Tag } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 
 interface SaveReplyModalProps {
@@ -14,27 +13,20 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
   
   const [title, setTitle] = useState('');
   const [shortcut, setShortcut] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('General');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
+    if (!title.trim()) { setError('El título es requerido'); return; }
 
-    setIsSaving(true);
-    setError(null);
+    setIsSaving(true); setError(null);
 
     try {
       const res = await fetch('/api/saved-replies', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           title: title.trim(),
           content: content.trim(),
@@ -48,120 +40,106 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
 
       if (data.ok) {
         setSuccess(true);
-        setTimeout(() => {
-          onSave();
-        }, 1000);
+        setTimeout(() => onSave(), 1000);
       } else {
-        setError(data.error || 'Error al guardar la respuesta');
+        setError(data.error || 'Error al guardar');
       }
     } catch (err) {
-      console.error('Failed to save reply:', err);
+      console.error(err);
       setError('Error de conexión');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Suggested categories
-  const categories = ['Saludos', 'FAQ', 'Soporte', 'Pagos', 'Técnico', 'Otros'];
+  const categories = ['General', 'Saludos', 'FAQ', 'Soporte', 'Pagos', 'Técnico'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95">
+    // is modal
+    // fix, se ve mocha partida en la mitad de la pantalla
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
+        
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/20 rounded-lg">
-              <Bookmark className="w-5 h-5 text-primary" />
+            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 shadow-inner">
+              <Bookmark className="w-5 h-5 text-indigo-500" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Guardar Respuesta Rápida</h2>
-              <p className="text-sm text-gray-500">Disponible al escribir /</p>
+              <h2 className="text-lg font-bold text-white">Guardar Respuesta</h2>
+              <p className="text-xs text-zinc-400">Crear nuevo atajo de texto</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Success state */}
+        <div className="p-6 space-y-6">
           {success ? (
-            <div className="py-8 text-center">
-              <div className="w-16 h-16 bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-green-400" />
+            <div className="py-12 text-center animate-in zoom-in duration-300">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+                <Check className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">¡Guardado!</h3>
-              <p className="text-gray-500">La respuesta ya está disponible</p>
+              <h3 className="text-xl font-bold text-white mb-1">¡Guardado!</h3>
+              <p className="text-zinc-500 text-sm">La respuesta está lista para usarse.</p>
             </div>
           ) : (
             <>
-              {/* Preview */}
-              <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-gray-400">Contenido de la respuesta</span>
+              {/* Preview Box */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" /> Contenido Original
+                </label>
+                <div className="p-4 bg-zinc-950/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
+                  "{content}"
                 </div>
-                <p className="text-white text-sm whitespace-pre-wrap line-clamp-4">
-                  {content}
-                </p>
               </div>
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Título <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ej: Saludo inicial, Respuesta FAQ..."
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 
-                             focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                  autoFocus
-                />
-              </div>
-
-              {/* Shortcut */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Atajo (opcional)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">/</span>
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Título <span className="text-red-400">*</span></label>
                   <input
                     type="text"
-                    value={shortcut}
-                    onChange={(e) => setShortcut(e.target.value.replace(/\s/g, '').toLowerCase())}
-                    placeholder="saludo"
-                    className="w-full pl-8 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 
-                               focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ej: Bienvenida"
+                    className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                    autoFocus
                   />
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  Escribe /{shortcut || 'atajo'} para insertar rápidamente
-                </p>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Atajo</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono text-sm">/</span>
+                    <input
+                      type="text"
+                      value={shortcut}
+                      onChange={(e) => setShortcut(e.target.value.replace(/\s/g, '').toLowerCase())}
+                      placeholder="hola"
+                      className="w-full pl-7 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-mono"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Categoría (opcional)
+              {/* Categories */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                   <Tag className="w-3 h-3"/> Categoría
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {categories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setCategory(cat)}
-                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all border ${
                         category === cat
-                          ? 'bg-primary text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                          : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
                       }`}
                     >
                       {cat}
@@ -172,17 +150,16 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
                   type="text"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="O escribe una categoría personalizada..."
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 
-                             focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
+                  placeholder="O escribe una nueva..."
+                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
                 />
               </div>
 
-              {/* Error */}
+              {/* Error Alert */}
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
+                <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-medium animate-in slide-in-from-top-1">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
+                  {error}
                 </div>
               )}
             </>
@@ -191,30 +168,21 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
 
         {/* Footer */}
         {!success && (
-          <div className="px-6 py-4 border-t border-gray-800 flex items-center justify-end gap-3">
+          <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-3">
             <button
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all"
             >
               Cancelar
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving || !title.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Bookmark className="w-4 h-4" />
-                  Guardar respuesta
-                </>
-              )}
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Guardar Respuesta
             </button>
           </div>
         )}

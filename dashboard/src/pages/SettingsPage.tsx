@@ -69,6 +69,7 @@ interface AgentSettings {
 interface SecuritySettings {
   sessionTimeout: number;
   maxLoginAttempts: number;
+  maxSessionsPerAgent: number;
   twoFactorEnabled: boolean;
   ipWhitelistEnabled: boolean;
   ipWhitelist: string[];
@@ -91,11 +92,11 @@ interface NotificationSettings {
 }
 
 const tabs: { id: SettingsTab; label: string; icon: React.ReactNode; description: string }[] = [
-  { id: 'bot', label: 'Bot', icon: <Bot className="w-5 h-5" />, description: 'Configura el bot de chat' },
-  { id: 'chat', label: 'Chat', icon: <MessageSquare className="w-5 h-5" />, description: 'Ajustes de conversación' },
-  { id: 'agents', label: 'Agentes', icon: <Users className="w-5 h-5" />, description: 'Reglas para agentes' },
-  { id: 'security', label: 'Seguridad', icon: <Shield className="w-5 h-5" />, description: 'Políticas de seguridad' },
-  { id: 'notifications', label: 'Notificaciones', icon: <Bell className="w-5 h-5" />, description: 'Alertas y sonidos' },
+  { id: 'bot', label: 'Bot', icon: <Bot className="w-5 h-5" />, description: 'Respuestas automáticas' },
+  { id: 'chat', label: 'Chat', icon: <MessageSquare className="w-5 h-5" />, description: 'Reglas de conversación' },
+  { id: 'agents', label: 'Agentes', icon: <Users className="w-5 h-5" />, description: 'Asignación y horarios' },
+  { id: 'security', label: 'Seguridad', icon: <Shield className="w-5 h-5" />, description: 'Acceso y auditoría' },
+  { id: 'notifications', label: 'Notificaciones', icon: <Bell className="w-5 h-5" />, description: 'Alertas del sistema' },
 ];
 
 const defaultBotSettings: BotSettings = {
@@ -133,6 +134,7 @@ const defaultAgentSettings: AgentSettings = {
 const defaultSecuritySettings: SecuritySettings = {
   sessionTimeout: 480,
   maxLoginAttempts: 5,
+  maxSessionsPerAgent: 3,
   twoFactorEnabled: false,
   ipWhitelistEnabled: false,
   ipWhitelist: [],
@@ -230,100 +232,88 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl">
-            <Settings className="w-6 h-6 text-purple-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Configuración</h1>
-            <p className="text-sm text-gray-400">Ajustes del sistema y preferencias</p>
-          </div>
-        </div>
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-purple-500/30">
 
-        <div className="flex items-center gap-3">
-          {saveSuccess && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-xl border border-green-500/30">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm font-medium">Guardado exitosamente</span>
+      {/* Purple Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col overflow-hidden relative z-0">
+
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2 border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-sm z-20">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-purple-900/10">
+                <Settings className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Configuración</h1>
+                <p className="text-sm text-zinc-400">Preferencias generales del sistema</p>
+              </div>
             </div>
-          )}
-          <button
-            onClick={loadSettings}
-            className="p-2.5 bg-gray-800/80 hover:bg-gray-700 border border-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-xl text-white font-medium transition-all hover:scale-105 shadow-lg shadow-purple-500/25 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Guardar Cambios</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Tabs */}
-        <div className="w-64 border-r border-gray-800 p-4 overflow-y-auto">
-          <nav className="space-y-2">
+            <div className="flex items-center gap-3">
+              {saveSuccess && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                  <CheckCircle className="w-4 h-4" /> Guardado
+                </div>
+              )}
+
+              <button
+                onClick={loadSettings}
+                className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium rounded-xl shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                <span>Guardar Cambios</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* Sidebar Tabs */}
+          <div className="w-72 border-r border-zinc-800 bg-zinc-900/30 p-4 flex flex-col gap-1 overflow-y-auto custom-scrollbar">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'text-gray-400 hover:bg-gray-800/50 hover:text-white border border-transparent'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${activeTab === tab.id
+                    ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20 shadow-sm'
+                    : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent'
+                  }`}
               >
-                <div className={`p-2 rounded-lg ${
-                  activeTab === tab.id ? 'bg-purple-500/20' : 'bg-gray-800'
-                }`}>
+                <div className={`p-2 rounded-lg transition-colors ${activeTab === tab.id ? 'bg-purple-500/20 text-purple-400' : 'bg-zinc-800 text-zinc-500 group-hover:text-zinc-300'}`}>
                   {tab.icon}
                 </div>
                 <div className="text-left flex-1">
-                  <p className="font-medium">{tab.label}</p>
-                  <p className="text-xs text-gray-500">{tab.description}</p>
+                  <p className={`font-medium text-sm ${activeTab === tab.id ? 'text-white' : ''}`}>{tab.label}</p>
+                  <p className="text-[10px] text-zinc-500 line-clamp-1">{tab.description}</p>
                 </div>
-                <ChevronRight className={`w-4 h-4 transition-transform ${
-                  activeTab === tab.id ? 'rotate-90' : ''
-                }`} />
+                {activeTab === tab.id && <ChevronRight className="w-4 h-4 text-purple-500/50" />}
               </button>
             ))}
-          </nav>
-        </div>
+          </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'bot' && (
-            <BotSettingsForm settings={botSettings} setSettings={setBotSettings} />
-          )}
-          {activeTab === 'chat' && (
-            <ChatSettingsForm settings={chatSettings} setSettings={setChatSettings} />
-          )}
-          {activeTab === 'agents' && (
-            <AgentSettingsForm settings={agentSettings} setSettings={setAgentSettings} />
-          )}
-          {activeTab === 'security' && (
-            <SecuritySettingsForm settings={securitySettings} setSettings={setSecuritySettings} />
-          )}
-          {activeTab === 'notifications' && (
-            <NotificationSettingsForm settings={notificationSettings} setSettings={setNotificationSettings} />
-          )}
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto px-10 py-8 custom-scrollbar bg-zinc-950/50">
+            <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {activeTab === 'bot' && <BotSettingsForm settings={botSettings} setSettings={setBotSettings} />}
+              {activeTab === 'chat' && <ChatSettingsForm settings={chatSettings} setSettings={setChatSettings} />}
+              {activeTab === 'agents' && <AgentSettingsForm settings={agentSettings} setSettings={setAgentSettings} />}
+              {activeTab === 'security' && <SecuritySettingsForm settings={securitySettings} setSettings={setSecuritySettings} />}
+              {activeTab === 'notifications' && <NotificationSettingsForm settings={notificationSettings} setSettings={setNotificationSettings} />}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -332,82 +322,59 @@ export default function SettingsPage() {
 
 // Form Components
 
-function FormSection({
-  title,
-  description,
-  icon,
-  children,
-}: {
+function FormSection({ title, description, icon, children }: {
   title: string;
   description?: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 last:mb-0">
-      <div className="flex items-center gap-3 mb-4">
-        {icon && <div className="p-2 bg-gray-800 rounded-lg text-gray-400">{icon}</div>}
+    <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
+      <div className="px-6 py-4 border-b border-zinc-800/50 bg-zinc-900/60 flex items-center gap-3">
+        <div className="p-2 bg-zinc-800 rounded-lg text-zinc-400 border border-zinc-700/50">{icon}</div>
         <div>
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
-          {description && <p className="text-sm text-gray-500">{description}</p>}
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          {description && <p className="text-xs text-zinc-500">{description}</p>}
         </div>
       </div>
-      <div className="bg-gray-800/40 rounded-xl border border-gray-700/50 p-5 space-y-4">
+      <div className="p-6 space-y-6">
         {children}
       </div>
     </div>
   );
 }
 
-function InputField({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  placeholder,
-  suffix,
-  min,
-  max,
-}: {
+function InputField({ label, value, onChange, type = 'text', placeholder, suffix, min, max, helper }: {
   label: string;
   value: string | number;
   onChange: (value: string) => void;
-  type?: 'text' | 'number' | 'time';
+  type?: string;
   placeholder?: string;
   suffix?: string;
   min?: number;
   max?: number;
+  helper?: string;
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-      <div className="relative">
+      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <div className="relative group">
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          min={min}
-          max={max}
-          className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+          min={min} max={max}
+          className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
         />
-        {suffix && (
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-            {suffix}
-          </span>
-        )}
+        {suffix && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium">{suffix}</span>}
       </div>
+      {helper && <p className="mt-1.5 text-xs text-zinc-500 flex items-center gap-1"><InfoIcon className="w-3 h-3" /> {helper}</p>}
     </div>
   );
 }
 
-function TextareaField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  rows = 3,
-}: {
+function TextareaField({ label, value, onChange, placeholder, rows = 3 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -416,57 +383,38 @@ function TextareaField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
+        className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all resize-none text-sm leading-relaxed"
       />
     </div>
   );
 }
 
-function ToggleField({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
+function ToggleField({ label, description, checked, onChange }: {
   label: string;
   description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-2">
-      <div>
-        <p className="font-medium text-white">{label}</p>
-        {description && <p className="text-sm text-gray-500">{description}</p>}
+    <div className="flex items-center justify-between py-3 px-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 hover:border-zinc-700 transition-colors">
+      <div className="pr-4">
+        <p className="font-medium text-sm text-zinc-200">{label}</p>
+        {description && <p className="text-xs text-zinc-500 mt-0.5">{description}</p>}
       </div>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`relative w-14 h-8 rounded-full transition-all ${
-          checked ? 'bg-purple-500' : 'bg-gray-600'
-        }`}
-      >
-        <div
-          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${
-            checked ? 'left-7' : 'left-1'
-          }`}
-        />
-      </button>
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" className="sr-only peer" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+      </label>
     </div>
   );
 }
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
+function SelectField({ label, value, onChange, options }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -474,254 +422,49 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 appearance-none focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm cursor-pointer"
+        >
+          {options.map((opt: any) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+        </select>
+        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 rotate-90 pointer-events-none" />
+      </div>
     </div>
   );
 }
 
+const InfoIcon = (props: any) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+
 // Settings Forms
 
-function BotSettingsForm({
-  settings,
-  setSettings,
-}: {
+function BotSettingsForm({ settings, setSettings }: {
   settings: BotSettings;
   setSettings: (settings: BotSettings) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <FormSection title="Información del Bot" description="Configura la identidad del bot" icon={<Bot className="w-5 h-5" />}>
-        <InputField
-          label="Nombre del Bot"
-          value={settings.botName}
-          onChange={(v) => setSettings({ ...settings, botName: v })}
-          placeholder="Asistente"
-        />
-        <SelectField
-          label="Idioma"
-          value={settings.language}
-          onChange={(v) => setSettings({ ...settings, language: v })}
-          options={[
-            { value: 'es', label: 'Español' },
-            { value: 'en', label: 'English' },
-            { value: 'pt', label: 'Português' },
-          ]}
-        />
-      </FormSection>
-
-      <FormSection title="Mensajes" description="Configura los mensajes automáticos" icon={<MessageSquare className="w-5 h-5" />}>
-        <TextareaField
-          label="Mensaje de Bienvenida"
-          value={settings.welcomeMessage}
-          onChange={(v) => setSettings({ ...settings, welcomeMessage: v })}
-          placeholder="¡Hola! ¿En qué puedo ayudarte?"
-        />
-        <TextareaField
-          label="Mensaje Fuera de Línea"
-          value={settings.offlineMessage}
-          onChange={(v) => setSettings({ ...settings, offlineMessage: v })}
-          placeholder="No hay agentes disponibles..."
-        />
-      </FormSection>
-
-      <FormSection title="Comportamiento" description="Ajusta cómo responde el bot" icon={<Zap className="w-5 h-5" />}>
-        <ToggleField
-          label="Respuestas Automáticas"
-          description="Habilitar respuestas automáticas del bot"
-          checked={settings.autoReplyEnabled}
-          onChange={(v) => setSettings({ ...settings, autoReplyEnabled: v })}
-        />
-        {settings.autoReplyEnabled && (
-          <InputField
-            label="Retraso de Respuesta"
-            value={settings.autoReplyDelay}
-            onChange={(v) => setSettings({ ...settings, autoReplyDelay: parseInt(v) || 0 })}
-            type="number"
-            suffix="ms"
-            min={0}
-            max={5000}
-          />
-        )}
-        <ToggleField
-          label="Indicador de Escritura"
-          description="Mostrar cuando el bot está escribiendo"
-          checked={settings.typingIndicator}
-          onChange={(v) => setSettings({ ...settings, typingIndicator: v })}
-        />
-      </FormSection>
-    </div>
-  );
-}
-
-function ChatSettingsForm({
-  settings,
-  setSettings,
-}: {
-  settings: ChatSettings;
-  setSettings: (settings: ChatSettings) => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <FormSection title="Cola de Espera" description="Configura la gestión de la cola" icon={<Clock className="w-5 h-5" />}>
-        <div className="grid grid-cols-2 gap-4">
-          <InputField
-            label="Tamaño Máximo de Cola"
-            value={settings.maxQueueSize}
-            onChange={(v) => setSettings({ ...settings, maxQueueSize: parseInt(v) || 50 })}
-            type="number"
-            suffix="chats"
-          />
-          <InputField
-            label="Tiempo de Espera Máximo"
-            value={settings.queueTimeout}
-            onChange={(v) => setSettings({ ...settings, queueTimeout: parseInt(v) || 300 })}
-            type="number"
-            suffix="seg"
-          />
+    <div className="space-y-8">
+      <FormSection title="Identidad del Bot" description="Configura cómo se presenta el bot ante los usuarios" icon={<Bot className="w-5 h-5 text-purple-400" />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <InputField label="Nombre del Bot" value={settings.botName} onChange={(v: any) => setSettings({ ...settings, botName: v })} placeholder="Ej: Asistente Virtual" />
+          <SelectField label="Idioma Predeterminado" value={settings.language} onChange={(v: any) => setSettings({ ...settings, language: v })} options={[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }, { value: 'pt', label: 'Português' }]} />
         </div>
-        <InputField
-          label="Timeout de Inactividad"
-          value={settings.inactivityTimeout}
-          onChange={(v) => setSettings({ ...settings, inactivityTimeout: parseInt(v) || 600 })}
-          type="number"
-          suffix="seg"
-        />
       </FormSection>
-
-      <FormSection title="Archivos" description="Configura el intercambio de archivos" icon={<FileText className="w-5 h-5" />}>
-        <ToggleField
-          label="Permitir Archivos"
-          description="Permitir que usuarios envíen archivos"
-          checked={settings.enableFileSharing}
-          onChange={(v) => setSettings({ ...settings, enableFileSharing: v })}
-        />
-        {settings.enableFileSharing && (
-          <>
-            <InputField
-              label="Tamaño Máximo de Archivo"
-              value={settings.maxFileSize}
-              onChange={(v) => setSettings({ ...settings, maxFileSize: parseInt(v) || 10 })}
-              type="number"
-              suffix="MB"
-            />
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Tipos de Archivo Permitidos</label>
-              <input
-                type="text"
-                value={settings.allowedFileTypes.join(', ')}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    allowedFileTypes: e.target.value.split(',').map((t) => t.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="pdf, png, jpg..."
-                className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-              />
-              <p className="text-xs text-gray-500 mt-1">Separados por comas</p>
-            </div>
-          </>
-        )}
+      <FormSection title="Mensajes Automáticos" description="Personaliza los mensajes que envía el sistema" icon={<MessageSquare className="w-5 h-5 text-purple-400" />}>
+        <TextareaField label="Bienvenida" value={settings.welcomeMessage} onChange={(v: any) => setSettings({ ...settings, welcomeMessage: v })} placeholder="Mensaje inicial..." />
+        <TextareaField label="Fuera de Horario" value={settings.offlineMessage} onChange={(v: any) => setSettings({ ...settings, offlineMessage: v })} placeholder="Mensaje cuando no hay agentes..." />
       </FormSection>
-
-      <FormSection title="Funciones" description="Habilita funciones adicionales" icon={<Sparkles className="w-5 h-5" />}>
-        <ToggleField
-          label="Emojis"
-          description="Permitir emojis en los mensajes"
-          checked={settings.enableEmoji}
-          onChange={(v) => setSettings({ ...settings, enableEmoji: v })}
-        />
-        <ToggleField
-          label="Sugerencias"
-          description="Mostrar sugerencias de respuesta"
-          checked={settings.enableSuggestions}
-          onChange={(v) => setSettings({ ...settings, enableSuggestions: v })}
-        />
-      </FormSection>
-    </div>
-  );
-}
-
-function AgentSettingsForm({
-  settings,
-  setSettings,
-}: {
-  settings: AgentSettings;
-  setSettings: (settings: AgentSettings) => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <FormSection title="Asignación de Chats" description="Configura cómo se asignan los chats" icon={<UserCog className="w-5 h-5" />}>
-        <InputField
-          label="Chats Simultáneos por Defecto"
-          value={settings.defaultMaxChats}
-          onChange={(v) => setSettings({ ...settings, defaultMaxChats: parseInt(v) || 5 })}
-          type="number"
-          min={1}
-          max={20}
-        />
-        <ToggleField
-          label="Asignación Automática"
-          description="Asignar chats automáticamente a agentes disponibles"
-          checked={settings.autoAssign}
-          onChange={(v) => setSettings({ ...settings, autoAssign: v })}
-        />
-        {settings.autoAssign && (
-          <>
-            <ToggleField
-              label="Round Robin"
-              description="Distribuir chats equitativamente entre agentes"
-              checked={settings.roundRobinEnabled}
-              onChange={(v) => setSettings({ ...settings, roundRobinEnabled: v })}
-            />
-            <ToggleField
-              label="Enrutamiento por Habilidades"
-              description="Asignar según las habilidades del agente"
-              checked={settings.skillBasedRouting}
-              onChange={(v) => setSettings({ ...settings, skillBasedRouting: v })}
-            />
-            <ToggleField
-              label="Enrutamiento por Prioridad"
-              description="Priorizar clientes VIP o casos urgentes"
-              checked={settings.priorityRouting}
-              onChange={(v) => setSettings({ ...settings, priorityRouting: v })}
-            />
-          </>
-        )}
-      </FormSection>
-
-      <FormSection title="Horario de Trabajo" description="Define el horario de atención" icon={<Clock className="w-5 h-5" />}>
-        <ToggleField
-          label="Habilitar Horario"
-          description="Restringir atención a horario laboral"
-          checked={settings.workingHoursEnabled}
-          onChange={(v) => setSettings({ ...settings, workingHoursEnabled: v })}
-        />
-        {settings.workingHoursEnabled && (
-          <div className="grid grid-cols-2 gap-4">
-            <InputField
-              label="Hora de Inicio"
-              value={settings.workingHoursStart}
-              onChange={(v) => setSettings({ ...settings, workingHoursStart: v })}
-              type="time"
-            />
-            <InputField
-              label="Hora de Fin"
-              value={settings.workingHoursEnd}
-              onChange={(v) => setSettings({ ...settings, workingHoursEnd: v })}
-              type="time"
-            />
+      <FormSection title="Comportamiento" description="Ajustes de interacción" icon={<Zap className="w-5 h-5 text-purple-400" />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ToggleField label="Respuestas Automáticas" description="Permitir respuestas del bot" checked={settings.autoReplyEnabled} onChange={(v: any) => setSettings({ ...settings, autoReplyEnabled: v })} />
+          <ToggleField label="Indicador de Escritura" description="Simular escritura humana" checked={settings.typingIndicator} onChange={(v: any) => setSettings({ ...settings, typingIndicator: v })} />
+        </div>
+        {settings.autoReplyEnabled && (
+          <div className="mt-4">
+            <InputField label="Delay de Respuesta" value={settings.autoReplyDelay} onChange={(v: any) => setSettings({ ...settings, autoReplyDelay: parseInt(v) || 0 })} type="number" suffix="ms" min={0} max={5000} />
           </div>
         )}
       </FormSection>
@@ -729,148 +472,102 @@ function AgentSettingsForm({
   );
 }
 
-function SecuritySettingsForm({
-  settings,
-  setSettings,
-}: {
-  settings: SecuritySettings;
-  setSettings: (settings: SecuritySettings) => void;
+function ChatSettingsForm({ settings, setSettings }: {
+  settings: ChatSettings;
+  setSettings: (settings: ChatSettings) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <FormSection title="Sesiones" description="Configura la seguridad de sesiones" icon={<Lock className="w-5 h-5" />}>
-        <InputField
-          label="Timeout de Sesión"
-          value={settings.sessionTimeout}
-          onChange={(v) => setSettings({ ...settings, sessionTimeout: parseInt(v) || 480 })}
-          type="number"
-          suffix="min"
-        />
-        <InputField
-          label="Intentos de Login Máximos"
-          value={settings.maxLoginAttempts}
-          onChange={(v) => setSettings({ ...settings, maxLoginAttempts: parseInt(v) || 5 })}
-          type="number"
-          min={1}
-          max={10}
-        />
-        <ToggleField
-          label="Autenticación de Dos Factores"
-          description="Requerir 2FA para todos los usuarios"
-          checked={settings.twoFactorEnabled}
-          onChange={(v) => setSettings({ ...settings, twoFactorEnabled: v })}
-        />
+    <div className="space-y-8">
+      <FormSection title="Gestión de Cola" description="Parámetros para la espera de clientes" icon={<Clock className="w-5 h-5 text-blue-400" />}>
+        <div className="grid grid-cols-2 gap-6">
+          <InputField label="Tamaño Máximo de Cola" value={settings.maxQueueSize} onChange={(v: any) => setSettings({ ...settings, maxQueueSize: parseInt(v) || 50 })} type="number" suffix="chats" />
+          <InputField label="Tiempo Máximo de Espera" value={settings.queueTimeout} onChange={(v: any) => setSettings({ ...settings, queueTimeout: parseInt(v) || 300 })} type="number" suffix="seg" />
+        </div>
+        <InputField label="Timeout de Inactividad" value={settings.inactivityTimeout} onChange={(v: any) => setSettings({ ...settings, inactivityTimeout: parseInt(v) || 600 })} type="number" suffix="seg" helper="Tiempo antes de cerrar un chat inactivo automáticamente." />
       </FormSection>
-
-      <FormSection title="Políticas de Contraseña" description="Define requisitos de contraseña" icon={<Key className="w-5 h-5" />}>
-        <InputField
-          label="Longitud Mínima"
-          value={settings.passwordPolicy.minLength}
-          onChange={(v) =>
-            setSettings({
-              ...settings,
-              passwordPolicy: { ...settings.passwordPolicy, minLength: parseInt(v) || 8 },
-            })
-          }
-          type="number"
-          suffix="caracteres"
-          min={6}
-          max={32}
-        />
-        <ToggleField
-          label="Requiere Mayúsculas"
-          checked={settings.passwordPolicy.requireUppercase}
-          onChange={(v) =>
-            setSettings({
-              ...settings,
-              passwordPolicy: { ...settings.passwordPolicy, requireUppercase: v },
-            })
-          }
-        />
-        <ToggleField
-          label="Requiere Números"
-          checked={settings.passwordPolicy.requireNumbers}
-          onChange={(v) =>
-            setSettings({
-              ...settings,
-              passwordPolicy: { ...settings.passwordPolicy, requireNumbers: v },
-            })
-          }
-        />
-        <ToggleField
-          label="Requiere Caracteres Especiales"
-          checked={settings.passwordPolicy.requireSpecial}
-          onChange={(v) =>
-            setSettings({
-              ...settings,
-              passwordPolicy: { ...settings.passwordPolicy, requireSpecial: v },
-            })
-          }
-        />
-      </FormSection>
-
-      <FormSection title="Auditoría" description="Configura los registros de auditoría" icon={<FileText className="w-5 h-5" />}>
-        <InputField
-          label="Retención de Logs"
-          value={settings.auditLogRetention}
-          onChange={(v) => setSettings({ ...settings, auditLogRetention: parseInt(v) || 90 })}
-          type="number"
-          suffix="días"
-        />
+      <FormSection title="Archivos y Medios" description="Restricciones de contenido multimedia" icon={<FileText className="w-5 h-5 text-blue-400" />}>
+        <ToggleField label="Habilitar Archivos" description="Permitir subir archivos" checked={settings.enableFileSharing} onChange={(v: any) => setSettings({ ...settings, enableFileSharing: v })} />
+        {settings.enableFileSharing && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputField label="Tamaño Máximo" value={settings.maxFileSize} onChange={(v: any) => setSettings({ ...settings, maxFileSize: parseInt(v) || 10 })} type="number" suffix="MB" />
+            <InputField label="Extensiones Permitidas" value={settings.allowedFileTypes.join(', ')} onChange={(e: any) => setSettings({ ...settings, allowedFileTypes: e.target.value.split(',').map((t: any) => t.trim()).filter(Boolean) })} placeholder="pdf, jpg, png..." />
+          </div>
+        )}
       </FormSection>
     </div>
   );
 }
 
-function NotificationSettingsForm({
-  settings,
-  setSettings,
-}: {
+function AgentSettingsForm({ settings, setSettings }: {
+  settings: AgentSettings;
+  setSettings: (settings: AgentSettings) => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <FormSection title="Asignación de Chats" description="Reglas de distribución de trabajo" icon={<UserCog className="w-5 h-5 text-emerald-400" />}>
+        <InputField label="Chats Máximos por Agente" value={settings.defaultMaxChats} onChange={(v: any) => setSettings({ ...settings, defaultMaxChats: parseInt(v) || 5 })} type="number" min={1} max={20} />
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ToggleField label="Asignación Automática" checked={settings.autoAssign} onChange={(v: any) => setSettings({ ...settings, autoAssign: v })} />
+          {settings.autoAssign && <ToggleField label="Round Robin" description="Distribución equitativa" checked={settings.roundRobinEnabled} onChange={(v: any) => setSettings({ ...settings, roundRobinEnabled: v })} />}
+        </div>
+      </FormSection>
+      <FormSection title="Horarios" description="Control de disponibilidad" icon={<Clock className="w-5 h-5 text-emerald-400" />}>
+        <ToggleField label="Restricción Horaria" checked={settings.workingHoursEnabled} onChange={(v: any) => setSettings({ ...settings, workingHoursEnabled: v })} />
+        {settings.workingHoursEnabled && (
+          <div className="mt-4 grid grid-cols-2 gap-6">
+            <InputField label="Inicio" value={settings.workingHoursStart} onChange={(v: any) => setSettings({ ...settings, workingHoursStart: v })} type="time" />
+            <InputField label="Fin" value={settings.workingHoursEnd} onChange={(v: any) => setSettings({ ...settings, workingHoursEnd: v })} type="time" />
+          </div>
+        )}
+      </FormSection>
+    </div>
+  );
+}
+
+function SecuritySettingsForm({ settings, setSettings }: {
+  settings: SecuritySettings;
+  setSettings: (settings: SecuritySettings) => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <FormSection title="Sesiones y Acceso" description="Control de seguridad de cuentas" icon={<Shield className="w-5 h-5 text-red-400" />}>
+        <div className="grid grid-cols-2 gap-6">
+          <InputField label="Timeout de Sesión (min)" value={settings.sessionTimeout} onChange={(v: any) => setSettings({ ...settings, sessionTimeout: parseInt(v) || 480 })} type="number" />
+          <InputField label="Max Intentos Login" value={settings.maxLoginAttempts} onChange={(v: any) => setSettings({ ...settings, maxLoginAttempts: parseInt(v) || 5 })} type="number" />
+        </div>
+        <div className="mt-4">
+          <ToggleField label="Autenticación 2FA" description="Requerir segundo factor para todos" checked={settings.twoFactorEnabled} onChange={(v: any) => setSettings({ ...settings, twoFactorEnabled: v })} />
+        </div>
+      </FormSection>
+      <FormSection title="Contraseñas" description="Política de complejidad" icon={<Key className="w-5 h-5 text-red-400" />}>
+        <InputField label="Longitud Mínima" value={settings.passwordPolicy.minLength} onChange={(v: any) => setSettings({ ...settings, passwordPolicy: { ...settings.passwordPolicy, minLength: parseInt(v) || 8 } })} type="number" suffix="chars" />
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ToggleField label="Mayúsculas" checked={settings.passwordPolicy.requireUppercase} onChange={(v: any) => setSettings({ ...settings, passwordPolicy: { ...settings.passwordPolicy, requireUppercase: v } })} />
+          <ToggleField label="Números" checked={settings.passwordPolicy.requireNumbers} onChange={(v: any) => setSettings({ ...settings, passwordPolicy: { ...settings.passwordPolicy, requireNumbers: v } })} />
+          <ToggleField label="Especiales" checked={settings.passwordPolicy.requireSpecial} onChange={(v: any) => setSettings({ ...settings, passwordPolicy: { ...settings.passwordPolicy, requireSpecial: v } })} />
+        </div>
+      </FormSection>
+    </div>
+  );
+}
+
+function NotificationSettingsForm({ settings, setSettings }: {
   settings: NotificationSettings;
   setSettings: (settings: NotificationSettings) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <FormSection title="Notificaciones por Email" description="Configura alertas por correo" icon={<Mail className="w-5 h-5" />}>
-        <ToggleField
-          label="Notificaciones por Email"
-          description="Recibir alertas importantes por email"
-          checked={settings.emailNotifications}
-          onChange={(v) => setSettings({ ...settings, emailNotifications: v })}
-        />
-        <ToggleField
-          label="Alertas de Escalación"
-          description="Notificar cuando un chat es escalado"
-          checked={settings.escalationAlerts}
-          onChange={(v) => setSettings({ ...settings, escalationAlerts: v })}
-        />
-        <ToggleField
-          label="Reporte Diario"
-          description="Recibir resumen diario de actividad"
-          checked={settings.dailyReportEmail}
-          onChange={(v) => setSettings({ ...settings, dailyReportEmail: v })}
-        />
+    <div className="space-y-8">
+      <FormSection title="Canales" description="Dónde recibir alertas" icon={<Mail className="w-5 h-5 text-amber-400" />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ToggleField label="Email" description="Alertas críticas por correo" checked={settings.emailNotifications} onChange={(v: any) => setSettings({ ...settings, emailNotifications: v })} />
+          <ToggleField label="Escritorio" description="Push notifications del navegador" checked={settings.desktopNotifications} onChange={(v: any) => setSettings({ ...settings, desktopNotifications: v })} />
+        </div>
       </FormSection>
-
-      <FormSection title="Sonidos y Alertas" description="Configura notificaciones en el navegador" icon={<Volume2 className="w-5 h-5" />}>
-        <ToggleField
-          label="Notificaciones de Escritorio"
-          description="Mostrar notificaciones del navegador"
-          checked={settings.desktopNotifications}
-          onChange={(v) => setSettings({ ...settings, desktopNotifications: v })}
-        />
-        <ToggleField
-          label="Sonido de Nuevo Chat"
-          description="Reproducir sonido al recibir un chat"
-          checked={settings.newChatSound}
-          onChange={(v) => setSettings({ ...settings, newChatSound: v })}
-        />
-        <ToggleField
-          label="Sonido de Nuevo Mensaje"
-          description="Reproducir sonido al recibir un mensaje"
-          checked={settings.newMessageSound}
-          onChange={(v) => setSettings({ ...settings, newMessageSound: v })}
-        />
+      <FormSection title="Sonidos" description="Feedback auditivo" icon={<Volume2 className="w-5 h-5 text-amber-400" />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ToggleField label="Nuevo Chat" checked={settings.newChatSound} onChange={(v: any) => setSettings({ ...settings, newChatSound: v })} />
+          <ToggleField label="Nuevo Mensaje" checked={settings.newMessageSound} onChange={(v: any) => setSettings({ ...settings, newMessageSound: v })} />
+        </div>
       </FormSection>
     </div>
   );

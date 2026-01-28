@@ -185,10 +185,21 @@ export async function requestPermission(input: CreateRequestInput): Promise<{
   error?: string;
   alreadyPending?: boolean;
   blocked?: boolean;
+  banned?: boolean;
 }> {
   const { agentId, permission, reason, page } = input;
   
   try {
+    // Check if agent is banned from requesting permissions
+    const agent = await Agent.findById(agentId).select('canRequestPermissions');
+    if (agent && agent.canRequestPermissions === false) {
+      return { 
+        ok: false, 
+        error: 'No tienes permitido solicitar permisos. Contacta a un administrador.',
+        banned: true
+      };
+    }
+    
     // Check if permission is blocked
     const isBlocked = await isPermissionBlocked(agentId, permission);
     if (isBlocked) {

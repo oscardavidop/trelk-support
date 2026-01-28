@@ -6,11 +6,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Navigate } from 'react-router-dom';
-import { 
-  Activity, 
-  Search, 
-  Filter, 
-  Calendar, 
+import {
+  Activity,
+  Search,
+  Filter,
+  Calendar,
   RefreshCw,
   User,
   MessageCircle,
@@ -24,7 +24,8 @@ import {
   Download,
   Shield,
   ChevronDown,
-  Clock
+  Clock,
+  FileJson
 } from 'lucide-react';
 
 interface ActivityLog {
@@ -75,11 +76,11 @@ export default function AuditPage() {
   // Fetch logs
   const fetchLogs = useCallback(async () => {
     if (!canAccess) return;
-    
+
     setLoading(true);
     try {
       const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}').state?.token;
-      
+
       // Fetch activity logs
       const activityRes = await fetch(`/api/activity?timeFilter=${timeFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -88,7 +89,7 @@ export default function AuditPage() {
         const data = await activityRes.json();
         setActivityLogs(data.data || []);
       }
-      
+
       // Fetch audit logs
       const auditRes = await fetch(`/api/audit?timeFilter=${timeFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -114,133 +115,106 @@ export default function AuditPage() {
 
   // Filter logs based on search and action type
   const filteredActivityLogs = activityLogs.filter(log => {
-    const matchesSearch = searchTerm === '' || 
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.agentName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchTerm === '' || log.action.toLowerCase().includes(searchTerm.toLowerCase()) || log.agentName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesAction = actionFilter === 'all' || log.actionType === actionFilter;
     return matchesSearch && matchesAction;
   });
 
   const filteredAuditLogs = auditLogs.filter(log => {
-    const matchesSearch = searchTerm === '' ||
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.performedByName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchTerm === '' || log.action.toLowerCase().includes(searchTerm.toLowerCase()) || log.performedByName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-500/20 rounded-xl">
-            <Activity className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Registros de Actividad</h1>
-            <p className="text-sm text-gray-400">Historial de acciones y auditoría del sistema</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              showFilters ? 'bg-indigo-500/20 text-indigo-400' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filtros</span>
-          </button>
-          <button
-            onClick={fetchLogs}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Actualizar</span>
-          </button>
-        </div>
-      </div>
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-indigo-500/30">
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="border-b border-gray-800 px-6 py-4 bg-gray-900/50">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+      {/* Indigo Ambient Glow */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-indigo-900/10">
+                <Activity className="w-6 h-6 text-indigo-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Registro de Actividad</h1>
+                <p className="text-sm text-zinc-400">Monitoreo y auditoría del sistema</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="flex bg-zinc-900/50 rounded-xl border border-zinc-800 p-1">
+                <TabButton active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} icon={Clock} label="Timeline" />
+                <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} icon={Shield} label="Auditoría" />
+              </div>
+
+              <button
+                onClick={fetchLogs}
+                disabled={loading}
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+              >
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Toolbar (Search & Filters) */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="relative flex-1 min-w-[280px] max-w-md group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por acción o agente..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder={activeTab === 'activity' ? "Buscar actividad..." : "Buscar cambios..."}
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
               />
             </div>
 
-            {/* Time Filter */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-3">
               <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 cursor-pointer"
               >
                 <option value="today">Hoy</option>
                 <option value="week">Esta semana</option>
                 <option value="month">Este mes</option>
                 <option value="all">Todo</option>
               </select>
-            </div>
 
-            {/* Action Type Filter (for activity tab) */}
-            {activeTab === 'activity' && (
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-              >
-                <option value="all">Todas las acciones</option>
-                <option value="chat">Chats</option>
-                <option value="message">Mensajes</option>
-                <option value="session">Sesiones</option>
-                <option value="agent">Agentes</option>
-                <option value="auth">Autenticación</option>
-                <option value="system">Sistema</option>
-              </select>
-            )}
+              {activeTab === 'activity' && (
+                <select
+                  value={actionFilter}
+                  onChange={(e) => setActionFilter(e.target.value)}
+                  className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 cursor-pointer"
+                >
+                  <option value="all">Todas las acciones</option>
+                  <option value="chat">Chat</option>
+                  <option value="message">Mensajes</option>
+                  <option value="session">Sesiones</option>
+                  <option value="agent">Agentes</option>
+                  <option value="system">Sistema</option>
+                </select>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-800">
-        <TabButton
-          active={activeTab === 'activity'}
-          onClick={() => setActiveTab('activity')}
-          icon={<Clock className="w-4 h-4" />}
-          label="Timeline de Actividad"
-          count={filteredActivityLogs.length}
-        />
-        <TabButton
-          active={activeTab === 'audit'}
-          onClick={() => setActiveTab('audit')}
-          icon={<Shield className="w-4 h-4" />}
-          label="Logs de Auditoría"
-          count={filteredAuditLogs.length}
-        />
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {loading ? (
-          <LoadingSkeleton />
-        ) : activeTab === 'activity' ? (
-          <ActivityTimeline logs={filteredActivityLogs} />
-        ) : (
-          <AuditLogsList logs={filteredAuditLogs} />
-        )}
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-2 custom-scrollbar">
+          {loading ? (
+            <LoadingSkeleton />
+          ) : activeTab === 'activity' ? (
+            <ActivityTimeline logs={filteredActivityLogs} />
+          ) : (
+            <AuditLogsList logs={filteredAuditLogs} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -248,85 +222,42 @@ export default function AuditPage() {
 
 // Sub-components
 
-function TabButton({ 
-  active, 
-  onClick, 
-  icon, 
-  label, 
-  count 
-}: { 
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  count: number;
-}) {
+
+function TabButton({ active, onClick, icon: Icon, label }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-        active
-          ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10'
-          : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800'
-      }`}
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${active
+        ? 'bg-zinc-800 text-white shadow-sm'
+        : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+        }`}
     >
-      {icon}
-      <span className="font-medium">{label}</span>
-      <span className="px-2 py-0.5 bg-gray-700 rounded-full text-xs text-gray-300">
-        {count}
-      </span>
+      <Icon className="w-4 h-4" />
+      {label}
     </button>
   );
 }
 
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4, 5].map(i => (
-        <div key={i} className="flex gap-4 animate-pulse">
-          <div className="w-10 h-10 bg-gray-800 rounded-full" />
-          <div className="flex-1">
-            <div className="h-4 bg-gray-800 rounded w-3/4 mb-2" />
-            <div className="h-3 bg-gray-800 rounded w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function ActivityTimeline({ logs }: { logs: ActivityLog[] }) {
-  if (logs.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <Activity className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay actividad registrada</p>
-        <p className="text-sm mt-1">Las acciones de los agentes aparecerán aquí</p>
-      </div>
-    );
-  }
+  if (logs.length === 0) return <EmptyState icon={Activity} text="No hay actividad registrada" />;
 
-  // Group by date
   const groupedLogs = logs.reduce((acc, log) => {
-    const date = new Date(log.createdAt).toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const date = new Date(log.createdAt).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     if (!acc[date]) acc[date] = [];
     acc[date].push(log);
     return acc;
   }, {} as Record<string, ActivityLog[]>);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-4xl">
       {Object.entries(groupedLogs).map(([date, dateLogs]) => (
-        <div key={date}>
-          <h3 className="text-sm font-medium text-gray-400 mb-4 sticky top-0 bg-gray-950 py-2">
-            {date}
-          </h3>
-          <div className="space-y-1">
+        <div key={date} className="relative">
+          <div className="sticky top-0 z-20 bg-zinc-950/95 backdrop-blur py-2 mb-4 border-b border-zinc-800/50 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">{date}</h3>
+          </div>
+
+          <div className="space-y-0 pl-1">
             {dateLogs.map((log, idx) => (
               <ActivityItem key={log._id} log={log} isLast={idx === dateLogs.length - 1} />
             ))}
@@ -338,55 +269,45 @@ function ActivityTimeline({ logs }: { logs: ActivityLog[] }) {
 }
 
 function ActivityItem({ log, isLast }: { log: ActivityLog; isLast: boolean }) {
-  const getActionIcon = (actionType: string) => {
-    switch (actionType) {
-      case 'chat': return <MessageCircle className="w-4 h-4" />;
-      case 'message': return <Send className="w-4 h-4" />;
-      case 'session': return <User className="w-4 h-4" />;
-      case 'agent': return <Settings className="w-4 h-4" />;
-      case 'auth': return <LogIn className="w-4 h-4" />;
-      default: return <Activity className="w-4 h-4" />;
+  const getActionConfig = (type: string) => {
+    switch (type) {
+      case 'chat': return { icon: MessageCircle, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+      case 'message': return { icon: Send, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+      case 'session': return { icon: User, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
+      case 'agent': return { icon: Settings, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+      case 'auth': return { icon: LogIn, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+      default: return { icon: Activity, color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' };
     }
   };
 
-  const getActionColor = (actionType: string) => {
-    switch (actionType) {
-      case 'chat': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'message': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'session': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      case 'agent': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-      case 'auth': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    }
-  };
-
-  const time = new Date(log.createdAt).toLocaleTimeString('es-ES', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const config = getActionConfig(log.actionType);
+  const Icon = config.icon;
 
   return (
-    <div className="flex gap-4 group">
-      {/* Timeline line */}
-      <div className="flex flex-col items-center">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${getActionColor(log.actionType)}`}>
-          {getActionIcon(log.actionType)}
-        </div>
-        {!isLast && <div className="w-0.5 flex-1 bg-gray-800 mt-2" />}
+    <div className="flex gap-4 group relative pb-8 last:pb-0">
+      {!isLast && <div className="absolute left-5 top-10 bottom-0 w-px bg-zinc-800 group-hover:bg-zinc-700 transition-colors" />}
+
+      <div className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center border ${config.bg} ${config.border} shrink-0`}>
+        <Icon className={`w-5 h-5 ${config.color}`} />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 pb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium text-white">{log.agentName}</span>
-          <span className="text-gray-500">•</span>
-          <span className="text-sm text-gray-400">{time}</span>
+      <div className="flex-1 pt-1.5 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-zinc-200 text-sm">{log.agentName}</span>
+            <span className="text-zinc-600 text-xs">•</span>
+            <span className="text-zinc-400 text-xs">{log.action}</span>
+          </div>
+          <span className="text-xs text-zinc-500 font-mono">
+            {new Date(log.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
-        <p className="text-sm text-gray-300">{log.action}</p>
+
         {log.targetType && (
-          <p className="text-xs text-gray-500 mt-1">
-            {log.targetType}: {log.targetId}
-          </p>
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 mt-1 font-mono">
+            <span className="text-zinc-500">{log.targetType}:</span>
+            <span className="text-zinc-300">{log.targetId}</span>
+          </div>
         )}
       </div>
     </div>
@@ -396,67 +317,55 @@ function ActivityItem({ log, isLast }: { log: ActivityLog; isLast: boolean }) {
 function AuditLogsList({ logs }: { logs: AuditLog[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  if (logs.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <Shield className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay registros de auditoría</p>
-        <p className="text-sm mt-1">Los cambios de configuración y datos aparecerán aquí</p>
-      </div>
-    );
-  }
+  if (logs.length === 0) return <EmptyState icon={Shield} text="No hay registros de auditoría" />;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 max-w-5xl">
       {logs.map(log => (
-        <div
-          key={log._id}
-          className="bg-gray-800/50 rounded-xl border border-gray-700 overflow-hidden"
-        >
+        <div key={log._id} className={`bg-zinc-900/40 border transition-all duration-200 overflow-hidden rounded-xl ${expanded === log._id ? 'border-indigo-500/30 bg-zinc-900/80 shadow-lg' : 'border-zinc-800 hover:border-zinc-700'}`}>
           <button
             onClick={() => setExpanded(expanded === log._id ? null : log._id)}
-            className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-800 transition-colors"
+            className="w-full p-4 flex items-center justify-between gap-4 text-left"
           >
-            <div className="flex items-center gap-4">
-              <AuditActionIcon action={log.action} />
-              <div>
-                <p className="font-medium text-white">{log.action}</p>
-                <p className="text-sm text-gray-400">
-                  {log.performedByName} • {log.resource}
-                  {log.resourceId && ` #${log.resourceId.slice(-6)}`}
+            <div className="flex items-center gap-4 min-w-0">
+              <AuditIcon action={log.action} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-medium text-zinc-200 text-sm">{log.action}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercase tracking-wider border border-zinc-700">{log.resource}</span>
+                </div>
+                <p className="text-xs text-zinc-500 truncate">
+                  Por <span className="text-zinc-300">{log.performedByName}</span> • {new Date(log.createdAt).toLocaleString()}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">
-                {new Date(log.createdAt).toLocaleString('es-ES')}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded === log._id ? 'rotate-180' : ''}`} />
-            </div>
+            <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${expanded === log._id ? 'rotate-180' : ''}`} />
           </button>
 
           {expanded === log._id && log.changes && (
-            <div className="px-4 pb-4 border-t border-gray-700 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                {log.changes.before && (
-                  <div>
-                    <p className="text-xs text-red-400 uppercase tracking-wider mb-2">Antes</p>
-                    <pre className="text-xs text-gray-400 bg-gray-900 p-3 rounded-lg overflow-auto max-h-48">
-                      {JSON.stringify(log.changes.before, null, 2)}
-                    </pre>
+            <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-2">
+              <div className="grid grid-cols-2 gap-4 mt-2 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-red-400 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-red-500/50" /> Antes
                   </div>
-                )}
-                {log.changes.after && (
-                  <div>
-                    <p className="text-xs text-green-400 uppercase tracking-wider mb-2">Después</p>
-                    <pre className="text-xs text-gray-400 bg-gray-900 p-3 rounded-lg overflow-auto max-h-48">
-                      {JSON.stringify(log.changes.after, null, 2)}
-                    </pre>
+                  <pre className="text-xs text-red-200/70 font-mono bg-red-950/10 border border-red-500/10 p-3 rounded-lg overflow-x-auto">
+                    {JSON.stringify(log.changes.before, null, 2)}
+                  </pre>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/50" /> Después
                   </div>
-                )}
+                  <pre className="text-xs text-emerald-200/70 font-mono bg-emerald-950/10 border border-emerald-500/10 p-3 rounded-lg overflow-x-auto">
+                    {JSON.stringify(log.changes.after, null, 2)}
+                  </pre>
+                </div>
               </div>
               {log.ipAddress && (
-                <p className="text-xs text-gray-500 mt-3">IP: {log.ipAddress}</p>
+                <div className="mt-3 flex items-center gap-2 text-[10px] text-zinc-500 font-mono pl-1">
+                  <Shield className="w-3 h-3" /> IP: {log.ipAddress}
+                </div>
               )}
             </div>
           )}
@@ -466,48 +375,47 @@ function AuditLogsList({ logs }: { logs: AuditLog[] }) {
   );
 }
 
-function AuditActionIcon({ action }: { action: string }) {
-  const actionLower = action.toLowerCase();
-  
-  if (actionLower.includes('create') || actionLower.includes('add')) {
-    return (
-      <div className="p-2 bg-green-500/20 rounded-lg">
-        <Edit className="w-4 h-4 text-green-400" />
-      </div>
-    );
-  }
-  if (actionLower.includes('update') || actionLower.includes('edit') || actionLower.includes('change')) {
-    return (
-      <div className="p-2 bg-blue-500/20 rounded-lg">
-        <Edit className="w-4 h-4 text-blue-400" />
-      </div>
-    );
-  }
-  if (actionLower.includes('delete') || actionLower.includes('remove')) {
-    return (
-      <div className="p-2 bg-red-500/20 rounded-lg">
-        <Trash2 className="w-4 h-4 text-red-400" />
-      </div>
-    );
-  }
-  if (actionLower.includes('view') || actionLower.includes('read') || actionLower.includes('access')) {
-    return (
-      <div className="p-2 bg-purple-500/20 rounded-lg">
-        <Eye className="w-4 h-4 text-purple-400" />
-      </div>
-    );
-  }
-  if (actionLower.includes('export') || actionLower.includes('download')) {
-    return (
-      <div className="p-2 bg-yellow-500/20 rounded-lg">
-        <Download className="w-4 h-4 text-yellow-400" />
-      </div>
-    );
-  }
-  
+function AuditIcon({ action }: { action: string }) {
+  const act = action.toLowerCase();
+  let icon = FileJson;
+  let color = 'text-zinc-400';
+  let bg = 'bg-zinc-800';
+
+  if (act.includes('create') || act.includes('add')) { icon = Edit; color = 'text-emerald-400'; bg = 'bg-emerald-500/10 border-emerald-500/20'; }
+  else if (act.includes('update') || act.includes('edit')) { icon = Edit; color = 'text-blue-400'; bg = 'bg-blue-500/10 border-blue-500/20'; }
+  else if (act.includes('delete')) { icon = Trash2; color = 'text-red-400'; bg = 'bg-red-500/10 border-red-500/20'; }
+  else if (act.includes('export')) { icon = Download; color = 'text-amber-400'; bg = 'bg-amber-500/10 border-amber-500/20'; }
+  else { icon = FileJson; color = 'text-zinc-400'; bg = 'bg-zinc-800/10 border-zinc-800/50'; }
+
+  const Icon = icon;
   return (
-    <div className="p-2 bg-gray-500/20 rounded-lg">
-      <Shield className="w-4 h-4 text-gray-400" />
+    <div className={`p-2 rounded-lg border ${bg} ${color}`}>
+      <Icon className="w-4 h-4" />
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, text }: any) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
+      <Icon className="w-12 h-12 mb-3 stroke-1" />
+      <p className="text-sm font-medium">{text}</p>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6 max-w-4xl">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex gap-4 animate-pulse">
+          <div className="w-10 h-10 bg-zinc-800 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-zinc-800 rounded w-1/3" />
+            <div className="h-3 bg-zinc-800 rounded w-1/2" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

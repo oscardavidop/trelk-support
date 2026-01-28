@@ -82,7 +82,7 @@
 
 //   useEffect(() => {
 //     loadMessages();
-    
+
 //     // Refresh every 30 seconds to update time remaining
 //     const interval = setInterval(loadMessages, 30000);
 //     return () => clearInterval(interval);
@@ -211,7 +211,7 @@
 //   const StatusIcon = STATUS_ICONS[message.status];
 //   const TypeIcon = TYPE_ICONS[message.type];
 //   const statusColor = STATUS_COLORS[message.status];
-  
+
 //   const timeRemaining = message.status === 'pending' && message.scheduledAt
 //     ? formatTimeRemaining(message.scheduledAt)
 //     : null;
@@ -373,6 +373,7 @@ import {
 import type { ScheduledMessage, ScheduledMessageStatus, ScheduleType } from '../../types/scheduledMessage';
 import { toast } from '../../stores/toastStore';
 import { getSocket } from '../../services/socket';
+import usePermissions from '../../hooks/usePermissions';
 
 interface Props {
   sessionId: string;
@@ -404,6 +405,16 @@ const TYPE_ICONS: Record<ScheduleType, typeof Clock> = {
 };
 
 export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
+  const { can } = usePermissions();
+  if (!can('scheduled.read')) {
+    return (
+      <div className="px-3 py-2">
+        <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+          No tienes permiso para ver los mensajes programados.
+        </p>
+      </div>
+    );
+  }
   const [messages, setMessages] = useState<ScheduledMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -426,7 +437,7 @@ export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
 
   useEffect(() => {
     loadMessages();
-    
+
     // Refresh every 30 seconds to update time remaining
     const interval = setInterval(loadMessages, 30000);
     return () => clearInterval(interval);
@@ -555,7 +566,7 @@ function MessageCard({ message, expanded, onToggle, onCancel, cancelling, compac
   const StatusIcon = STATUS_ICONS[message.status];
   const TypeIcon = TYPE_ICONS[message.type];
   const statusColor = STATUS_COLORS[message.status];
-  
+
   const timeRemaining = message.status === 'pending' && message.scheduledAt
     ? formatTimeRemaining(message.scheduledAt)
     : null;

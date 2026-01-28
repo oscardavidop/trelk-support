@@ -589,7 +589,13 @@ export const contactsService = {
     }
 
     // Segment filters (asumiendo lógica externa)
-    /* if (segmentId) { ... tu lógica de segmentos ... } */
+    if (segmentId) {
+      const segment = await Segment.findById(segmentId);
+      if (segment?.filters) {
+        const segmentFilterQuery = buildFilterQuery(segment.filters);
+        Object.assign(baseQuery, segmentFilterQuery);
+      }
+    }
 
     const pipeline: PipelineStage[] = [
       { $match: baseQuery },

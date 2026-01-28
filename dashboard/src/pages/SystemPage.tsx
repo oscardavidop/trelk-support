@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Activity, 
-  Server, 
-  Database, 
+import {
+  Activity,
+  Server,
+  Database,
   Cpu,
   AlertTriangle,
   CheckCircle,
@@ -19,10 +19,11 @@ import {
   Users,
   AlertCircle,
   TrendingUp,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { getSocket } from '../services/socket';
-import { 
+import {
   getSystemHealth,
   type SystemHealth
 } from '../services/system.service';
@@ -63,7 +64,7 @@ export default function SystemPage() {
   const loadHealth = useCallback(async () => {
     // Skip if access was denied (403)
     if (accessDenied) return;
-    
+
     const result = await getSystemHealth();
     if (result.ok && result.data) {
       setHealth(result.data);
@@ -88,7 +89,7 @@ export default function SystemPage() {
   // Auto-refresh every 5 seconds
   useEffect(() => {
     if (!autoRefresh) return;
-    
+
     const interval = setInterval(loadHealth, 5000);
     return () => clearInterval(interval);
   }, [autoRefresh, loadHealth]);
@@ -111,121 +112,92 @@ export default function SystemPage() {
     };
 
     socket.on('system:redis:status', handleRedisStatus);
-    
+
     return () => {
       socket.off('system:redis:status', handleRedisStatus);
     };
   }, [health]);
 
-  const getStatusColor = (status: 'up' | 'down'): string => {
-    return status === 'up' ? 'text-green-400' : 'text-red-400';
-  };
-
-  const getStatusBg = (status: 'up' | 'down'): string => {
-    return status === 'up' ? 'bg-green-400/10' : 'bg-red-400/10';
-  };
-
-  const getHealthBadge = (status: 'healthy' | 'degraded' | 'down') => {
-    switch (status) {
-      case 'healthy':
-        return (
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-sm font-medium">
-            <CheckCircle className="w-4 h-4" />
-            Healthy
-          </span>
-        );
-      case 'degraded':
-        return (
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 text-yellow-400 rounded-full text-sm font-medium">
-            <AlertCircle className="w-4 h-4" />
-            Degraded
-          </span>
-        );
-      case 'down':
-        return (
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-sm font-medium">
-            <XCircle className="w-4 h-4" />
-            Down
-          </span>
-        );
-    }
-  };
-
   return (
-    <div className="flex-1 flex flex-col bg-gray-950 min-h-screen">
-      {/* Header */}
-      <div className="border-b border-gray-800 bg-gray-900/50 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl">
-              <Activity className="w-6 h-6 text-purple-400" />
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-purple-500/30">
+
+      {/* Purple Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-0">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-purple-900/10">
+                <Activity className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Monitor del Sistema</h1>
+                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                  <span className={`w-2 h-2 rounded-full ${health?.status === 'healthy' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+                  {health?.status === 'healthy' ? 'Sistema Operativo' : 'Problemas Detectados'}
+                  <span className="text-zinc-600 mx-1">•</span>
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Actualizado: {lastUpdate.toLocaleTimeString()}</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-semibold text-white">System Monitor</h1>
-              <p className="text-sm text-gray-400">Real-time automation status</p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`p-2.5 rounded-xl border transition-all ${autoRefresh
+                  ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+              >
+                <RefreshCw className={`w-5 h-5 ${autoRefresh ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
+              </button>
+
+              <button
+                onClick={loadHealth}
+                disabled={loading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl text-white font-medium transition-all"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Actualizar</span>
+              </button>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-            {health && getHealthBadge(health.status)}
-            
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Updated {lastUpdate.toLocaleTimeString()}</span>
-            </div>
-            
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`p-2 rounded-lg transition-colors ${
-                autoRefresh 
-                  ? 'bg-blue-500/20 text-blue-400' 
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
-              title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
-            >
-              <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} 
-                style={{ animationDuration: '3s' }} />
-            </button>
-            
-            <button
-              onClick={loadHealth}
-              disabled={loading}
-              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
-            >
-              Refresh
-            </button>
+
+          {/* Tabs */}
+          <div className="flex gap-1 border-b border-zinc-800/50">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                  ? 'border-purple-500 text-purple-400'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                  }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 mt-4 -mb-4">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-gray-950 text-white border-t border-x border-gray-800'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
+          {activeTab === 'overview' && (
+            <OverviewContent health={health} loading={loading} error={error} />
+          )}
+          {/* Render other tabs here assuming they are updated or compatible */}
+          {activeTab === 'queues' && <QueuesTab />}
+          {activeTab === 'flows' && <FlowsTab />}
+          {activeTab === 'scheduled' && <ScheduledTab />}
+          {activeTab === 'workers' && <WorkersTab />}
+          {activeTab === 'errors' && <ErrorsTab />}
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {activeTab === 'overview' && (
-          <OverviewContent health={health} loading={loading} error={error} />
-        )}
-        {activeTab === 'queues' && <QueuesTab />}
-        {activeTab === 'flows' && <FlowsTab />}
-        {activeTab === 'scheduled' && <ScheduledTab />}
-        {activeTab === 'workers' && <WorkersTab />}
-        {activeTab === 'errors' && <ErrorsTab />}
       </div>
     </div>
   );
@@ -243,120 +215,110 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
   if (loading && !health) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+        <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
-        <AlertTriangle className="w-12 h-12 text-red-500" />
+      <div className="flex flex-col items-center justify-center h-64 text-zinc-500 gap-4">
+        <div className="p-4 bg-red-500/10 rounded-full border border-red-500/20">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+        </div>
         <div className="text-center">
-          <p className="text-white font-medium">Error loading system health</p>
-          <p className="text-sm">{error}</p>
+          <p className="text-white font-medium text-lg">Error de conexión</p>
+          <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
     );
   }
 
-  if (!health) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
-        Failed to load system health
-      </div>
-    );
-  }
+  if (!health) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Service Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ServiceCard
-          name="Redis"
-          icon={Database}
-          status={health.services.redis.status}
-          latency={health.services.redis.latencyMs}
-          description="Cache & Queue storage"
-        />
-        <ServiceCard
-          name="MongoDB"
-          icon={Database}
-          status={health.services.mongodb.status}
-          latency={health.services.mongodb.latencyMs}
-          description="Primary database"
-        />
-        <ServiceCard
-          name="BullMQ Queues"
-          icon={Server}
-          status={health.services.queues.status}
-          description={health.services.queues.initialized ? 'All queues initialized' : 'Not initialized'}
-        />
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Active Flows"
-          value={health.metrics.activeFlows}
-          icon={Workflow}
-          color="purple"
-          description="Published and running"
-        />
-        <MetricCard
-          title="Pending Jobs"
-          value={health.metrics.pendingJobs}
-          icon={Clock}
-          color="blue"
-          description="In queue waiting"
-        />
-        <MetricCard
-          title="Scheduled Messages"
-          value={health.metrics.scheduledMessages}
-          icon={Timer}
-          color="yellow"
-          description="Pending delivery"
-        />
-        <MetricCard
-          title="Failed Jobs (24h)"
-          value={health.metrics.failedJobs24h}
-          icon={AlertTriangle}
-          color="red"
-          description="Errors in last 24 hours"
-          alert={health.metrics.failedJobs24h > 10}
-        />
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-6">
-        <h3 className="text-lg font-medium text-white mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <QuickAction
-            icon={RefreshCw}
-            label="Retry Failed Jobs"
-            description="Retry all failed jobs in queues"
-            onClick={() => {/* TODO */}}
+      {/* 1. Services Status */}
+      <div>
+        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <Server className="w-4 h-4" /> Servicios Principales
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <ServiceCard
+            name="Redis Cache"
+            icon={Database}
+            status={health.services.redis.status}
+            latency={health.services.redis.latencyMs}
+            description="Cola de mensajes y almacenamiento"
           />
-          <QuickAction
-            icon={Zap}
-            label="Clear Cache"
-            description="Clear all Redis caches"
-            onClick={() => {/* TODO */}}
+          <ServiceCard
+            name="MongoDB Atlas"
+            icon={Database}
+            status={health.services.mongodb.status}
+            latency={health.services.mongodb.latencyMs}
+            description="Base de datos principal"
           />
-          <QuickAction
-            icon={TrendingUp}
-            label="View Metrics"
-            description="Detailed performance metrics"
-            onClick={() => {/* TODO */}}
-          />
-          <QuickAction
-            icon={Users}
-            label="Worker Status"
-            description="Check worker health"
-            onClick={() => {/* TODO */}}
+          <ServiceCard
+            name="BullMQ Workers"
+            icon={Cpu}
+            status={health.services.queues.status}
+            description={health.services.queues.initialized ? 'Procesando tareas en segundo plano' : 'Inicializando...'}
           />
         </div>
       </div>
+
+      {/* 2. Key Metrics */}
+      <div>
+        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4" /> Métricas Clave
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <MetricCard
+            title="Flows Activos"
+            value={health.metrics.activeFlows}
+            icon={Workflow}
+            color="purple"
+            description="En ejecución"
+          />
+          <MetricCard
+            title="Tareas en Cola"
+            value={health.metrics.pendingJobs}
+            icon={Clock}
+            color="blue"
+            description="Esperando worker"
+          />
+          <MetricCard
+            title="Programados"
+            value={health.metrics.scheduledMessages}
+            icon={Timer}
+            color="amber"
+            description="Mensajes futuros"
+          />
+          <MetricCard
+            title="Fallos (24h)"
+            value={health.metrics.failedJobs24h}
+            icon={AlertTriangle}
+            color="red"
+            description="Requieren atención"
+            alert={health.metrics.failedJobs24h > 0}
+          />
+        </div>
+      </div>
+
+      {/* 3. Quick Actions */}
+      <div>
+        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <Zap className="w-4 h-4" /> Mantenimiento Rápido
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <QuickAction icon={RefreshCw} label="Reintentar Fallos" description="Reencolar jobs fallidos" onClick={() => { }} />
+          <QuickAction icon={Zap} label="Limpiar Cache" description="Purgar Redis keys" onClick={() => { }} />
+          <QuickAction icon={TrendingUp} label="Ver Métricas" description="Dashboard detallado" onClick={() => { }} />
+          <QuickAction icon={Users} label="Estado Workers" description="Salud de procesos" onClick={() => { }} />
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -370,75 +332,13 @@ interface ServiceCardProps {
   latency?: number;
   description: string;
 }
-
-function ServiceCard({ name, icon: Icon, status, latency, description }: ServiceCardProps) {
-  return (
-    <div className={`rounded-xl border p-5 ${
-      status === 'up' 
-        ? 'bg-gray-900/50 border-gray-800' 
-        : 'bg-red-500/5 border-red-500/30'
-    }`}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${
-            status === 'up' ? 'bg-green-500/10' : 'bg-red-500/10'
-          }`}>
-            <Icon className={`w-5 h-5 ${
-              status === 'up' ? 'text-green-400' : 'text-red-400'
-            }`} />
-          </div>
-          <div>
-            <h3 className="font-medium text-white">{name}</h3>
-            <p className="text-xs text-gray-500">{description}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {latency !== undefined && (
-            <span className="text-xs text-gray-400">{latency}ms</span>
-          )}
-          {status === 'up' ? (
-            <CheckCircle className="w-5 h-5 text-green-400" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-400" />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface MetricCardProps {
   title: string;
   value: number;
   icon: typeof Activity;
-  color: 'purple' | 'blue' | 'yellow' | 'red' | 'green';
+  color: 'purple' | 'blue' | 'amber' | 'red' | 'green' ;
   description: string;
   alert?: boolean;
-}
-
-function MetricCard({ title, value, icon: Icon, color, description, alert }: MetricCardProps) {
-  const colors = {
-    purple: 'from-purple-500/20 to-purple-600/10 text-purple-400',
-    blue: 'from-blue-500/20 to-blue-600/10 text-blue-400',
-    yellow: 'from-yellow-500/20 to-yellow-600/10 text-yellow-400',
-    red: 'from-red-500/20 to-red-600/10 text-red-400',
-    green: 'from-green-500/20 to-green-600/10 text-green-400',
-  };
-
-  return (
-    <div className={`rounded-xl border border-gray-800 bg-gradient-to-br ${colors[color]} p-5 ${
-      alert ? 'animate-pulse' : ''
-    }`}>
-      <div className="flex items-center justify-between mb-3">
-        <Icon className="w-5 h-5" />
-        {alert && <AlertCircle className="w-4 h-4 text-red-400" />}
-      </div>
-      <div className="text-3xl font-bold text-white mb-1">{value.toLocaleString()}</div>
-      <div className="text-sm font-medium text-white/80">{title}</div>
-      <div className="text-xs text-gray-500 mt-1">{description}</div>
-    </div>
-  );
 }
 
 interface QuickActionProps {
@@ -448,16 +348,72 @@ interface QuickActionProps {
   onClick: () => void;
 }
 
+function ServiceCard({ name, icon: Icon, status, latency, description }: ServiceCardProps) {
+  const isUp = status === 'up';
+  return (
+    <div className={`group p-5 rounded-2xl border transition-all duration-300 ${isUp ? 'bg-zinc-900/50 border-zinc-800 hover:border-emerald-500/30' : 'bg-red-500/5 border-red-500/20'
+      }`}>
+      <div className="flex justify-between items-start mb-3">
+        <div className={`p-2.5 rounded-xl ${isUp ? 'bg-zinc-800 group-hover:bg-emerald-500/10' : 'bg-red-500/10'}`}>
+          <Icon className={`w-5 h-5 ${isUp ? 'text-zinc-400 group-hover:text-emerald-400' : 'text-red-500'}`} />
+        </div>
+        <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full ${isUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+          }`}>
+          {isUp ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+          {isUp ? 'ONLINE' : 'OFFLINE'}
+        </div>
+      </div>
+      <div>
+        <h3 className="text-lg font-bold text-white mb-1">{name}</h3>
+        <p className="text-sm text-zinc-500 mb-3">{description}</p>
+        {latency !== undefined && (
+          <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 bg-zinc-950/50 w-fit px-2 py-1 rounded border border-zinc-800">
+            <Activity className="w-3 h-3" />
+            {latency}ms
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ title, value, icon: Icon, color, description, alert }: MetricCardProps) {
+  const colors = {
+    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    red: 'text-red-400 bg-red-500/10 border-red-500/20',
+    green: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  };
+  const theme = colors[color as keyof typeof colors];
+
+  return (
+    <div className={`relative p-5 bg-zinc-900/40 backdrop-blur-sm border rounded-2xl transition-all hover:bg-zinc-900/60 ${alert ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'border-zinc-800'}`}>
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-2.5 rounded-xl border ${theme}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        {alert && <div className="animate-pulse w-2 h-2 bg-red-500 rounded-full" />}
+      </div>
+      <div className="text-3xl font-bold text-white tracking-tight mb-1">{value?.toLocaleString() || 0}</div>
+      <div className="text-sm font-medium text-zinc-300">{title}</div>
+      <div className="text-xs text-zinc-500 mt-1">{description}</div>
+    </div>
+  );
+}
+
 function QuickAction({ icon: Icon, label, description, onClick }: QuickActionProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-2 p-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-xl transition-colors text-center"
+      className="flex flex-col items-center gap-3 p-5 bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-2xl transition-all group text-center"
     >
-      <Icon className="w-6 h-6 text-gray-400" />
+      <div className="p-3 bg-zinc-950 rounded-full border border-zinc-800 group-hover:border-zinc-600 transition-colors">
+        <Icon className="w-5 h-5 text-zinc-400 group-hover:text-white" />
+      </div>
       <div>
-        <div className="text-sm font-medium text-white">{label}</div>
-        <div className="text-xs text-gray-500">{description}</div>
+        <div className="text-sm font-medium text-white mb-0.5">{label}</div>
+        <div className="text-[10px] text-zinc-500">{description}</div>
       </div>
     </button>
   );

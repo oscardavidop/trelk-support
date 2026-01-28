@@ -1,4 +1,3 @@
-// Chat Page - Main chat interface
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../stores/chatStore';
@@ -13,7 +12,7 @@ import {
   releaseTab,
   cleanupSessionGuard,
 } from '../services/sessionGuard.service';
-import { MessageCircle, MessageSquare } from 'lucide-react';
+import { MessageSquare, MessageCircle } from 'lucide-react';
 
 export default function ChatPage() {
   const { activeSession, sessions, setActiveSession } = useChatStore();
@@ -36,14 +35,10 @@ export default function ChatPage() {
       onSessionReplaced: (data) => setSessionReplaced({ device: data.newDevice, ip: data.newIp }),
     });
 
-    // Try to register as active tab
     registerAsActiveTab('/dashboard/chat').then((success) => {
-      if (!success) {
-        setIsTabBlocked(true);
-      }
+      if (!success) setIsTabBlocked(true);
     });
 
-    // Cleanup on unmount
     return () => {
       releaseTab();
       cleanupSessionGuard();
@@ -61,11 +56,10 @@ export default function ChatPage() {
     }
   }, [searchParams, sessions, activeSession, setActiveSession]);
 
-  // Clean up URL after navigating to message (remove session param and hash)
+  // Clean up URL after navigating
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     if (sessionParam && activeSession?.sessionId === sessionParam && targetMessageId) {
-      // Wait a bit for the scroll animation to complete, then clean URL
       const timer = setTimeout(() => {
         navigate('/dashboard/chat', { replace: true });
       }, 1000);
@@ -73,48 +67,53 @@ export default function ChatPage() {
     }
   }, [activeSession, searchParams, targetMessageId, navigate]);
 
-  // Count waiting sessions for badge
   const waitingCount = sessions.filter(s => s.status === 'waiting').length;
 
-  // Handle redirect from blocked tab
   const handleGoToDashboard = useCallback(() => {
     navigate('/dashboard');
   }, [navigate]);
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen w-full flex bg-zinc-950 text-zinc-100 font-sans overflow-hidden relative selection:bg-indigo-500/30">
+      
       {/* Session Guard Overlays */}
-      <TabBlockedOverlay
-        isBlocked={isTabBlocked}
-        onClose={handleGoToDashboard}
-      />
-      <SessionReplacedOverlay
-        isShown={!!sessionReplaced}
-        device={sessionReplaced?.device}
-        ip={sessionReplaced?.ip}
-      />
+      <TabBlockedOverlay isBlocked={isTabBlocked} onClose={handleGoToDashboard} />
+      <SessionReplacedOverlay isShown={!!sessionReplaced} device={sessionReplaced?.device} ip={sessionReplaced?.ip} />
 
-      {/* Session List */}
-      <div className="border-r border-gray-800 flex flex-col bg-gray-950" style={{ width: isSidebarOpen ? 370 : 370 }}>
-        <div className="p-4 border-b border-gray-800 h-[56px] flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-xl">
-            <MessageSquare className="w-4 h-4 text-purple-400" />
+      {/* COLUMN 1: Session List (Fixed Width) */}
+      <div className="w-[319px] flex flex-col border-r border-zinc-800 bg-zinc-950 shrink-0 z-0">
+        {/* Header */}
+        <div className="h-[56px] px-4 flex items-center justify-between border-b border-zinc-800/50 bg-zinc-900/30 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 shadow-sm shadow-indigo-500/10">
+              <MessageSquare className="w-5 h-5 text-indigo-500" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white tracking-tight leading-none">Conversaciones</h2>
+              <p className="text-[10px] text-zinc-500 font-medium mt-0.5">Bandeja de entrada</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">Conversations
-              {waitingCount > 0 && (
-                <span className="px-2 py-0.5 bg-warning text-gray-900 text-xs font-bold rounded-full">
-                  {waitingCount}
-                </span>
-              )}
-            </h2>
-          </div>
+          
+          {waitingCount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-xs font-bold text-amber-500">{waitingCount}</span>
+            </div>
+          )}
         </div>
-        <SessionList />
+
+        {/* List */}
+        <div className="flex-1 overflow-hidden relative">
+           <SessionList />
+        </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* COLUMN 2: Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-zinc-900/30 relative z-10">
+        
+        {/* Ambient Glow for Chat Area */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+
         {activeSession ? (
           <ChatWindow
             key={activeSession.sessionId}
@@ -124,11 +123,14 @@ export default function ChatPage() {
             targetMessageId={targetMessageId}
           />
         ) : (
-          <EmptyState />
+          <div className="flex-1 flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-[url('/assets/pattern.svg')] opacity-5" />
+            <EmptyState />
+          </div>
         )}
       </div>
 
-      {/* Contact Info Sidebar */}
+      {/* COLUMN 3: Info Sidebar (Collapsible) */}
       <ChatInfoSidebar
         sessionId={activeSession?.sessionId || null}
         isOpen={isSidebarOpen && !!activeSession}

@@ -47,7 +47,8 @@ import {
   Volume2,
   VolumeX,
   Code,
-  CheckCheck
+  CheckCheck,
+  CheckCircle2
 } from 'lucide-react';
 import {
   File as FileIcon,
@@ -72,12 +73,12 @@ interface ChatWindowProps {
 export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, targetMessageId }: ChatWindowProps) {
   const agent = useAuthStore((state) => state.agent);
   const { can } = usePermissions();
-  
+
   // Permission checks for chat actions
   const canClose = can('chats.close');
   const canTransfer = can('chats.transfer');
   const canReopen = can('chats.reopen');
-  
+
   const {
     messages,
     setMessages,
@@ -632,103 +633,114 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         </div>
       )}
 
-      {/* Closed Banner */}
+      {/* Closed Banner (Read Only Mode) */}
       {isClosed && (
-        // hidden banner in mobile view 
-        <div className="flex items-center justify-center gap-2 px-4 py-2 border-b border-gray-800 text-gray-400 text-sm bg-gray-950 h-[56px]">
-          <Lock className="w-4 h-4" />
-          <span>Modo solo lectura</span>
-          <span className="text-gray-600">•</span>
-          <span>{getCloseReasonLabel()}</span>
-          {session.closedAt && (
-            <>
-              <span className="text-gray-600">•</span>
-              <span>{formatClosedDate()}</span>
-            </>
-          )}
+        <div className="relative z-10 flex items-center justify-center w-full h-[56px] border-b border-zinc-800 bg-zinc-900/90 overflow-hidden">
+
+    
+          <div className="relative flex items-center gap-3 text-xs text-zinc-500">
+
+            {/* Icon Badge */}
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 shadow-sm">
+              <Lock className="w-3 h-3" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-zinc-400 tracking-wide">Solo Lectura</span>
+
+              <span className="w-1 h-1 rounded-full bg-zinc-800" />
+
+              <span className="text-zinc-500">
+                Razón: <span className="text-zinc-400">{getCloseReasonLabel()}</span>
+              </span>
+
+              {session.closedAt && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-zinc-800" />
+                  <span className="font-mono text-zinc-600">
+                    {formatClosedDate()}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Header Component - Fixed Height [56px] */}
       <div className={`
-      relative z-20 flex items-center justify-between px-4 h-[56px] w-full
-      border-b border-white/10 backdrop-blur-xl transition-all duration-300
-      ${isClosed ? 'bg-gray-50/50 dark:bg-[#0f1117]' : 'bg-gray-950'}
-    `}>
+  relative z-20 flex items-center justify-between px-4 h-[56px] w-full
+  border-b border-zinc-800/50 backdrop-blur-md transition-all duration-300
+  ${isClosed ? 'bg-zinc-900/50 grayscale-[0.5]' : 'bg-zinc-900/90'}
+`}>
 
         {/* --- LEFT: User Profile --- */}
         <div className="flex items-center gap-3.5 min-w-0 h-full overflow-hidden">
 
-          {/* Avatar Container (38px visual size) */}
-          <div className="relative shrink-0 flex items-center justify-center">
+          {/* Avatar Container */}
+          <div className="relative shrink-0">
             <div className={`
-            w-[38px] h-[38px] rounded-full flex items-center justify-center 
-            text-sm font-bold text-white shadow-inner
-            ${session.user.isSubscriber
-                ? 'bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 ring-2 ring-purple-500/20'
-                : 'bg-gradient-to-br from-gray-700 to-gray-800 ring-1 ring-white/10'
+        w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg overflow-hidden
+        ${session.user.isSubscriber
+                ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px]' // Borde gradiente
+                : 'bg-zinc-800 ring-1 ring-white/10'
               }
-          `}>
-              {
-                session.user.photoFileId ? (
+      `}>
+              <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden relative">
+                {session.user.photoFileId ? (
                   <img
                     src={`/api/media/${session.user.photoFileId}`}
-                    alt={`${session.user.firstName} ${session.user.lastName}`}
-                    className="w-full h-full object-cover rounded-full"
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="select-none">
+                  <span className="text-zinc-300 select-none">
                     {session.user.firstName.charAt(0).toUpperCase()}
-                    {session.user.lastName ? session.user.lastName.charAt(0).toUpperCase() : ''}
                   </span>
-                )
-              }
+                )}
+              </div>
             </div>
 
             {/* Platform Indicator (Telegram) */}
-            <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[2px] ring-2 ring-gray-900">
-              <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
+            <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
+              <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+              </svg>
             </div>
           </div>
 
-          {/* Text Info */}
+          {/* User Info Text */}
           <div className="flex flex-col justify-center gap-0.5 min-w-0">
-            {/* Name & Username Row */}
-            <div className="flex items-baseline gap-2 truncate">
-              <h3 className="text-[15px] font-semibold text-gray-100 truncate tracking-tight">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-zinc-100 truncate max-w-[150px]">
                 {session.user.firstName} {session.user.lastName || ''}
               </h3>
-              {session.user.username && (
-                <span className="text-xs text-gray-500 font-medium truncate">@{session.user.username}</span>
+              {session.user.isSubscriber && (
+                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-[9px] font-bold text-indigo-300 tracking-wider uppercase">
+                  PRO
+                </span>
               )}
             </div>
 
-            {/* Meta Badges Row */}
-            <div className="flex items-center gap-1.5">
-              <Badge icon={false} text={`ID: ${session.user.telegramId}`} />
-              <Badge icon={false} text={session.user.language || 'UNK'} className="uppercase font-bold" />
-
-              {session.user.isSubscriber && (
-                <div className="flex items-center gap-1 px-1.5 py-[1px] rounded bg-amber-500/10 border border-amber-500/20">
-                  <svg className="w-2.5 h-2.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                  <span className="text-[9px] font-bold text-amber-400 tracking-wider">PRO</span>
-                </div>
-              )}
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              {session.user.username && <span className="truncate hover:text-zinc-300 transition-colors">@{session.user.username}</span>}
+              <span className="w-1 h-1 rounded-full bg-zinc-700" />
+              <span className="font-mono opacity-80">{session.user.language?.toUpperCase() || 'UNK'}</span>
             </div>
           </div>
         </div>
 
         {/* --- RIGHT: Actions Toolbar --- */}
-        <div className="flex items-center h-full gap-1">
+        <div className="flex items-center gap-1">
 
-          {/* GROUP 1: Primary State Actions */}
-          <div className="flex items-center mr-1">
+          {/* GROUP 1: Primary Actions (Accept/Close/Reopen) */}
+          <div className="flex items-center mr-2">
             {session.status === 'waiting' && (
               <button
                 onClick={handleAccept}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-green-900/20 transition-all hover:translate-y-[-1px] active:translate-y-[0px] active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
-                <CheckCircle className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Aceptar</span>
               </button>
             )}
@@ -743,48 +755,50 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             {session.status === 'human' && isMySession && canClose && (
               <button
                 onClick={handleClose}
-                className="group flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 hover:border-gray-600 text-xs font-medium rounded-lg transition-all active:scale-95"
-                title="Cerrar y archivar ticket"
+                className="group flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-red-500/10 border border-zinc-700 hover:border-red-500/30 text-zinc-400 hover:text-red-400 text-xs font-medium rounded-lg transition-all"
+                title="Finalizar sesión"
               >
-                <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-400 transition-colors" />
-                <span className="group-hover:text-white">Cerrar</span>
+                <X className="w-3.5 h-3.5" />
+                <span>Cerrar</span>
               </button>
             )}
           </div>
 
           {/* Separator */}
-          <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
+          <div className="h-5 w-px bg-zinc-800 mx-1 hidden sm:block" />
 
-          {/* GROUP 2: Management Tools (Icon Only) */}
+          {/* GROUP 2: Tools (Category, Transfer, Block) */}
           {session.status === 'human' && isMySession && (
             <div className="flex items-center gap-1">
-              {/* Category Selector (Compact Mode) */}
-              <div className="scale-95 origin-right">
-                <CategorySelector
-                  sessionId={session.sessionId}
-                  currentCategory={(session as any).category}
-                  compact
-                />
-              </div>
+              <CategorySelector
+                sessionId={session.sessionId}
+                currentCategory={(session as any).category}
+                compact
+              />
 
               {canTransfer && (
-                <IconButton onClick={() => setShowTransferModal(true)} icon={<ArrowRightLeft className="w-4 h-4" />} tooltip="Transferir Agente" />
+                <button onClick={() => setShowTransferModal(true)} className="p-2 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors" title="Transferir">
+                  <ArrowRightLeft className="w-4 h-4" />
+                </button>
               )}
-              <IconButton onClick={() => setShowBlockModal(true)} icon={<Ban className="w-4 h-4" />} tooltip="Bloquear Usuario" danger />
+
+              <button onClick={() => setShowBlockModal(true)} className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Bloquear">
+                <Ban className="w-4 h-4" />
+              </button>
             </div>
           )}
 
           {/* Separator */}
-          {(session.status === 'human' && isMySession) && <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />}
+          {(session.status === 'human' && isMySession) && <div className="h-5 w-px bg-zinc-800 mx-1 hidden sm:block" />}
 
-          {/* GROUP 3: Utilities */}
+          {/* GROUP 3: Utilities & Sidebar Toggle */}
           <div className="flex items-center gap-1">
             <a
               href={`https://t.me/${session.user.username || ''}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-gray-400 hover:text-[#229ED9] hover:bg-[#229ED9]/10 rounded-lg transition-colors"
-              title="Abrir en Telegram Web"
+              className="p-2 text-zinc-400 hover:text-[#229ED9] hover:bg-[#229ED9]/10 rounded-lg transition-colors"
+              title="Abrir en Telegram"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
@@ -792,11 +806,11 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             {onToggleSidebar && (
               <button
                 onClick={onToggleSidebar}
-                className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${isSidebarOpen
-                  ? 'text-primary bg-primary/10 ring-1 ring-primary/20'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                className={`p-2 rounded-lg transition-all ${isSidebarOpen
+                  ? 'text-indigo-400 bg-indigo-500/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                   }`}
-                title={isSidebarOpen ? 'Ocultar detalles' : 'Ver detalles del usuario'}
+                title={isSidebarOpen ? 'Ocultar detalles' : 'Ver info del usuario'}
               >
                 {isSidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
               </button>
@@ -809,7 +823,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-neutral-950 bg-[radial-gradient(#3f3f4630_1px,transparent_1px)] [background-size:16px_16px]"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-zinc-950"
       >
         {/* Load More Indicator */}
         {hasMoreMessages && (
@@ -941,21 +955,21 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           onCancelReply={handleCancelReply}
         />
       ) : session.status === 'waiting' ? (
-        <div className="p-4 border-t border-gray-800 bg-warning/10 text-center">
-          <p className="text-warning text-sm">
+        <div className="p-4 border-t border-amber-700/50 bg-amber-500/10 text-center">
+          <p className="text-amber-500 text-sm">
             <Clock className="w-4 h-4 inline-block mr-2" />
             This session is waiting for an agent. Click "Accept" to start chatting.
           </p>
         </div>
       ) : session.status === 'human' && !isMySession ? (
-        <div className="p-4 border-t border-gray-800 bg-gray-800/50 text-center">
+        <div className="p-4 border-t text-center border-zinc-800 bg-zinc-900/50">
           <p className="text-gray-500 text-sm">
             <Headphones className="w-4 h-4 inline-block mr-2" />
             This session is assigned to {session.assignedAgent?.name}
           </p>
         </div>
       ) : isClosed ? (
-        <div className="p-4 border-t border-gray-800 bg-gray-800/30">
+        <div className="p-4 border-t border-zinc-800/50 bg-zinc-900/50 grayscale-[0.5] text-center">
           <div className="flex items-center justify-center gap-3 text-gray-500">
             <Archive className="w-5 h-5" />
             <div className="text-center">
@@ -1098,7 +1112,7 @@ function DateSeparator({ date }: { date: Date }) {
 
   return (
     <div className="flex justify-center my-4 sticky top-1 z-[1]">
-      <span className="px-4 py-1 text-xs font-medium rounded-full bg-gray-800/80 text-gray-400 backdrop-blur border border-gray-700 min-w-[200px] text-center">
+      <span className="px-4 py-1 text-xs font-medium rounded-full text-gray-400 backdrop-blur border border-zinc-700/70 min-w-[200px] text-center bg-zinc-900/70">
         {label}
       </span>
     </div>
@@ -1121,7 +1135,7 @@ function MessageBubble({
   if (isSystem) {
     return (
       <div className="flex justify-center my-2">
-        <span className="px-4 py-1.5 text-xs rounded-full bg-gray-800/70 text-gray-500 backdrop-blur">
+        <span className="px-4 py-1.5 text-xs rounded-full bg-zinc-800/70 text-gray-500 backdrop-blur">
           {message.content}
         </span>
       </div>
@@ -1218,7 +1232,7 @@ function MessageBubble({
             relative px-4 py-2.5 rounded-2xl transition
             ${isAgent
               ? 'bg-primary text-white rounded-br-md'
-              : 'bg-gray-800 text-white rounded-bl-md'}
+              : 'bg-primary/40 text-white rounded-bl-md'}
             ${isPinned ? 'ring-2 ring-primary/40' : ''}
             ${isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''}
             hover:shadow-md
@@ -1318,7 +1332,12 @@ function MediaImage({ url, alt, isAgent }: { url: string; alt: string; isAgent: 
       {/* Fullscreen Modal */}
       {isFullscreen && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+        style={
+          {
+            zIndex: 9999
+          }
+        }
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsFullscreen(false)}
         >
           <img

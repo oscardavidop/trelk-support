@@ -194,3 +194,44 @@ export async function isSessionActive(tokenHash: string): Promise<boolean> {
   const session = await AgentSession.findOne({ token: tokenHash, isActive: true });
   return !!session;
 }
+
+/**
+ * Count active sessions for an agent
+ */
+export async function countActiveSessions(agentId: string): Promise<number> {
+  return AgentSession.countDocuments({ agentId, isActive: true });
+}
+
+/**
+ * Invalidate oldest sessions if exceeding limit
+ * Returns the number of sessions invalidated
+ */
+export async function enforceSessionLimit(agentId: string, maxSessions: number): Promise<number> {
+  if (maxSessions <= 0) return 0; // 0 means unlimited
+  
+  const activeSessions = await AgentSession.find({ agentId, isActive: true })
+    .sort({ loginAt: 1 }) // Oldest first
+    .lean();
+  
+  // Calculate how many need to be invalidated (current count + 1 new session - maxSessions)
+  const sessionsToRemove = activeSessions.length - maxSessions + 1;
+  
+  if (sessionsToRemove <= 0) return 0;
+  
+  // Get the IDs of the oldest sessions to invalidate
+  const sessionIdsToInvalidate = activeSessions
+    .slice(0, sessionsToRemove)
+    .map(s => s._id);
+  
+  const result = await AgentSession.updateMany(
+    { _id: { $in: sessionIdsToInvalidate } },
+    { 
+      $set: { 
+        isActive: false, 
+        logoutAt: new Date() 
+      } 
+    }
+  );
+  
+  return result.modifiedCount;
+}

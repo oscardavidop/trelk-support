@@ -8,45 +8,50 @@ interface SurveyDisplayProps {
 }
 
 export const SurveyDisplay: React.FC<SurveyDisplayProps> = ({ survey, compact = false }) => {
-  // Configuración visual basada en el rating (Sentimiento)
+  
+  // Configuración visual basada en el rating (Sentimiento Refinado)
   const getSentimentConfig = (rating: number) => {
     if (rating >= 4) return {
-      color: 'text-emerald-500',
-      fill: 'fill-emerald-500',
-      bg: 'bg-emerald-50 dark:bg-emerald-900/10',
-      border: 'border-emerald-100 dark:border-emerald-900/30',
-      label: 'Experiencia Positiva'
+      color: 'text-emerald-400',
+      fill: 'fill-emerald-400',
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-500/20',
+      label: 'Positiva',
+      gradient: 'from-emerald-500/20 to-transparent'
     };
     if (rating === 3) return {
-      color: 'text-amber-500',
-      fill: 'fill-amber-500',
-      bg: 'bg-amber-50 dark:bg-amber-900/10',
-      border: 'border-amber-100 dark:border-amber-900/30',
-      label: 'Experiencia Neutral'
+      color: 'text-amber-400',
+      fill: 'fill-amber-400',
+      bg: 'bg-amber-500/10',
+      border: 'border-amber-500/20',
+      label: 'Neutral',
+      gradient: 'from-amber-500/20 to-transparent'
     };
     return {
-      color: 'text-rose-500',
-      fill: 'fill-rose-500',
-      bg: 'bg-rose-50 dark:bg-rose-900/10',
-      border: 'border-rose-100 dark:border-rose-900/30',
-      label: 'Experiencia Negativa'
+      color: 'text-rose-400',
+      fill: 'fill-rose-400',
+      bg: 'bg-rose-500/10',
+      border: 'border-rose-500/20',
+      label: 'Negativa',
+      gradient: 'from-rose-500/20 to-transparent'
     };
   };
 
+  // --- ESTADO VACÍO ---
   if (!survey) {
     return compact ? (
-      <span className="text-xs text-gray-400">-</span>
+      <span className="text-xs text-zinc-600">-</span>
     ) : (
-      <div className="flex flex-col items-center justify-center p-6 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/30 text-gray-400">
-        <MessageSquare className="w-8 h-8 mb-2 opacity-20" />
-        <span className="text-sm italic">El usuario no dejó encuesta</span>
+      <div className="flex flex-col items-center justify-center p-8 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/30 text-zinc-500">
+        <MessageSquare className="w-10 h-10 mb-3 opacity-20" />
+        <span className="text-sm font-medium">El usuario no dejó encuesta</span>
       </div>
     );
   }
 
   const sentiment = getSentimentConfig(survey.rating);
 
-  // Renderizado de estrellas reutilizable
+  // Componente de Estrellas
   const StarRating = ({ size = "md" }: { size?: "sm" | "md" }) => (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -54,77 +59,89 @@ export const SurveyDisplay: React.FC<SurveyDisplayProps> = ({ survey, compact = 
           key={star}
           className={`
             ${size === "sm" ? "w-3 h-3" : "w-5 h-5"} 
-            ${star <= survey.rating ? sentiment.color + " " + sentiment.fill : "text-gray-200 dark:text-gray-700"}
+            ${star <= survey.rating ? sentiment.color + " " + sentiment.fill : "text-zinc-700"}
+            transition-all duration-300
           `}
         />
       ))}
     </div>
   );
 
-  // --- MODO COMPACTO (Para tablas o listas) ---
+  // --- MODO COMPACTO (Tablas) ---
   if (compact) {
     return (
-      <div className="flex items-center gap-2" title={`Comentario: ${survey.comment || 'Ninguno'}`}>
+      <div className="flex items-center gap-2 group cursor-help" title={survey.comment || 'Sin comentarios'}>
         <StarRating size="sm" />
-        <span className={`text-xs font-bold ${sentiment.color}`}>{survey.rating}.0</span>
+        <span className={`text-xs font-bold font-mono ${sentiment.color}`}>{survey.rating}.0</span>
+        {survey.comment && <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 group-hover:bg-zinc-400 transition-colors" />}
       </div>
     );
   }
 
-  // --- MODO COMPLETO (Para detalles de chat) ---
+  // --- MODO COMPLETO (Detalles) ---
   return (
     <div className={`
-      relative overflow-hidden rounded-xl border p-5 transition-all
-      bg-white dark:bg-[#1a1d26] ${sentiment.border}
+      relative overflow-hidden rounded-2xl border p-6 transition-all shadow-sm
+      bg-zinc-900 ${sentiment.border}
     `}>
-      {/* Background decoration */}
-      <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10 ${sentiment.bg.replace('/10', '')}`} />
+      
+      {/* Background Gradient Glow */}
+      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${sentiment.gradient} opacity-20 blur-2xl pointer-events-none`} />
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-4 relative z-10">
+      <div className="flex items-start justify-between mb-6 relative z-10">
         <div>
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            Resultados de Encuesta
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${sentiment.bg} ${sentiment.color}`}>
+          <div className="flex items-center gap-3 mb-1">
+            <h4 className="text-sm font-bold text-white tracking-tight">
+              Resultados de Encuesta
+            </h4>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${sentiment.bg} ${sentiment.color} ${sentiment.border}`}>
               {sentiment.label}
             </span>
-          </h4>
-          <p className="text-xs text-gray-500 mt-1">Feedback del cliente</p>
+          </div>
+          <p className="text-xs text-zinc-400">Feedback enviado por el cliente</p>
         </div>
         
         <div className="flex flex-col items-end">
           <StarRating />
-          <span className={`text-2xl font-bold leading-none mt-1 ${sentiment.color}`}>
-            {survey.rating}<span className="text-sm text-gray-300 font-normal">/5</span>
-          </span>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className={`text-2xl font-bold leading-none ${sentiment.color}`}>
+              {survey.rating}
+            </span>
+            <span className="text-xs text-zinc-600 font-medium">/ 5</span>
+          </div>
         </div>
       </div>
 
       {/* Comment Section */}
-      {survey.comment ? (
-        <div className="relative p-4 bg-gray-50 dark:bg-black/20 rounded-lg border border-gray-100 dark:border-gray-800">
-          <Quote className="absolute top-3 left-3 w-4 h-4 text-gray-300 dark:text-gray-600" />
-          <p className="text-sm text-gray-700 dark:text-gray-300 italic pl-6 leading-relaxed relative z-10">
-            "{survey.comment}"
-          </p>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 text-xs text-gray-400 italic p-2">
-          <AlertCircle className="w-3.5 h-3.5" /> Sin comentarios adicionales
-        </div>
-      )}
+      <div className="mb-6">
+        {survey.comment ? (
+          <div className="relative p-4 bg-black/20 rounded-xl border border-zinc-800/50">
+            <Quote className="absolute top-3 left-3 w-4 h-4 text-zinc-600 opacity-50" />
+            <p className="text-sm text-zinc-300 italic pl-6 leading-relaxed relative z-10">
+              "{survey.comment}"
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs text-zinc-500 italic px-2 py-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 border-dashed justify-center">
+            <AlertCircle className="w-3.5 h-3.5" /> Sin comentarios adicionales
+          </div>
+        )}
+      </div>
 
       {/* Footer Metadata */}
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between pt-4 border-t border-zinc-800/80 text-xs">
+        <div className="flex items-center gap-2 text-zinc-500">
           <Calendar className="w-3.5 h-3.5" />
-          <span>{new Date(survey.submittedAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+          <span className="font-mono">{new Date(survey.submittedAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}</span>
         </div>
         
         {survey.agent && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md">
-            <User className="w-3 h-3" />
-            <span className="font-medium truncate max-w-[150px]">{survey.agent.name}</span>
+          <div className="flex items-center gap-2 pl-3 py-1 border-l border-zinc-800">
+            <div className="p-1 bg-zinc-800 rounded text-zinc-400">
+                <User className="w-3 h-3" />
+            </div>
+            <span className="font-medium text-zinc-300 truncate max-w-[120px]">{survey.agent.name}</span>
           </div>
         )}
       </div>

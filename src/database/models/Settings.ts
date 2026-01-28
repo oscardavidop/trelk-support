@@ -52,6 +52,7 @@ export interface ISecuritySettings {
   logCriticalEvents: boolean;
   sessionTimeoutMinutes: number;
   maxLoginAttempts: number;
+  maxSessionsPerAgent: number; // Max concurrent sessions per agent (0 = unlimited)
   twoFactorEnabled: boolean;
   // Password policy
   passwordMinLength: number;
@@ -153,6 +154,7 @@ const SettingsSchema = new Schema<ISettings>(
       logCriticalEvents: { type: Boolean, default: true },
       sessionTimeoutMinutes: { type: Number, default: 480 },
       maxLoginAttempts: { type: Number, default: 5 },
+      maxSessionsPerAgent: { type: Number, default: 3 }, // 0 = unlimited
       twoFactorEnabled: { type: Boolean, default: false },
       passwordMinLength: { type: Number, default: 8 },
       passwordRequireUppercase: { type: Boolean, default: true },

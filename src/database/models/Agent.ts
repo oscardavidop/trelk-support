@@ -135,6 +135,9 @@ export interface IAgent extends Document {
   // Permission version for cache invalidation
   permissionVersion?: number;
   
+  // Whether the agent can request permissions (can be blocked by admin)
+  canRequestPermissions?: boolean;
+  
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -233,6 +236,11 @@ const AgentSchema = new Schema<IAgent>(
     permissionVersion: {
       type: Number,
       default: 1,
+    },
+    // Whether the agent can request permissions
+    canRequestPermissions: {
+      type: Boolean,
+      default: true,
     },
     // Survey metrics
     metrics: {

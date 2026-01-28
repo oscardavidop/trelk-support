@@ -21,7 +21,8 @@ import {
   CheckCircle,
   X,
   Sparkles,
-  Clock
+  Clock,
+  Keyboard
 } from 'lucide-react';
 import type { SavedReply, SavedReplyStats } from '../types';
 import { PLACEHOLDERS } from '../types';
@@ -210,158 +211,131 @@ export default function SavedRepliesPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl">
-            <MessageSquare className="w-6 h-6 text-blue-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Respuestas Guardadas</h1>
-            <p className="text-sm text-gray-400">Plantillas de respuesta rápida para soporte</p>
-          </div>
-        </div>
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-blue-500/30">
+      
+      {/* Blue Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowPlaceholdersModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/80 hover:bg-gray-700 border border-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105"
-          >
-            <Code className="w-4 h-4" />
-            <span>Variables</span>
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all hover:scale-105 ${
-              showFilters 
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
-                : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700 border border-gray-700'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filtros</span>
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2.5 bg-gray-800/80 hover:bg-gray-700 border border-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => openFormModal()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl text-white font-medium transition-all hover:scale-105 shadow-lg shadow-blue-500/25"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nueva Respuesta</span>
-          </button>
-        </div>
-      </div>
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-blue-900/10">
+                <MessageSquare className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Respuestas Rápidas</h1>
+                <p className="text-sm text-zinc-400">Plantillas y atajos para el chat</p>
+              </div>
+            </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-4 gap-4 p-6 border-b border-gray-800">
-          <StatCard
-            icon={<MessageSquare className="w-5 h-5" />}
-            label="Total Respuestas"
-            value={stats.totalReplies}
-            color="blue"
-          />
-          <StatCard
-            icon={<Zap className="w-5 h-5" />}
-            label="Activas"
-            value={stats.activeReplies}
-            color="green"
-          />
-          <StatCard
-            icon={<TrendingUp className="w-5 h-5" />}
-            label="Uso Total"
-            value={stats.totalUsage}
-            color="purple"
-          />
-          <StatCard
-            icon={<Tag className="w-5 h-5" />}
-            label="Categorías"
-            value={categories.length}
-            color="yellow"
-          />
-        </div>
-      )}
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowPlaceholdersModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-300 transition-all"
+              >
+                <Code className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium">Variables</span>
+              </button>
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="border-b border-gray-800 px-6 py-4 bg-gray-900/50">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <button 
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+              </button>
+              
+              <button
+                onClick={() => openFormModal()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nueva Respuesta</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Stats Bar (Glassy) */}
+          {stats && (
+            <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6">
+              <StatBadge icon={MessageSquare} count={stats.totalReplies} label="Total" color="text-zinc-200" bg="bg-zinc-800" />
+              <div className="h-4 w-px bg-white/10" />
+              <StatBadge icon={Zap} count={stats.activeReplies} label="Activas" color="text-blue-400" bg="bg-blue-500/10" />
+              <div className="h-4 w-px bg-white/10" />
+              <StatBadge icon={TrendingUp} count={stats.totalUsage} label="Usos" color="text-purple-400" bg="bg-purple-500/10" />
+              <div className="h-4 w-px bg-white/10" />
+              <StatBadge icon={Tag} count={categories.length} label="Categorías" color="text-amber-400" bg="bg-amber-500/10" />
+            </div>
+          )}
+
+          {/* Toolbar (Search & Filters) */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[280px] max-w-md group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-blue-500 transition-colors" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar respuestas..."
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                placeholder="Buscar por título o contenido..."
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
               />
             </div>
 
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all min-w-40"
-            >
-              <option value="all">Todas las categorías</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-3">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
+              >
+                <option value="all">Todas las categorías</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
 
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                showInactive 
-                  ? 'bg-blue-500 border-blue-500' 
-                  : 'border-gray-600 group-hover:border-gray-500'
-              }`}>
-                {showInactive && <CheckCircle className="w-3 h-3 text-white" />}
-              </div>
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="hidden"
-              />
-              <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Mostrar inactivas</span>
-            </label>
+              <button
+                onClick={() => setShowInactive(!showInactive)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-all ${
+                  showInactive 
+                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {showInactive ? <CheckCircle className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border border-zinc-600" />}
+                <span>Inactivas</span>
+              </button>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {filteredReplies.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-            <div className="p-4 bg-gray-800/50 rounded-2xl mb-4">
-              <MessageSquare className="w-12 h-12 opacity-50" />
+        {/* Content Grid */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
+          {filteredReplies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
+              <MessageSquare className="w-16 h-16 mb-4 stroke-1" />
+              <p className="text-lg font-medium">No se encontraron respuestas</p>
             </div>
-            <p className="text-lg font-medium">No se encontraron respuestas</p>
-            {searchQuery && <p className="text-sm mt-1">Intenta ajustar tu búsqueda</p>}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {filteredReplies.map((reply) => (
-              <ReplyCard
-                key={reply._id}
-                reply={reply}
-                onEdit={() => openFormModal(reply)}
-                onDelete={() => openDeleteModal(reply)}
-                onCopy={() => copyToClipboard(reply.content, reply._id)}
-                isCopied={copiedId === reply._id}
-              />
-            ))}
-          </div>
-        )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredReplies.map((reply) => (
+                <ReplyCard
+                  key={reply._id}
+                  reply={reply}
+                  onEdit={() => openFormModal(reply)}
+                  onDelete={() => openDeleteModal(reply)}
+                  onCopy={() => copyToClipboard(reply.content, reply._id)}
+                  isCopied={copiedId === reply._id}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Form Modal */}
+      {/* Modals */}
       {showFormModal && (
         <FormModal
           isEditing={!!editingReply}
@@ -374,20 +348,15 @@ export default function SavedRepliesPage() {
         />
       )}
 
-      {/* Delete Modal */}
       {showDeleteModal && editingReply && (
         <DeleteModal
           reply={editingReply}
           isSaving={isSaving}
           onDelete={handleDelete}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setEditingReply(null);
-          }}
+          onClose={() => { setShowDeleteModal(false); setEditingReply(null); }}
         />
       )}
 
-      {/* Placeholders Modal */}
       {showPlaceholdersModal && (
         <PlaceholdersModal onClose={() => setShowPlaceholdersModal(false)} />
       )}
@@ -397,267 +366,201 @@ export default function SavedRepliesPage() {
 
 // Sub-components
 
-function StatCard({ 
-  icon, 
-  label, 
-  value, 
-  color 
-}: { 
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  color: 'blue' | 'green' | 'purple' | 'yellow';
-}) {
-  const colors = {
-    blue: 'from-blue-500/20 to-blue-600/10 text-blue-400 border-blue-500/20',
-    green: 'from-green-500/20 to-green-600/10 text-green-400 border-green-500/20',
-    purple: 'from-purple-500/20 to-purple-600/10 text-purple-400 border-purple-500/20',
-    yellow: 'from-yellow-500/20 to-yellow-600/10 text-yellow-400 border-yellow-500/20',
-  };
-
-  const iconColors = {
-    blue: 'bg-blue-500/20',
-    green: 'bg-green-500/20',
-    purple: 'bg-purple-500/20',
-    yellow: 'bg-yellow-500/20',
-  };
-
+function StatBadge({ icon: Icon, count, label, color, bg }: any) {
   return (
-    <div className={`p-4 bg-gradient-to-br ${colors[color]} rounded-xl border`}>
-      <div className="flex items-center gap-3">
-        <div className={`p-2.5 rounded-xl ${iconColors[color]}`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm text-gray-400">{label}</p>
-          <p className="text-2xl font-bold text-white">{value.toLocaleString()}</p>
-        </div>
+    <div className="flex items-center gap-3 px-3">
+      <div className={`p-1.5 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <div className="flex flex-col leading-none">
+        <span className={`font-bold text-lg ${color}`}>{count.toLocaleString()}</span>
+        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
       </div>
     </div>
   );
 }
 
-function ReplyCard({ 
-  reply, 
-  onEdit, 
-  onDelete, 
-  onCopy,
-  isCopied
-}: { 
-  reply: SavedReply;
-  onEdit: () => void;
-  onDelete: () => void;
-  onCopy: () => void;
-  isCopied?: boolean;
-}) {
+
+function ReplyCard({ reply, onEdit, onDelete, onCopy, isCopied }: any) {
   return (
-    <div className={`group p-5 bg-gray-800/40 rounded-xl border transition-all duration-200 ${
+    <div className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-hidden flex flex-col ${
       reply.isActive 
-        ? 'border-gray-700/50 hover:border-gray-600 hover:bg-gray-800/60' 
-        : 'border-gray-800/50 opacity-50'
+        ? 'border-zinc-800 hover:border-blue-500/30' 
+        : 'border-zinc-800/50 opacity-60 bg-zinc-900/30'
     }`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-semibold text-white truncate">{reply.title}</h3>
-            {!reply.isActive && (
-              <span className="px-2 py-0.5 bg-gray-700/50 text-gray-400 text-xs rounded-full">
-                Inactiva
-              </span>
-            )}
+      
+      <div className="p-5 flex-1">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1 min-w-0 pr-4">
+            <h3 className="font-semibold text-zinc-100 truncate text-lg mb-1">{reply.title}</h3>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              {reply.category && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded-md text-[10px] uppercase font-bold tracking-wider border border-zinc-700/50">
+                  {reply.category}
+                </span>
+              )}
+              {reply.shortcut && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-xs font-mono border border-blue-500/20">
+                  <Keyboard className="w-3 h-3" />
+                  /{reply.shortcut}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {reply.category && (
-              <span className="flex items-center gap-1 px-2.5 py-1 bg-gray-700/50 rounded-lg text-xs text-gray-400">
-                <Tag className="w-3 h-3" />
-                {reply.category}
-              </span>
-            )}
-            {reply.shortcut && (
-              <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-mono">
-                /{reply.shortcut}
-              </span>
-            )}
-            <span className="flex items-center gap-1 px-2.5 py-1 bg-gray-700/50 rounded-lg text-xs text-gray-500">
-              <TrendingUp className="w-3 h-3" />
-              {reply.usageCount || 0} usos
-            </span>
+
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+            <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
+              <Edit3 className="w-4 h-4" />
+            </button>
+            <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
-        
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+        <div className="relative">
+          <div className="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 text-sm text-zinc-400 font-mono leading-relaxed line-clamp-3">
+            {reply.content}
+          </div>
           <button
             onClick={onCopy}
-            className={`p-2 rounded-lg transition-all ${
+            className={`absolute bottom-2 right-2 p-1.5 rounded-lg border shadow-sm transition-all ${
               isCopied 
-                ? 'text-green-400 bg-green-500/10' 
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                ? 'bg-green-500 text-white border-green-600' 
+                : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500'
             }`}
-            title="Copiar"
           >
-            {isCopied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
-            title="Editar"
-          >
-            <Edit3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-            title="Eliminar"
-          >
-            <Trash2 className="w-4 h-4" />
+            {isCopied ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
-      
-      <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{reply.content}</p>
 
-      {reply.createdBy && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700/50 text-xs text-gray-500">
-          <Clock className="w-3 h-3" />
-          <span>Creado por {reply.createdBy.name}</span>
+      <div className="px-5 py-3 border-t border-zinc-800/50 bg-zinc-900/30 flex items-center justify-between text-xs text-zinc-500">
+        <div className="flex items-center gap-1.5">
+          <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
+          <span>{reply.usageCount || 0} usos</span>
         </div>
-      )}
+        {reply.createdBy && (
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{reply.createdBy.name}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function FormModal({
-  isEditing,
-  formData,
-  setFormData,
-  categories,
-  isSaving,
-  onSubmit,
-  onClose,
-}: {
-  isEditing: boolean;
-  formData: ReplyFormData;
-  setFormData: (data: ReplyFormData) => void;
-  categories: string[];
-  isSaving: boolean;
-  onSubmit: () => void;
-  onClose: () => void;
-}) {
+function FormModal({ isEditing, formData, setFormData, categories, isSaving, onSubmit, onClose }: any) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative w-full max-w-2xl bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50 bg-gray-800/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              {isEditing ? <Edit3 className="w-5 h-5 text-blue-400" /> : <Plus className="w-5 h-5 text-blue-400" />}
+            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              {isEditing ? <Edit3 className="w-5 h-5 text-blue-500" /> : <Plus className="w-5 h-5 text-blue-500" />}
             </div>
-            <h2 className="text-lg font-bold text-white">
-              {isEditing ? 'Editar Respuesta' : 'Nueva Respuesta'}
-            </h2>
+            <h2 className="text-lg font-bold text-white">{isEditing ? 'Editar Respuesta' : 'Nueva Respuesta'}</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
-        
-        <div className="p-6 space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Título</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Ej: Saludo inicial"
-              className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Contenido</label>
-            <textarea
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Escribe el contenido de la respuesta..."
-              rows={5}
-              className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
-            />
-            <p className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
-              <Code className="w-3 h-3" />
-              Usa variables como {'{userName}'}, {'{agentName}'} para personalizar
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+
+        <div className="p-6 space-y-6">
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Categoría</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Título</label>
               <input
                 type="text"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="Ej: Saludos"
-                list="categories"
-                className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Ej: Saludo inicial"
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
-              <datalist id="categories">
-                {categories.map(cat => (
-                  <option key={cat} value={cat} />
-                ))}
-              </datalist>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Atajo</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono">/</span>
-                <input
-                  type="text"
-                  value={formData.shortcut}
-                  onChange={(e) => setFormData({ ...formData, shortcut: e.target.value.replace(/\s/g, '') })}
-                  placeholder="saludo"
-                  className="w-full pl-8 pr-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-mono"
-                />
+              <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">
+                Contenido
+                <span className="normal-case text-zinc-500 ml-2 font-normal tracking-normal">(Soporta variables)</span>
+              </label>
+              <textarea
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                placeholder="Hola {userName}, ¿en qué puedo ayudarte hoy?"
+                rows={5}
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none font-mono text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Categoría</label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="Ej: Soporte"
+                    list="categories"
+                    className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                  <datalist id="categories">
+                    {categories.map((cat: string) => <option key={cat} value={cat} />)}
+                  </datalist>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Atajo (Shortcut)</label>
+                <div className="relative group">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono text-lg group-focus-within:text-blue-500">/</span>
+                  <input
+                    type="text"
+                    value={formData.shortcut}
+                    onChange={(e) => setFormData({ ...formData, shortcut: e.target.value.replace(/\s/g, '') })}
+                    placeholder="saludo"
+                    className="w-full pl-7 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div className={`w-12 h-7 rounded-full transition-all relative ${
-              formData.isActive ? 'bg-blue-500' : 'bg-gray-600'
-            }`}>
-              <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-md ${
-                formData.isActive ? 'left-6' : 'left-1'
-              }`} />
+
+            <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-6 rounded-full relative transition-colors ${formData.isActive ? 'bg-blue-600' : 'bg-zinc-700'}`}>
+                  <input 
+                    type="checkbox" 
+                    className="absolute inset-0 opacity-0 cursor-pointer" 
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                  />
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${formData.isActive ? 'left-5' : 'left-1'}`} />
+                </div>
+                <span className="text-sm font-medium text-zinc-300">Respuesta Activa</span>
+              </div>
+              <span className="text-xs text-zinc-500">
+                {formData.isActive ? 'Visible en el chat' : 'Oculta para los agentes'}
+              </span>
             </div>
-            <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
-              Respuesta activa
-            </span>
-          </label>
+          </div>
         </div>
-        
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700/50 bg-gray-800/30">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-xl transition-all"
-          >
-            Cancelar
-          </button>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800">
+          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={onSubmit}
-            disabled={isSaving || !formData.title.trim() || !formData.content.trim()}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
+            disabled={isSaving || !formData.title || !formData.content}
+            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>{isEditing ? 'Guardar Cambios' : 'Crear Respuesta'}</span>
-              </>
-            )}
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            <span>{isEditing ? 'Guardar Cambios' : 'Crear Respuesta'}</span>
           </button>
         </div>
       </div>
@@ -665,51 +568,26 @@ function FormModal({
   );
 }
 
-function DeleteModal({
-  reply,
-  isSaving,
-  onDelete,
-  onClose,
-}: {
-  reply: SavedReply;
-  isSaving: boolean;
-  onDelete: () => void;
-  onClose: () => void;
-}) {
+function DeleteModal({ reply, isSaving, onDelete, onClose }: any) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 black/6bg-0 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 p-6">
-        <div className="text-center">
-          <div className="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Trash2 className="w-7 h-7 text-red-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">Eliminar Respuesta</h2>
-          <p className="text-gray-400 mb-6 leading-relaxed">
-            ¿Estás seguro de eliminar "<span className="text-white font-medium">{reply.title}</span>"?
-            <br />
-            <span className="text-sm">Esta acción no se puede deshacer.</span>
-          </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 p-6 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+          <Trash2 className="w-8 h-8 text-red-500" />
         </div>
-        
+        <h2 className="text-xl font-bold text-white mb-2">Eliminar Respuesta</h2>
+        <p className="text-zinc-400 mb-6">
+          ¿Eliminar la respuesta "<span className="text-white font-medium">{reply.title}</span>"? <br/>
+          Esta acción no se puede deshacer.
+        </p>
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-5 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-all font-medium"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onDelete}
+          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
+          <button 
+            onClick={onDelete} 
             disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all font-medium disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
           >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             <span>Eliminar</span>
           </button>
         </div>
@@ -735,46 +613,45 @@ function PlaceholdersModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative w-full max-w-lg bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50 bg-gray-800/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
+            <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
               <Code className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h2 className="font-bold text-white">Variables Disponibles</h2>
-              <p className="text-sm text-gray-400">Usa estas variables en tus respuestas</p>
+              <h2 className="font-bold text-white">Variables Dinámicas</h2>
+              <p className="text-xs text-zinc-400">Haz clic para copiar e insertar en tus respuestas</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
         
-        <div className="p-4 space-y-2 max-h-96 overflow-auto">
+        <div className="p-4 space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
           {placeholderList.map(([key, description]) => (
-            <div
+            <button
               key={key}
-              className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-all group"
+              onClick={() => copyPlaceholder(key)}
+              className="w-full flex items-center justify-between p-4 bg-zinc-800/40 rounded-xl hover:bg-zinc-800 border border-transparent hover:border-purple-500/30 transition-all group text-left"
             >
-              <div>
-                <code className="text-purple-400 font-mono font-medium">{key}</code>
-                <p className="text-sm text-gray-400 mt-0.5">{description}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 font-mono text-xs border border-purple-500/20">
+                  {'{ }'}
+                </div>
+                <div>
+                  <code className="text-zinc-200 font-mono font-medium block mb-0.5">{key}</code>
+                  <p className="text-xs text-zinc-500">{description}</p>
+                </div>
               </div>
-              <button
-                onClick={() => copyPlaceholder(key)}
-                className={`p-2.5 rounded-lg transition-all ${
-                  copiedKey === key
-                    ? 'text-green-400 bg-green-500/10'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700 opacity-0 group-hover:opacity-100'
-                }`}
-              >
+              <div className={`p-2 rounded-lg transition-all ${
+                copiedKey === key ? 'text-green-400 bg-green-500/10' : 'text-zinc-500 group-hover:text-white group-hover:bg-zinc-700'
+              }`}>
                 {copiedKey === key ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
+              </div>
+            </button>
           ))}
         </div>
       </div>

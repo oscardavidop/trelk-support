@@ -531,13 +531,13 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       // Get all flows with their execution stats
       const flows = await Flow.find({})
-        .select('name status nodes triggers executionStats updatedAt')
+        .select('name status nodes triggers executionCount updatedAt errorCount executionStats avgExecutionTime')
         .lean();
 
       const flowStats: FlowStats[] = flows.map((flow: any) => {
         // Extract trigger types from nodes
         const triggerNodes = (flow.nodes || []).filter((n: any) => n.type === 'trigger');
-        const triggers = triggerNodes.map((n: any) => n.data?.triggerType || 'unknown');
+        const triggers = triggerNodes.map((n: any) => n.config?.triggerType || 'unknown');
 
         return {
           id: flow._id.toString(),
@@ -545,11 +545,11 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
           status: flow.status || 'draft',
           cachedInRedis: false, // Would check Redis cache
           triggers,
-          totalExecutions: flow.executionStats?.totalExecutions || 0,
+          totalExecutions: flow.executionCount || 0,
           successfulExecutions: flow.executionStats?.successfulExecutions || 0,
-          failedExecutions: flow.executionStats?.failedExecutions || 0,
-          lastExecutedAt: flow.executionStats?.lastExecutedAt?.toISOString(),
-          avgExecutionTimeMs: flow.executionStats?.avgExecutionTimeMs,
+          failedExecutions: flow.errorCount || 0,
+          lastExecutedAt: flow.lastExecutedAt?.toISOString(),
+          avgExecutionTimeMs: Math.round(flow.avgExecutionTime || 0)
         };
       });
 

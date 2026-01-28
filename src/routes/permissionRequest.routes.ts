@@ -19,6 +19,7 @@ import {
   isPermissionPending,
   isPermissionBlocked
 } from '../services/permissionRequest.service.js';
+import { Agent } from '../database/index.js';
 
 // ============= TYPES =============
 
@@ -82,6 +83,10 @@ export async function registerPermissionRequestRoutes(fastify: FastifyInstance):
       const agentId = request.agent!._id.toString();
       const { permission } = request.params;
       
+      // Check if agent is banned from requesting
+      const agent = await Agent.findById(agentId).select('canRequestPermissions').lean();
+      const isBanned = agent?.canRequestPermissions === false;
+      
       const [isPending, isBlocked] = await Promise.all([
         isPermissionPending(agentId, permission),
         isPermissionBlocked(agentId, permission)
@@ -92,7 +97,8 @@ export async function registerPermissionRequestRoutes(fastify: FastifyInstance):
         permission,
         isPending, 
         isBlocked,
-        canRequest: !isPending && !isBlocked
+        isBanned,
+        canRequest: !isPending && !isBlocked && !isBanned
       };
     }
   );
@@ -312,6 +318,64 @@ export async function registerPermissionRequestRoutes(fastify: FastifyInstance):
       
       const cancelled = await cancelRequest(requestId, reviewerId);
       return { ok: cancelled };
+    }
+  );
+
+  /**
+   * POST /api/permission-requests/agent/:agentId/toggle-ban
+   * Toggle whether an agent can request permissions (admin only)
+   */
+  fastify.post<{ Params: { agentId: string } }>(
+    '/agent/:agentId/toggle-ban',
+    { preHandler: requirePermission('permissions.write') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      
+      const agent = await Agent.findById(agentId);
+      if (!agent) {
+        return reply.code(404).send({ 
+          ok: false, 
+          error: 'Agente no encontrado' 
+        });
+      }
+      
+      // Toggle the ban status
+      const newStatus = agent.canRequestPermissions === false ? true : false;
+      agent.canRequestPermissions = newStatus;
+      await agent.save();
+      
+      return { 
+        ok: true, 
+        canRequestPermissions: newStatus,
+        message: newStatus 
+          ? 'El agente ahora puede solicitar permisos' 
+          : 'El agente ha sido bloqueado para solicitar permisos'
+      };
+    }
+  );
+
+  /**
+   * GET /api/permission-requests/agent/:agentId/can-request
+   * Check if an agent can request permissions
+   */
+  fastify.get<{ Params: { agentId: string } }>(
+    '/agent/:agentId/can-request',
+    { preHandler: requirePermission('permissions.write') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      
+      const agent = await Agent.findById(agentId).select('canRequestPermissions name');
+      if (!agent) {
+        return reply.code(404).send({ 
+          ok: false, 
+          error: 'Agente no encontrado' 
+        });
+      }
+      
+      return { 
+        ok: true, 
+        canRequestPermissions: agent.canRequestPermissions !== false 
+      };
     }
   );
 }

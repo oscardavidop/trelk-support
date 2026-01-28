@@ -307,6 +307,7 @@ import { es } from 'date-fns/locale';
 import type { Note } from '../../types';
 import { createNote, getUserNotes, deleteNote } from '../../services/contactApi';
 import { toast } from '../../stores/toastStore';
+import usePermissions from '../../hooks/usePermissions';
 
 interface NotesProps {
   userId: string;
@@ -337,6 +338,7 @@ export function SidebarNotes({ userId, sessionId, notesCount, latestNote, onNote
   const [pendingDeletes, setPendingDeletes] = useState<Set<string>>(new Set());
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { can } = usePermissions();
 
   // Auto-focus when opening add mode
   useEffect(() => {
@@ -449,6 +451,16 @@ export function SidebarNotes({ userId, sessionId, notesCount, latestNote, onNote
   };
 
   // --- Render ---
+  
+  if (!can('notes.read')) {
+    return (
+      <div className="px-3 py-2">
+        <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+          No tienes permiso para ver las notas.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="px-3 py-2 space-y-3">

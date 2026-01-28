@@ -43,7 +43,7 @@
 //   const handleReopen = () => {
 //     setIsLoading(true);
 //     socket?.emit('session:reopen', { sessionId });
-    
+
 //     setTimeout(() => {
 //       setIsLoading(false);
 //       setIsDialogOpen(false);
@@ -119,10 +119,10 @@
 
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogFooter,
   DialogDescription,
@@ -131,7 +131,8 @@ import { useSocket } from '../../hooks/useSocket';
 import { useAuth } from '../../hooks/useAuth';
 import { RotateCcw, Loader2, ShieldAlert, History, CheckCircle2 } from 'lucide-react';
 // Si tienes toast, úsalo, si no, puedes quitarlo
-import { toast } from 'sonner'; 
+import { toast } from 'sonner';
+import usePermissions from '../../hooks/usePermissions';
 
 interface ReopenChatButtonProps {
   sessionId: string;
@@ -156,20 +157,20 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   // Solo admin puede reabrir
-  const isAdmin = agent?.role === 'admin';
+  const { can } = usePermissions();
 
-  if (!isAdmin) return null;
+  if (!can('chats.reopen')) return null;
 
   const handleReopen = async () => {
     if (!socket) return;
-    
+
     setIsLoading(true);
 
     try {
       // Promesa simulada para dar tiempo a la UI
       await new Promise<void>((resolve) => {
         socket.emit('session:reopen', { sessionId });
-        setTimeout(resolve, 800); 
+        setTimeout(resolve, 800);
       });
 
       if (typeof toast !== 'undefined') toast.success('Chat reactivado correctamente');
@@ -194,9 +195,9 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
         title="Reactivar conversación"
       >
         <RotateCcw className={`w-4 h-4 ${reopenCount > 0 && size !== 'icon' ? 'mr-2' : ''}`} />
-        
+
         {size !== 'icon' && <span>Reabrir</span>}
-        
+
         {/* Badge contador estilo notificación */}
         {reopenCount > 0 && (
           <span className={`
@@ -212,17 +213,17 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         {/* Nota: DialogContent ya tiene bg-gray-900 por defecto en tu componente */}
         <DialogContent className="sm:max-w-[440px] border-gray-800">
-          
+
           <DialogHeader className="gap-2">
             {/* Icono decorativo centrado */}
             <div className="mx-auto bg-emerald-500/10 p-3 rounded-full w-fit mb-1 border border-emerald-500/20">
               <RotateCcw className="w-6 h-6 text-emerald-400" />
             </div>
-            
+
             <DialogTitle className="text-xl text-center">
               ¿Reactivar conversación?
             </DialogTitle>
-            
+
             <DialogDescription className="text-center text-gray-400">
               Esta acción moverá el chat de "Cerrado" a "Activo" o "En Espera".
             </DialogDescription>
@@ -256,17 +257,17 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
           </div>
 
           <DialogFooter className="gap-3 sm:gap-2">
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsDialogOpen(false)} 
+            <Button
+              variant="ghost"
+              onClick={() => setIsDialogOpen(false)}
               disabled={isLoading}
               className="hover:bg-gray-800 hover:text-white text-gray-400"
             >
               Cancelar
             </Button>
-            
-            <Button 
-              onClick={handleReopen} 
+
+            <Button
+              onClick={handleReopen}
               disabled={isLoading}
               className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 ring-0 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
             >

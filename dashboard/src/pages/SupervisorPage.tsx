@@ -9,19 +9,20 @@ import { useSupervisorStore, type AgentOverview } from '../stores/supervisorStor
 import { supervisorService } from '../services/supervisor.service';
 import { Navigate } from 'react-router-dom';
 import { ChatPreview } from '../components/supervisor/ChatPreview';
-import { 
-  Eye, 
-  Users, 
-  MessageCircle, 
-  AlertTriangle, 
-  Clock, 
+import {
+  Eye,
+  Users,
+  MessageCircle,
+  AlertTriangle,
+  Clock,
   RefreshCw,
   Send,
   PhoneForwarded,
   MessageSquare,
   CheckCircle2,
   XCircle,
-  Activity
+  Activity,
+  Shield
 } from 'lucide-react';
 
 interface LiveChat {
@@ -103,7 +104,7 @@ export default function SupervisorPage() {
   // Send whisper to agent
   const handleSendWhisper = async () => {
     if (!selectedChat || !whisperText.trim()) return;
-    
+
     setWhisperSending(true);
     try {
       await supervisorService.sendWhisper(selectedChat.sessionId, selectedChat.agentId, whisperText);
@@ -133,188 +134,150 @@ export default function SupervisorPage() {
   const slaWarning = liveChats.filter(c => c.slaStatus === 'warning').length;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-xl">
-            <Eye className="w-6 h-6 text-purple-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Panel de Supervisor</h1>
-            <p className="text-sm text-gray-400">Monitoreo en tiempo real de agentes y conversaciones</p>
-          </div>
-        </div>
-        
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>Actualizar</span>
-        </button>
-      </div>
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-purple-500/30">
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 p-6 border-b border-gray-800">
-        <StatCard
-          icon={<MessageCircle className="w-5 h-5" />}
-          label="Chats Activos"
-          value={stats?.totalActiveSessions || liveChats.length}
-          color="blue"
-          loading={isLoadingStats}
-        />
-        <StatCard
-          icon={<Clock className="w-5 h-5" />}
-          label="En Espera"
-          value={stats?.queuedSessions || 0}
-          color="yellow"
-          loading={isLoadingStats}
-        />
-        <StatCard
-          icon={<Users className="w-5 h-5" />}
-          label="Agentes Online"
-          value={stats?.onlineAgents || agents.filter(a => a.status === 'online').length}
-          subValue={`/ ${agents.length} total`}
-          color="green"
-          loading={isLoadingAgents}
-        />
-        <StatCard
-          icon={<AlertTriangle className="w-5 h-5" />}
-          label="SLA en Riesgo"
-          value={slaAtRisk}
-          subValue={slaWarning > 0 ? `+${slaWarning} advertencias` : undefined}
-          color="red"
-          loading={isLoadingStats}
-        />
-      </div>
+      {/* Purple Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Tabs */}
-        <div className="w-2/3 border-r border-gray-800 flex flex-col">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-800">
-            <TabButton
-              active={activeTab === 'agents'}
-              onClick={() => setActiveTab('agents')}
-              icon={<Users className="w-4 h-4" />}
-              label="Agentes"
-              badge={agents.length}
-            />
-            <TabButton
-              active={activeTab === 'chats'}
-              onClick={() => setActiveTab('chats')}
-              icon={<MessageCircle className="w-4 h-4" />}
-              label="Chats en Vivo"
-              badge={liveChats.length}
-            />
-            <TabButton
-              active={activeTab === 'sla'}
-              onClick={() => setActiveTab('sla')}
-              icon={<AlertTriangle className="w-4 h-4" />}
-              label="Alertas SLA"
-              badge={slaAtRisk + slaWarning}
-              badgeColor={slaAtRisk > 0 ? 'red' : 'yellow'}
-            />
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-purple-900/10">
+                <Shield className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Panel de Supervisor</h1>
+                <p className="text-sm text-zinc-400">Monitoreo y gestión en tiempo real</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all flex items-center gap-2"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+              <span className="text-sm font-medium">Actualizar</span>
+            </button>
           </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 overflow-auto p-4">
-            {activeTab === 'agents' && (
-              <AgentGrid agents={agents} loading={isLoadingAgents} />
-            )}
-            {activeTab === 'chats' && (
-              <LiveChatsList 
-                chats={liveChats} 
-                selectedChat={selectedChat}
-                onSelectChat={setSelectedChat}
-                onTakeOver={handleTakeOver}
-              />
-            )}
-            {activeTab === 'sla' && (
-              <SLAAlerts 
-                chats={liveChats.filter(c => c.slaStatus !== 'ok')} 
-                onSelectChat={setSelectedChat}
-              />
+          {/* Stats Bar (Glassy) */}
+          <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6 overflow-x-auto">
+            <StatBadge icon={MessageCircle} count={stats?.totalActiveSessions || liveChats.length} label="Chats Activos" color="text-blue-400" bg="bg-blue-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Clock} count={stats?.queuedSessions || 0} label="En Espera" color="text-amber-400" bg="bg-amber-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Users} count={stats?.onlineAgents || agents.filter(a => a.status === 'online').length} label="Agentes Online" color="text-emerald-400" bg="bg-emerald-500/10" />
+            {(slaAtRisk > 0 || slaWarning > 0) && (
+              <>
+                <div className="h-4 w-px bg-white/10" />
+                <StatBadge icon={AlertTriangle} count={slaAtRisk} label="SLA Crítico" color="text-red-400" bg="bg-red-500/10" alert />
+              </>
             )}
           </div>
         </div>
 
-        {/* Right Panel - Chat Preview & Whisper */}
-        <div className="w-1/3 flex flex-col">
-          {selectedChat ? (
-            <>
-              {/* Chat Info */}
-              <div className="p-4 border-b border-gray-800">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-white">{selectedChat.userName}</h3>
-                    <p className="text-sm text-gray-400">
-                      Agente: {selectedChat.agentName}
-                    </p>
+        {/* Main Content Area */}
+        <div className="flex-1 flex overflow-hidden border-t border-zinc-800/50">
+
+          {/* Left Panel: Lists */}
+          <div className="w-2/5 xl:w-1/3 border-r border-zinc-800 flex flex-col bg-zinc-900/30">
+            {/* Tabs */}
+            <div className="flex border-b border-zinc-800 bg-zinc-950/50">
+              <TabButton active={activeTab === 'agents'} onClick={() => setActiveTab('agents')} icon={Users} label="Agentes" badge={agents.length} />
+              <TabButton active={activeTab === 'chats'} onClick={() => setActiveTab('chats')} icon={MessageCircle} label="Chats" badge={liveChats.length} />
+              <TabButton active={activeTab === 'sla'} onClick={() => setActiveTab('sla')} icon={AlertTriangle} label="SLA" badge={slaAtRisk + slaWarning} alert={slaAtRisk > 0} />
+            </div>
+
+            {/* List Content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
+              {activeTab === 'agents' && (
+                isLoadingAgents ? <LoadingSkeleton /> : <AgentList agents={agents} />
+              )}
+
+              {activeTab === 'chats' && (
+                <LiveChatsList chats={liveChats} selectedChat={selectedChat} onSelectChat={setSelectedChat} />
+              )}
+
+              {activeTab === 'sla' && (
+                <SLAAlerts chats={liveChats.filter(c => c.slaStatus !== 'ok')} onSelectChat={setSelectedChat} />
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel: Chat Detail */}
+          <div className="flex-1 flex flex-col bg-zinc-950/80 relative">
+            {selectedChat ? (
+              <>
+                {/* Chat Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-bold border border-white/10">
+                      {selectedChat.userName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">{selectedChat.userName}</h3>
+                      <div className="flex items-center gap-2 text-xs text-zinc-400">
+                        <span>Agente: <span className="text-zinc-300">{selectedChat.agentName}</span></span>
+                        <span>•</span>
+                        <SLABadge status={selectedChat.slaStatus} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  <button
+                    onClick={() => handleTakeOver(selectedChat.sessionId)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-sm font-medium border border-orange-500/20 transition-colors"
+                  >
+                    <PhoneForwarded className="w-4 h-4" />
+                    <span>Tomar Control</span>
+                  </button>
+                </div>
+
+                {/* Chat Area */}
+                <div className="flex-1 overflow-hidden relative">
+                  <ChatPreview
+                    sessionId={selectedChat.sessionId}
+                    userName={selectedChat.userName}
+                    agentName={selectedChat.agentName}
+                  />
+                </div>
+
+                {/* Supervisor Whisper Input */}
+                <div className="p-4 border-t border-zinc-800 bg-zinc-900">
+                  <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-purple-400">
+                    <Eye className="w-3 h-3" /> Modo Supervisión (Privado)
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={whisperText}
+                      onChange={(e) => setWhisperText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendWhisper()}
+                      placeholder="Escribe un mensaje privado para el agente..."
+                      className="w-full pl-4 pr-12 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                    />
                     <button
-                      onClick={() => handleTakeOver(selectedChat.sessionId)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 transition-colors text-sm"
+                      onClick={handleSendWhisper}
+                      disabled={!whisperText.trim() || whisperSending}
+                      className="absolute right-2 top-1.5 p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:bg-zinc-800"
                     >
-                      <PhoneForwarded className="w-4 h-4" />
-                      <span>Tomar</span>
+                      {whisperSending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 opacity-60">
+                <MessageSquare className="w-16 h-16 mb-4 stroke-1" />
+                <p className="text-lg font-medium">Selecciona una conversación</p>
+                <p className="text-sm">para monitorear o intervenir</p>
               </div>
-
-              {/* Chat Preview (Read-only) */}
-              <div className="flex-1 overflow-hidden flex flex-col bg-gray-900/50">
-                <ChatPreview
-                  sessionId={selectedChat.sessionId}
-                  userName={selectedChat.userName}
-                  agentName={selectedChat.agentName}
-                />
-              </div>
-
-              {/* Whisper Box */}
-              <div className="p-4 border-t border-gray-800 bg-gray-900">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-medium text-purple-400">Whisper al agente</span>
-                  <span className="text-xs text-gray-500">(Solo el agente verá esto)</span>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={whisperText}
-                    onChange={(e) => setWhisperText(e.target.value)}
-                    placeholder="Escribe un mensaje privado para el agente..."
-                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendWhisper()}
-                  />
-                  <button
-                    onClick={handleSendWhisper}
-                    disabled={!whisperText.trim() || whisperSending}
-                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {whisperSending ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Eye className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                <p>Selecciona un chat para ver detalles</p>
-                <p className="text-sm mt-1">y enviar whispers al agente</p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -323,84 +286,34 @@ export default function SupervisorPage() {
 
 // Sub-components
 
-function StatCard({ 
-  icon, 
-  label, 
-  value, 
-  subValue, 
-  color, 
-  loading 
-}: { 
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  subValue?: string;
-  color: 'blue' | 'yellow' | 'green' | 'red';
-  loading?: boolean;
-}) {
-  const colors = {
-    blue: 'bg-blue-500/20 text-blue-400',
-    yellow: 'bg-yellow-500/20 text-yellow-400',
-    green: 'bg-green-500/20 text-green-400',
-    red: 'bg-red-500/20 text-red-400',
-  };
 
+function StatBadge({ icon: Icon, count, label, color, bg, alert }: any) {
   return (
-    <div className="p-4 bg-gray-900 rounded-xl border border-gray-800">
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${colors[color]}`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm text-gray-400">{label}</p>
-          <div className="flex items-baseline gap-1">
-            <p className="text-2xl font-bold text-white">
-              {loading ? '...' : value}
-            </p>
-            {subValue && (
-              <span className="text-sm text-gray-500">{subValue}</span>
-            )}
-          </div>
-        </div>
+    <div className={`flex items-center gap-3 px-3 py-1 rounded-xl transition-all min-w-fit ${alert ? 'animate-pulse' : ''}`}>
+      <div className={`p-1.5 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <div className="flex flex-col leading-none">
+        <span className={`font-bold text-lg ${color}`}>{count}</span>
+        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
       </div>
     </div>
   );
 }
 
-function TabButton({ 
-  active, 
-  onClick, 
-  icon, 
-  label, 
-  badge, 
-  badgeColor = 'gray' 
-}: { 
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  badge?: number;
-  badgeColor?: 'gray' | 'red' | 'yellow';
-}) {
-  const badgeColors = {
-    gray: 'bg-gray-700 text-gray-300',
-    red: 'bg-red-500 text-white',
-    yellow: 'bg-yellow-500 text-gray-900',
-  };
-
+function TabButton({ active, onClick, icon: Icon, label, badge, alert }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-        active
-          ? 'border-purple-500 text-purple-400 bg-purple-500/10'
-          : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800'
-      }`}
+      className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-all ${active
+          ? 'border-purple-500 text-purple-400 bg-purple-500/5'
+          : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-900'
+        }`}
     >
-      {icon}
-      <span className="font-medium">{label}</span>
-      {badge !== undefined && (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badgeColors[badgeColor]}`}>
+      <Icon className="w-4 h-4" />
+      <span className="text-sm font-medium">{label}</span>
+      {badge > 0 && (
+        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${alert ? 'bg-red-500 text-white' : 'bg-zinc-800 text-zinc-400'}`}>
           {badge}
         </span>
       )}
@@ -408,226 +321,142 @@ function TabButton({
   );
 }
 
-function AgentGrid({ agents, loading }: { agents: AgentOverview[]; loading: boolean }) {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <div key={i} className="p-4 bg-gray-800/50 rounded-xl animate-pulse h-32" />
-        ))}
-      </div>
-    );
-  }
-
-  if (agents.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay agentes disponibles</p>
-      </div>
-    );
-  }
+function AgentList({ agents }: { agents: AgentOverview[] }) {
+  if (agents.length === 0) return <EmptyState icon={Users} text="No hay agentes conectados" />;
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <>
       {agents.map(agent => (
-        <AgentCard key={agent.id} agent={agent} />
-      ))}
-    </div>
-  );
-}
-
-function AgentCard({ agent }: { agent: AgentOverview }) {
-  const statusColors = {
-    online: 'bg-green-500',
-    away: 'bg-yellow-500',
-    offline: 'bg-gray-500',
-  };
-
-  const statusLabels = {
-    online: 'En línea',
-    away: 'Ausente',
-    offline: 'Desconectado',
-  };
-
-  return (
-    <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-gray-600 transition-colors">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="relative">
-          <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-medium">
-            {agent.name.charAt(0).toUpperCase()}
+        <div key={agent.id} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl hover:bg-zinc-800/50 transition-colors">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-xs font-bold text-zinc-300 border border-zinc-700">
+                  {agent.name.charAt(0)}
+                </div>
+                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-zinc-900 ${agent.status === 'online' ? 'bg-emerald-500' : agent.status === 'away' ? 'bg-amber-500' : 'bg-zinc-500'
+                  }`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">{agent.name}</p>
+                <p className="text-[10px] text-zinc-500 capitalize">{agent.status}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">{agent.activeChats}</p>
+              <p className="text-[10px] text-zinc-500">Chats</p>
+            </div>
           </div>
-          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-800 ${statusColors[agent.status]}`} />
+          <div className="flex gap-2">
+            <MetricPill label="Avg Time" value={agent.avgResponseTime || '-'} />
+            {/* Add more metrics if needed */}
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-white truncate">{agent.name}</p>
-          <p className="text-xs text-gray-400">{statusLabels[agent.status]}</p>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-2 text-center">
-        <div className="p-2 bg-gray-900/50 rounded-lg">
-          <p className="text-lg font-bold text-white">{agent.activeChats}</p>
-          <p className="text-xs text-gray-500">Activos</p>
-        </div>
-        <div className="p-2 bg-gray-900/50 rounded-lg">
-          <p className="text-lg font-bold text-white">{agent.avgResponseTime || '--'}</p>
-          <p className="text-xs text-gray-500">Promedio</p>
-        </div>
-      </div>
-    </div>
+      ))}
+    </>
   );
 }
 
-function LiveChatsList({ 
-  chats, 
-  selectedChat, 
-  onSelectChat, 
-  onTakeOver 
-}: { 
-  chats: LiveChat[];
-  selectedChat: LiveChat | null;
-  onSelectChat: (chat: LiveChat) => void;
-  onTakeOver: (sessionId: string) => void;
-}) {
-  if (chats.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay chats activos en este momento</p>
-      </div>
-    );
-  }
+function LiveChatsList({ chats, selectedChat, onSelectChat }: { chats: LiveChat[], selectedChat: LiveChat | null, onSelectChat: (chat: LiveChat) => void }) {
+  if (chats.length === 0) return <EmptyState icon={MessageCircle} text="No hay chats activos" />;
 
   return (
-    <div className="space-y-2">
+    <>
       {chats.map(chat => (
-        <div
+        <button
           key={chat.sessionId}
           onClick={() => onSelectChat(chat)}
-          className={`p-4 rounded-xl border cursor-pointer transition-colors ${
-            selectedChat?.sessionId === chat.sessionId
-              ? 'bg-purple-500/10 border-purple-500'
-              : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
-          }`}
+          className={`w-full text-left p-3 rounded-xl border transition-all ${selectedChat?.sessionId === chat.sessionId
+              ? 'bg-purple-500/10 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.1)]'
+              : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700'
+            }`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-white">{chat.userName}</span>
-              <SLABadge status={chat.slaStatus} />
-            </div>
-            <span className="text-xs text-gray-500">
+          <div className="flex justify-between items-start mb-1">
+            <span className="font-medium text-zinc-200 text-sm">{chat.userName}</span>
+            <span className="text-[10px] text-zinc-500 font-mono">
               {Math.floor(chat.duration / 60)}:{(chat.duration % 60).toString().padStart(2, '0')}
             </span>
           </div>
-          <p className="text-sm text-gray-400 truncate">{chat.lastMessage || 'Sin mensajes'}</p>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-gray-500">Agente: {chat.agentName}</span>
-            <span className="text-xs text-gray-500">{chat.messagesCount} mensajes</span>
+
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs text-zinc-500 truncate max-w-[120px]">{chat.agentName}</span>
+            <SLABadge status={chat.slaStatus} mini />
           </div>
-        </div>
+
+          <p className="text-xs text-zinc-400 truncate opacity-80 pl-2 border-l-2 border-zinc-700">
+            {chat.lastMessage || '...'}
+          </p>
+        </button>
       ))}
-    </div>
+    </>
   );
 }
 
-function SLABadge({ status }: { status: 'ok' | 'warning' | 'critical' }) {
-  const styles = {
-    ok: 'bg-green-500/20 text-green-400',
-    warning: 'bg-yellow-500/20 text-yellow-400',
-    critical: 'bg-red-500/20 text-red-400',
-  };
-
-  const labels = {
-    ok: 'OK',
-    warning: 'Advertencia',
-    critical: 'Crítico',
-  };
-
-  const icons = {
-    ok: <CheckCircle2 className="w-3 h-3" />,
-    warning: <Clock className="w-3 h-3" />,
-    critical: <XCircle className="w-3 h-3" />,
-  };
+function SLAAlerts({ chats, onSelectChat }: { chats: LiveChat[], onSelectChat: (chat: LiveChat) => void }) {
+  if (chats.length === 0) return <EmptyState icon={CheckCircle2} text="Todo bajo control" color="text-emerald-500" />;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
-      {icons[status]}
-      {labels[status]}
+    <>
+      {chats.map(chat => (
+        <button
+          key={chat.sessionId}
+          onClick={() => onSelectChat(chat)}
+          className={`w-full text-left p-3 rounded-xl border mb-2 transition-all ${chat.slaStatus === 'critical'
+              ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
+              : 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20'
+            }`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-medium text-white text-sm">{chat.userName}</span>
+            <AlertTriangle className={`w-4 h-4 ${chat.slaStatus === 'critical' ? 'text-red-400' : 'text-amber-400'}`} />
+          </div>
+          <div className="flex justify-between items-center text-xs opacity-80">
+            <span className={chat.slaStatus === 'critical' ? 'text-red-300' : 'text-amber-300'}>
+              {chat.agentName}
+            </span>
+            <span className="font-mono">
+              Wait: {Math.floor(chat.duration / 60)}m
+            </span>
+          </div>
+        </button>
+      ))}
+    </>
+  );
+}
+
+const MetricPill = ({ label, value }: { label: string, value: string | number }) => (
+  <div className="px-2 py-1 bg-zinc-950 rounded text-[10px] text-zinc-400 border border-zinc-800">
+    <span className="opacity-70 mr-1">{label}:</span>
+    <span className="text-zinc-200 font-medium">{value}</span>
+  </div>
+);
+
+const SLABadge = ({ status, mini }: { status: string, mini?: boolean }) => {
+  const styles = {
+    ok: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    warning: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    critical: 'text-red-400 bg-red-500/10 border-red-500/20',
+  };
+  const s = styles[status as keyof typeof styles] || styles.ok;
+
+  if (mini) return <div className={`w-2 h-2 rounded-full ${s.split(' ')[1].replace('/10', '')}`} />;
+
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${s}`}>
+      {status}
     </span>
   );
-}
+};
 
-function SLAAlerts({ 
-  chats, 
-  onSelectChat 
-}: { 
-  chats: LiveChat[];
-  onSelectChat: (chat: LiveChat) => void;
-}) {
-  if (chats.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50 text-green-500" />
-        <p className="text-green-400">Todos los chats están dentro del SLA</p>
-        <p className="text-sm mt-1">No hay alertas en este momento</p>
-      </div>
-    );
-  }
+const EmptyState = ({ icon: Icon, text, color = 'text-zinc-500' }: any) => (
+  <div className={`flex flex-col items-center justify-center py-10 opacity-60 ${color}`}>
+    <Icon className="w-10 h-10 mb-2 stroke-1" />
+    <p className="text-sm font-medium">{text}</p>
+  </div>
+);
 
-  const critical = chats.filter(c => c.slaStatus === 'critical');
-  const warning = chats.filter(c => c.slaStatus === 'warning');
-
-  return (
-    <div className="space-y-6">
-      {critical.length > 0 && (
-        <div>
-          <h3 className="flex items-center gap-2 text-red-400 font-medium mb-3">
-            <XCircle className="w-4 h-4" />
-            Críticos ({critical.length})
-          </h3>
-          <div className="space-y-2">
-            {critical.map(chat => (
-              <AlertCard key={chat.sessionId} chat={chat} onClick={() => onSelectChat(chat)} />
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {warning.length > 0 && (
-        <div>
-          <h3 className="flex items-center gap-2 text-yellow-400 font-medium mb-3">
-            <AlertTriangle className="w-4 h-4" />
-            Advertencias ({warning.length})
-          </h3>
-          <div className="space-y-2">
-            {warning.map(chat => (
-              <AlertCard key={chat.sessionId} chat={chat} onClick={() => onSelectChat(chat)} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AlertCard({ chat, onClick }: { chat: LiveChat; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-        chat.slaStatus === 'critical'
-          ? 'bg-red-500/10 border-red-500/30 hover:border-red-500'
-          : 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="font-medium text-white">{chat.userName}</span>
-        <span className="text-xs text-gray-400">
-          Esperando {Math.floor(chat.duration / 60)} min
-        </span>
-      </div>
-      <p className="text-sm text-gray-400">Agente: {chat.agentName}</p>
-    </button>
-  );
-}
+const LoadingSkeleton = () => (
+  <div className="space-y-3">
+    {[1, 2, 3].map(i => <div key={i} className="h-20 bg-zinc-900/50 rounded-xl animate-pulse" />)}
+  </div>
+);

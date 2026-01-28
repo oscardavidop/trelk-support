@@ -28,7 +28,8 @@ import {
   Clock,
   Star,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 import type { Agent, OnlineStatus } from '../types';
 
@@ -291,135 +292,127 @@ export default function AgentsPage() {
     );
   }
 
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-950">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl">
-            <Users className="w-6 h-6 text-green-400" />
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-emerald-500/30">
+
+      {/* Green Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-600/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-emerald-900/10">
+                <Users className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Equipo de Soporte</h1>
+                <p className="text-sm text-zinc-400">Gestión de agentes y rendimiento</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+              </button>
+
+              <button
+                onClick={() => openFormModal()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-medium rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nuevo Agente</span>
+              </button>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Agentes</h1>
-            <p className="text-sm text-gray-400">Gestiona el equipo de soporte</p>
+
+          {/* Stats Bar (Glassy) */}
+          <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6">
+            <StatBadge icon={Users} count={stats.total} label="Total" color="text-zinc-200" bg="bg-zinc-800" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={UserCheck} count={stats.online} label="En Línea" color="text-emerald-400" bg="bg-emerald-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Shield} count={stats.supervisors} label="Supervisores" color="text-purple-400" bg="bg-purple-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={ShieldCheck} count={stats.admins} label="Admins" color="text-amber-400" bg="bg-amber-500/10" />
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all hover:scale-105 ${
-              showFilters
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700 border border-gray-700'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filtros</span>
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2.5 bg-gray-800/80 hover:bg-gray-700 border border-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => openFormModal()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white font-medium transition-all hover:scale-105 shadow-lg shadow-green-500/25"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Agente</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 p-6 border-b border-gray-800">
-        <StatCard icon={<Users className="w-5 h-5" />} label="Total Agentes" value={stats.total} color="green" />
-        <StatCard icon={<UserCheck className="w-5 h-5" />} label="En Línea" value={stats.online} color="blue" />
-        <StatCard icon={<Shield className="w-5 h-5" />} label="Supervisores" value={stats.supervisors} color="purple" />
-        <StatCard icon={<ShieldCheck className="w-5 h-5" />} label="Administradores" value={stats.admins} color="amber" />
-      </div>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="border-b border-gray-800 px-6 py-4 bg-gray-900/50">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          {/* Toolbar (Search & Filters) */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[280px] max-w-md group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre o email..."
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
+                placeholder="Buscar agente..."
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
               />
             </div>
 
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all min-w-40"
-            >
-              <option value="all">Todos los roles</option>
-              <option value="support">Agente</option>
-              <option value="junior">Junior</option>
-              <option value="supervisor">Supervisores</option>
-              <option value="admin">Administradores</option>
-            </select>
+            <div className="flex items-center gap-3">
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 cursor-pointer"
+              >
+                <option value="all">Todos los roles</option>
+                <option value="support">Agente</option>
+                <option value="junior">Junior</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="admin">Admin</option>
+              </select>
 
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all min-w-40"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="available">Disponibles</option>
-              <option value="busy">Ocupados</option>
-              <option value="away">Ausentes</option>
-              <option value="offline">Desconectados</option>
-            </select>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 cursor-pointer"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="available">Disponible</option>
+                <option value="busy">Ocupado</option>
+                <option value="away">Ausente</option>
+                <option value="offline">Offline</option>
+              </select>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {filteredAgents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-            <div className="p-4 bg-gray-800/50 rounded-2xl mb-4">
-              <Users className="w-12 h-12 opacity-50" />
+        {/* Content Grid */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
+          {filteredAgents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
+              <Users className="w-16 h-16 mb-4 stroke-1" />
+              <p className="text-lg font-medium">No se encontraron agentes</p>
             </div>
-            <p className="text-lg font-medium">No se encontraron agentes</p>
-            {searchQuery && <p className="text-sm mt-1">Intenta ajustar tu búsqueda</p>}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredAgents.map((agent) => (
-              <AgentCard
-                key={agent._id}
-                agent={agent}
-                isCurrentUser={currentAgent?._id === agent._id}
-                activeDropdown={activeDropdown}
-                setActiveDropdown={setActiveDropdown}
-                onEdit={() => openFormModal(agent)}
-                onDelete={() => {
-                  setEditingAgent(agent);
-                  setShowDeleteModal(true);
-                }}
-                onResetPassword={() => {
-                  setEditingAgent(agent);
-                  setShowResetPasswordModal(true);
-                }}
-                onToggleActive={() => handleToggleActive(agent)}
-              />
-            ))}
-          </div>
-        )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+              {filteredAgents.map((agent) => (
+                <AgentCard
+                  key={agent._id}
+                  agent={agent}
+                  isCurrentUser={currentAgent?._id === agent._id}
+                  activeDropdown={activeDropdown}
+                  setActiveDropdown={setActiveDropdown}
+                  onEdit={() => openFormModal(agent)}
+                  onDelete={() => { setEditingAgent(agent); setShowDeleteModal(true); }}
+                  onResetPassword={() => { setEditingAgent(agent); setShowResetPasswordModal(true); }}
+                  onToggleActive={() => handleToggleActive(agent)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Form Modal */}
+      {/* Modals */}
       {showFormModal && (
         <FormModal
           isEditing={!!editingAgent}
@@ -435,29 +428,22 @@ export default function AgentsPage() {
         />
       )}
 
-      {/* Delete Modal */}
+      {/* Reutilizando tus modales Delete y Reset con estilo actualizado en el componente */}
       {showDeleteModal && editingAgent && (
         <DeleteModal
           agent={editingAgent}
           isSaving={isSaving}
           onDelete={handleDelete}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setEditingAgent(null);
-          }}
+          onClose={() => { setShowDeleteModal(false); setEditingAgent(null); }}
         />
       )}
 
-      {/* Reset Password Modal */}
       {showResetPasswordModal && editingAgent && (
         <ResetPasswordModal
           agent={editingAgent}
           isSaving={isSaving}
           onReset={handleResetPassword}
-          onClose={() => {
-            setShowResetPasswordModal(false);
-            setEditingAgent(null);
-          }}
+          onClose={() => { setShowResetPasswordModal(false); setEditingAgent(null); }}
         />
       )}
     </div>
@@ -504,161 +490,95 @@ function StatCard({
   );
 }
 
-function AgentCard({
-  agent,
-  isCurrentUser,
-  activeDropdown,
-  setActiveDropdown,
-  onEdit,
-  onDelete,
-  onResetPassword,
-  onToggleActive,
-}: {
-  agent: Agent;
-  isCurrentUser: boolean;
-  activeDropdown: string | null;
-  setActiveDropdown: (id: string | null) => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onResetPassword: () => void;
-  onToggleActive: () => void;
-}) {
+function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive }: any) {
   const status: OnlineStatus = (agent.status as OnlineStatus) || 'offline';
   const isActive = agent.isActive !== false;
 
   return (
-    <div
-      className={`group p-5 bg-gray-800/40 rounded-xl border transition-all duration-200 ${
-        isActive
-          ? 'border-gray-700/50 hover:border-gray-600 hover:bg-gray-800/60'
-          : 'border-gray-800/50 opacity-50'
-      }`}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
+    <div className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-visible ${isActive ? 'border-zinc-800 hover:border-emerald-500/30' : 'border-zinc-800/50 opacity-60'}`}>
+      
+      {/* Card Header */}
+      <div className="p-5 pb-4">
+        <div className="flex justify-between items-start">
+          <div className="flex gap-4">
+            {/* Avatar */}
+            <div className="relative">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-white shadow-inner">
+                {agent.name.charAt(0).toUpperCase()}
+              </div>
+              <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-zinc-900 ${statusColors[status]}`} />
+            </div>
+            
+            {/* Info */}
+            <div className="min-w-0">
+              <h3 className="font-semibold text-zinc-100 truncate flex items-center gap-2">
+                {agent.name}
+                {isCurrentUser && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">TÚ</span>}
+              </h3>
+              <p className="text-xs text-zinc-500 truncate mt-0.5">{agent.email}</p>
+              
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded border font-medium uppercase tracking-wider ${roleColors[agent.role]}`}>
+                  {agent.role}
+                </span>
+                {agent.department && (
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-zinc-800 bg-zinc-800/50 text-zinc-400">
+                    {agent.department}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Context Menu */}
           <div className="relative">
-            <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center text-lg font-bold text-white">
-              {agent.name.charAt(0).toUpperCase()}
-            </div>
-            <div
-              className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 ${statusColors[status]} rounded-full border-2 border-gray-800`}
-              title={statusLabels[status]}
-            />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white truncate">{agent.name}</h3>
-              {isCurrentUser && (
-                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">Tú</span>
-              )}
-            </div>
-            <p className="text-sm text-gray-400 truncate">{agent.email}</p>
-          </div>
-        </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === agent._id ? null : agent._id); }}
+              className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors ${activeDropdown === agent._id ? 'bg-white/10 text-white' : ''}`}
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
 
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveDropdown(activeDropdown === agent._id ? null : agent._id);
-            }}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
-
-          {activeDropdown === agent._id && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-xl shadow-xl z-10 py-1 overflow-hidden">
-              <button
-                onClick={onEdit}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Editar</span>
-              </button>
-              <button
-                onClick={onResetPassword}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-              >
-                <Key className="w-4 h-4" />
-                <span>Resetear contraseña</span>
-              </button>
-              <button
-                onClick={onToggleActive}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-              >
-                {isActive ? (
+            {activeDropdown === agent._id && (
+              <div className="absolute right-0 top-8 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
+                <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
+                <DropdownItem 
+                  icon={isActive ? UserX : UserCheck} 
+                  label={isActive ? 'Desactivar' : 'Activar'} 
+                  onClick={onToggleActive} 
+                />
+                {!isCurrentUser && (
                   <>
-                    <UserX className="w-4 h-4" />
-                    <span>Desactivar</span>
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="w-4 h-4" />
-                    <span>Activar</span>
+                    <div className="h-px bg-zinc-800 my-1" />
+                    <DropdownItem icon={Trash2} label="Eliminar" onClick={onDelete} danger />
                   </>
                 )}
-              </button>
-              {!isCurrentUser && (
-                <button
-                  onClick={onDelete}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Eliminar</span>
-                </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className={`px-3 py-1 rounded-lg text-xs font-medium border ${roleColors[agent.role]}`}>
-          {agent.role === 'admin' && <ShieldCheck className="w-3 h-3 inline mr-1" />}
-          {agent.role === 'supervisor' && <Shield className="w-3 h-3 inline mr-1" />}
-          {roleLabels[agent.role]}
-        </span>
-        {agent.department && (
-          <span className="px-3 py-1 bg-gray-700/50 text-gray-400 rounded-lg text-xs">
-            {agent.department}
-          </span>
-        )}
+      {/* Metrics Strip */}
+      <div className="grid grid-cols-3 border-t border-zinc-800/50 bg-zinc-900/30">
+        <MetricItem icon={MessageSquare} value={agent.activeChats || 0} label="Chats" />
+        <div className="w-px bg-zinc-800/50" />
+        <MetricItem icon={Clock} value={agent.avgResponseTime || '-'} label="Tiempo" />
+        <div className="w-px bg-zinc-800/50" />
+        <MetricItem icon={Star} value={agent.rating?.toFixed(1) || '-'} label="Rating" color="text-amber-400" />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-700/50">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
-            <MessageSquare className="w-3 h-3" />
-          </div>
-          <p className="text-sm font-medium text-white">{agent.activeChats || 0}</p>
-          <p className="text-xs text-gray-500">Activos</p>
-        </div>
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
-            <Clock className="w-3 h-3" />
-          </div>
-          <p className="text-sm font-medium text-white">{agent.avgResponseTime || '-'}</p>
-          <p className="text-xs text-gray-500">Resp. Prom.</p>
-        </div>
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
-            <Star className="w-3 h-3" />
-          </div>
-          <p className="text-sm font-medium text-white">{agent.rating?.toFixed(1) || '-'}</p>
-          <p className="text-xs text-gray-500">Rating</p>
-        </div>
-      </div>
-
+      {/* Skills Footer */}
       {agent.skills && agent.skills.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-4 pt-4 border-t border-gray-700/50">
-          {agent.skills.slice(0, 3).map((skill) => (
-            <span key={skill} className="px-2 py-0.5 bg-gray-700/50 text-gray-400 rounded text-xs">
+        <div className="px-5 py-3 border-t border-zinc-800/50 flex flex-wrap gap-1.5">
+          {agent.skills.slice(0, 3).map((skill: string) => (
+            <span key={skill} className="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 text-zinc-400 rounded text-[10px]">
               {skill}
             </span>
           ))}
           {agent.skills.length > 3 && (
-            <span className="px-2 py-0.5 bg-gray-700/50 text-gray-500 rounded text-xs">
+            <span className="px-2 py-0.5 bg-zinc-800 text-zinc-500 rounded text-[10px] border border-zinc-700">
               +{agent.skills.length - 3}
             </span>
           )}
@@ -668,178 +588,115 @@ function AgentCard({
   );
 }
 
-function FormModal({
-  isEditing,
-  formData,
-  setFormData,
-  skillInput,
-  setSkillInput,
-  onAddSkill,
-  onRemoveSkill,
-  isSaving,
-  onSubmit,
-  onClose,
-}: {
-  isEditing: boolean;
-  formData: AgentFormData;
-  setFormData: (data: AgentFormData) => void;
-  skillInput: string;
-  setSkillInput: (value: string) => void;
-  onAddSkill: () => void;
-  onRemoveSkill: (skill: string) => void;
-  isSaving: boolean;
-  onSubmit: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-2xl bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50 bg-gray-800/50 sticky top-0 z-10">
+const MetricItem = ({ icon: Icon, value, label, color = "text-white" }: any) => (
+  <div className="py-3 flex flex-col items-center justify-center hover:bg-white/[0.02] transition-colors">
+    <span className={`text-sm font-semibold ${color}`}>{value}</span>
+    <div className="flex items-center gap-1 text-[10px] text-zinc-500 uppercase font-medium">
+      <Icon className="w-3 h-3" />
+      {label}
+    </div>
+  </div>
+);
+
+const DropdownItem = ({ icon: Icon, label, onClick, danger }: any) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+      danger ? 'text-red-400 hover:bg-red-500/10' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+    }`}
+  >
+    <Icon className="w-4 h-4" />
+    {label}
+  </button>
+);
+
+function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput, onAddSkill, onRemoveSkill, isSaving, onSubmit, onClose }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              {isEditing ? <Edit3 className="w-5 h-5 text-green-400" /> : <Plus className="w-5 h-5 text-green-400" />}
+            <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+              {isEditing ? <Edit3 className="w-5 h-5 text-emerald-500" /> : <Plus className="w-5 h-5 text-emerald-500" />}
             </div>
             <h2 className="text-lg font-bold text-white">{isEditing ? 'Editar Agente' : 'Nuevo Agente'}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-5">
+            <InputGroup label="Nombre" icon={UserCog} value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre completo" />
+            <InputGroup label="Email" icon={Mail} value={formData.email} onChange={(e: any) => setFormData({ ...formData, email: e.target.value })} placeholder="correo@ejemplo.com" type="email" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Nombre</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Rol</label>
               <div className="relative">
-                <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nombre completo"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
-                />
+                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                >
+                  <option value="support">Agente</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="admin">Administrador</option>
+                  <option value="junior">Junior</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="email@ejemplo.com"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
-                />
-              </div>
-            </div>
+            <InputGroup label="Departamento" icon={Users} value={formData.department} onChange={(e: any) => setFormData({ ...formData, department: e.target.value })} placeholder="Ej: Ventas" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Rol</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as AgentFormData['role'] })}
-                className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
-              >
-                <option value="agent">Agente</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Departamento</label>
-              <input
-                type="text"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                placeholder="Ej: Ventas, Soporte"
-                className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Chats Simultáneos Máximos</label>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={formData.maxConcurrentChats}
-              onChange={(e) => setFormData({ ...formData, maxConcurrentChats: parseInt(e.target.value) || 5 })}
-              className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Habilidades</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAddSkill())}
-                placeholder="Ej: Python, Ventas, Soporte técnico"
-                className="flex-1 px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
-              />
-              <button
-                onClick={onAddSkill}
-                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            {formData.skills.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-sm"
-                  >
-                    {skill}
-                    <button
-                      onClick={() => onRemoveSkill(skill)}
-                      className="ml-1 hover:text-white transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+          <div className="grid grid-cols-2 gap-5">
+             <InputGroup label="Chats Máximos" icon={MessageSquare} value={formData.maxConcurrentChats} onChange={(e: any) => setFormData({ ...formData, maxConcurrentChats: parseInt(e.target.value) })} type="number" />
+             
+             {/* Skills Input */}
+             <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Habilidades</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAddSkill())}
+                    placeholder="Agregar skill..."
+                    className="flex-1 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  />
+                  <button onClick={onAddSkill} className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {/* Skills Chips */}
+                <div className="flex flex-wrap gap-2 mt-3 min-h-[30px]">
+                  {formData.skills.map((skill: string) => (
+                    <span key={skill} className="flex items-center gap-1 pl-3 pr-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-sm">
+                      {skill}
+                      <button onClick={() => onRemoveSkill(skill)} className="hover:text-white"><X className="w-3 h-3" /></button>
+                    </span>
+                  ))}
+                </div>
+             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700/50 bg-gray-800/30 sticky bottom-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-xl transition-all"
-          >
-            Cancelar
-          </button>
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800">
+          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={onSubmit}
-            disabled={isSaving || !formData.name.trim() || !formData.email.trim()}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-500/25"
+            disabled={isSaving || !formData.name || !formData.email}
+            className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                <span>{isEditing ? 'Guardar Cambios' : 'Crear Agente'}</span>
-              </>
-            )}
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            <span>{isEditing ? 'Guardar Cambios' : 'Crear Agente'}</span>
           </button>
         </div>
       </div>
@@ -847,45 +704,42 @@ function FormModal({
   );
 }
 
-function DeleteModal({
-  agent,
-  isSaving,
-  onDelete,
-  onClose,
-}: {
-  agent: Agent;
-  isSaving: boolean;
-  onDelete: () => void;
-  onClose: () => void;
-}) {
+function InputGroup({ label, icon: Icon, value, onChange, placeholder, type = "text" }: any) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+    <div>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <div className="relative group">
+        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+        />
+      </div>
+    </div>
+  );
+}
 
-      <div className="relative w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 p-6">
-        <div className="text-center">
-          <div className="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Trash2 className="w-7 h-7 text-red-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">Eliminar Agente</h2>
-          <p className="text-gray-400 mb-6 leading-relaxed">
-            ¿Estás seguro de eliminar a "<span className="text-white font-medium">{agent.name}</span>"?
-            <br />
-            <span className="text-sm">Esta acción no se puede deshacer.</span>
-          </p>
+function DeleteModal({ agent, isSaving, onDelete, onClose }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 p-6 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+          <Trash2 className="w-8 h-8 text-red-500" />
         </div>
-
+        <h2 className="text-xl font-bold text-white mb-2">Eliminar Agente</h2>
+        <p className="text-zinc-400 mb-6">
+          ¿Estás seguro de que deseas eliminar a <span className="text-white font-medium">{agent.name}</span>? <br />
+          Esta acción es irreversible.
+        </p>
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-5 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-all font-medium"
-          >
-            Cancelar
-          </button>
+          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={onDelete}
             disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all font-medium disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             <span>Eliminar</span>
@@ -896,50 +750,42 @@ function DeleteModal({
   );
 }
 
-function ResetPasswordModal({
-  agent,
-  isSaving,
-  onReset,
-  onClose,
-}: {
-  agent: Agent;
-  isSaving: boolean;
-  onReset: () => void;
-  onClose: () => void;
-}) {
+function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-      <div className="relative w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 p-6">
-        <div className="text-center">
-          <div className="w-14 h-14 bg-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Key className="w-7 h-7 text-amber-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">Resetear Contraseña</h2>
-          <p className="text-gray-400 mb-6 leading-relaxed">
-            ¿Resetear la contraseña de "<span className="text-white font-medium">{agent.name}</span>"?
-            <br />
-            <span className="text-sm">Se enviará una nueva contraseña temporal por email.</span>
-          </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 p-6 text-center">
+        <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+          <Key className="w-8 h-8 text-amber-500" />
         </div>
-
+        <h2 className="text-xl font-bold text-white mb-2">Resetear Contraseña</h2>
+        <p className="text-zinc-400 mb-6">
+          Se generará una nueva contraseña temporal para <span className="text-white font-medium">{agent.name}</span> y se enviará por correo.
+        </p>
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-5 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-all font-medium"
-          >
-            Cancelar
-          </button>
+          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={onReset}
             disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all font-medium disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-amber-900/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-            <span>Resetear</span>
+            <span>Confirmar</span>
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StatBadge({ icon: Icon, count, label, color, bg }: any) {
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <div className={`p-1.5 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <div className="flex flex-col leading-none">
+        <span className={`font-bold text-lg ${color}`}>{count}</span>
+        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
       </div>
     </div>
   );

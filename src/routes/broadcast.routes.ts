@@ -18,7 +18,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { broadcastService, CreateBroadcastParams } from '../services/broadcast.service.js';
 import { BroadcastStatus, DeliveryStatus } from '../database/models/Broadcast.js';
-import { authMiddleware, requireRole } from '../middleware/auth.js';
+import { authMiddleware, requirePermission, requireRole } from '../middleware/auth.js';
 import { logger } from '../services/logger.js';
 
 // ============= TYPES =============
@@ -73,7 +73,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post<{ Body: CreateBroadcastBody }>(
     '/',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.write') },
     async (
       request: FastifyRequest<{ Body: CreateBroadcastBody }>,
       reply: FastifyReply
@@ -216,7 +216,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post<{ Params: BroadcastParams }>(
     '/:id/start',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.send') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
@@ -255,7 +255,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post<{ Params: BroadcastParams }>(
     '/:id/pause',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.write') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
@@ -289,7 +289,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post<{ Params: BroadcastParams }>(
     '/:id/resume',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.write') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
@@ -323,7 +323,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post<{ Params: BroadcastParams }>(
     '/:id/cancel',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.write') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
@@ -361,7 +361,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get(
     '/stats',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.read') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const stats = await broadcastService.getStats();
@@ -386,7 +386,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get<{ Querystring: ListBroadcastsQuery }>(
     '/',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.read') },
     async (
       request: FastifyRequest<{ Querystring: ListBroadcastsQuery }>,
       reply: FastifyReply
@@ -426,7 +426,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get<{ Params: BroadcastParams }>(
     '/:id',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.read') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
@@ -462,7 +462,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get<{ Params: BroadcastParams; Querystring: RecipientsQuery }>(
     '/:id/recipients',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.read') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams; Querystring: RecipientsQuery }>,
       reply: FastifyReply
@@ -503,7 +503,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get<{ Params: BroadcastParams }>(
     '/:id/errors',
-    { preHandler: requireRole(['admin', 'supervisor']) },
+    { preHandler: requirePermission('broadcasts.read') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
@@ -532,7 +532,7 @@ export async function broadcastRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.delete<{ Params: BroadcastParams }>(
     '/:id',
-    { preHandler: requireRole(['admin']) },
+    { preHandler: requirePermission('broadcasts.delete') },
     async (
       request: FastifyRequest<{ Params: BroadcastParams }>,
       reply: FastifyReply
