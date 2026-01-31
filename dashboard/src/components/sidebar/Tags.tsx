@@ -438,7 +438,7 @@ export function SidebarTags({ userId, tags, onTagsChanged }: TagsProps) {
                 {showCreateOption && (
                   <div className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-md mt-1 border border-gray-100 dark:border-gray-700/50">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[10px] font-semibold text-gray-500 uppercaseflex items-center gap-1">
                         <Palette className="w-3 h-3" /> Nueva etiqueta
                       </span>
                     </div>

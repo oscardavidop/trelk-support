@@ -120,7 +120,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
       {/* 2. Question Input */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
             Pregunta al usuario
           </label>
 
@@ -173,7 +173,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 3. Variable Name Input */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
           Guardar respuesta en
         </label>
         <div className="flex items-center">
@@ -196,7 +196,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 4. Validation Type Grid */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
           Tipo de Validación
         </label>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -277,7 +277,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 6. Error Message Input */}
       <div>
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5 block">
+        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-1.5 block">
           Mensaje de error (si falla validación)
         </label>
         <input

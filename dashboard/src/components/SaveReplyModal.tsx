@@ -90,7 +90,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
             <>
               {/* Preview Box */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-xs font-bold text-zinc-500 uppercaseflex items-center gap-1.5">
                   <Zap className="w-3 h-3" /> Contenido Original
                 </label>
                 <div className="p-4 bg-zinc-950/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
@@ -101,7 +101,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
               {/* Form Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Título <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-bold text-zinc-500 ">Título <span className="text-red-400">*</span></label>
                   <input
                     type="text"
                     value={title}
@@ -112,7 +112,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Atajo</label>
+                  <label className="text-xs font-bold text-zinc-500 ">Atajo</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono text-sm">/</span>
                     <input
@@ -128,7 +128,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
 
               {/* Categories */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-xs font-bold text-zinc-500 uppercaseflex items-center gap-1.5">
                    <Tag className="w-3 h-3"/> Categoría
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">

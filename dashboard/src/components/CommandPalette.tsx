@@ -1,30 +1,14 @@
 /**
  * CommandPalette - Ctrl+K Quick Action Palette
- * Fuzzy search for actions, navigation, and commands
+ * UI Refactor: Premium Zinc Style
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search,
-  MessageCircle,
-  Users,
-  Settings,
-  Eye,
-  Activity,
-  Download,
-  LayoutDashboard,
-  MessageSquare,
-  Keyboard,
-  Moon,
-  Sun,
-  LogOut,
-  RefreshCw,
-  Send,
-  Tag,
-  Clock,
-  FileText,
-  Zap
+  Search, MessageCircle, Users, Settings, Eye, Activity, Download,
+  LayoutDashboard, MessageSquare, Keyboard, RefreshCw, Zap,
+  ArrowRight, Command as CommandIcon
 } from 'lucide-react';
 
 interface Command {
@@ -53,104 +37,23 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
   // Define commands
   const commands: Command[] = useMemo(() => [
     // Navigation
-    {
-      id: 'nav-overview',
-      label: 'Ir a Overview',
-      description: 'Dashboard principal',
-      icon: <LayoutDashboard className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard'); onClose(); }
-    },
-    {
-      id: 'nav-chat',
-      label: 'Ir a Chat',
-      description: 'Conversaciones activas',
-      icon: <MessageCircle className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/chat'); onClose(); }
-    },
-    {
-      id: 'nav-supervisor',
-      label: 'Ir a Supervisor',
-      description: 'Panel de supervisión',
-      icon: <Eye className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/supervisor'); onClose(); }
-    },
-    {
-      id: 'nav-audit',
-      label: 'Ir a Actividad',
-      description: 'Logs de actividad y auditoría',
-      icon: <Activity className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/audit'); onClose(); }
-    },
-    {
-      id: 'nav-exports',
-      label: 'Ir a Exportar',
-      description: 'Sistema de exportación',
-      icon: <Download className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/exports'); onClose(); }
-    },
-    {
-      id: 'nav-replies',
-      label: 'Ir a Respuestas Guardadas',
-      description: 'Respuestas rápidas',
-      icon: <MessageSquare className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/saved-replies'); onClose(); }
-    },
-    {
-      id: 'nav-agents',
-      label: 'Ir a Agentes',
-      description: 'Gestión de agentes',
-      icon: <Users className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/agents'); onClose(); }
-    },
-    {
-      id: 'nav-settings',
-      label: 'Ir a Configuración',
-      description: 'Ajustes del sistema',
-      icon: <Settings className="w-4 h-4" />,
-      category: 'navigation',
-      action: () => { navigate('/dashboard/settings'); onClose(); }
-    },
+    { id: 'nav-overview', label: 'Ir a Overview', description: 'Dashboard principal', icon: <LayoutDashboard className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard'); onClose(); } },
+    { id: 'nav-chat', label: 'Ir a Chat', description: 'Conversaciones activas', icon: <MessageCircle className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/chat'); onClose(); } },
+    { id: 'nav-supervisor', label: 'Ir a Supervisor', description: 'Panel de supervisión', icon: <Eye className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/supervisor'); onClose(); } },
+    { id: 'nav-audit', label: 'Ir a Actividad', description: 'Logs de auditoría', icon: <Activity className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/audit'); onClose(); } },
+    { id: 'nav-exports', label: 'Ir a Exportar', description: 'Descargar reportes', icon: <Download className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/exports'); onClose(); } },
+    { id: 'nav-replies', label: 'Respuestas Rápidas', description: 'Gestionar plantillas', icon: <MessageSquare className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/saved-replies'); onClose(); } },
+    { id: 'nav-agents', label: 'Ir a Agentes', description: 'Gestión de equipo', icon: <Users className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/agents'); onClose(); } },
+    { id: 'nav-settings', label: 'Configuración', description: 'Ajustes del sistema', icon: <Settings className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/settings'); onClose(); } },
     // Actions
-    {
-      id: 'action-new-export',
-      label: 'Nueva Exportación',
-      description: 'Crear una exportación de datos',
-      icon: <Download className="w-4 h-4" />,
-      category: 'action',
-      action: () => { navigate('/dashboard/exports'); onClose(); }
-    },
-    {
-      id: 'action-refresh',
-      label: 'Actualizar Datos',
-      description: 'Recargar información actual',
-      icon: <RefreshCw className="w-4 h-4" />,
-      category: 'action',
-      shortcut: 'F5',
-      action: () => { window.location.reload(); }
-    },
+    { id: 'action-refresh', label: 'Recargar Datos', description: 'Sincronizar interfaz', icon: <RefreshCw className="w-4 h-4" />, category: 'action', shortcut: 'F5', action: () => { window.location.reload(); } },
     // Help
-    {
-      id: 'help-shortcuts',
-      label: 'Ver Atajos de Teclado',
-      description: 'Lista de todos los atajos',
-      icon: <Keyboard className="w-4 h-4" />,
-      category: 'help',
-      shortcut: '?',
-      action: () => { onShowShortcuts(); onClose(); }
-    },
+    { id: 'help-shortcuts', label: 'Atajos de Teclado', description: 'Ver lista completa', icon: <Keyboard className="w-4 h-4" />, category: 'help', shortcut: '?', action: () => { onShowShortcuts(); onClose(); } },
   ], [navigate, onClose, onShowShortcuts]);
 
-  // Filter commands based on query
+  // Filter logic
   const filteredCommands = useMemo(() => {
     if (!query) return commands;
-    
     const lowerQuery = query.toLowerCase();
     return commands.filter(cmd => 
       cmd.label.toLowerCase().includes(lowerQuery) ||
@@ -158,37 +61,23 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
     );
   }, [commands, query]);
 
-  // Group commands by category
+  // Grouping logic
   const groupedCommands = useMemo(() => {
-    const groups: Record<string, Command[]> = {
-      navigation: [],
-      action: [],
-      settings: [],
-      help: [],
-    };
-    
-    filteredCommands.forEach(cmd => {
-      groups[cmd.category].push(cmd);
-    });
-    
+    const groups: Record<string, Command[]> = { navigation: [], action: [], settings: [], help: [] };
+    filteredCommands.forEach(cmd => { if (groups[cmd.category]) groups[cmd.category].push(cmd); });
     return groups;
   }, [filteredCommands]);
 
-  // Reset selected index when query changes
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+  useEffect(() => { setSelectedIndex(0); }, [query]);
 
-  // Focus input when opening
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
-  // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -198,15 +87,12 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
       setSelectedIndex(i => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filteredCommands[selectedIndex]) {
-        filteredCommands[selectedIndex].action();
-      }
+      if (filteredCommands[selectedIndex]) filteredCommands[selectedIndex].action();
     } else if (e.key === 'Escape') {
       onClose();
     }
   }, [filteredCommands, selectedIndex, onClose]);
 
-  // Scroll selected item into view
   useEffect(() => {
     const selectedElement = listRef.current?.querySelector(`[data-index="${selectedIndex}"]`);
     selectedElement?.scrollIntoView({ block: 'nearest' });
@@ -216,57 +102,59 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
 
   const categoryLabels: Record<string, string> = {
     navigation: 'Navegación',
-    action: 'Acciones',
-    settings: 'Configuración',
+    action: 'Acciones Rápidas',
+    settings: 'Sistema',
     help: 'Ayuda',
   };
 
   let flatIndex = -1;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 animate-in fade-in duration-200">
       
-      {/* Palette */}
-      <div className="relative w-full max-w-xl bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
-        {/* Search Input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-700">
-          <Search className="w-5 h-5 text-gray-400" />
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      
+      {/* Palette Container */}
+      <div className="relative w-full max-w-xl bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 overflow-hidden ring-1 ring-white/10 flex flex-col max-h-[75vh] animate-in zoom-in-95 slide-in-from-top-2 duration-200">
+        
+        {/* Search Header */}
+        <div className="flex items-center gap-4 px-5 py-4 border-b border-zinc-800 bg-zinc-900/50">
+          <Search className="w-5 h-5 text-zinc-500" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escribe un comando o busca..."
-            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-lg"
+            placeholder="¿Qué quieres hacer?"
+            className="flex-1 bg-transparent text-white placeholder-zinc-500 outline-none text-lg font-medium"
           />
-          <kbd className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400 font-mono">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded-md text-[10px] text-zinc-400 font-mono font-bold tracking-wider">
             ESC
           </kbd>
         </div>
         
-        {/* Commands List */}
-        <div ref={listRef} className="max-h-96 overflow-auto p-2">
+        {/* Results List */}
+        <div ref={listRef} className="flex-1 overflow-y-auto custom-scrollbar p-2 scroll-smooth">
           {filteredCommands.length === 0 ? (
-            <div className="py-8 text-center text-gray-500">
-              <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>No se encontraron comandos</p>
+            <div className="py-12 text-center">
+              <div className="w-12 h-12 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-3">
+                 <Search className="w-5 h-5 text-zinc-600" />
+              </div>
+              <p className="text-sm text-zinc-400 font-medium">No se encontraron resultados</p>
+              <p className="text-xs text-zinc-600 mt-1">Intenta con otro término de búsqueda</p>
             </div>
           ) : (
             Object.entries(groupedCommands).map(([category, cmds]) => {
               if (cmds.length === 0) return null;
               
               return (
-                <div key={category} className="mb-4 last:mb-0">
-                  <p className="px-3 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div key={category} className="mb-2 last:mb-0">
+                  <p className="px-3 py-2 text-[10px] font-bold text-zinc-500 r bg-zinc-900/95 backdrop-blur-sm z-10">
                     {categoryLabels[category]}
                   </p>
-                  <div className="space-y-1 mt-1">
+                  <div className="space-y-0.5">
                     {cmds.map(cmd => {
                       flatIndex++;
                       const isSelected = flatIndex === selectedIndex;
@@ -277,23 +165,32 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
                           data-index={flatIndex}
                           onClick={cmd.action}
                           onMouseEnter={() => setSelectedIndex(flatIndex)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                            isSelected
-                              ? 'bg-primary/20 text-primary'
-                              : 'text-gray-300 hover:bg-gray-800'
-                          }`}
+                          className={`
+                            w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 group relative
+                            ${isSelected ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50'}
+                          `}
                         >
-                          <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-primary/20' : 'bg-gray-800'}`}>
+                          {/* Selection Indicator */}
+                          {isSelected && (
+                             <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-indigo-500 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                          )}
+
+                          <div className={`p-2 rounded-lg transition-colors ${isSelected ? 'bg-zinc-700 text-white' : 'bg-zinc-900 border border-zinc-800 text-zinc-500'}`}>
                             {cmd.icon}
                           </div>
-                          <div className="flex-1 text-left">
-                            <p className="font-medium">{cmd.label}</p>
+                          
+                          <div className="flex-1 text-left min-w-0">
+                            <div className="flex items-center gap-2">
+                                <p className={`text-sm font-medium truncate ${isSelected ? 'text-zinc-100' : 'text-zinc-300'}`}>{cmd.label}</p>
+                                {isSelected && <ArrowRight className="w-3 h-3 text-indigo-400 animate-in slide-in-from-left-1 fade-in duration-300" />}
+                            </div>
                             {cmd.description && (
-                              <p className="text-xs text-gray-500">{cmd.description}</p>
+                              <p className={`text-xs truncate ${isSelected ? 'text-zinc-400' : 'text-zinc-600'}`}>{cmd.description}</p>
                             )}
                           </div>
+                          
                           {cmd.shortcut && (
-                            <kbd className="px-2 py-0.5 bg-gray-800 rounded text-xs text-gray-400 font-mono">
+                            <kbd className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${isSelected ? 'bg-zinc-700 border-zinc-600 text-zinc-300' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}>
                               {cmd.shortcut}
                             </kbd>
                           )}
@@ -308,26 +205,35 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
         </div>
         
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-gray-700 flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-800 rounded font-mono">↑</kbd>
-              <kbd className="px-1.5 py-0.5 bg-gray-800 rounded font-mono">↓</kbd>
-              <span>navegar</span>
+        <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-900/50 flex items-center justify-between text-[10px] text-zinc-500">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5">
+              <KeyIcon>↑</KeyIcon>
+              <KeyIcon>↓</KeyIcon>
+              <span>Navegar</span>
             </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-800 rounded font-mono">↵</kbd>
-              <span>seleccionar</span>
+            <span className="flex items-center gap-1.5">
+              <KeyIcon>↵</KeyIcon>
+              <span>Seleccionar</span>
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            <span>Command Palette</span>
+          <div className="flex items-center gap-1.5 opacity-50">
+            <CommandIcon className="w-3 h-3" />
+            <span className="font-medium tracking-wide">COMMAND PALETTE</span>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Helper for Footer Keys
+function KeyIcon({ children }: { children: React.ReactNode }) {
+    return (
+        <kbd className="min-w-[18px] h-[18px] flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded text-zinc-300 font-mono shadow-sm">
+            {children}
+        </kbd>
+    );
 }
 
 export default CommandPalette;

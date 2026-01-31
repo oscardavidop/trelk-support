@@ -228,7 +228,7 @@ export function SidebarHistory({ userId, totalSessions, currentSessionId }: Hist
                                     <Calendar className="w-3 h-3" />
                                     <span>{format(new Date(session.createdAt), "dd MMM yyyy", { locale: es })}</span>
                                 </div>
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${config.color}`}>
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase${config.color}`}>
                                     {config.label}
                                 </span>
                             </div>

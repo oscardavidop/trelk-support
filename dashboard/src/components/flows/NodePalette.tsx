@@ -790,7 +790,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
                     return (
                       <div key={subCat.id} className="mt-2">
                         {/* SubCategory header */}
-                        <div className="mx-3 mb-1 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        <div className="mx-3 mb-1 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
                           {subCat.icon} {subCat.label}
                         </div>
                         {/* SubCategory items */}

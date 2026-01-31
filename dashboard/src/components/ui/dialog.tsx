@@ -1,9 +1,8 @@
-/**
- * Dialog Components (shadcn/ui style)
- */
-
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+
+// ==================== INTERFACES ====================
 
 interface DialogProps {
   open?: boolean;
@@ -14,6 +13,7 @@ interface DialogProps {
 interface DialogContentProps {
   children: React.ReactNode;
   className?: string;
+  showCloseButton?: boolean;
 }
 
 interface DialogHeaderProps {
@@ -36,10 +36,14 @@ interface DialogFooterProps {
   className?: string;
 }
 
+// ==================== CONTEXT ====================
+
 const DialogContext = React.createContext<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>({ open: false, onOpenChange: () => {} });
+
+// ==================== COMPONENT: ROOT ====================
 
 export function Dialog({ open = false, onOpenChange, children }: DialogProps) {
   const handleOpenChange = React.useCallback((newOpen: boolean) => {
@@ -53,65 +57,98 @@ export function Dialog({ open = false, onOpenChange, children }: DialogProps) {
   );
 }
 
-export function DialogContent({ children, className = '' }: DialogContentProps) {
+// ==================== COMPONENT: CONTENT (PORTAL) ====================
+
+export function DialogContent({ children, className = '', showCloseButton = true }: DialogContentProps) {
   const { open, onOpenChange } = React.useContext(DialogContext);
+  const [mounted, setMounted] = React.useState(false);
 
-  if (!open) return null;
+  // Evitar problemas de hidratación en SSR (Next.js/Remix)
+  React.useEffect(() => {
+    setMounted(true);
+    // Bloquear scroll del body cuando está abierto
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+      {/* Backdrop con Blur */}
       <div 
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={() => onOpenChange(false)}
       />
       
-      {/* Content */}
+      {/* Modal Panel */}
       <div 
-        className={`relative top-[112px] z-50 w-full max-w-lg rounded-lg border border-gray-800 bg-gray-900 p-6 shadow-xl ${className}`}
+        className={`
+          relative z-[101] w-full max-w-lg
+          bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl 
+          animate-in fade-in zoom-in-95 duration-200 slide-in-from-bottom-2
+          ring-1 ring-white/10
+          ${className}
+        `}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
-        >
-          <X className="h-4 w-4 text-gray-400" />
-        </button>
+        {showCloseButton && (
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-4 top-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-700"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cerrar</span>
+          </button>
+        )}
         
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
+// ==================== COMPONENT: HEADER ====================
+
 export function DialogHeader({ children, className = '' }: DialogHeaderProps) {
   return (
-    <div className={`flex flex-col space-y-1.5 text-center sm:text-left ${className}`}>
+    <div className={`flex flex-col space-y-1.5 text-center sm:text-left mb-4 ${className}`}>
       {children}
     </div>
   );
 }
 
+// ==================== COMPONENT: TITLE ====================
+
 export function DialogTitle({ children, className = '' }: DialogTitleProps) {
   return (
-    <h2 className={`text-lg font-semibold leading-none tracking-tight text-white ${className}`}>
+    <h2 className={`text-lg font-bold leading-none tracking-tight text-white ${className}`}>
       {children}
     </h2>
   );
 }
 
+// ==================== COMPONENT: DESCRIPTION ====================
+
 export function DialogDescription({ children, className = '' }: DialogDescriptionProps) {
   return (
-    <p className={`text-sm text-gray-400 ${className}`}>
+    <p className={`text-sm text-zinc-400 leading-relaxed ${className}`}>
       {children}
     </p>
   );
 }
 
+// ==================== COMPONENT: FOOTER ====================
+
 export function DialogFooter({ children, className = '' }: DialogFooterProps) {
   return (
-    <div className={`flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 ${className}`}>
+    <div className={`flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 mt-6 ${className}`}>
       {children}
     </div>
   );

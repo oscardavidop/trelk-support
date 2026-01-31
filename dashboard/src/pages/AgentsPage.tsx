@@ -94,6 +94,7 @@ export default function AgentsPage() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [showDesactivateModal, setShowDesactivateModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [formData, setFormData] = useState<AgentFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
@@ -224,6 +225,7 @@ export default function AgentsPage() {
       const data = await res.json();
       if (data.ok) {
         setAgents(agents.map((a) => (a._id === agent._id ? data.agent : a)));
+        setShowDesactivateModal(false);
       }
     } catch (error) {
       console.error('Failed to toggle agent status:', error);
@@ -386,31 +388,48 @@ export default function AgentsPage() {
         </div>
 
         {/* Content Grid */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
-          {filteredAgents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
-              <Users className="w-16 h-16 mb-4 stroke-1" />
-              <p className="text-lg font-medium">No se encontraron agentes</p>
+        <div className="flex-1 overflow-hidden px-8 pb-8 pt-2">
+          <div className="flex flex-col bg-zinc-900/40 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
+
+            {/* Table Header */}
+            <div className="grid grid-cols-[2fr_1.5fr_1fr_1.5fr_1fr_50px] gap-4 px-6 py-4 bg-zinc-900/80 border-b border-zinc-800 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <div className="flex items-center gap-2">Agente</div>
+              <div>Rol / Dpto</div>
+              <div>Estado</div>
+              <div>Métricas</div>
+              <div>Habilidades</div>
+              <div className="text-right">Acciones</div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-              {filteredAgents.map((agent) => (
-                <AgentCard
-                  key={agent._id}
-                  agent={agent}
-                  isCurrentUser={currentAgent?._id === agent._id}
-                  activeDropdown={activeDropdown}
-                  setActiveDropdown={setActiveDropdown}
-                  onEdit={() => openFormModal(agent)}
-                  onDelete={() => { setEditingAgent(agent); setShowDeleteModal(true); }}
-                  onResetPassword={() => { setEditingAgent(agent); setShowResetPasswordModal(true); }}
-                  onToggleActive={() => handleToggleActive(agent)}
-                />
-              ))}
+
+            {/* Table Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {filteredAgents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
+                  <Users className="w-16 h-16 mb-4 stroke-1" />
+                  <p className="text-lg font-medium">No se encontraron agentes</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-zinc-800/50">
+                  {filteredAgents.map((agent) => (
+                    <AgentRow
+                      key={agent._id}
+                      agent={agent}
+                      isCurrentUser={currentAgent?._id === agent._id}
+                      activeDropdown={activeDropdown}
+                      setActiveDropdown={setActiveDropdown}
+                      onEdit={() => openFormModal(agent)}
+                      onDelete={() => { setEditingAgent(agent); setShowDeleteModal(true); }}
+                      onResetPassword={() => { setEditingAgent(agent); setShowResetPasswordModal(true); }}
+                      onToggleActive={() => { setEditingAgent(agent); setShowDesactivateModal(true); }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
+
 
       {/* Modals */}
       {showFormModal && (
@@ -446,69 +465,162 @@ export default function AgentsPage() {
           onClose={() => { setShowResetPasswordModal(false); setEditingAgent(null); }}
         />
       )}
+      {showDesactivateModal && editingAgent && (
+        <DesactivateModal
+          agent={editingAgent}
+          isSaving={isSaving}
+          onConfirm={handleToggleActive}
+          onClose={() => { setShowDesactivateModal(false); setEditingAgent(null); }}
+        />
+      )}
     </div>
   );
 }
 
 // Sub-components
 
-function StatCard({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  color: 'green' | 'blue' | 'purple' | 'amber';
-}) {
-  const colors = {
-    green: 'from-green-500/20 to-green-600/10 text-green-400 border-green-500/20',
-    blue: 'from-blue-500/20 to-blue-600/10 text-blue-400 border-blue-500/20',
-    purple: 'from-purple-500/20 to-purple-600/10 text-purple-400 border-purple-500/20',
-    amber: 'from-amber-500/20 to-amber-600/10 text-amber-400 border-amber-500/20',
-  };
-
-  const iconColors = {
-    green: 'bg-green-500/20',
-    blue: 'bg-blue-500/20',
-    purple: 'bg-purple-500/20',
-    amber: 'bg-amber-500/20',
-  };
+function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive }: any) {
+  const status: OnlineStatus = (agent.onlineStatus as OnlineStatus) || 'offline';
+  const isActive = agent.isActive !== false;
 
   return (
-    <div className={`p-4 bg-gradient-to-br ${colors[color]} rounded-xl border`}>
-      <div className="flex items-center gap-3">
-        <div className={`p-2.5 rounded-xl ${iconColors[color]}`}>{icon}</div>
-        <div>
-          <p className="text-sm text-gray-400">{label}</p>
-          <p className="text-2xl font-bold text-white">{value}</p>
+    <div className={`group grid grid-cols-[2fr_1.5fr_1fr_1.5fr_1fr_50px] gap-4 px-6 py-4 items-center hover:bg-zinc-800/30 transition-colors duration-200 ${!isActive && 'opacity-50 grayscale-[0.5]'}`}>
+
+      {/* 1. Agente (Avatar + Nombre) */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="relative shrink-0">
+          {agent.avatar ? (
+            <img src={agent.avatar} alt={agent.name} className="w-10 h-10 rounded-full bg-zinc-800 object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 flex items-center justify-center text-sm font-bold text-white shadow-inner">
+              {agent.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-zinc-900 ${statusColors[status]}`} />
         </div>
+        <div className="min-w-0 flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-zinc-200 truncate">{agent.name}</span>
+            {isCurrentUser && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-px rounded border border-emerald-500/30 font-medium">TÚ</span>}
+          </div>
+          <span className="text-xs text-zinc-500 truncate">{agent.email}</span>
+        </div>
+      </div>
+
+      {/* 2. Rol y Departamento */}
+      <div className="flex flex-col items-start gap-1.5">
+        <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium uppercase ${roleColors[agent.role]}`}>
+          {roleLabels[agent.role] || agent.role}
+        </span>
+        {agent.department && (
+          <span className="text-xs text-zinc-400 flex items-center gap-1">
+            <Users className="w-3 h-3 text-zinc-600" />
+            {agent.department}
+          </span>
+        )}
+      </div>
+
+      {/* 3. Estado */}
+      <div>
+        <div className="flex items-center gap-2">
+          <div className={`w-1.5 h-1.5 rounded-full ${statusColors[status]}`}></div>
+          <span className="text-sm text-zinc-300 capitalize">{statusLabels[status]}</span>
+        </div>
+        <span className="text-[10px] text-zinc-500">
+          {isActive ? 'Cuenta activa' : 'Desactivado'}
+        </span>
+      </div>
+
+      {/* 4. Métricas (Condensadas) */}
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5 text-zinc-300 font-medium">
+            <MessageSquare className="w-3.5 h-3.5 text-zinc-500" />
+            {agent.activeChats || 0}
+          </div>
+          <span className="text-[10px] text-zinc-600">Chats Activos</span>
+        </div>
+        <div className="w-px h-6 bg-zinc-800" />
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5 text-amber-400 font-medium">
+            <Star className="w-3.5 h-3.5 fill-amber-400/20" />
+            {agent.metrics.averageRating?.toFixed(1) || '-'}
+          </div>
+          <span className="text-[10px] text-zinc-600">Rating</span>
+        </div>
+      </div>
+
+      {/* 5. Skills (Píldoras pequeñas) */}
+      <div className="flex flex-wrap gap-1">
+        {agent.skills?.slice(0, 2).map((skill: string) => (
+          <span key={skill} className="px-1.5 py-0.5 bg-zinc-800/80 border border-zinc-700 text-zinc-400 rounded text-[10px]">
+            {skill}
+          </span>
+        ))}
+        {agent.skills?.length > 2 && (
+          <span className="px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded text-[10px] border border-zinc-700">
+            +{agent.skills.length - 2}
+          </span>
+        )}
+        {!agent.skills?.length && <span className="text-zinc-700 text-xs">-</span>}
+      </div>
+
+      {/* 6. Acciones (Dropdown) */}
+      <div className="relative flex justify-end">
+        <button
+          onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === agent._id ? null : agent._id); }}
+          className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? 'bg-zinc-700 text-white' : ''}`}
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
+
+        {activeDropdown === agent._id && (
+          <div className="absolute right-8 top-0 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
+            <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
+            <DropdownItem
+              icon={isActive ? UserX : UserCheck}
+              label={isActive ? 'Desactivar' : 'Activar'}
+              onClick={onToggleActive}
+            />
+            {!isCurrentUser && (
+              <>
+                <div className="h-px bg-zinc-800 my-1" />
+                <DropdownItem icon={Trash2} label="Eliminar" onClick={onDelete} danger />
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive }: any) {
-  const status: OnlineStatus = (agent.status as OnlineStatus) || 'offline';
+  const status: OnlineStatus = (agent.onlineStatus as OnlineStatus) || 'offline';
   const isActive = agent.isActive !== false;
 
   return (
     <div className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-visible ${isActive ? 'border-zinc-800 hover:border-emerald-500/30' : 'border-zinc-800/50 opacity-60'}`}>
-      
+
       {/* Card Header */}
       <div className="p-5 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex gap-4">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-white shadow-inner">
-                {agent.name.charAt(0).toUpperCase()}
-              </div>
-              <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-zinc-900 ${statusColors[status]}`} />
+              {
+                agent.avatar ? (
+                  <img src={agent.avatar} alt={agent.name} className="w-12 h-12 rounded-4xl" />
+                ) : (
+                  <div className="w-12 h-12 rounded-4xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-white shadow-inner">
+                    {agent.name.charAt(0).toUpperCase()}
+                  </div>
+                )
+              }
+              <div className={`absolute bottom-6 -right-1 w-4 h-4 rounded-full border-[3px] border-zinc-900 ${statusColors[status]}`} />
             </div>
-            
+
             {/* Info */}
             <div className="min-w-0">
               <h3 className="font-semibold text-zinc-100 truncate flex items-center gap-2">
@@ -516,9 +628,9 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
                 {isCurrentUser && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">TÚ</span>}
               </h3>
               <p className="text-xs text-zinc-500 truncate mt-0.5">{agent.email}</p>
-              
+
               <div className="flex items-center gap-2 mt-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded border font-medium uppercase tracking-wider ${roleColors[agent.role]}`}>
+                <span className={`text-[10px] px-2 py-0.5 rounded border font-medium uppercase${roleColors[agent.role]}`}>
                   {agent.role}
                 </span>
                 {agent.department && (
@@ -543,10 +655,10 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
               <div className="absolute right-0 top-8 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
                 <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
-                <DropdownItem 
-                  icon={isActive ? UserX : UserCheck} 
-                  label={isActive ? 'Desactivar' : 'Activar'} 
-                  onClick={onToggleActive} 
+                <DropdownItem
+                  icon={isActive ? UserX : UserCheck}
+                  label={isActive ? 'Desactivar' : 'Activar'}
+                  onClick={onToggleActive}
                 />
                 {!isCurrentUser && (
                   <>
@@ -563,10 +675,8 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
       {/* Metrics Strip */}
       <div className="grid grid-cols-3 border-t border-zinc-800/50 bg-zinc-900/30">
         <MetricItem icon={MessageSquare} value={agent.activeChats || 0} label="Chats" />
-        <div className="w-px bg-zinc-800/50" />
         <MetricItem icon={Clock} value={agent.avgResponseTime || '-'} label="Tiempo" />
-        <div className="w-px bg-zinc-800/50" />
-        <MetricItem icon={Star} value={agent.rating?.toFixed(1) || '-'} label="Rating" color="text-amber-400" />
+        <MetricItem icon={Star} value={agent.metrics.averageRating?.toFixed(1) || '-'} label="Rating" color="text-amber-400" />
       </div>
 
       {/* Skills Footer */}
@@ -592,7 +702,7 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
 const MetricItem = ({ icon: Icon, value, label, color = "text-white" }: any) => (
   <div className="py-3 flex flex-col items-center justify-center hover:bg-white/[0.02] transition-colors">
     <span className={`text-sm font-semibold ${color}`}>{value}</span>
-    <div className="flex items-center gap-1 text-[10px] text-zinc-500 uppercase font-medium">
+    <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
       <Icon className="w-3 h-3" />
       {label}
     </div>
@@ -602,9 +712,8 @@ const MetricItem = ({ icon: Icon, value, label, color = "text-white" }: any) => 
 const DropdownItem = ({ icon: Icon, label, onClick, danger }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
-      danger ? 'text-red-400 hover:bg-red-500/10' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-    }`}
+    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${danger ? 'text-red-400 hover:bg-red-500/10' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+      }`}
   >
     <Icon className="w-4 h-4" />
     {label}
@@ -636,7 +745,7 @@ function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput
 
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Rol</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Rol</label>
               <div className="relative">
                 <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <select
@@ -656,34 +765,34 @@ function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput
           </div>
 
           <div className="grid grid-cols-2 gap-5">
-             <InputGroup label="Chats Máximos" icon={MessageSquare} value={formData.maxConcurrentChats} onChange={(e: any) => setFormData({ ...formData, maxConcurrentChats: parseInt(e.target.value) })} type="number" />
-             
-             {/* Skills Input */}
-             <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Habilidades</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAddSkill())}
-                    placeholder="Agregar skill..."
-                    className="flex-1 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                  />
-                  <button onClick={onAddSkill} className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-white transition-colors">
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                {/* Skills Chips */}
-                <div className="flex flex-wrap gap-2 mt-3 min-h-[30px]">
-                  {formData.skills.map((skill: string) => (
-                    <span key={skill} className="flex items-center gap-1 pl-3 pr-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-sm">
-                      {skill}
-                      <button onClick={() => onRemoveSkill(skill)} className="hover:text-white"><X className="w-3 h-3" /></button>
-                    </span>
-                  ))}
-                </div>
-             </div>
+            <InputGroup label="Chats Máximos" icon={MessageSquare} value={formData.maxConcurrentChats} onChange={(e: any) => setFormData({ ...formData, maxConcurrentChats: parseInt(e.target.value) })} type="number" />
+
+            {/* Skills Input */}
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Habilidades</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={skillInput}
+                  onChange={(e) => setSkillInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAddSkill())}
+                  placeholder="Agregar skill..."
+                  className="flex-1 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+                <button onClick={onAddSkill} className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Skills Chips */}
+              <div className="flex flex-wrap gap-2 mt-3 min-h-[30px]">
+                {formData.skills.map((skill: string) => (
+                  <span key={skill} className="flex items-center gap-1 pl-3 pr-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-sm">
+                    {skill}
+                    <button onClick={() => onRemoveSkill(skill)} className="hover:text-white"><X className="w-3 h-3" /></button>
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -707,7 +816,7 @@ function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput
 function InputGroup({ label, icon: Icon, value, onChange, placeholder, type = "text" }: any) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">{label}</label>
       <div className="relative group">
         <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
         <input
@@ -777,6 +886,39 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
   );
 }
 
+function DesactivateModal({ agent, isSaving, onConfirm, onClose }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 p-6 text-center">
+        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
+          <UserX className="w-8 h-8 text-yellow-500" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">{agent.isActive ? 'Desactivar Agente' : 'Activar Agente'}
+        </h2>
+        <p className="text-zinc-400 mb-6">
+          ¿Estás seguro de que deseas {agent.isActive ? 'desactivar' : 'activar'} a <span className="text-white font-medium">{agent.name}</span>? <br />
+          {
+            agent.isActive
+              ? 'El agente no podrá iniciar sesión ni atender chats hasta que sea reactivado.'
+              : 'El agente podrá iniciar sesión y atender chats nuevamente.'
+          }
+        </p>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
+          <button
+            onClick={() => onConfirm(agent)}
+            disabled={isSaving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-yellow-900/20"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+            <span>{agent.isActive ? 'Desactivar' : 'Activar'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatBadge({ icon: Icon, count, label, color, bg }: any) {
   return (
     <div className="flex items-center gap-3 px-3">
@@ -785,7 +927,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: any) {
       </div>
       <div className="flex flex-col leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );

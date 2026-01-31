@@ -125,7 +125,7 @@ export function CopilotPanel({ sessionId, onApplySuggestion }: Props) {
           
           {/* Quick actions */}
           <div className="p-3 border-b border-gray-700">
-            <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Acciones Rápidas</p>
+            <p className="text-xs text-gray-400 uppercasemb-2">Acciones Rápidas</p>
             <div className="grid grid-cols-2 gap-2">
               <ActionButton
                 label="Sugerir"

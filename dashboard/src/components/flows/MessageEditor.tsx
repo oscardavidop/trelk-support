@@ -162,7 +162,7 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
 
       {/* Detected keys */}
       <div className="mb-3 p-2 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-        <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+        <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400 tracking-wide">
           Textos detectados:
         </span>
         <div className="flex flex-wrap gap-1 mt-1">
@@ -636,7 +636,7 @@ return (
       {/* Detected Variables Badge */}
       {block.content && block.content.includes('{{') && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs px-1">
-          <span className="text-blue-600 dark:text-blue-400 font-medium text-[10px] uppercase tracking-wide">Variables:</span>
+          <span className="text-blue-600 dark:text-blue-400 font-medium text-[10px] tracking-wide">Variables:</span>
           {block.content.match(/\{\{[^}]+\}\}/g)?.map((v, i) => (
             <span key={i} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/40 border border-blue-100 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded text-[10px] font-mono">
               {v}
@@ -1519,7 +1519,7 @@ const BlockKeyboardEditor: React.FC<BlockKeyboardEditorProps> = ({ keyboard, onC
           <div key={row.id} className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 shadow-sm">
             {/* Row header */}
             <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+              <span className="text-[10px] font-medium text-gray-400 ">
                 Fila {rowIndex + 1}
               </span>
               {!readOnly && keyboard.rows.length > 1 && (

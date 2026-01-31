@@ -1,13 +1,14 @@
-// Chat Info Sidebar - Main component
-
 import { useState, useEffect, useCallback } from 'react';
 import {
-  X, User, MessageSquare, Clock, Tag, StickyNote, Settings, History, ChevronDown, ChevronRight, Loader2, AlertCircle, Activity, Timer
-  // for copilot
-  , Bot,
+  X, User, MessageSquare, Clock, Tag, StickyNote, Settings, History,
+  ChevronDown, ChevronRight, Loader2, AlertCircle, Activity, Timer, Bot,
+  SquareDashedMousePointerIcon,
+  MessageCircle
 } from 'lucide-react';
 import type { ContactInfo } from '../types';
 import { getContactInfo } from '../services/contactApi';
+
+// Sub-components imports (Mantenemos la lógica de importación existente)
 import { SidebarConversationStatus } from './sidebar/ConversationStatus';
 import { SidebarUserIdentity } from './sidebar/UserIdentity';
 import { SidebarNotes } from './sidebar/Notes';
@@ -18,8 +19,8 @@ import { SidebarSystemFields } from './sidebar/SystemFields';
 import { LiveContactTimer } from './sidebar/LiveContactTimer';
 import { ActivityTimeline } from './sidebar/ActivityTimeline';
 import { ScheduledMessagesList } from './scheduled/ScheduledMessagesList';
-import { CopilotPanel } from './copilot';
 import { CopilotSection } from './sidebar/Copilot';
+import ContactProfileHeader from './0';
 
 interface ChatInfoSidebarProps {
   sessionId: string | null;
@@ -32,10 +33,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scheduledCount, setScheduledCount] = useState(0);
-  // Default expanded sections logic
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set([])
-  );
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status', 'copilot']));
 
   const fetchContactInfo = useCallback(async () => {
     if (!sessionId) {
@@ -67,42 +65,44 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
       return next;
     });
   };
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (!isOpen) return null;
 
   return (
-    <div className="w-70 bg-white dark:bg-[#0f1117] border-l border-gray-200 dark:border-zinc-800 flex flex-col h-full shadow-xl z-0">
+    <div className="w-80 bg-zinc-950 border-l border-zinc-800 flex flex-col h-full shadow-2xl z-20 transition-all duration-300">
 
-      {/* Header Compacto */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-zinc-800 bg-zinc-900/90 h-[56px]">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-sm tracking-wide">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md shrink-0 h-[56px]">
+        <h3 className="font-bold text-zinc-100 flex items-center gap-2 text-sm tracking-wide">
           <User className="w-4 h-4 text-indigo-500" />
           Detalles del Contacto
         </h3>
         <button
           onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-all"
+          className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-all"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Main Scrollable Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
 
-        {/* Loading State */}
+        {/* Loading */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
+          <div className="flex flex-col items-center justify-center h-64 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-            <p className="text-xs text-gray-400">Cargando perfil...</p>
+            <p className="text-xs text-zinc-500 animate-pulse">Sincronizando perfil...</p>
           </div>
         )}
 
-        {/* Error State */}
+        {/* Error */}
         {error && !isLoading && (
-          <div className="m-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-center">
-            <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-            <p className="text-xs text-red-600 dark:text-red-400 font-medium">{error}</p>
-            <button onClick={fetchContactInfo} className="mt-2 text-xs text-red-700 underline">
+          <div className="m-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
+            <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+            <p className="text-xs text-red-300 font-medium">{error}</p>
+            <button onClick={fetchContactInfo} className="mt-3 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg transition-colors">
               Reintentar
             </button>
           </div>
@@ -110,76 +110,29 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 
         {/* Empty State */}
         {!sessionId && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full px-6 text-center opacity-60">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-              <MessageSquare className="w-8 h-8 text-gray-400" />
+          <div className="flex flex-col items-center justify-center h-full px-6 text-center opacity-50">
+            <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mb-4 border border-zinc-800">
+              <MessageSquare className="w-8 h-8 text-zinc-600" />
             </div>
-            <p className="text-sm text-gray-500">Selecciona un chat para ver detalles</p>
+            <p className="text-sm font-medium text-zinc-400">Selecciona un chat</p>
+            <p className="text-xs text-zinc-600 mt-1">Para ver los detalles del usuario</p>
           </div>
         )}
 
-        {/* Content */}
+        {/* Contact Data */}
         {contactInfo && !isLoading && (
           <div className="pb-10">
-            {/* Profile Header Card */}
-            <div className="px-6 py-6 bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-900/50 dark:to-[#0f1117] border-b border-gray-100 dark:border-gray-800">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative mb-3">
-                  <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold ring-4 ring-white dark:ring-[#0f1117] ${contactInfo.user?.photoFileId ? '' : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20'}`}>
-                    {
-                      contactInfo.user?.photoFileId ? (
-                        <img
-                          src={`/api/media/${contactInfo.user.photoFileId}`}
-                          alt={`${contactInfo.user.firstName} ${contactInfo.user.lastName}`}
-                          className="w-full h-full object-cover rounded-full"
-                        />
-                      ) : (
-                        <>
-                          {contactInfo.user.firstName.charAt(0).toUpperCase()}
-                          {contactInfo.user.lastName ? contactInfo.user.lastName.charAt(0).toUpperCase() : ''}
-                        </>
-                      )
-                    }
-                  </div>
-                  {/* Status Indicator */}
-                  <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white dark:border-[#0f1117] ${contactInfo.session.status === 'open' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                </div>
 
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {contactInfo.user.firstName} {contactInfo.user.lastName}
-                </h2>
 
-                {contactInfo.user.username && (
-                  <a
-                    href={`https://t.me/${contactInfo.user.username}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-indigo-500 hover:text-indigo-600 transition-colors mt-0.5"
-                  >
-                    @{contactInfo.user.username}
-                  </a>
-                )}
+            <ContactProfileHeader contactInfo={contactInfo} />
 
-                <div className="flex items-center gap-4 mt-4 w-full justify-center">
-                  <div className="flex flex-col items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 min-w-[70px]">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Chats</span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">{contactInfo.stats.totalSessions}</span>
-                  </div>
-                  <div className="flex flex-col items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 min-w-[70px]">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Msgs</span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">{contactInfo.stats.totalMessages}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Accordion Sections */}
+            <div className="px-3 mt-4 space-y-2">
 
-            {/* Sections */}
-            <div className="px-2 mt-2 space-y-1">
-              {/* Copilot Section (Highlighted) */}
 
               <SidebarSection
-                title="Estado"
-                icon={<Activity className="w-4 h-4 text-blue-500" />}
+                title="Estado Actual"
+                icon={<Activity className="w-4 h-4 text-blue-400" />}
                 isExpanded={expandedSections.has('status')}
                 onToggle={() => toggleSection('status')}
               >
@@ -187,8 +140,8 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               </SidebarSection>
 
               <SidebarSection
-                title="Tiempo activo"
-                icon={<Timer className="w-4 h-4 text-orange-500" />}
+                title="Tiempo Activo"
+                icon={<Timer className="w-4 h-4 text-orange-400" />}
                 isExpanded={expandedSections.has('time')}
                 onToggle={() => toggleSection('time')}
               >
@@ -201,8 +154,8 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               </SidebarSection>
 
               <SidebarSection
-                title="Notas"
-                icon={<StickyNote className="w-4 h-4 text-yellow-500" />}
+                title="Notas Internas"
+                icon={<StickyNote className="w-4 h-4 text-yellow-400" />}
                 isExpanded={expandedSections.has('notes')}
                 onToggle={() => toggleSection('notes')}
                 badge={contactInfo.notes.count}
@@ -218,7 +171,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 
               <SidebarSection
                 title="Etiquetas"
-                icon={<Tag className="w-4 h-4 text-emerald-500" />}
+                icon={<Tag className="w-4 h-4 text-emerald-400" />}
                 isExpanded={expandedSections.has('tags')}
                 onToggle={() => toggleSection('tags')}
                 badge={contactInfo.tags.length}
@@ -231,8 +184,8 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               </SidebarSection>
 
               <SidebarSection
-                title="Programados"
-                icon={<Clock className="w-4 h-4 text-teal-500" />}
+                title="Mensajes Programados"
+                icon={<Clock className="w-4 h-4 text-teal-400" />}
                 isExpanded={expandedSections.has('scheduled')}
                 onToggle={() => toggleSection('scheduled')}
                 badge={scheduledCount}
@@ -241,8 +194,8 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               </SidebarSection>
 
               <SidebarSection
-                title="Historial"
-                icon={<History className="w-4 h-4 text-gray-500" />}
+                title="Historial de Chats"
+                icon={<History className="w-4 h-4 text-zinc-400" />}
                 isExpanded={expandedSections.has('history')}
                 onToggle={() => toggleSection('history')}
               >
@@ -254,56 +207,61 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               </SidebarSection>
 
               <SidebarSection
-                title='Linea de tiempo'
-                icon={<Activity className="w-4 h-4 text-yellow-600" />}
+                title="Línea de Tiempo"
+                icon={<Activity className="w-4 h-4 text-indigo-400" />}
                 isExpanded={expandedSections.has('activity')}
                 onToggle={() => toggleSection('activity')}
               >
                 {sessionId && <ActivityTimeline sessionId={sessionId} />}
               </SidebarSection>
 
+              {/* Meta Data Divider */}
+              <div className="pt-6 pb-2 px-2">
+                <p className="text-[10px] font-bold text-zinc-600 tracking-widest">Información Técnica</p>
+              </div>
+
               <SidebarSection
-                title="AI Copilot"
-                icon={<> <Bot className="w-4 h-4 text-pink-500" /> </>}
-                isExpanded={expandedSections.has('copilot')}
-                onToggle={() => toggleSection('copilot')}
+                title="Identidad de Usuario"
+                icon={<User className="w-4 h-4 text-zinc-500" />}
+                isExpanded={expandedSections.has('identity')}
+                onToggle={() => toggleSection('identity')}
               >
-                {sessionId && <CopilotSection sessionId={sessionId} />}
+                <SidebarUserIdentity user={contactInfo.user} />
               </SidebarSection>
 
+              <SidebarSection
+                title="Campos del Sistema"
+                icon={<Settings className="w-4 h-4 text-zinc-500" />}
+                isExpanded={expandedSections.has('system')}
+                onToggle={() => toggleSection('system')}
+              >
+                <SidebarSystemFields user={contactInfo.user} />
+              </SidebarSection>
 
-              {/* Advanced / Meta Sections */}
-              <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800 mx-2">
-                <p className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Metadatos</p>
+              <SidebarSection
+                title="Campos Personalizados"
+                icon={<Settings className="w-4 h-4 text-zinc-500" />}
+                isExpanded={expandedSections.has('custom')}
+                onToggle={() => toggleSection('custom')}
+              >
+                <SidebarCustomFields
+                  userId={contactInfo.user.id}
+                  fields={contactInfo.customFields}
+                  onFieldUpdated={fetchContactInfo}
+                />
+              </SidebarSection>
 
+              {/* Highlighted AI Section */}
+              <div className="mb-4">
                 <SidebarSection
-                  title="Identidad"
-                  icon={<User className="w-4 h-4 text-gray-400" />}
-                  isExpanded={expandedSections.has('identity')}
-                  onToggle={() => toggleSection('identity')}
+                  title="AI Copilot"
+                  icon={<Bot className="w-4 h-4 text-pink-500" />}
+                  isExpanded={expandedSections.has('copilot')}
+                  onToggle={() => toggleSection('copilot')}
+                  className="border border-pink-500/20 bg-pink-500/5 rounded-xl overflow-hidden"
+                  headerClassName="hover:bg-pink-500/10"
                 >
-                  <SidebarUserIdentity user={contactInfo.user} />
-                </SidebarSection>
-
-                <SidebarSection
-                  title="Campos Sistema"
-                  icon={<Settings className="w-4 h-4 text-gray-400" />}
-                  isExpanded={expandedSections.has('system')}
-                  onToggle={() => toggleSection('system')}
-                >
-                  <SidebarSystemFields user={contactInfo.user} />
-                </SidebarSection>
-                <SidebarSection
-                  title="Campos Personalizados"
-                  icon={<Settings className="w-4 h-4 text-gray-400" />}
-                  isExpanded={expandedSections.has('custom')}
-                  onToggle={() => toggleSection('custom')}
-                >
-                  <SidebarCustomFields
-                    userId={contactInfo.user.id}
-                    fields={contactInfo.customFields}
-                    onFieldUpdated={fetchContactInfo}
-                  />
+                  {sessionId && <CopilotSection sessionId={sessionId} />}
                 </SidebarSection>
               </div>
             </div>
@@ -314,7 +272,17 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   );
 }
 
-// Collapsible section component con mejor UI
+// ============= HELPER COMPONENTS =============
+
+function StatBadge({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 min-w-[80px]">
+      <span className="text-[10px] text-zinc-500 font-bold ">{label}</span>
+      <span className="text-lg font-bold text-white leading-none mt-1">{value}</span>
+    </div>
+  );
+}
+
 interface SidebarSectionProps {
   title: string;
   icon: React.ReactNode;
@@ -328,38 +296,39 @@ interface SidebarSectionProps {
 
 function SidebarSection({ title, icon, isExpanded, onToggle, badge, children, className, headerClassName }: SidebarSectionProps) {
   return (
-    <div className={`transition-all duration-200 ${className || 'border-b border-transparent'}`}>
+    <div className={`overflow-hidden transition-all duration-300 ${className || 'border-b border-zinc-800/50 last:border-0'}`}>
       <button
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-4 py-3 group transition-colors rounded-lg ${isExpanded ? 'bg-gray-50 dark:bg-gray-800/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+        className={`w-full flex items-center justify-between px-3 py-3 group transition-all rounded-lg ${isExpanded
+          ? 'bg-zinc-900/50 text-white'
+          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30'
           } ${headerClassName}`}
       >
         <div className="flex items-center gap-3">
-          <div className={`opacity-70 group-hover:opacity-100 transition-opacity ${isExpanded ? 'opacity-100' : ''}`}>
+          <div className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-zinc-800' : 'bg-zinc-900 group-hover:bg-zinc-800'}`}>
             {icon}
           </div>
-          <span className={`text-sm font-medium ${isExpanded ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}>
-            {title}
-          </span>
+          <span className="text-sm font-medium">{title}</span>
           {badge !== undefined && badge > 0 && (
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 rounded-full">
+            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 rounded-md border border-indigo-500/20 min-w-[20px] text-center">
               {badge}
             </span>
           )}
         </div>
-        {isExpanded ? (
-          <ChevronDown className="w-4 h-4 text-gray-400" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
-        )}
+
+        <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
+          <ChevronDown className="w-4 h-4 opacity-50" />
+        </div>
       </button>
 
-      {isExpanded && (
-        <div className="animate-in slide-in-from-top-1 fade-in duration-200">
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+      >
+        <div className="p-0 pt-0">
           {children}
         </div>
-      )}
+      </div>
     </div>
   );
 }
-

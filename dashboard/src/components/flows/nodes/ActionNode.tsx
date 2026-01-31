@@ -382,7 +382,7 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
             <div className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight truncate">
               {data.label || 'Acción'}
             </div>
-            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider mt-0.5 truncate">
+            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium uppercasemt-0.5 truncate">
               {actionLabel}
             </div>
           </div>
@@ -396,7 +396,7 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
           {hasButtons && (
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Opciones</span>
+                <span className="text-[10px] font-bold text-gray-400 ">Opciones</span>
                 <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 rounded-full">{buttonHandles.length}</span>
               </div>
 

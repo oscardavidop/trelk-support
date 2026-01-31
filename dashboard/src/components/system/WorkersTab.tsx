@@ -207,7 +207,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: {
       </div>
       <div className="flex flex-col items-start leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );
@@ -254,7 +254,7 @@ function WorkerCard({ worker }: { worker: WorkerInfo }) {
           </div>
         </div>
 
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border} flex items-center gap-1.5`}>
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercaseborder ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border} flex items-center gap-1.5`}>
           <span className={`w-1.5 h-1.5 rounded-full ${worker.status === 'online' ? 'bg-current animate-pulse' : 'bg-current'}`} />
           {worker.status}
         </span>
@@ -263,11 +263,11 @@ function WorkerCard({ worker }: { worker: WorkerInfo }) {
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 gap-px bg-zinc-800/50 rounded-lg overflow-hidden border border-zinc-800/50 mb-4">
         <div className="bg-zinc-900/40 p-2.5 text-center">
-          <div className="text-[10px] text-zinc-500 uppercase font-bold">Procesados</div>
+          <div className="text-[10px] text-zinc-500 font-bold">Procesados</div>
           <div className="text-sm font-mono text-zinc-200">{worker.jobsProcessed.toLocaleString()}</div>
         </div>
         <div className="bg-zinc-900/40 p-2.5 text-center">
-          <div className="text-[10px] text-zinc-500 uppercase font-bold">Uptime</div>
+          <div className="text-[10px] text-zinc-500 font-bold">Uptime</div>
           <div className="text-sm font-mono text-zinc-200">{getUptime()}</div>
         </div>
       </div>
@@ -277,7 +277,7 @@ function WorkerCard({ worker }: { worker: WorkerInfo }) {
         <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-3 h-3 text-blue-400 animate-bounce" />
-            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Procesando Job</span>
+            <span className="text-[10px] font-bold text-blue-400 ">Procesando Job</span>
           </div>
           <div className="font-mono text-xs text-blue-200 truncate" title={worker.currentJob}>
             {worker.currentJob}

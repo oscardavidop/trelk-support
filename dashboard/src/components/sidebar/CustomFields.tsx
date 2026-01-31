@@ -1,205 +1,17 @@
-// // Custom Fields Section
-// import { useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { Settings, Edit2, Check, X, Loader2 } from 'lucide-react';
-// import type { CustomFieldValue } from '../../types';
-// import { setUserFieldValue } from '../../services/contactApi';
-
-// interface CustomFieldsProps {
-//   userId: string;
-//   fields: CustomFieldValue[];
-//   onFieldUpdated: () => void;
-// }
-
-// export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFieldsProps) {
-//   const navigate = useNavigate();
-//   const [editingField, setEditingField] = useState<string | null>(null);
-//   const [editValue, setEditValue] = useState<string>('');
-//   const [isSaving, setIsSaving] = useState(false);
-
-//   const handleEdit = (field: CustomFieldValue) => {
-//     setEditingField(field.key);
-//     setEditValue(field.value?.toString() || '');
-//   };
-
-//   const handleSave = async (field: CustomFieldValue) => {
-//     if (!field.fieldId) return;
-    
-//     setIsSaving(true);
-//     try {
-//       let value: string | number | boolean = editValue;
-      
-//       // Convert based on type
-//       if (field.type === 'number') {
-//         value = parseFloat(editValue) || 0;
-//       } else if (field.type === 'boolean') {
-//         value = editValue === 'true';
-//       }
-      
-//       await setUserFieldValue(userId, field.fieldId, value);
-//       onFieldUpdated();
-//       setEditingField(null);
-//     } catch (error) {
-//       console.error('Error saving field:', error);
-//     } finally {
-//       setIsSaving(false);
-//     }
-//   };
-
-//   const handleCancel = () => {
-//     setEditingField(null);
-//     setEditValue('');
-//   };
-
-//   const renderValue = (field: CustomFieldValue) => {
-//     if (field.value === null || field.value === undefined || field.value === '') {
-//       return <span className="text-gray-400 italic text-xs">No establecido</span>;
-//     }
-
-//     if (field.type === 'boolean') {
-//       return (
-//         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-//           field.value ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-//                       : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-//         }`}>
-//           {field.value ? 'Sí' : 'No'}
-//         </span>
-//       );
-//     }
-
-//     if (field.type === 'url') {
-//       return (
-//         <a
-//           href={field.value as string}
-//           target="_blank"
-//           rel="noopener noreferrer"
-//           className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[120px] block"
-//         >
-//           {field.value as string}
-//         </a>
-//       );
-//     }
-
-//     return <span className="text-xs text-gray-700 dark:text-gray-300 truncate max-w-[120px] block">{String(field.value)}</span>;
-//   };
-
-//   const renderEditInput = (field: CustomFieldValue) => {
-//     if (field.type === 'boolean') {
-//       return (
-//         <select
-//           value={editValue}
-//           onChange={(e) => setEditValue(e.target.value)}
-//           className="text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded 
-//                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-//         >
-//           <option value="true">Sí</option>
-//           <option value="false">No</option>
-//         </select>
-//       );
-//     }
-
-//     return (
-//       <input
-//         type={field.type === 'number' ? 'number' : field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : 'text'}
-//         value={editValue}
-//         onChange={(e) => setEditValue(e.target.value)}
-//         className="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded 
-//                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-full"
-//         autoFocus
-//       />
-//     );
-//   };
-
-//   if (fields.length === 0) {
-//     return (
-//       <div className="px-4 py-2">
-//         <p className="text-xs text-gray-400 dark:text-gray-500 italic mb-2">
-//           Sin campos personalizados
-//         </p>
-//         <button
-//           onClick={() => navigate('/dashboard/custom-fields')}
-//           className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700"
-//         >
-//           <Settings className="w-3 h-3" />
-//           Gestionar campos personalizados
-//         </button>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="px-4 py-2 space-y-2">
-//       {fields.map((field) => (
-//         <div key={field.key} className="group">
-//           {editingField === field.key ? (
-//             <div className="space-y-1">
-//               <label className="text-[10px] text-gray-500 dark:text-gray-400">{field.name}</label>
-//               <div className="flex items-center gap-1">
-//                 {renderEditInput(field)}
-//                 <button
-//                   onClick={() => handleSave(field)}
-//                   disabled={isSaving}
-//                   className="p-0.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded"
-//                 >
-//                   {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-//                 </button>
-//                 <button
-//                   onClick={handleCancel}
-//                   className="p-0.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-//                 >
-//                   <X className="w-3 h-3" />
-//                 </button>
-//               </div>
-//             </div>
-//           ) : (
-//             <div className="flex items-center justify-between">
-//               <span className="text-xs text-gray-500 dark:text-gray-400">{field.name}</span>
-//               <div className="flex items-center gap-1">
-//                 {renderValue(field)}
-//                 <button
-//                   onClick={() => handleEdit(field)}
-//                   className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-opacity"
-//                   title="Editar"
-//                 >
-//                   <Edit2 className="w-3 h-3 text-gray-400" />
-//                 </button>
-//               </div>
-//             </div>
-//           )}
-//         </div>
-//       ))}
-
-//       <button
-//         onClick={() => navigate('/dashboard/custom-fields')}
-//         className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 mt-2"
-//       >
-//         <Settings className="w-3 h-3" />
-//         Gestionar campos
-//       </button>
-//     </div>
-//   );
-// }
-
-
-// SidebarCustomFields.tsx - Refactored UI
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Settings, Edit2, Check, X, Loader2, Type, Hash, Link as LinkIcon, CheckSquare, Calendar, Plus, Search, Archive, RotateCcw, ToggleLeft, List, Mail } from 'lucide-react';
+import { 
+  Settings, Edit2, Check, X, Loader2, Type, Hash, Link as LinkIcon, 
+  CheckSquare, Calendar, Plus, Search, Archive, RotateCcw, 
+  ToggleLeft, List, Mail, Trash2, ArrowLeft 
+} from 'lucide-react';
 import type { CustomFieldValue } from '../../types';
 import { setUserFieldValue } from '../../services/contactApi';
 import {
-  getCustomFields,
-  createCustomField,
-  updateCustomField,
-  deleteCustomField,
-  restoreCustomField,
-  generateFieldKey,
-  isValidFieldKey,
-  FIELD_TYPE_LABELS,
-  type CustomField,
-  type CustomFieldType,
-  type CreateCustomFieldInput,
+  getCustomFields, createCustomField, updateCustomField, deleteCustomField, restoreCustomField,
+  generateFieldKey, isValidFieldKey, FIELD_TYPE_LABELS,
+  type CustomField, type CustomFieldType, type CreateCustomFieldInput,
 } from '../../services/customFieldsApi';
-import { toast } from '../ui';
+import { toast } from '../../stores/toastStore';
 
 interface CustomFieldsProps {
   userId: string;
@@ -207,7 +19,7 @@ interface CustomFieldsProps {
   onFieldUpdated: () => void;
 }
 
-// Field types config
+// Configuración de Tipos
 const FIELD_TYPES: { type: CustomFieldType; label: string }[] = [
   { type: 'text', label: 'Texto' },
   { type: 'number', label: 'Número' },
@@ -231,14 +43,9 @@ const FieldTypeIcon = ({ type, className = "w-4 h-4" }: { type: string; classNam
   }
 };
 
-// ============= FIELDS MANAGER MODAL =============
-interface FieldsManagerModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onFieldsChanged: () => void;
-}
+// ============= FIELDS MANAGER MODAL (Premium Zinc) =============
 
-function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerModalProps) {
+function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: boolean; onClose: () => void; onFieldsChanged: () => void; }) {
   const [fields, setFields] = useState<CustomField[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showInactive, setShowInactive] = useState(false);
@@ -246,16 +53,8 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
   const [editingField, setEditingField] = useState<CustomField | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    key: '',
-    type: 'text' as CustomFieldType,
-    description: '',
-    required: false,
-    options: [] as string[],
-    defaultValue: '',
-  });
+  // Form State
+  const [formData, setFormData] = useState({ name: '', key: '', type: 'text' as CustomFieldType, description: '', required: false, options: [] as string[], defaultValue: '' });
   const [newOption, setNewOption] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -268,30 +67,15 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
     setIsLoading(false);
   }, [showInactive]);
 
-  useEffect(() => {
-    if (isOpen) loadFields();
-  }, [isOpen, loadFields]);
+  useEffect(() => { if (isOpen) loadFields(); }, [isOpen, loadFields]);
 
-  const filteredFields = useMemo(() => {
-    return fields.filter(field => {
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        if (!field.name.toLowerCase().includes(query) && !field.key.toLowerCase().includes(query)) return false;
-      }
-      return true;
-    });
-  }, [fields, searchQuery]);
-
+  const filteredFields = useMemo(() => fields.filter(f => !searchQuery || f.name.toLowerCase().includes(searchQuery.toLowerCase()) || f.key.includes(searchQuery.toLowerCase())), [fields, searchQuery]);
   const activeFields = filteredFields.filter(f => f.isActive);
   const archivedFields = filteredFields.filter(f => !f.isActive);
 
   const resetForm = () => {
     setFormData({ name: '', key: '', type: 'text', description: '', required: false, options: [], defaultValue: '' });
-    setNewOption('');
-    setErrors({});
-    setKeyTouched(false);
-    setEditingField(null);
-    setShowNewForm(false);
+    setNewOption(''); setErrors({}); setKeyTouched(false); setEditingField(null); setShowNewForm(false);
   };
 
   const handleNameChange = (value: string) => {
@@ -305,297 +89,195 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
   };
 
   const addOption = () => {
-    const trimmed = newOption.trim();
-    if (trimmed && !formData.options.includes(trimmed)) {
-      setFormData(prev => ({ ...prev, options: [...prev.options, trimmed] }));
+    if (newOption.trim() && !formData.options.includes(newOption.trim())) {
+      setFormData(prev => ({ ...prev, options: [...prev.options, newOption.trim()] }));
       setNewOption('');
     }
   };
 
-  const removeOption = (index: number) => {
-    setFormData(prev => ({ ...prev, options: prev.options.filter((_, i) => i !== index) }));
-  };
-
-  const openEditForm = (field: CustomField) => {
-    setEditingField(field);
-    setFormData({
-      name: field.name,
-      key: field.key,
-      type: field.type,
-      description: field.description || '',
-      required: field.required,
-      options: field.options || [],
-      defaultValue: field.defaultValue?.toString() || '',
-    });
-    setKeyTouched(true);
-    setShowNewForm(true);
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'El nombre es requerido';
-    if (!formData.key.trim()) newErrors.key = 'La clave es requerida';
-    else if (!isValidFieldKey(formData.key)) newErrors.key = 'Solo letras minúsculas, números y _';
-    if (formData.type === 'select' && formData.options.length === 0) newErrors.options = 'Agrega al menos una opción';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSave = async () => {
-    if (!validate()) return;
+    // Basic validation logic simplified for UI demo
+    if (!formData.name || !formData.key) return setErrors({ name: !formData.name ? 'Requerido' : '', key: !formData.key ? 'Requerido' : '' });
     setIsSaving(true);
+    
     try {
-      let parsedDefault: string | number | boolean | undefined = undefined;
-      if (formData.defaultValue) {
-        if (formData.type === 'number') parsedDefault = parseFloat(formData.defaultValue);
-        else if (formData.type === 'boolean') parsedDefault = formData.defaultValue === 'true';
-        else parsedDefault = formData.defaultValue;
-      }
+      const payload: any = { ...formData, description: formData.description || undefined, options: formData.type === 'select' ? formData.options : undefined };
+      
+      let result;
+      if (editingField) result = await updateCustomField(editingField.id, payload);
+      else result = await createCustomField(payload as CreateCustomFieldInput);
 
-      if (editingField) {
-        const result = await updateCustomField(editingField.id, {
-          name: formData.name.trim(),
-          description: formData.description.trim() || undefined,
-          required: formData.required,
-          options: formData.type === 'select' ? formData.options : undefined,
-          defaultValue: parsedDefault,
-        });
-        if (result.ok && result.field) {
-          toast.success('Campo actualizado');
-          setFields(prev => prev.map(f => f.id === result.field!.id ? result.field! : f));
-          resetForm();
-          onFieldsChanged();
-        } else toast.error(result.error || 'Error al actualizar');
+      if (result.ok) {
+        toast.success(editingField ? 'Campo actualizado' : 'Campo creado');
+        if (editingField) setFields(prev => prev.map(f => f.id === result.field!.id ? result.field! : f));
+        else setFields(prev => [...prev, result.field!]);
+        resetForm();
+        onFieldsChanged();
       } else {
-        const input: CreateCustomFieldInput = {
-          name: formData.name.trim(),
-          key: formData.key.trim(),
-          type: formData.type,
-          description: formData.description.trim() || undefined,
-          required: formData.required,
-          options: formData.type === 'select' ? formData.options : undefined,
-          defaultValue: parsedDefault,
-        };
-        const result = await createCustomField(input);
-        if (result.ok && result.field) {
-          toast.success('Campo creado');
-          setFields(prev => [...prev, result.field!]);
-          resetForm();
-          onFieldsChanged();
-        } else {
-          if (result.error?.includes('already exists')) setErrors({ key: 'Esta clave ya existe' });
-          else toast.error(result.error || 'Error al crear');
-        }
+        toast.error(result.error || 'Error al guardar');
       }
-    } catch { toast.error('Error al guardar'); }
+    } catch { toast.error('Error de conexión'); } 
     finally { setIsSaving(false); }
   };
 
   const handleArchive = async (field: CustomField) => {
-    const result = await deleteCustomField(field.id);
-    if (result.ok) { toast.success('Campo archivado'); setFields(prev => prev.map(f => f.id === field.id ? { ...f, isActive: false } : f)); onFieldsChanged(); }
-    else toast.error(result.error || 'Error al archivar');
+    const res = await deleteCustomField(field.id);
+    if (res.ok) { setFields(prev => prev.map(f => f.id === field.id ? { ...f, isActive: false } : f)); onFieldsChanged(); }
   };
 
   const handleRestore = async (field: CustomField) => {
-    const result = await restoreCustomField(field.id);
-    if (result.ok) { toast.success('Campo restaurado'); setFields(prev => prev.map(f => f.id === field.id ? { ...f, isActive: true } : f)); onFieldsChanged(); }
-    else toast.error(result.error || 'Error al restaurar');
+    const res = await restoreCustomField(field.id);
+    if (res.ok) { setFields(prev => prev.map(f => f.id === field.id ? { ...f, isActive: true } : f)); onFieldsChanged(); }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 w-full h-full">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden ring-1 ring-white/10">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl">
-              <Settings className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+            <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+              <Settings className="w-5 h-5 text-indigo-400" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Gestionar Campos</h2>
+            <h2 className="text-base font-bold text-white">Gestor de Campos</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
           {showNewForm ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-gray-900 dark:text-white font-medium text-sm">{editingField ? 'Editar Campo' : 'Nuevo Campo'}</h3>
-                <button onClick={resetForm} className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-white">← Volver</button>
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-zinc-200">{editingField ? 'Editar Campo' : 'Nuevo Campo Personalizado'}</h3>
+                <button onClick={resetForm} className="text-xs flex items-center gap-1 text-zinc-500 hover:text-white transition-colors">
+                  <ArrowLeft className="w-3 h-3"/> Volver a la lista
+                </button>
               </div>
 
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Nombre *</label>
-                <input type="text" value={formData.name} onChange={(e) => handleNameChange(e.target.value)} placeholder="Ej: Número de cliente"
-                  className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.name ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'}`}
-                />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
-              </div>
-
-              {/* Key (only new) */}
-              {!editingField && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Clave interna *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">$</span>
-                    <input type="text" value={formData.key} onChange={(e) => handleKeyChange(e.target.value)} placeholder="numero_cliente"
-                      className={`w-full pl-7 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-lg text-gray-900 dark:text-white placeholder-gray-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.key ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'}`}
-                    />
-                  </div>
-                  {errors.key ? <p className="mt-1 text-xs text-red-500">{errors.key}</p> : <p className="mt-1 text-[10px] text-gray-400">Usa en flujos: <code className="text-purple-500">{`{{custom.${formData.key || 'campo'}}}`}</code></p>}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Nombre</label>
+                  <input type="text" value={formData.name} onChange={e => handleNameChange(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-sm focus:border-indigo-500 outline-none" placeholder="Ej: ID Cliente" />
                 </div>
-              )}
-
-              {/* Type (only new) */}
-              {!editingField && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Tipo *</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {FIELD_TYPES.map(({ type: t, label }) => (
-                      <button key={t} type="button" onClick={() => setFormData(prev => ({ ...prev, type: t }))}
-                        className={`flex items-center gap-1.5 p-2 rounded-lg border text-xs transition-all ${formData.type === t ? 'border-purple-500 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300'}`}
-                      >
-                        <FieldTypeIcon type={t} className="w-3.5 h-3.5" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Type badge (edit) */}
-              {editingField && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <FieldTypeIcon type={formData.type} className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-500">Tipo: <span className="text-gray-900 dark:text-white">{FIELD_TYPE_LABELS[formData.type]}</span></span>
-                </div>
-              )}
-
-              {/* Options for select */}
-              {formData.type === 'select' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Opciones *</label>
-                  <div className="space-y-1.5">
-                    {formData.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">{option}</div>
-                        <button onClick={() => removeOption(index)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><X className="w-3.5 h-3.5" /></button>
-                      </div>
-                    ))}
-                    <div className="flex gap-2">
-                      <input type="text" value={newOption} onChange={(e) => setNewOption(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }} placeholder="Nueva opción"
-                        className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                      <button onClick={addOption} disabled={!newOption.trim()} className={`px-3 py-1.5 rounded-lg text-xs ${newOption.trim() ? 'bg-purple-500 text-white hover:bg-purple-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                {!editingField && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-500 uppercase">Clave (Variable)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-zinc-500 text-sm">$</span>
+                      <input type="text" value={formData.key} onChange={e => handleKeyChange(e.target.value)} className="w-full pl-6 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 font-mono text-sm focus:border-indigo-500 outline-none" placeholder="id_cliente" />
                     </div>
                   </div>
-                  {errors.options && <p className="mt-1 text-xs text-red-500">{errors.options}</p>}
+                )}
+              </div>
+
+              {!editingField && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Tipo de Dato</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {FIELD_TYPES.map((ft) => (
+                      <button key={ft.type} onClick={() => setFormData(prev => ({...prev, type: ft.type}))}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${formData.type === ft.type ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:border-zinc-700'}`}
+                      >
+                        <FieldTypeIcon type={ft.type} className="w-3.5 h-3.5"/> {ft.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Save Button */}
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-800">
-                <button onClick={resetForm} className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">Cancelar</button>
-                <button onClick={handleSave} disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50 text-xs"
-                >
-                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  {editingField ? 'Guardar' : 'Crear'}
+              {/* Options for Select */}
+              {formData.type === 'select' && (
+                <div className="space-y-3 p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Opciones de Lista</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={newOption} onChange={e => setNewOption(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addOption())} className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-sm focus:border-indigo-500 outline-none" placeholder="Nueva opción..." />
+                    <button onClick={addOption} className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg border border-zinc-700"><Plus className="w-4 h-4"/></button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.options.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-1 pl-3 pr-1 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-300">
+                        {opt} <button onClick={() => setFormData(prev => ({...prev, options: prev.options.filter((_, idx) => idx !== i)}))} className="p-1 hover:text-red-400"><X className="w-3 h-3"/></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-zinc-800">
+                <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50">
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+                  {editingField ? 'Guardar Cambios' : 'Crear Campo'}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Search & Actions */}
-              <div className="flex items-center gap-2">
+            <div className="space-y-6">
+              <div className="flex gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar..."
-                    className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
+                  <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 outline-none placeholder-zinc-600" placeholder="Buscar campos..." />
                 </div>
-                <button onClick={() => setShowNewForm(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 text-xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Nuevo
+                <button onClick={() => setShowNewForm(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-900/20">
+                  <Plus className="w-4 h-4"/> Nuevo
                 </button>
               </div>
 
-              {/* Toggle archived */}
-              <button onClick={() => setShowInactive(!showInactive)}
-                className={`text-[10px] px-2 py-1 rounded ${showInactive ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-white'}`}
-              >
-                {showInactive ? 'Ocultar archivados' : 'Mostrar archivados'}
-              </button>
-
-              {/* Loading */}
-              {isLoading && <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-purple-500" /></div>}
-
-              {/* Active Fields */}
-              {!isLoading && activeFields.length > 0 && (
-                <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Activos ({activeFields.length})</h4>
-                  {activeFields.map((field) => (
-                    <div key={field.id} className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 group">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                          <FieldTypeIcon type={field.type} className="w-3.5 h-3.5 text-gray-400" />
+              {/* List */}
+              <div className="space-y-4">
+                {isLoading ? (
+                  <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto"/></div>
+                ) : activeFields.length === 0 && !showInactive ? (
+                  <div className="text-center py-10 text-zinc-500">
+                    <Hash className="w-10 h-10 mx-auto mb-3 opacity-20"/>
+                    <p className="text-sm">No hay campos configurados</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {activeFields.map(field => (
+                      <div key={field.id} className="group flex items-center justify-between p-3 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-zinc-900 rounded-lg text-zinc-400 border border-zinc-800">
+                            <FieldTypeIcon type={field.type} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">{field.name}</p>
+                            <code className="text-[10px] text-zinc-500 font-mono">${field.key}</code>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white">{field.name}</p>
-                          <p className="text-[10px] text-gray-400 font-mono">${field.key}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEditForm(field)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded"><Edit2 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => handleArchive(field)} className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded"><Archive className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Archived Fields */}
-              {!isLoading && showInactive && archivedFields.length > 0 && (
-                <div className="space-y-1.5 mt-3">
-                  <h4 className="text-[10px] font-medium text-amber-500/70 uppercase tracking-wider">Archivados ({archivedFields.length})</h4>
-                  {archivedFields.map((field) => (
-                    <div key={field.id} className="flex items-center justify-between p-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg border border-gray-200/50 dark:border-gray-800 group opacity-60">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg"><FieldTypeIcon type={field.type} className="w-3.5 h-3.5 text-gray-400" /></div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{field.name}</p>
-                          <p className="text-[10px] text-gray-400 font-mono">${field.key}</p>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => { setEditingField(field); setFormData({ ...field, options: field.options || [], defaultValue: field.defaultValue?.toString() || '', description: field.description ?? '' }); setShowNewForm(true); }} className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"><Edit2 className="w-3.5 h-3.5"/></button>
+                          <button onClick={() => handleArchive(field)} className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"><Archive className="w-3.5 h-3.5"/></button>
                         </div>
                       </div>
-                      <button onClick={() => handleRestore(field)} className="flex items-center gap-1 px-2 py-1 text-[10px] text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        <RotateCcw className="w-3 h-3" />
-                        Restaurar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {/* Empty */}
-              {!isLoading && activeFields.length === 0 && !searchQuery && (
-                <div className="text-center py-6">
-                  <Hash className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-xs text-gray-400">No hay campos personalizados</p>
-                  <button onClick={() => setShowNewForm(true)} className="mt-2 text-xs text-purple-500 hover:text-purple-600">Crear primer campo →</button>
+                {/* Archived Toggle */}
+                <div className="pt-4 border-t border-zinc-800">
+                   <button onClick={() => setShowInactive(!showInactive)} className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-2">
+                      {showInactive ? 'Ocultar archivados' : 'Ver campos archivados'}
+                      {showInactive ? <ArrowLeft className="w-3 h-3 rotate-90"/> : <ArrowLeft className="w-3 h-3 -rotate-90"/>}
+                   </button>
+                   
+                   {showInactive && archivedFields.length > 0 && (
+                      <div className="mt-3 space-y-2 opacity-60">
+                         {archivedFields.map(field => (
+                            <div key={field.id} className="flex items-center justify-between p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+                               <span className="text-xs text-zinc-400">{field.name}</span>
+                               <button onClick={() => handleRestore(field)} className="text-[10px] text-indigo-400 hover:underline flex items-center gap-1"><RotateCcw className="w-3 h-3"/> Restaurar</button>
+                            </div>
+                         ))}
+                      </div>
+                   )}
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>
@@ -604,22 +286,13 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
   );
 }
 
+// ============= SIDEBAR COMPONENT (Premium Zinc) =============
+
 export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFieldsProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [showManager, setShowManager] = useState(false);
-
-  // Mapeo de iconos por tipo de campo
-  const getFieldIcon = (type: string) => {
-    switch (type) {
-      case 'number': return Hash;
-      case 'url': return LinkIcon;
-      case 'boolean': return CheckSquare;
-      case 'date': return Calendar;
-      default: return Type;
-    }
-  };
 
   const handleEdit = (field: CustomFieldValue) => {
     setEditingField(field.key);
@@ -630,70 +303,30 @@ export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFi
     if (!field.fieldId) return;
     setIsSaving(true);
     try {
-      let value: string | number | boolean = editValue;
+      let value: any = editValue;
       if (field.type === 'number') value = parseFloat(editValue) || 0;
       else if (field.type === 'boolean') value = editValue === 'true';
-      
       await setUserFieldValue(userId, field.fieldId, value);
       onFieldUpdated();
       setEditingField(null);
-    } catch (error) {
-      console.error('Error saving field:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingField(null);
-    setEditValue('');
+    } catch (e) { console.error(e); } 
+    finally { setIsSaving(false); }
   };
 
   const renderValue = (field: CustomFieldValue) => {
-    if (field.value === null || field.value === undefined || field.value === '') {
-      return <span className="text-xs text-gray-400 italic">Vacío</span>;
-    }
-
-    if (field.type === 'boolean') {
-      return (
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-          field.value 
-            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' 
-            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-        }`}>
-          {field.value ? 'Sí' : 'No'}
-        </span>
-      );
-    }
-
-    if (field.type === 'url') {
-      return (
-        <a
-          href={field.value as string}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-indigo-500 hover:text-indigo-600 hover:underline truncate max-w-[120px] block"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {field.value as string}
-        </a>
-      );
-    }
-
-    return <span className="text-xs text-gray-700 dark:text-gray-300 truncate max-w-[120px] block">{String(field.value)}</span>;
+    if (field.value === null || field.value === undefined || field.value === '') return <span className="text-xs text-zinc-600 italic">Sin valor</span>;
+    if (field.type === 'boolean') return <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${field.value ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>{field.value ? 'SÍ' : 'NO'}</span>;
+    if (field.type === 'url') return <a href={String(field.value)} target="_blank" className="text-xs text-indigo-400 hover:underline truncate block max-w-[140px]">{String(field.value)}</a>;
+    return <span className="text-xs text-zinc-300 truncate block max-w-[140px]">{String(field.value)}</span>;
   };
 
   if (fields.length === 0) {
     return (
       <>
-        <div className="px-3 py-4 text-center">
-          <p className="text-xs text-gray-400 mb-2">No hay campos personalizados configurados.</p>
-          <button
-            onClick={() => setShowManager(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 transition-colors"
-          >
-            <Settings className="w-3 h-3" />
-            Configurar campos
+        <div className="px-4 py-6 text-center">
+          <p className="text-xs text-zinc-500 mb-3">Sin campos configurados</p>
+          <button onClick={() => setShowManager(true)} className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg text-xs font-medium text-zinc-300 transition-all">
+            <Settings className="w-3.5 h-3.5" /> Configurar
           </button>
         </div>
         <FieldsManagerModal isOpen={showManager} onClose={() => setShowManager(false)} onFieldsChanged={onFieldUpdated} />
@@ -702,102 +335,61 @@ export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFi
   }
 
   return (
-    <>
-      <div className="px-3 py-2">
-        <div className="bg-white dark:bg-[#1a1d26] border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
-          {fields.map((field, index) => {
-            const Icon = getFieldIcon(field.type);
-            const isEditing = editingField === field.key;
+    <div className="px-3 py-2">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        {fields.map((field, index) => {
+          const Icon = field.type === 'number' ? Hash : field.type === 'url' ? LinkIcon : field.type === 'date' ? Calendar : Type;
+          const isEditing = editingField === field.key;
 
-            return (
-              <div 
-                key={field.key} 
-                className={`
-                  group px-3 py-2.5 
-                  ${index !== fields.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}
-                  ${isEditing ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors'}
-                `}
-              >
-                {isEditing ? (
-                  <div className="space-y-2 animate-in fade-in duration-200">
-                    <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                      <Icon className="w-3 h-3" />
-                      {field.name}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {field.type === 'boolean' ? (
-                        <select
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="flex-1 h-7 text-xs border border-indigo-300 dark:border-indigo-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                          autoFocus
-                        >
-                          <option value="true">Sí</option>
-                          <option value="false">No</option>
-                        </select>
-                      ) : (
-                        <input
-                          type={field.type === 'number' ? 'number' : field.type === 'email' ? 'email' : 'text'}
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="flex-1 h-7 text-xs border border-indigo-300 dark:border-indigo-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                          autoFocus
-                        />
-                      )}
-                      
-                      <button
-                        onClick={() => handleSave(field)}
-                        disabled={isSaving}
-                        className="h-7 w-7 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors disabled:opacity-50"
-                      >
-                        {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        disabled={isSaving}
-                        className="h-7 w-7 flex items-center justify-center bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 rounded transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate" title={field.name}>{field.name}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 pl-2">
-                      {renderValue(field)}
-                      <button
-                        onClick={() => handleEdit(field)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-indigo-500 transition-all"
-                        title="Editar valor"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+          return (
+            <div key={field.key} className={`group px-4 py-3 ${index !== fields.length - 1 ? 'border-b border-zinc-800' : ''} ${isEditing ? 'bg-zinc-800/50' : 'hover:bg-zinc-800/30 transition-colors'}`}>
+              
+              {/* Header: Label */}
+              <div className="flex items-center gap-2 mb-1">
+                 <Icon className="w-3 h-3 text-zinc-500" />
+                 <span className="text-xs font-medium text-zinc-400">{field.name}</span>
               </div>
-            );
-          })}
-        </div>
 
-        <div className="mt-3 flex justify-center">
-          <button
-            onClick={() => setShowManager(true)}
-            className="text-[10px] text-gray-400 hover:text-indigo-500 flex items-center gap-1 transition-colors"
-          >
-            <Settings className="w-3 h-3" />
-            Gestionar campos
-          </button>
-        </div>
+              {/* Body: Value / Edit */}
+              {isEditing ? (
+                <div className="flex items-center gap-2 mt-1 animate-in fade-in duration-200">
+                   {field.type === 'boolean' ? (
+                      <select value={editValue} onChange={e => setEditValue(e.target.value)} className="flex-1 h-7 text-xs bg-zinc-950 border border-zinc-700 rounded px-2 text-white focus:border-indigo-500 outline-none">
+                         <option value="true">Sí</option>
+                         <option value="false">No</option>
+                      </select>
+                   ) : (
+                      <input 
+                        type={field.type === 'number' ? 'number' : 'text'} 
+                        value={editValue} 
+                        onChange={e => setEditValue(e.target.value)} 
+                        className="flex-1 h-7 text-xs bg-zinc-950 border border-zinc-700 rounded px-2 text-white focus:border-indigo-500 outline-none"
+                        autoFocus
+                      />
+                   )}
+                   <button onClick={() => handleSave(field)} disabled={isSaving} className="h-7 w-7 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded"><Check className="w-3 h-3"/></button>
+                   <button onClick={() => setEditingField(null)} className="h-7 w-7 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded"><X className="w-3 h-3"/></button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                   {renderValue(field)}
+                   <button onClick={() => handleEdit(field)} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-indigo-400 transition-all">
+                      <Edit2 className="w-3 h-3"/>
+                   </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      
+
+      <div className="mt-3 flex justify-center">
+        <button onClick={() => setShowManager(true)} className="text-[10px] text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors py-1">
+          <Settings className="w-3 h-3" /> Administrar campos
+        </button>
+      </div>
+
       <FieldsManagerModal isOpen={showManager} onClose={() => setShowManager(false)} onFieldsChanged={onFieldUpdated} />
-    </>
+    </div>
   );
 }

@@ -248,7 +248,7 @@ export default function SupervisorPage() {
 
                 {/* Supervisor Whisper Input */}
                 <div className="p-4 border-t border-zinc-800 bg-zinc-900">
-                  <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-purple-400">
+                  <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercasetext-purple-400">
                     <Eye className="w-3 h-3" /> Modo Supervisión (Privado)
                   </div>
                   <div className="relative">
@@ -295,7 +295,7 @@ function StatBadge({ icon: Icon, count, label, color, bg, alert }: any) {
       </div>
       <div className="flex flex-col leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );
@@ -442,7 +442,7 @@ const SLABadge = ({ status, mini }: { status: string, mini?: boolean }) => {
   if (mini) return <div className={`w-2 h-2 rounded-full ${s.split(' ')[1].replace('/10', '')}`} />;
 
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${s}`}>
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercaseborder ${s}`}>
       {status}
     </span>
   );

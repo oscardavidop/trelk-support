@@ -38,7 +38,7 @@
 //             {pinnedMessage.content}
 //           </p>
 //           <div className="flex items-center gap-1.5 mt-0.5">
-//             <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+//             <span className="text-[10px] font-boldtext-zinc-500">
 //               {pinnedMessage.senderAgent?.name || (pinnedMessage.sender === 'user' ? 'Usuario' : 'Bot')}
 //             </span>
 //             <span className="w-0.5 h-0.5 bg-zinc-600 rounded-full" />
@@ -104,7 +104,7 @@
 //           <React.Fragment key={msg._id}>
 //             {showDate && (
 //               <div className="flex justify-center py-6">
-//                 <span className="px-3 py-1 bg-zinc-900/50 border border-zinc-800 rounded-full text-[10px] font-medium text-zinc-500 uppercase tracking-widest shadow-sm">
+//                 <span className="px-3 py-1 bg-zinc-900/50 border border-zinc-800 rounded-full text-[10px] font-medium text-zinc-500 tracking-widest shadow-sm">
 //                   {new Date(msg.createdAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
 //                 </span>
 //               </div>
@@ -142,7 +142,7 @@
 //           <div className="w-full border-t border-zinc-800"></div>
 //         </div>
 //         <div className="relative flex justify-center mb-6">
-//           <span className="px-3 bg-zinc-950 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+//           <span className="px-3 bg-zinc-950 text-xs font-medium text-zinc-500 ">
 //             Conversación Finalizada
 //           </span>
 //         </div>

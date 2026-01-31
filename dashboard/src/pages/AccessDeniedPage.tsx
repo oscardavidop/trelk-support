@@ -228,7 +228,7 @@ export default function AccessDeniedPage({
           <div className="w-full max-w-md mx-auto py-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
-              <span className="text-xs font-medium uppercase tracking-widest text-gray-400">Requerimientos</span>
+              <span className="text-xs font-medium tracking-widest text-gray-400">Requerimientos</span>
               <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
             </div>
 

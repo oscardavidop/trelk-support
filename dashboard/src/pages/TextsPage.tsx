@@ -500,7 +500,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: any) {
       </div>
       <div className="flex flex-col leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );
@@ -686,7 +686,7 @@ function TextModal({ isOpen, onClose, onSave, editingText, languages, categories
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Traducciones</label>
+              <label className="text-xs font-medium text-zinc-400 tracking-wide">Traducciones</label>
               <div className="flex gap-2">
                 {languages.filter((l: any) => !formData.texts[l.code]).map((l: any) => (
                   <button
@@ -780,7 +780,7 @@ function DeleteModal({ textKey, isOpen, onClose, onConfirm }: DeleteModalProps) 
 function InputGroup({ label, value, onChange, placeholder, type = "text", options, mono, disabled }: any) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">{label}</label>
       {type === 'select' ? (
         <div className="relative">
           <select

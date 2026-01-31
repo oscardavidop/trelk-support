@@ -5,6 +5,7 @@
 
 import { Agent, type IAgent, type AgentRole, type OnlineStatus } from '../database/index.js';
 import { MAX_CONCURRENT_CHATS, RECONNECTION_GRACE_MINUTES, type AvailabilityStatus } from '../database/models/Agent.js';
+import { sendMessage } from './telegram.js';
 
 export { MAX_CONCURRENT_CHATS, RECONNECTION_GRACE_MINUTES };
 
@@ -266,4 +267,21 @@ export async function getOfflineAgentsWithChats(): Promise<IAgent[]> {
  */
 export async function resetActiveChats(agentId: string, count = 0): Promise<void> {
   await Agent.updateOne({ _id: agentId }, { activeChats: count });
+}
+
+export async function sendNewPasswordTelegramMessage(telegramId: number, newPassword: string): Promise<void> {
+  // Placeholder for sending Telegram message logic
+  sendMessage(telegramId, `Hi there! Your new password is: \`${newPassword}\`.\n\nPlease change it after logging in.`, { parseMode: 'Markdown' });
+}
+
+/** 
+ * * Generate a random secure password
+ */   
+export function generatePassword(length = 12): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 }

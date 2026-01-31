@@ -253,7 +253,7 @@ export default function SessionList() {
         ) : sortedSessions.length === 0 ? (
           <EmptyState activeTab={activeTab} hasSearch={!!searchQuery} />
         ) : (
-          <div className="divide-y divide-zinc-800/50">
+          <div className=" divide-zinc-800/50">
             {sortedSessions.map((session) => (
               <SessionItem
                 key={session.sessionId}
@@ -342,7 +342,7 @@ const TabButton = ({ isActive, onClick, icon: Icon, label, count, activeColor }:
         </span>
       )}
     </div>
-    <span className="text-[10px] font-medium uppercase tracking-wide opacity-90">{label}</span>
+    <span className="text-[10px] font-medium tracking-wide opacity-90">{label}</span>
   </button>
 );
 

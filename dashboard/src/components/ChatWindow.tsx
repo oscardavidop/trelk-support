@@ -575,14 +575,14 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   const isAuditMode = !isMySession && !isClosed && session.assignedAgent && (isAdmin || isSupervisor);
 
   const getCloseReasonLabel = () => {
-    if (!session.closeReason) return 'Conversación cerrada';
     const labels: Record<string, string> = {
       manual: session.closedByType === 'agent' ? 'Cerrado por agente' : 'Cerrado por usuario',
       inactivity: 'Cerrado por inactividad',
       resolved: 'Marcado como resuelto',
       spam: 'Marcado como spam',
+      system: session.closureReason ? session.closureReason  : 'Cerrado por el sistema',
     };
-    return labels[session.closeReason] || 'Conversación cerrada';
+    return (session as any).closureReason || labels[session.closeReason || 'manual'] || 'Conversación cerrada';
   };
 
   const formatClosedDate = () => {
@@ -716,7 +716,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                 {session.user.firstName} {session.user.lastName || ''}
               </h3>
               {session.user.isSubscriber && (
-                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-[9px] font-bold text-indigo-300 tracking-wider uppercase">
+                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-[9px] font-bold text-indigo-300uppercase">
                   PRO
                 </span>
               )}
@@ -823,7 +823,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 chat-messages-scroll bg-zinc-950"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 bg-zinc-950 scrollbar-hover"
       >
         {/* Load More Indicator */}
         {hasMoreMessages && (

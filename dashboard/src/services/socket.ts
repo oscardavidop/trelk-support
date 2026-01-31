@@ -1079,7 +1079,7 @@ function playNotificationSound(type: 'chat' | 'message' = 'message'): void {
     if (type === 'chat' && !notifications.newChatSound) return;
     if (type === 'message' && !notifications.newMessageSound) return;
     
-    const audio = new Audio('/notification.mp3');
+    const audio = new Audio('https://cdn.pixabay.com/audio/2025/06/03/audio_e8e6c2ff70.mp3');
     audio.volume = notifications.volume ?? 0.3;
     audio.play().catch(() => {
       // Ignore autoplay errors

@@ -783,7 +783,7 @@ const scrollToBottom = () => {
                     <span>Vars</span>
                   </button>
                   <div className="absolute bottom-full left-0 mb-2 w-60 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-900/50 border-b border-gray-700 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                    <div className="px-3 py-2 bg-gray-900/50 border-b border-gray-700 text-[10px] font-semibold text-gray-500 ">
                       Insertar variable
                     </div>
                     <div className="max-h-48 overflow-y-auto">
@@ -998,7 +998,7 @@ function QuickReplyDropdown({ isLoading, replies, selectedIndex, onSelect }: Qui
 
       {/* Header */}
       <div className="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900">
-        <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 ">
           <Zap className="w-3 h-3 text-amber-500" />
           <span>Respuestas Rápidas</span>
         </div>

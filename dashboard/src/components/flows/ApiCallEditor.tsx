@@ -410,7 +410,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                     {activeTab === 'params' && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between px-1">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Parámetros de URL</span>
+                                <span className="text-xs font-semibold text-gray-500 ">Parámetros de URL</span>
                                 <button onClick={addQueryParam} className="text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors">
                                     <Plus className="w-3 h-3" /> Añadir
                                 </button>
@@ -462,7 +462,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                     {activeTab === 'headers' && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between px-1">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Headers HTTP</span>
+                                <span className="text-xs font-semibold text-gray-500 ">Headers HTTP</span>
                                 <button onClick={addHeader} className="text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors">
                                     <Plus className="w-3 h-3" /> Añadir
                                 </button>
@@ -540,7 +540,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                                     />
                                     {/* Dynamic Hint Overlay */}
                                     <div className="absolute top-2 right-2 pointer-events-none">
-                                        <span className="text-[10px] text-gray-600 bg-gray-800/80 px-2 py-1 rounded uppercase border border-gray-700">
+                                        <span className="text-[10px] text-gray-600 bg-gray-800/80 px-2 py-1 rounded border border-gray-700">
                                             {cfg.bodyType}
                                         </span>
                                     </div>
@@ -565,7 +565,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                     {activeTab === 'auth' && (
                         <div className="space-y-4">
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo de Autenticación</label>
+                                <label className="text-xs font-semibold text-gray-500 ">Tipo de Autenticación</label>
                                 <div className="relative">
                                     <select
                                         value={cfg.authType}
@@ -766,10 +766,10 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                         {/* List Header (Solo visible en Desktop para ahorrar espacio) */}
                         {cfg.extractVariables.length > 0 && (
                             <div className="hidden md:flex items-center gap-2 mb-2 px-1">
-                                <span className="flex-1 text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Nombre Variable</span>
+                                <span className="flex-1 text-[10px] text-gray-500 font-semibold">Nombre Variable</span>
                                 <span className="w-6"></span> {/* Spacer for arrow */}
-                                <span className="flex-[2] text-[10px] uppercase text-gray-500 font-semibold tracking-wider">JSON Path</span>
-                                <span className="w-24 text-[10px] uppercase text-gray-500 font-semibold tracking-wider text-center">Default</span>
+                                <span className="flex-[2] text-[10px] text-gray-500 font-semibold">JSON Path</span>
+                                <span className="w-24 text-[10px] text-gray-500 font-semiboldtext-center">Default</span>
                                 <span className="w-8"></span> {/* Spacer for delete */}
                             </div>
                         )}
@@ -885,7 +885,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
 
                     {/* 1. Network & Resilience Group */}
                     <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Control de Ejecución</h4>
+                        <h4 className="text-xs font-semibold text-gray-500 ">Control de Ejecución</h4>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* Timeout */}
@@ -957,7 +957,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
 
                     {/* 2. Error Handling Group */}
                     <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Manejo de Fallos</h4>
+                        <h4 className="text-xs font-semibold text-gray-500 ">Manejo de Fallos</h4>
 
                         {/* Strategy Segmented Control */}
                         <div className="bg-gray-900 p-1 rounded-lg border border-gray-700 flex flex-col sm:flex-row gap-1">

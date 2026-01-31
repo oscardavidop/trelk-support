@@ -241,7 +241,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
 
       {/* 1. Services Status */}
       <div>
-        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-4 flex items-center gap-2">
           <Server className="w-4 h-4" /> Servicios Principales
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -270,7 +270,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
 
       {/* 2. Key Metrics */}
       <div>
-        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-4 flex items-center gap-2">
           <TrendingUp className="w-4 h-4" /> Métricas Clave
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -308,7 +308,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
 
       {/* 3. Quick Actions */}
       <div>
-        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-4 flex items-center gap-2">
           <Zap className="w-4 h-4" /> Mantenimiento Rápido
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -357,7 +357,7 @@ function ServiceCard({ name, icon: Icon, status, latency, description }: Service
         <div className={`p-2.5 rounded-xl ${isUp ? 'bg-zinc-800 group-hover:bg-emerald-500/10' : 'bg-red-500/10'}`}>
           <Icon className={`w-5 h-5 ${isUp ? 'text-zinc-400 group-hover:text-emerald-400' : 'text-red-500'}`} />
         </div>
-        <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full ${isUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+        <div className={`flex items-center gap-1.5 text-xs font-bold uppercasepx-2 py-1 rounded-full ${isUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
           }`}>
           {isUp ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
           {isUp ? 'ONLINE' : 'OFFLINE'}

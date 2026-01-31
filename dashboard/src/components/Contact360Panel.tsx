@@ -584,7 +584,7 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
               {/* Active Fields */}
               {!isLoading && activeFields.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Campos Activos ({activeFields.length})</h4>
+                  <h4 className="text-xs font-medium text-gray-500 ">Campos Activos ({activeFields.length})</h4>
                   {activeFields.map((field) => (
                     <div key={field.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 group">
                       <div className="flex items-center gap-3">
@@ -612,7 +612,7 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
               {/* Archived Fields */}
               {!isLoading && showInactive && archivedFields.length > 0 && (
                 <div className="space-y-2 mt-4">
-                  <h4 className="text-xs font-medium text-amber-500/70 uppercase tracking-wider">Archivados ({archivedFields.length})</h4>
+                  <h4 className="text-xs font-medium text-amber-500/70 ">Archivados ({archivedFields.length})</h4>
                   {archivedFields.map((field) => (
                     <div key={field.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-800 group opacity-60">
                       <div className="flex items-center gap-3">

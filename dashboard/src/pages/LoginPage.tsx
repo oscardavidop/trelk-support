@@ -63,7 +63,7 @@ export default function LoginPage() {
 
             {/* Email Input */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-xs font-bold text-zinc-500 uppercase tracking-wider pl-1">
+              <label htmlFor="email" className="block text-xs font-bold text-zinc-500 uppercasepl-1">
                 Correo Electrónico
               </label>
               <div className="relative group">
@@ -85,7 +85,7 @@ export default function LoginPage() {
             {/* Password Input */}
             <div className="space-y-2">
               <div className="flex items-center justify-between pl-1">
-                <label htmlFor="password" className="block text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                <label htmlFor="password" className="block text-xs font-bold text-zinc-500 ">
                   Contraseña
                 </label>
               </div>

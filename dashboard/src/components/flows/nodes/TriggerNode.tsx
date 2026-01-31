@@ -195,7 +195,7 @@ function TriggerNode({ data, selected, id }: NodeProps<TriggerNodeData>) {
             <div className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight truncate">
               {data.label || 'Inicio del Flujo'}
             </div>
-            <div className="text-[10px] text-green-600 dark:text-green-400 font-medium uppercase tracking-wider mt-0.5 truncate">
+            <div className="text-[10px] text-green-600 dark:text-green-400 font-medium uppercasemt-0.5 truncate">
               {triggerLabel}
             </div>
           </div>

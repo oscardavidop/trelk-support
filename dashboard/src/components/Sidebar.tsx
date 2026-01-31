@@ -30,7 +30,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   if (HIDDEN_ROUTES.some(route => location.pathname.startsWith(route))) {
-    return null;
+    // return null;
   }
 
   // Close dropdown logic
@@ -212,7 +212,8 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       </div>
 
       {/* 3. Navigation */}
-      <nav className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-6">
+      {/* only show scrollbar on hover */}
+      <nav className="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-hover custom-scrollbar">
         {navItems.map((group, groupIdx) => {
           const visibleItems = group.items.filter(item => item.permission === null || can(item.permission));
           if (visibleItems.length === 0) return null;
@@ -220,7 +221,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
           return (
             <div key={groupIdx}>
               {!isCollapsed && (
-                <h3 className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                <h3 className="px-3 text-[10px] font-bold text-zinc-500 uppercasemb-2">
                   {group.section}
                 </h3>
               ) || (
@@ -299,7 +300,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
               {/* Profile Header in Menu */}
               <div className="p-3 border-b border-zinc-800/50 mb-1">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Estado</p>
+                <p className="text-xs font-medium text-zinc-500 uppercasemb-2">Estado</p>
                 <div className="space-y-1">
                   <StatusButton
                     status="online"

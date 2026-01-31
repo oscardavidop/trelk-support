@@ -218,7 +218,7 @@ function FilterBadge({ label, count, icon: Icon, color, bg, active, onClick }: {
       </div>
       <div className="flex flex-col items-start leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </button>
   );
@@ -281,7 +281,7 @@ function ScheduledMessageCard({ message }: { message: ScheduledMessageInfo }) {
         {/* IDs & Type */}
         <div className="col-span-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
+            <span className={`text-[10px] font-boldpx-1.5 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
               {typeConfig.label}
             </span>
             <span className="text-zinc-500 text-xs font-mono">#{message.id.slice(-6)}</span>
@@ -297,7 +297,7 @@ function ScheduledMessageCard({ message }: { message: ScheduledMessageInfo }) {
         <div className="col-span-1">
           {message.scheduledAt ? (
             <div className="flex flex-col">
-              <span className="text-xs text-zinc-500 uppercase font-bold">Programado</span>
+              <span className="text-xs text-zinc-500 font-bold">Programado</span>
               <span className="text-sm text-zinc-200">{new Date(message.scheduledAt).toLocaleString()}</span>
               {message.status === 'pending' && (
                 <span className="text-xs text-amber-400 mt-0.5">En: {getTimeRemaining()}</span>
@@ -310,7 +310,7 @@ function ScheduledMessageCard({ message }: { message: ScheduledMessageInfo }) {
 
         {/* Status & Attempts */}
         <div className="col-span-1 flex flex-col">
-          <span className="text-xs text-zinc-500 uppercase font-bold mb-1">Estado</span>
+          <span className="text-xs text-zinc-500 font-bold mb-1">Estado</span>
           <div className="flex items-center gap-2">
             <span className={`px-2 py-0.5 rounded text-xs font-medium border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
               {statusConfig.label}
@@ -330,7 +330,7 @@ function ScheduledMessageCard({ message }: { message: ScheduledMessageInfo }) {
 
         {/* Created At */}
         <div className="col-span-1 text-right">
-          <span className="text-[10px] text-zinc-500 block uppercase font-bold">Creado</span>
+          <span className="text-[10px] text-zinc-500 block font-bold">Creado</span>
           <span className="text-xs text-zinc-400 font-mono">
             {new Date(message.createdAt).toLocaleTimeString()}
           </span>

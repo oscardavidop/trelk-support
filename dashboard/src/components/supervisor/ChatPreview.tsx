@@ -101,7 +101,7 @@ export function ChatPreview({ sessionId, userName, agentName }: ChatPreviewProps
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
           </span>
-          <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">En Vivo</span>
+          <span className="text-[10px] font-bold text-red-400 ">En Vivo</span>
         </div>
       </div>
 
@@ -266,7 +266,7 @@ function FileDownload({ url, name }: any) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
-        <p className="text-[10px] text-zinc-500 uppercase font-bold">Documento</p>
+        <p className="text-[10px] text-zinc-500 font-bold">Documento</p>
       </div>
       <Download className="w-4 h-4 text-zinc-500 group-hover:text-white" />
     </a>

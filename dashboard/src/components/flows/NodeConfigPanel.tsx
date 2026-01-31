@@ -385,7 +385,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
-                    <span className="text-[10px] font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">Activo</span>
+                    <span className="text-[10px] font-medium text-green-700 dark:text-green-300 tracking-wide">Activo</span>
                   </span>
                 </div>
 
@@ -414,7 +414,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <div className="p-4 space-y-5">
               {/* Command name */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-2 block">
                   Comando (sin /)
                 </label>
                 <div className="relative">
@@ -446,7 +446,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
               {/* Parameter matching */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-2 block">
                   Coincidir parámetro
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -482,7 +482,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {/* Expected param value (if not 'any') */}
               {triggerConfig.commandParamMatch && triggerConfig.commandParamMatch !== 'any' && (
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-2 block">
                     Valor del parámetro esperado
                   </label>
                   <input
@@ -500,7 +500,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <svg className="w-4 h-4 text-cyan-600 dark:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Guardar en variables</span>
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 tracking-wide">Guardar en variables</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -543,7 +543,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {/* Preview */}
               {triggerConfig.command && (
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-2">
                     Vista previa
                   </div>
                   <div className="text-sm font-mono text-gray-700 dark:text-gray-300">
@@ -593,7 +593,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
               {/* Selector de Tipo de Coincidencia */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-2 block">
                   Lógica de coincidencia
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -647,7 +647,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {/* Input de Keywords */}
               <div className="relative">
                 <div className="flex justify-between items-end mb-2">
-                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
                     Lista de palabras (1 por línea)
                   </label>
                   <span className="text-[10px] font-medium px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400">

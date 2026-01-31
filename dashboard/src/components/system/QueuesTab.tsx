@@ -246,11 +246,11 @@ function QueueCard({ queue, expanded, jobs, jobsLoading, actionLoading, onToggle
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-zinc-100 text-lg">{queue.name}</h3>
                 {queue.paused ? (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercasebg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
                     <Pause className="w-3 h-3" /> Paused
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercasebg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
                     <Play className="w-3 h-3" /> Running
                   </span>
                 )}
@@ -355,7 +355,7 @@ const StatBox = ({ label, value, color, textColor }: any) => (
     <span className={`text-lg font-bold ${textColor}`}>{value.toLocaleString()}</span>
     <div className="flex items-center gap-1.5 mt-1">
       <div className={`w-1.5 h-1.5 rounded-full ${color}`} />
-      <span className="text-[10px] uppercase font-bold text-zinc-500">{label}</span>
+      <span className="text-[10px] font-bold text-zinc-500">{label}</span>
     </div>
   </div>
 );
@@ -394,7 +394,7 @@ function JobCard({ job }: { job: QueueJob }) {
         </div>
       )}
 
-      <div className="mt-2 flex items-center gap-4 text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+      <div className="mt-2 flex items-center gap-4 text-[10px] text-zinc-500 font-bold">
         <span>Intentos: <span className="text-zinc-300">{job.attemptsMade}</span></span>
         {job && job.delay !== undefined && job.delay > 0 && <span>Delay: <span className="text-zinc-300">{job.delay}ms</span></span>}
       </div>

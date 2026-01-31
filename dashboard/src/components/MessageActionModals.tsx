@@ -148,7 +148,7 @@ export function DeleteMessageModal({ isOpen, onClose, message, onConfirm }: Dele
         </div>
         {message && (
           <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
-            <p className="text-xs text-zinc-500 uppercase font-bold mb-2 tracking-wider">Mensaje a eliminar</p>
+            <p className="text-xs text-zinc-500 font-bold mb-2">Mensaje a eliminar</p>
             <p className="text-zinc-300 text-sm italic">"{message.content}"</p>
           </div>
         )}
@@ -194,11 +194,11 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-zinc-500 uppercase mb-1.5">Nombre</label>
+            <label className="block text-xs font-bold text-zinc-500 mb-1.5">Nombre</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-all" placeholder="Ej: Saludo" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-zinc-500 uppercase mb-1.5">Categoría</label>
+            <label className="block text-xs font-bold text-zinc-500 mb-1.5">Categoría</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-all">
               {REPLY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -206,7 +206,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-zinc-500 uppercase mb-1.5">Atajo (Opcional)</label>
+          <label className="block text-xs font-bold text-zinc-500 mb-1.5">Atajo (Opcional)</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-mono">/</span>
             <input type="text" value={shortcut} onChange={(e) => setShortcut(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))} className="w-full pl-6 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-all font-mono" placeholder="saludo" />
@@ -214,7 +214,7 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-zinc-500 uppercase mb-1.5">Contenido</label>
+          <label className="block text-xs font-bold text-zinc-500 mb-1.5">Contenido</label>
           <textarea value={content} onChange={(e) => setContent(e.target.value)} className="w-full h-24 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none resize-none transition-all" placeholder="Texto del mensaje..." />
         </div>
       </div>

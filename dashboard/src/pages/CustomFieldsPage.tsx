@@ -211,7 +211,7 @@ export default function CustomFieldsPage() {
               {/* Active Fields */}
               {activeFields.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest pl-1">Campos Activos</h3>
+                  <h3 className="text-xs font-bold text-zinc-500 tracking-widest pl-1">Campos Activos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {activeFields.map(field => (
                       <FieldCard
@@ -228,7 +228,7 @@ export default function CustomFieldsPage() {
               {/* Archived Fields */}
               {showInactive && archivedFields.length > 0 && (
                 <div className="space-y-4 pt-4 border-t border-zinc-800/50">
-                  <h3 className="text-xs font-bold text-amber-500/70 uppercase tracking-widest pl-1 flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-amber-500/70 tracking-widest pl-1 flex items-center gap-2">
                     <Archive className="w-3 h-3" /> Archivados
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 opacity-75 grayscale-[0.3]">
@@ -292,7 +292,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: any) {
       </div>
       <div className="flex flex-col leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );
@@ -314,7 +314,7 @@ function FieldCard({ field, onEdit, onDelete, onRestore, archived }: any) {
             <div className="flex items-center gap-2 text-xs">
               <span className="text-zinc-500">{typeInfo.label}</span>
               {field.required && (
-                <span className="px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded border border-red-500/20 text-[10px] uppercase font-bold tracking-wide">
+                <span className="px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded border border-red-500/20 text-[10px] font-bold tracking-wide">
                   Req
                 </span>
               )}
@@ -516,7 +516,7 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
               />
             ) : (
               <div className="p-3 bg-zinc-800/30 border border-zinc-800 rounded-xl flex flex-col gap-1">
-                <span className="text-xs text-zinc-500 uppercase font-bold">Clave Interna</span>
+                <span className="text-xs text-zinc-500 font-bold">Clave Interna</span>
                 <code className="text-sm text-indigo-300 font-mono">${formData.key}</code>
               </div>
             )}
@@ -524,7 +524,7 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
             {/* TYPE SELECTION */}
             {!isEdit ? (
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">Tipo de Dato</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Tipo de Dato</label>
                 <div className="grid grid-cols-2 gap-2">
                   {FIELD_TYPES.map(({ type, label, icon: Icon }) => (
                     <button
@@ -543,14 +543,14 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
               </div>
             ) : (
               <div className="p-3 bg-zinc-800/30 border border-zinc-800 rounded-xl flex items-center justify-between">
-                <span className="text-xs text-zinc-500 uppercase font-bold">Tipo de dato</span>
+                <span className="text-xs text-zinc-500 font-bold">Tipo de dato</span>
                 <span className="text-sm font-medium text-white">{FIELD_TYPE_LABELS[formData.type]}</span>
               </div>
             )}
 
             {/* DESCRIPTION */}
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">Descripción</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">Descripción</label>
               <textarea
                 value={formData.description}
                 onChange={(e: any) => setFormData({ ...formData, description: e.target.value })}
@@ -564,7 +564,7 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
             {formData.type === 'select' && (
               <div className="bg-zinc-900/50 p-4 border border-zinc-800 rounded-xl space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Opciones de Lista</label>
+                  <label className="text-xs font-medium text-zinc-400 tracking-wide">Opciones de Lista</label>
                   <span className="text-xs text-zinc-500">{formData.options.length} opciones</span>
                 </div>
 
@@ -630,7 +630,7 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
 
             {/* --- DYNAMIC DEFAULT VALUE INPUT --- */}
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">Valor por Defecto</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">Valor por Defecto</label>
 
               {/* Logic for different input types based on field type */}
               {formData.type === 'text' || formData.type === 'email' || formData.type === 'url' ? (
@@ -724,7 +724,7 @@ function DeleteModal({ field, isOpen, onClose, onConfirm }: any) {
 function InputGroup({ label, value, onChange, placeholder, mono, prefix, error, type = 'text' }: any) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">{label}</label>
       <div className="relative">
         {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono">{prefix}</span>}
         <input

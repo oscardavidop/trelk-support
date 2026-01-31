@@ -184,7 +184,7 @@ function StatsOverview({ stats, loading }: { stats: SupervisorStats | null; load
     <div className="grid grid-cols-5 gap-4 p-6 border-b border-gray-700">
       {items.map((item, i) => (
         <div key={i} className="bg-gray-800/50 rounded-lg p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{item.label}</p>
+          <p className="text-xs text-gray-400 uppercasemb-1">{item.label}</p>
           <div className="flex items-baseline gap-1">
             <span className={`text-2xl font-bold ${item.color}`}>{item.value}</span>
             {item.total !== undefined && (
@@ -230,7 +230,7 @@ function AgentList({
   return (
     <div className="w-80 border-r border-gray-700 overflow-y-auto">
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+        <h3 className="text-sm font-semibold text-gray-300 uppercasemb-3">
           Agentes ({agents.length})
         </h3>
         
@@ -374,7 +374,7 @@ function AgentDetail({ agent, onClose }: { agent?: AgentOverview; onClose: () =>
       
       {/* Active sessions */}
       <div>
-        <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+        <h4 className="text-sm font-semibold text-gray-300 uppercasemb-3">
           Sesiones Activas ({agent.sessions.length})
         </h4>
         

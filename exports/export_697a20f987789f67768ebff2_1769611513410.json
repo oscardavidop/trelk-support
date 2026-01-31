@@ -1,0 +1,2016 @@
+{
+  "exportedAt": "2026-01-28T14:45:13.410Z",
+  "exportedBy": "6962dc472ba9a76efed78395",
+  "totalSessions": 16,
+  "sessions": [
+    {
+      "session": {
+        "id": "CS-LR22-A222F5",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T03:33:26.715Z",
+        "closedAt": "2026-01-18T18:11:25.087Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-18T03:33:26.773Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T03:33:33.389Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T03:35:52.901Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T03:36:30.099Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-18T03:44:34.762Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T03:55:49.886Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T03:59:45.889Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T03:59:57.302Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:04:59.754Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-V4YW-D2A599",
+        "status": "closed",
+        "category": "feedback",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T04:08:44.265Z",
+        "closedAt": "2026-01-24T22:57:36.525Z",
+        "rating": 5
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-18T04:08:44.321Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:09:14.458Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:30:26.799Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:31:15.892Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:31:28.891Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:33:14.531Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:33:39.869Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:34:02.202Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:39:21.884Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-18T04:48:13.503Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:52:13.243Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T04:53:46.763Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T05:48:15.916Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T16:27:52.081Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T16:49:01.337Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T17:02:27.790Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-18T17:20:01.434Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T17:27:01.910Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-18T17:36:45.413Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-18T17:39:19.088Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T17:53:50.808Z"
+        },
+        {
+          "action": "scheduled_message_cancelled",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado cancelado",
+          "createdAt": "2026-01-18T17:56:01.898Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-18T18:00:12.642Z"
+        },
+        {
+          "action": "scheduled_message_cancelled",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado cancelado",
+          "createdAt": "2026-01-18T18:00:20.081Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Admin took over this chat",
+          "createdAt": "2026-01-18T18:10:30.277Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T01:53:10.958Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-21T02:06:03.620Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:34:01.619Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-21T19:34:01.724Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-23T14:52:19.843Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-23T15:11:14.880Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:04:18.862Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:12:59.158Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:13:34.383Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:14:20.927Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-24T03:24:26.407Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:45:33.903Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:46:24.144Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:46:35.226Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:46:39.220Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:47:34.298Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:48:37.147Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:49:09.226Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:49:23.249Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:52:51.137Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:53:05.507Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:54:44.196Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:54:52.197Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:55:04.145Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:55:14.135Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:55:26.203Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-24T03:55:37.649Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T03:55:50.661Z"
+        },
+        {
+          "action": "whisper_sent",
+          "actor": "Admin",
+          "description": "Supervisor Admin sent a whisper",
+          "createdAt": "2026-01-24T04:01:10.692Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-24T04:15:09.270Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-24T13:50:37.847Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-24T22:57:36.527Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-N8FE-A19BA6",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T18:02:23.978Z",
+        "closedAt": "2026-01-20T14:42:15.398Z",
+        "rating": 1
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-18T18:02:24.040Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T18:02:32.952Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-18T18:02:52.667Z"
+        },
+        {
+          "action": "scheduled_message_cancelled",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado cancelado",
+          "createdAt": "2026-01-18T18:03:25.553Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T19:04:01.722Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-20T04:00:07.721Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-20T13:54:14.619Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-20T14:19:24.556Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-20T14:32:14.876Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-20T14:42:15.454Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-Q66P-427AB6",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-18T18:04:41.042Z",
+        "closedAt": "2026-01-22T15:09:12.100Z"
+      },
+      "user": {
+        "id": "696d20b43b948fde67337e3a",
+        "name": "Juan",
+        "telegramId": 6866821292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Juan",
+          "description": "Session started by Juan",
+          "createdAt": "2026-01-18T18:04:41.095Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-18T18:05:06.284Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T14:51:37.577Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-22T14:57:13.882Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para evento",
+          "createdAt": "2026-01-22T14:58:34.029Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T14:59:12.069Z"
+        },
+        {
+          "action": "scheduled_message_cancelled",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado cancelado",
+          "createdAt": "2026-01-22T14:59:20.274Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para después de inactividad",
+          "createdAt": "2026-01-22T15:02:08.652Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-22T15:09:12.101Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-VMXV-78F3F4",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-21T03:04:09.188Z",
+        "closedAt": "2026-01-21T19:26:26.311Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-21T03:04:09.247Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:10:57.025Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:12:51.342Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:12:57.887Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:15:01.531Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:15:12.331Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:15:28.320Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:20:36.316Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-21T18:20:57.065Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:30:55.935Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-21T18:40:56.030Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T18:59:11.043Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:01:48.432Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:02:58.461Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:03:16.430Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:05:14.451Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:08:11.440Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:08:42.520Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-21T19:09:11.116Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:11:02.182Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:14:06.531Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-21T19:16:04.373Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:18:36.068Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-21T19:18:36.192Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:25:00.551Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-21T19:25:00.662Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:25:40.894Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-21T19:26:26.312Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-9AGW-326C01",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-21T19:34:32.769Z",
+        "closedAt": "2026-01-22T21:58:42.635Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-21T19:34:32.770Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-21T19:34:39.794Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "User",
+          "description": "Session closed: Closed by user",
+          "createdAt": "2026-01-21T19:38:40.731Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T21:58:42.529Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T21:58:42.636Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-2BIV-C26482",
+        "status": "closed",
+        "category": "support",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-22T03:25:01.015Z",
+        "closedAt": "2026-01-22T22:31:14.926Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-22T03:25:01.016Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T03:25:21.670Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:08:43.268Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:08:49.188Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:10:15.168Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:10:26.186Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:10:36.193Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:10:43.328Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:10:47.234Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:10:55.568Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:11:11.217Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:11:26.191Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:11:41.217Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:12:16.214Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:12:28.182Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:12:36.178Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:12:54.172Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:13:09.179Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:14:25.227Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:14:41.213Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:14:52.376Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:24:08.615Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T04:24:08.729Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:26:26.008Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T04:26:26.169Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T04:33:01.558Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T04:33:01.667Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T14:51:15.954Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T14:51:16.064Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T15:29:23.803Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T15:29:23.927Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T15:29:45.482Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T15:29:45.587Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-22T22:31:14.824Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: 🚫 Chat cerrado: El usuario bloqueó el bot",
+          "createdAt": "2026-01-22T22:31:14.927Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-P5DZ-4F00E4",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-23T02:06:27.720Z",
+        "closedAt": "2026-01-23T02:16:53.849Z",
+        "rating": 3
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-23T02:06:27.722Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-23T02:06:34.947Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-23T02:07:17.113Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-23T02:16:53.851Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-XRU0-37AEEC",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-23T03:37:08.904Z",
+        "closedAt": "2026-01-23T03:57:15.173Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-23T03:37:08.905Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-23T03:37:22.606Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-23T03:51:56.403Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-23T03:52:17.849Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-5YVG-3575E8",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-25T00:58:54.029Z",
+        "closedAt": "2026-01-25T02:37:21.264Z",
+        "rating": 3
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [
+        {
+          "id": "69757e25e1be03556336fd96",
+          "content": "44444444444444",
+          "createdBy": "Admin",
+          "createdAt": "2026-01-25T02:21:25.946Z"
+        }
+      ],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-25T00:58:54.031Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T00:59:07.101Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:19:36.009Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-25T02:19:45.716Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:20:19.013Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:20:52.037Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:22:55.710Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:28:37.997Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:29:25.992Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:29:32.979Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:29:45.004Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:29:53.993Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:35:25.986Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:35:41.980Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T02:35:53.982Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-25T02:37:21.265Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-ZPYT-70CE57",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-25T04:37:59.478Z",
+        "closedAt": "2026-01-28T04:42:09.876Z",
+        "rating": 5
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [
+        {
+          "fromAgent": "Admin",
+          "toAgent": "Oscar",
+          "reason": "444444444444",
+          "createdAt": "2026-01-25T04:50:39.717Z"
+        }
+      ],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-25T04:37:59.479Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:38:06.806Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:45:19.956Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:46:28.937Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:46:36.936Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:46:46.930Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:47:03.917Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:47:12.995Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:47:12.998Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:47:23.073Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:47:23.076Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:47:30.930Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:47:39.931Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T04:47:47.016Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:47:47.019Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:48:22.927Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T04:49:08.987Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Transferred to Oscar: 444444444444",
+          "createdAt": "2026-01-25T04:50:39.723Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-26T04:38:15.038Z"
+        },
+        {
+          "action": "whisper_sent",
+          "actor": "Admin",
+          "description": "Supervisor Admin sent a whisper",
+          "createdAt": "2026-01-26T04:39:29.906Z"
+        },
+        {
+          "action": "whisper_sent",
+          "actor": "Admin",
+          "description": "Supervisor Admin sent a whisper",
+          "createdAt": "2026-01-26T04:39:31.624Z"
+        },
+        {
+          "action": "whisper_read",
+          "actor": "agent",
+          "description": "Agent read supervisor whisper",
+          "createdAt": "2026-01-26T04:40:27.448Z"
+        },
+        {
+          "action": "whisper_read",
+          "actor": "agent",
+          "description": "Agent read supervisor whisper",
+          "createdAt": "2026-01-26T04:40:28.372Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "User",
+          "description": "Session closed: Closed by user",
+          "createdAt": "2026-01-26T04:42:09.622Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-26T19:42:42.431Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-26T19:52:42.528Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-27T18:21:53.421Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para hora fija",
+          "createdAt": "2026-01-27T18:23:18.529Z"
+        },
+        {
+          "action": "scheduled_message_created",
+          "actor": "ScheduledMessages",
+          "description": "Mensaje programado creado para evento",
+          "createdAt": "2026-01-27T18:25:08.506Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Admin took over this chat",
+          "createdAt": "2026-01-27T20:26:16.985Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Admin took over this chat",
+          "createdAt": "2026-01-27T20:26:18.902Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-28T03:12:44.021Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-28T03:41:18.553Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-28T04:06:43.576Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-28T04:42:09.878Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-QCV0-EBCE11",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-25T17:06:32.221Z",
+        "closedAt": "2026-01-27T20:14:20.594Z",
+        "rating": 1
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [
+        {
+          "id": "69791ef754f968b45fe112f3",
+          "content": "cliente grosero",
+          "createdBy": "Admin",
+          "createdAt": "2026-01-27T20:24:23.625Z"
+        }
+      ],
+      "transfers": [
+        {
+          "fromAgent": "Admin",
+          "toAgent": "Oscar",
+          "reason": "..........",
+          "createdAt": "2026-01-25T20:20:35.304Z"
+        },
+        {
+          "fromAgent": "Admin",
+          "toAgent": "Oscar",
+          "reason": "3",
+          "createdAt": "2026-01-25T20:47:06.478Z"
+        }
+      ],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-25T17:06:32.223Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T17:07:11.588Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:14:13.865Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:18:39.631Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:18:47.654Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:18:47.658Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:18:53.601Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:19:00.581Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:19:20.563Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Transferred to Oscar: ..........",
+          "createdAt": "2026-01-25T20:20:35.309Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:28:44.882Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:28:57.559Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:29:05.720Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:31:34.624Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:35:31.619Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:35:40.289Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:35:40.292Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:36:56.587Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:36:56.593Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:37:13.581Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:37:30.587Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:37:52.546Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:38:01.579Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:38:10.571Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:38:39.570Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:39:09.983Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:39:09.989Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:42:50.575Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:45:22.464Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Transferred to Oscar: 3",
+          "createdAt": "2026-01-25T20:47:06.483Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:51:55.630Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:52:01.708Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-01-25T20:52:01.712Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-25T20:52:21.493Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-25T21:01:07.057Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-27T19:54:21.746Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-27T20:04:20.487Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-27T20:14:20.595Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-5OBN-46D423",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-26T04:58:17.316Z",
+        "closedAt": "2026-01-26T04:59:51.537Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-26T04:58:17.317Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-26T04:58:29.179Z"
+        },
+        {
+          "action": "session_transferred",
+          "actor": "Admin",
+          "description": "Admin took over this chat",
+          "createdAt": "2026-01-26T04:59:39.103Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-OXUV-5FC7D1",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-27T19:00:45.032Z",
+        "closedAt": "2026-01-27T19:16:13.109Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-27T19:00:45.034Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-27T19:01:02.112Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-27T19:16:13.110Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-1WTS-78C4C8",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-27T20:34:49.073Z",
+        "closedAt": "2026-01-27T20:39:49.103Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-01-27T20:34:49.074Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity in queue",
+          "createdAt": "2026-01-27T20:39:49.104Z"
+        }
+      ]
+    },
+    {
+      "session": {
+        "id": "CS-2HGN-316316",
+        "status": "closed",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-01-27T20:35:15.815Z",
+        "closedAt": "2026-01-28T03:37:42.153Z"
+      },
+      "user": {
+        "id": "696d20b43b948fde67337e3a",
+        "name": "Juan",
+        "telegramId": 6866821292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Admin",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Juan",
+          "description": "Session started by Juan",
+          "createdAt": "2026-01-27T20:35:15.817Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-27T20:35:58.375Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-01-27T20:46:04.113Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Admin",
+          "description": "Assigned to Admin",
+          "createdAt": "2026-01-28T03:27:48.290Z"
+        }
+      ]
+    }
+  ]
+}

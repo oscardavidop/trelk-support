@@ -357,7 +357,7 @@ function InputField({ label, value, onChange, type = 'text', placeholder, suffix
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">{label}</label>
       <div className="relative group">
         <input
           type={type}
@@ -383,7 +383,7 @@ function TextareaField({ label, value, onChange, placeholder, rows = 3 }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">{label}</label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -422,7 +422,7 @@ function SelectField({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">{label}</label>
       <div className="relative">
         <select
           value={value}

@@ -15,6 +15,8 @@ import { logger } from '../services/logger.js';
 import { acquireLock, releaseLock } from '../services/redis.js';
 import { ScheduledMessage } from '../database/models/ScheduledMessage.js';
 import { ChatSession } from '../database/models/ChatSession.js';
+import { getIO } from '../services/socket.js';
+import { addMessage } from '../services/chat.service.js';
 
 // ============= WORKER PROCESSOR =============
 
@@ -113,6 +115,25 @@ async function processScheduledMessage(job: Job<ScheduledMessageJob>): Promise<a
         telegramMessageId: result.messageId,
       });
 
+      // emit message sent event (if needed)
+      const savedMessage = await addMessage(sessionId, 'agent', 'Se envió una advertencia de inactividad.', {
+        messageType: 'text',
+      });
+
+      // Emit message:new event so it shows in real-time in the dashboard
+      const io = getIO();
+      if (io) {
+        const messageData = {
+          _id: savedMessage._id.toString(),
+          session: sessionId,
+          sender: 'agent',
+          content: scheduledMsg.message.text || '',
+          messageType: 'text' as const,
+          createdAt: savedMessage.createdAt,
+        };
+        io.to(`session:${sessionId}`).emit('message:new', messageData);
+      }
+
       return { success: true, telegramMessageId: result.messageId };
     } else {
       // Mark as failed
@@ -169,31 +190,31 @@ async function sendScheduledMessage(
       switch (media.type) {
         case 'photo':
           const photoSent = await telegram.sendPhoto(
-            chatId, 
-            media.url, 
+            chatId,
+            media.url,
             text || ''
           );
           return { success: photoSent };
 
         case 'document':
           const docSent = await telegram.sendDocument(
-            chatId, 
-            media.url, 
+            chatId,
+            media.url,
             text || ''
           );
           return { success: docSent };
 
         case 'voice':
           const voiceSent = await telegram.sendVoice(
-            chatId, 
+            chatId,
             media.url
           );
           return { success: voiceSent };
 
         case 'video':
           const videoSent = await telegram.sendVideo?.(
-            chatId, 
-            media.url, 
+            chatId,
+            media.url,
             text || ''
           );
           return { success: !!videoSent };
@@ -201,8 +222,8 @@ async function sendScheduledMessage(
         default:
           // Unknown media type, try as document
           const defaultSent = await telegram.sendDocument(
-            chatId, 
-            media.url, 
+            chatId,
+            media.url,
             text || ''
           );
           return { success: defaultSent };
@@ -219,6 +240,9 @@ async function sendScheduledMessage(
 
       return {
         success: true,
+        // data: {
+        //   message: 
+        // },
         messageId,
       };
     } else {
@@ -227,7 +251,7 @@ async function sendScheduledMessage(
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // Check for permanent errors that shouldn't be retried
     const permanentErrors = [
       'chat not found',
@@ -235,8 +259,8 @@ async function sendScheduledMessage(
       'user is deactivated',
       'chat_write_forbidden',
     ];
-    
-    const isPermanentError = permanentErrors.some(e => 
+
+    const isPermanentError = permanentErrors.some(e =>
       errorMessage.toLowerCase().includes(e)
     );
 

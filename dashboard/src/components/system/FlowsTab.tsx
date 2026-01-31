@@ -197,7 +197,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: { icon: typeof Play;
       </div>
       <div className="flex flex-col items-start leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );
@@ -227,7 +227,7 @@ function FlowMonitorCard({ flow, expanded, onToggle }: { flow: FlowStats; expand
             <div>
               <h3 className="font-semibold text-zinc-100 truncate text-base">{flow.name}</h3>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${statusConfig.bg} ${statusConfig.color}`}>
+                <span className={`text-[10px] font-bold uppercasepx-1.5 py-0.5 rounded ${statusConfig.bg} ${statusConfig.color}`}>
                   {statusConfig.label}
                 </span>
                 {flow.lastExecutedAt && (
@@ -264,7 +264,7 @@ function FlowMonitorCard({ flow, expanded, onToggle }: { flow: FlowStats; expand
 
             {/* Triggers */}
             <div>
-              <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-zinc-500 tracking-widest mb-2 flex items-center gap-1.5">
                 <Zap className="w-3 h-3" /> Triggers
               </h4>
               <div className="flex flex-wrap gap-1.5">
@@ -278,7 +278,7 @@ function FlowMonitorCard({ flow, expanded, onToggle }: { flow: FlowStats; expand
 
             {/* System Info */}
             <div>
-              <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-zinc-500 tracking-widest mb-2 flex items-center gap-1.5">
                 <Database className="w-3 h-3" /> Sistema
               </h4>
               <div className="space-y-1">
@@ -307,6 +307,6 @@ function FlowMonitorCard({ flow, expanded, onToggle }: { flow: FlowStats; expand
 const MetricBox = ({ label, value, color = 'text-zinc-200' }: any) => (
   <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-lg p-2 text-center">
     <div className={`text-sm font-bold ${color}`}>{typeof value === 'number' ? value.toLocaleString() : value}</div>
-    <div className="text-[10px] text-zinc-500 uppercase tracking-wide">{label}</div>
+    <div className="text-[10px] text-zinc-500 tracking-wide">{label}</div>
   </div>
 );

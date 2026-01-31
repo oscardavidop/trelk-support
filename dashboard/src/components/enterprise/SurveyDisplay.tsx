@@ -95,7 +95,7 @@ export const SurveyDisplay: React.FC<SurveyDisplayProps> = ({ survey, compact = 
             <h4 className="text-sm font-bold text-white tracking-tight">
               Resultados de Encuesta
             </h4>
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${sentiment.bg} ${sentiment.color} ${sentiment.border}`}>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercaseborder ${sentiment.bg} ${sentiment.color} ${sentiment.border}`}>
               {sentiment.label}
             </span>
           </div>

@@ -193,7 +193,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => toggleLogic(path)}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors ${group.logic === 'AND' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}`}
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercasetransition-colors ${group.logic === 'AND' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}`}
                     >
                         {group.logic === 'AND' ? 'Y (Todas)' : 'O (Alguna)'}
                     </button>
@@ -258,8 +258,8 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
 
                 {/* Add Buttons */}
                 <div className="flex gap-2 pt-1 opacity-60 hover:opacity-100 transition-opacity">
-                    <button onClick={() => addRule(path)} className="flex items-center gap-1 text-[10px] uppercase font-bold text-zinc-400 hover:text-white px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Regla</button>
-                    <button onClick={() => addGroup(path)} className="flex items-center gap-1 text-[10px] uppercase font-bold text-zinc-400 hover:text-white px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Grupo</button>
+                    <button onClick={() => addRule(path)} className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-white px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Regla</button>
+                    <button onClick={() => addGroup(path)} className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-white px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Grupo</button>
                 </div>
             </div>
         );
@@ -294,7 +294,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                             {/* Name & Desc */}
                             <div className="col-span-8 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Nombre</label>
+                                    <label className="block text-xs font-bold text-zinc-500 uppercasemb-1.5">Nombre</label>
                                     <input
                                         type="text"
                                         value={name}
@@ -304,7 +304,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Descripción</label>
+                                    <label className="block text-xs font-bold text-zinc-500 uppercasemb-1.5">Descripción</label>
                                     <input
                                         type="text"
                                         value={description}
@@ -318,7 +318,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                             {/* Color & Toggles */}
                             <div className="col-span-4 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Color</label>
+                                    <label className="block text-xs font-bold text-zinc-500 uppercasemb-1.5">Color</label>
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl border border-zinc-700 shadow-sm transition-colors" style={{ backgroundColor: color }} />
                                         <div className="flex-1 grid grid-cols-5 gap-1.5">

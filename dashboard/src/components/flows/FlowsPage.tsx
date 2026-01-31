@@ -788,7 +788,7 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
           </div>
           <div>
             <h3 className="font-semibold text-zinc-100 truncate max-w-[140px] group-hover:text-white transition-colors">{flow.name}</h3>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full border uppercase font-bold tracking-wider ${style.bg} ${style.text} ${style.border}`}>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold${style.bg} ${style.text} ${style.border}`}>
               {flow.status}
             </span>
           </div>
@@ -816,17 +816,17 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
       <div className="grid grid-cols-2 gap-2 mb-4 bg-zinc-950/50 p-2 rounded-xl border border-zinc-800/50">
         <div className="text-center p-1">
           <div className="text-sm font-bold text-white">{flow.executionCount || 0}</div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wide">Runs</div>
+          <div className="text-[10px] text-zinc-500 tracking-wide">Runs</div>
         </div>
         <div className="text-center p-1 border-l border-zinc-800">
           <div className={`text-sm font-bold ${flow.errorCount > 0 ? 'text-red-400' : 'text-zinc-400'}`}>{flow.errorCount || 0}</div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wide">Errors</div>
+          <div className="text-[10px] text-zinc-500 tracking-wide">Errors</div>
         </div>
       </div>
 
       {/* Triggers */}
       <div className="mb-4 flex-1">
-        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Triggers</div>
+        <div className="text-[10px] font-bold text-zinc-500 tracking-widest mb-2">Triggers</div>
         <div className="flex flex-wrap gap-1.5">
           {flow.triggers?.length > 0 ? flow.triggers.slice(0, 2).map((t: string) => (
             <span key={t} className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded-md text-[10px] font-medium flex items-center gap-1">
@@ -848,7 +848,7 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
           {flow.enabled ? 'Activado' : 'Desactivado'}
         </button>
 
-        <button onClick={onEdit} className="text-xs font-bold text-cyan-400 hover:text-cyan-300 uppercase tracking-wider flex items-center gap-1 hover:underline">
+        <button onClick={onEdit} className="text-xs font-bold text-cyan-400 hover:text-cyan-300 uppercaseflex items-center gap-1 hover:underline">
           Abrir <ChevronDown className="w-3 h-3 -rotate-90" />
         </button>
       </div>
@@ -864,7 +864,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: any) {
       </div>
       <div className="flex flex-col leading-none">
         <span className={`font-bold text-lg ${color}`}>{count.toLocaleString()}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );

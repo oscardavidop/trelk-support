@@ -254,7 +254,7 @@ function ActivityTimeline({ logs }: { logs: ActivityLog[] }) {
         <div key={date} className="relative">
           <div className="sticky top-0 z-20 bg-zinc-950/95 backdrop-blur py-2 mb-4 border-b border-zinc-800/50 flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-indigo-500" />
-            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">{date}</h3>
+            <h3 className="text-sm font-semibold text-zinc-400 ">{date}</h3>
           </div>
 
           <div className="space-y-0 pl-1">
@@ -332,7 +332,7 @@ function AuditLogsList({ logs }: { logs: AuditLog[] }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-medium text-zinc-200 text-sm">{log.action}</span>
-                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercase tracking-wider border border-zinc-700">{log.resource}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-400 uppercaseborder border-zinc-700">{log.resource}</span>
                 </div>
                 <p className="text-xs text-zinc-500 truncate">
                   Por <span className="text-zinc-300">{log.performedByName}</span> • {new Date(log.createdAt).toLocaleString()}
@@ -346,7 +346,7 @@ function AuditLogsList({ logs }: { logs: AuditLog[] }) {
             <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-2">
               <div className="grid grid-cols-2 gap-4 mt-2 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-red-400 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-bold text-red-400 ">
                     <span className="w-2 h-2 rounded-full bg-red-500/50" /> Antes
                   </div>
                   <pre className="text-xs text-red-200/70 font-mono bg-red-950/10 border border-red-500/10 p-3 rounded-lg overflow-x-auto">
@@ -354,7 +354,7 @@ function AuditLogsList({ logs }: { logs: AuditLog[] }) {
                   </pre>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 ">
                     <span className="w-2 h-2 rounded-full bg-emerald-500/50" /> Después
                   </div>
                   <pre className="text-xs text-emerald-200/70 font-mono bg-emerald-950/10 border border-emerald-500/10 p-3 rounded-lg overflow-x-auto">

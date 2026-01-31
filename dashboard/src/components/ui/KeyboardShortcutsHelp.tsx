@@ -79,7 +79,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: Props) {
               
               return (
                 <div key={category}>
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-300 uppercasemb-3">
                     <span>{categoryInfo.icon}</span>
                     {categoryInfo.label}
                   </h3>

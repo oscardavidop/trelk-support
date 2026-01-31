@@ -333,7 +333,7 @@ export async function updateSettings(
         if (key === 'passwordPolicy' && typeof value === 'object') {
           const policy = value as Record<string, unknown>;
           if (policy.minLength !== undefined) updateData['security.passwordMinLength'] = policy.minLength;
-          if (policy.requireUppercase !== undefined) updateData['security.passwordRequireUppercase'] = policy.requireUppercase;
+          if (policy.require!== undefined) updateData['security.passwordRequireUppercase'] = policy.requireUppercase;
           if (policy.requireNumbers !== undefined) updateData['security.passwordRequireNumbers'] = policy.requireNumbers;
           if (policy.requireSpecial !== undefined) updateData['security.passwordRequireSpecial'] = policy.requireSpecial;
         } else {

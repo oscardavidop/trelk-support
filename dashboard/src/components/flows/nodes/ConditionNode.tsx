@@ -70,7 +70,7 @@ function ConditionNode({ data, selected, id }: NodeProps<ConditionNodeData>) {
               <div className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight">
                 {data.label || 'Condición'}
               </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercasemt-0.5">
                 Lógica {groupOperator === 'AND' ? 'Y' : 'O'}
               </div>
             </div>

@@ -1,8 +1,3 @@
-/**
- * Admin Dashboard Component
- * Full executive view with all metrics, system health, and alerts
- */
-
 import { useAdminDashboard } from '../../hooks/useDashboard';
 import {
   MetricCardsGrid,
@@ -23,193 +18,193 @@ import {
   Server,
   TrendingUp,
   Workflow,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 
 export function AdminDashboard() {
   const { data, activeAlerts, isLoading, isRefreshing, error, refresh, acknowledgeAlert } = useAdminDashboard();
 
-  if (isLoading && !data) {
-    return <DashboardSkeleton />;
-  }
+  if (isLoading && !data) return <DashboardSkeleton />;
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <AlertTriangle className="w-12 h-12 mb-4 opacity-50" />
-        <p className="text-lg font-medium">No se pudieron cargar las métricas</p>
-        <p className="text-sm mt-1">{error || 'Intenta de nuevo más tarde'}</p>
-        <button
-          onClick={refresh}
-          className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-        >
-          Reintentar
+      <div className="flex flex-col items-center justify-center py-32 text-zinc-500 animate-in fade-in">
+        <div className="p-4 bg-zinc-900 rounded-full mb-4 border border-zinc-800">
+           <AlertTriangle className="w-8 h-8 text-zinc-600" />
+        </div>
+        <p className="text-lg font-medium text-zinc-300">No se pudieron cargar las métricas</p>
+        <p className="text-sm mt-1 mb-6 text-zinc-500">{error || 'Error de conexión con el servidor de métricas'}</p>
+        <button onClick={refresh} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all shadow-lg shadow-indigo-900/20">
+          Reintentar Conexión
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Refresh indicator */}
+    <div className="space-y-8 pb-10">
+      
+      {/* Header Actions */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          Última actualización: {new Date().toLocaleTimeString()}
-        </p>
+        <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-zinc-800/50">
+          <Clock className="w-3 h-3" />
+          <span>Actualizado: {new Date().toLocaleTimeString()}</span>
+        </div>
         <RefreshButton onClick={refresh} isRefreshing={isRefreshing} />
       </div>
 
-      {/* Metric Cards */}
+      {/* KPI Cards */}
       <MetricCardsGrid cards={data.cards} columns={4} />
 
-      {/* Charts Row */}
+      {/* Main Charts Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chats by Hour */}
+        
+        {/* Activity Chart */}
         <DashboardSection
-          title="Chats por Hora"
+          title="Volumen de Chats"
           subtitle="Últimas 24 horas"
           icon={Activity}
           className="lg:col-span-2"
         >
-          <BarChart 
-            data={data.chatsByHour} 
-            height={200}
-            color="bg-purple-500"
-          />
+          <div className="pt-4 h-[250px] w-full">
+             <BarChart data={data.chatsByHour} height={250} color="#6366f1" />
+          </div>
         </DashboardSection>
 
-        {/* SLA Compliance */}
+        {/* SLA Gauge */}
         <DashboardSection
-          title="SLA Compliance"
-          subtitle="Cumplimiento del día"
+          title="Cumplimiento SLA"
+          subtitle="Objetivo diario"
           icon={TrendingUp}
         >
-          <div className="flex flex-col items-center justify-center py-4">
+          <div className="flex flex-col items-center justify-center h-[250px]">
             <GaugeChart 
               value={data.slaCompliance} 
-              label="Cumplimiento SLA"
+              label="Nivel de Servicio"
               thresholds={[
-                { value: 80, color: '#ef4444' },
-                { value: 95, color: '#f59e0b' },
-                { value: 100, color: '#10b981' },
+                { value: 80, color: '#ef4444' }, // Red
+                { value: 95, color: '#f59e0b' }, // Amber
+                { value: 100, color: '#10b981' }, // Emerald
               ]}
             />
+            <div className="mt-4 text-center">
+                <p className="text-zinc-400 text-sm">Tiempo promedio de respuesta</p>
+                <p className="text-xl font-bold text-white font-mono">1m 45s</p>
+            </div>
           </div>
         </DashboardSection>
       </div>
 
-      {/* Category Distribution & Alerts */}
+      {/* Secondary Metrics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chats by Category */}
+        
+        {/* Categories Donut */}
         <DashboardSection
-          title="Chats por Categoría"
-          subtitle="Distribución del día"
+          title="Distribución por Categoría"
+          subtitle="Temas más frecuentes"
           icon={Activity}
         >
-          {data.chatsByCategory.length > 0 ? (
-            <DonutChart data={data.chatsByCategory} />
-          ) : (
-            <div className="flex items-center justify-center py-8 text-gray-500">
-              <p className="text-sm">Sin datos de categorías</p>
-            </div>
-          )}
+          <div className="h-[300px] flex items-center justify-center">
+            {data.chatsByCategory.length > 0 ? (
+              <DonutChart data={data.chatsByCategory} />
+            ) : (
+              <div className="text-center text-zinc-500">
+                <p>Sin datos suficientes</p>
+              </div>
+            )}
+          </div>
         </DashboardSection>
 
-        {/* Alerts */}
+        {/* Alerts Panel */}
         <DashboardSection
-          title="Alertas Activas"
-          subtitle={`${activeAlerts.length} pendientes`}
+          title="Centro de Alertas"
+          subtitle="Incidencias activas"
           icon={AlertTriangle}
-          action={
-            activeAlerts.length > 0 && (
-              <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
-                {activeAlerts.length}
-              </span>
-            )
-          }
+          action={activeAlerts.length > 0 && (
+            <span className="px-2.5 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold rounded-full animate-pulse">
+              {activeAlerts.length} ACTIVAS
+            </span>
+          )}
         >
-          <AlertsPanel 
-            alerts={activeAlerts} 
-            onAcknowledge={acknowledgeAlert}
-          />
+          <div className="h-[300px] overflow-y-auto custom-scrollbar pr-2">
+             <AlertsPanel alerts={activeAlerts} onAcknowledge={acknowledgeAlert} />
+          </div>
         </DashboardSection>
       </div>
 
-      {/* Agent Load & System Health */}
+      {/* Operations Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
         {/* Agent Status */}
         <DashboardSection
-          title="Estado de Agentes"
-          subtitle={`${data.agentLoad.filter(a => a.status !== 'offline').length} activos`}
+          title="Fuerza de Trabajo"
+          subtitle="Disponibilidad en tiempo real"
           icon={Users}
           className="lg:col-span-2"
         >
           <AgentStatusTable agents={data.agentLoad} />
         </DashboardSection>
 
-        {/* Insights */}
+        {/* AI Insights */}
         <DashboardSection
-          title="Insights"
-          subtitle="Análisis automático"
+          title="IA Insights"
+          subtitle="Análisis predictivo"
           icon={Lightbulb}
         >
-          <InsightsPanel insights={data.insights} />
+          <div className="h-[400px] overflow-y-auto custom-scrollbar pr-2">
+             <InsightsPanel insights={data.insights} />
+          </div>
         </DashboardSection>
       </div>
 
-      {/* System Health & Flow Stats */}
+      {/* Infrastructure Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
         {/* System Health */}
         <DashboardSection
-          title="Estado del Sistema"
-          subtitle="Infraestructura"
+          title="Salud del Sistema"
+          subtitle="Estado de infraestructura"
           icon={Server}
         >
           <SystemHealthCard health={data.systemHealth} />
         </DashboardSection>
 
-        {/* Flow Stats */}
+        {/* Flows Stats */}
         <DashboardSection
-          title="Flujos Ejecutados"
-          subtitle="Hoy"
+          title="Rendimiento de Flows"
+          subtitle="Ejecuciones automáticas"
           icon={Workflow}
         >
-          {data.flowStats.length > 0 ? (
-            <div className="space-y-3">
-              {data.flowStats.slice(0, 5).map((flow, i) => {
-                const successRate = flow.executions > 0 
-                  ? Math.round((flow.success / flow.executions) * 100) 
-                  : 0;
+          <div className="space-y-4 pt-2">
+            {data.flowStats.length > 0 ? (
+              data.flowStats.slice(0, 5).map((flow, i) => {
+                const successRate = flow.executions > 0 ? Math.round((flow.success / flow.executions) * 100) : 0;
                 return (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0 mr-4">
-                      <p className="text-sm text-white truncate">{flow.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {flow.executions} ejecuciones
-                      </p>
+                  <div key={i} className="group">
+                    <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">{flow.name}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-zinc-500">{flow.executions} execs</span>
+                            <span className={`text-xs font-bold ${successRate >= 90 ? 'text-emerald-400' : successRate >= 70 ? 'text-amber-400' : 'text-red-400'}`}>{successRate}% éxito</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full ${
-                            successRate >= 90 ? 'bg-green-500' :
-                            successRate >= 70 ? 'bg-amber-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${successRate}%` }}
+                            className={`h-full rounded-full transition-all duration-500 ${successRate >= 90 ? 'bg-emerald-500' : successRate >= 70 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                            style={{ width: `${successRate}%` }} 
                         />
-                      </div>
-                      <span className="text-xs text-gray-400 w-10 text-right">
-                        {successRate}%
-                      </span>
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8 text-gray-500">
-              <p className="text-sm">Sin flujos ejecutados hoy</p>
-            </div>
-          )}
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center h-40 text-zinc-500">
+                <Workflow className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-sm">Sin actividad de flows</p>
+              </div>
+            )}
+          </div>
         </DashboardSection>
       </div>
     </div>

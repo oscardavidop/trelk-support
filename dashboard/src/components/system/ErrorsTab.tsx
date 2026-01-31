@@ -206,7 +206,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: { icon: typeof Alert
       </div>
       <div className="flex flex-col items-start leading-none">
         <span className={`font-bold text-lg ${color}`}>{count}</span>
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{label}</span>
+        <span className="text-[10px] font-bold text-zinc-500">{label}</span>
       </div>
     </div>
   );
@@ -274,7 +274,7 @@ function ErrorCard({ error, expanded, onToggle }: { error: ErrorLogEntry; expand
           {/* Stack Trace / Error Details */}
           <div className="relative group/code">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1">
+              <span className="text-[10px] font-bold text-zinc-500 tracking-widest flex items-center gap-1">
                 <Terminal className="w-3 h-3" /> Stack Trace
               </span>
               <button
@@ -300,7 +300,7 @@ function ErrorCard({ error, expanded, onToggle }: { error: ErrorLogEntry; expand
 
 const InfoBox = ({ label, value, color = 'text-zinc-300' }: { label: string; value: string | number; color?: string }) => (
   <div className="bg-zinc-950/50 border border-zinc-800 rounded-lg p-2">
-    <span className="text-[10px] text-zinc-500 uppercase font-bold block mb-0.5">{label}</span>
+    <span className="text-[10px] text-zinc-500 font-bold block mb-0.5">{label}</span>
     <span className={`text-xs font-mono truncate block ${color}`}>{value}</span>
   </div>
 );

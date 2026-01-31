@@ -1,11 +1,25 @@
 @import "tailwindcss";
-
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 /* ============= THEME SYSTEM ============= */
 
 /* Semantic Color Tokens - These are the ONLY colors used in components */
 :root {
   /* Transitions for smooth theme switching */
   --theme-transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+html {
+  font-family: theme('fontFamily.sans');
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+body {
+  color: #e4e4e7; /* text-zinc-200 */
+  background-color: #18181b; /* bg-zinc-950 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============= DARK THEME (Default) ============= */
@@ -48,8 +62,8 @@
 
   /* Scrollbars */
   --scrollbar-track: transparent;
-  --scrollbar-thumb: #374151;
-  --scrollbar-thumb-hover: #4b5563;
+  --scrollbar-thumb: rgba(113, 113, 122, 0.5);
+  --scrollbar-thumb-hover: rgba(100, 100, 116, 0.7);
 
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -62,6 +76,28 @@
   --input-border-focus: #2563eb;
   --input-placeholder: #6b7280;
 }
+
+@layer base {
+  h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+  h2 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+  h3 {
+    @apply text-lg font-semibold;
+  }
+  h4 {
+    @apply text-base font-medium;
+  }
+  p {
+    @apply text-sm leading-relaxed;
+  }
+  small {
+    @apply text-xs text-zinc-400;
+  }
+}
+
 
 /* ============= LIGHT THEME ============= */
 :root[data-theme="light"] {
@@ -160,7 +196,7 @@ body {
 
 /* Scrollbar base styles */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 7px;
   height: 8px;
 }
 
@@ -230,6 +266,24 @@ body {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
+.scrollbar-hover {
+  scrollbar-width: none;
+}
+
+.scrollbar-hover::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hover:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-hover:hover {
+  scrollbar-width: thin;
+}
+
+
+
 /* Chat messages scrollbar */
 .chat-messages-scroll {
   scrollbar-width: thin;
@@ -237,7 +291,7 @@ body {
 }
 
 .chat-messages-scroll::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .chat-messages-scroll::-webkit-scrollbar-thumb {
@@ -915,4 +969,3 @@ input[type=number] {
   background-color: var(--bg-secondary) !important;
   color: var(--text-primary) !important;
 }
-

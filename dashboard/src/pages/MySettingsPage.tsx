@@ -1,46 +1,24 @@
-// MySettingsPage - User settings with tabs for Account, Preferences, Notifications, Security, Activity
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import {
-  User,
-  Sliders,
-  Bell,
-  Shield,
-  History,
-  Save,
-  Loader2,
-  Monitor,
-  Smartphone,
-  Tablet,
-  Globe,
-  Trash2,
-  AlertTriangle,
-  Check,
-  X,
-  Volume2,
-  VolumeX,
-  Moon,
-  Sun,
-  Eye,
-  EyeOff,
-  LogOut,
-  RefreshCw,
-  Camera,
-  Upload
+  User, Sliders, Bell, Shield, History, Save, Loader2, Monitor, Smartphone, Tablet, Globe, Trash2,
+  AlertTriangle, Check, X, Volume2, VolumeX, Moon, Sun, Eye, EyeOff, LogOut, RefreshCw, Camera, Upload,
+  ChevronRight, Mail, Hash, MapPin, Laptop, Layout, Keyboard, MessageSquare, Zap
 } from 'lucide-react';
 import type { AgentPreferences, AgentSession, AgentActivity } from '../types';
 import * as settingsService from '../services/settings.service';
+import { useTheme, type Theme } from '../hooks/useTheme';
 
 type TabType = 'account' | 'preferences' | 'notifications' | 'security' | 'activity';
 
-const tabs = [
-  { id: 'account' as TabType, label: 'Account', icon: User },
-  { id: 'preferences' as TabType, label: 'Preferences', icon: Sliders },
-  { id: 'notifications' as TabType, label: 'Notifications', icon: Bell },
-  { id: 'security' as TabType, label: 'Security', icon: Shield },
-  { id: 'activity' as TabType, label: 'Activity', icon: History },
-];
+const TABS = [
+  { id: 'account', label: 'Mi Cuenta', icon: User, desc: 'Perfil personal y avatar' },
+  { id: 'preferences', label: 'Preferencias', icon: Sliders, desc: 'Interfaz, sonidos y chat' },
+  { id: 'notifications', label: 'Notificaciones', icon: Bell, desc: 'Alertas y correos' },
+  { id: 'security', label: 'Seguridad', icon: Shield, desc: 'Accesos y contraseñas' },
+  { id: 'activity', label: 'Actividad', icon: History, desc: 'Registro de eventos' },
+] as const;
 
 export default function MySettingsPage() {
   const { tab } = useParams<{ tab?: string }>();
@@ -49,56 +27,99 @@ export default function MySettingsPage() {
   const updateAgentFields = useAuthStore((s) => s.updateAgentFields);
 
   const currentTab = (tab as TabType) || 'account';
+  const activeTabInfo = TABS.find(t => t.id === currentTab);
 
   useEffect(() => {
-    if (!tab) {
-      navigate('/dashboard/my-settings/account', { replace: true });
-    }
+    if (!tab) navigate('/dashboard/my-settings/account', { replace: true });
   }, [tab, navigate]);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-800">
-        <h1 className="text-2xl font-bold text-white">My Settings</h1>
-        <p className="text-gray-400 mt-1">Manage your account and preferences</p>
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30">
+      
+      {/* LEFT SIDEBAR */}
+      <div className="w-72 bg-zinc-900 border-r border-zinc-800 flex flex-col shrink-0 z-20 h-full">
+        <div className="p-6 border-b border-zinc-800/50">
+          <h1 className="text-xl font-bold text-white tracking-tight">Configuración</h1>
+          <p className="text-sm text-zinc-500 mt-1">Administra tu experiencia</p>
+        </div>
+        
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+          {TABS.map((t) => {
+            const isActive = currentTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => navigate(`/dashboard/my-settings/${t.id}`)}
+                className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-left transition-all duration-200 group ${
+                  isActive 
+                    ? 'bg-zinc-800 border border-zinc-700 shadow-sm' 
+                    : 'hover:bg-zinc-800/50 border border-transparent hover:border-zinc-800'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-indigo-500/10 text-indigo-400' : 'bg-zinc-900 text-zinc-500 group-hover:text-zinc-300'}`}>
+                    <t.icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className={`block text-sm font-medium ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                      {t.label}
+                    </span>
+                  </div>
+                </div>
+                {isActive && <ChevronRight className="w-4 h-4 text-zinc-500" />}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer Info */}
+        <div className="p-6 border-t border-zinc-800 bg-zinc-900/50">
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg">
+                    {agent?.name?.[0] || 'U'}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium text-white truncate">{agent?.name}</p>
+                    <p className="text-xs text-zinc-500 truncate">{agent?.email}</p>
+                </div>
+            </div>
+        </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Tabs */}
-        <div className="w-56 border-r border-gray-800 p-4 space-y-1">
-          {tabs.map((t) => (
-            <Link
-              key={t.id}
-              to={`/dashboard/my-settings/${t.id}`}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
-                currentTab === t.id
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-              }`}
-            >
-              <t.icon className="w-5 h-5" />
-              <span className="font-medium">{t.label}</span>
-            </Link>
-          ))}
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-zinc-950 relative">
+        
+        {/* Header Sticky */}
+        <div className="px-8 py-6 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-indigo-500/5">
+              {activeTabInfo && <activeTabInfo.icon className="w-6 h-6 text-indigo-500" />}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">{activeTabInfo?.label}</h2>
+              <p className="text-sm text-zinc-400">{activeTabInfo?.desc}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {currentTab === 'account' && <AccountTab agent={agent} updateAgentFields={updateAgentFields} />}
-          {currentTab === 'preferences' && <PreferencesTab />}
-          {currentTab === 'notifications' && <NotificationsTab />}
-          {currentTab === 'security' && <SecurityTab />}
-          {currentTab === 'activity' && <ActivityTab />}
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="w-full max-w-5xl space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {currentTab === 'account' && <AccountContent agent={agent} updateAgentFields={updateAgentFields} />}
+            {currentTab === 'preferences' && <PreferencesContent />}
+            {currentTab === 'notifications' && <NotificationsContent />}
+            {currentTab === 'security' && <SecurityContent />}
+            {currentTab === 'activity' && <ActivityContent />}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ============= ACCOUNT TAB =============
+// ============= 1. ACCOUNT CONTENT =============
 
-function AccountTab({ agent, updateAgentFields }: { agent: any; updateAgentFields: (fields: any) => void }) {
+function AccountContent({ agent, updateAgentFields }: { agent: any; updateAgentFields: (fields: any) => void }) {
   const [formData, setFormData] = useState({
     name: agent?.name || '',
     email: agent?.email || '',
@@ -115,231 +136,116 @@ function AccountTab({ agent, updateAgentFields }: { agent: any; updateAgentField
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Solo imágenes'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Máximo 5MB'); return; }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
-      return;
-    }
-
-    setUploadingAvatar(true);
-    setError('');
-
+    setUploadingAvatar(true); setError('');
     try {
       const formDataUpload = new FormData();
       formDataUpload.append('file', file);
-
-      const token = localStorage.getItem('trelk-support-auth') || '{}';
-      let authToken = '';
-      if (token) {
-        try {
-          const parsed = JSON.parse(token);
-          authToken = parsed.state?.token || '';
-        } catch {}
-      }
-
+      // Mock logic for token retrieval
+      const token = JSON.parse(localStorage.getItem('trelk-support-auth') || '{}')?.state?.token;
+      
       const res = await fetch('/api/upload/image', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        },
-        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formDataUpload
       });
-
       const data = await res.json();
+      
       if (data.ok && data.url) {
         setFormData({ ...formData, avatar: data.url });
-        // Also update in backend immediately
         await settingsService.updateAccount({ avatar: data.url });
         updateAgentFields({ avatar: data.url });
-      } else {
-        setError(data.error || 'Failed to upload image');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload');
-    } finally {
-      setUploadingAvatar(false);
-    }
+      } else throw new Error(data.error);
+    } catch (err: any) { setError(err.message || 'Error al subir imagen'); } 
+    finally { setUploadingAvatar(false); }
   };
 
-  useEffect(() => {
-    if (agent) {
-      setFormData({
-        name: agent.name || '',
-        email: agent.email || '',
-        department: agent.department || '',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        avatar: agent.avatar || ''
-      });
-    }
-  }, [agent]);
-
   const handleSave = async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const updated = await settingsService.updateAccount(formData);
       updateAgentFields({ name: updated.name, email: updated.email, department: updated.department });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to save');
-    } finally {
-      setLoading(false);
-    }
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) { setError(err.message || 'Error al guardar'); } 
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-lg font-semibold text-white mb-4">Profile Information</h2>
-        
-        {/* Avatar */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative">
-            {formData.avatar ? (
-              <img
-                src={formData.avatar}
-                alt="Profile"
-                className="w-20 h-20 rounded-full object-cover border-2 border-gray-700"
-              />
-            ) : (
-              <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-3xl text-white font-bold">
-                {formData.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            {uploadingAvatar && (
-              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
-              </div>
-            )}
+    <div className="space-y-6">
+      {/* Profile Card */}
+      <SectionCard title="Foto de Perfil" description="Esta imagen será visible para otros agentes y en los chats.">
+        <div className="flex items-center gap-6">
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-900 ring-4 ring-zinc-800 border border-zinc-700 flex items-center justify-center">
+              {formData.avatar ? (
+                <img src={formData.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl font-bold text-zinc-500">{formData.name.charAt(0).toUpperCase()}</span>
+              )}
+              {uploadingAvatar && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-white"/></div>}
+            </div>
+            <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg border-2 border-zinc-900 transition-all hover:scale-110" disabled={uploadingAvatar}>
+              <Camera className="w-4 h-4" />
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
           </div>
           <div>
-            <p className="text-sm text-gray-400">Profile photo</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              className="mt-1 text-sm text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
-            >
-              <Camera className="w-3 h-3" />
-              Change photo
-            </button>
+            <div className="flex gap-3">
+               <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg border border-zinc-700 transition-colors">
+                 Subir nueva foto
+               </button>
+               {formData.avatar && (
+                 <button onClick={() => setFormData({...formData, avatar: ''})} className="px-4 py-2 text-red-400 hover:bg-red-500/10 text-sm font-medium rounded-lg border border-transparent hover:border-red-500/20 transition-colors">
+                   Eliminar
+                 </button>
+               )}
+            </div>
+            <p className="text-xs text-zinc-500 mt-2">JPG, GIF o PNG. Máximo 5MB.</p>
           </div>
         </div>
+      </SectionCard>
 
-        {/* Form */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Department</label>
-            <input
-              type="text"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              placeholder="e.g., Customer Support"
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Timezone</label>
-            <select
-              value={formData.timezone}
-              onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
+      {/* Info Card */}
+      <SectionCard title="Información Personal" description="Actualiza tus datos básicos de identificación.">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <InputGroup label="Nombre Completo" icon={User} value={formData.name} onChange={(v) => setFormData({...formData, name: v})} className="col-span-2" />
+          <InputGroup label="Correo Electrónico" icon={Mail} value={formData.email} onChange={(v) => setFormData({...formData, email: v})} type="email" />
+          <InputGroup label="Departamento" icon={Hash} value={formData.department} onChange={(v) => setFormData({...formData, department: v})} placeholder="Ej: Soporte" />
+          
+          <div className="space-y-2 col-span-2">
+            <label className="text-xs font-bold text-zinc-500 uppercaseflex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> Zona Horaria</label>
+            <select 
+              value={formData.timezone} 
+              onChange={(e) => setFormData({...formData, timezone: e.target.value})}
+              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-sm appearance-none"
             >
               <option value="America/New_York">Eastern Time (ET)</option>
-              <option value="America/Chicago">Central Time (CT)</option>
-              <option value="America/Denver">Mountain Time (MT)</option>
-              <option value="America/Los_Angeles">Pacific Time (PT)</option>
-              <option value="America/Caracas">Venezuela (VET)</option>
-              <option value="America/Bogota">Colombia (COT)</option>
-              <option value="America/Mexico_City">Mexico City (CST)</option>
-              <option value="Europe/London">London (GMT)</option>
-              <option value="Europe/Madrid">Madrid (CET)</option>
               <option value="UTC">UTC</option>
+              {/* Add more options as needed */}
             </select>
           </div>
         </div>
 
-        {error && (
-          <div className="mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4"/>{error}</div>}
 
         <div className="mt-6 flex justify-end">
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {saved ? 'Saved!' : 'Save Changes'}
-          </button>
+           <SaveButton onClick={handleSave} loading={loading} saved={saved} />
         </div>
-      </div>
-
-      {/* Role Info */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-lg font-semibold text-white mb-4">Role & Permissions</h2>
-        <div className="flex items-center gap-3">
-          <span className="px-3 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium capitalize">
-            {agent?.role || 'Agent'}
-          </span>
-          <span className="text-gray-400 text-sm">
-            {agent?.role === 'admin' && 'Full access to all features'}
-            {agent?.role === 'supervisor' && 'Can supervise agents and view reports'}
-            {agent?.role === 'support' && 'Standard support agent'}
-            {agent?.role === 'junior' && 'Limited access'}
-          </span>
-        </div>
-      </div>
+      </SectionCard>
     </div>
   );
 }
 
-// ============= PREFERENCES TAB =============
+// ============= 2. PREFERENCES CONTENT =============
 
-import { useTheme, type Theme } from '../hooks/useTheme';
-
-function PreferencesTab() {
-  const { theme: currentTheme, setTheme } = useTheme();
-  const [prefs, setPrefs] = useState<Partial<AgentPreferences>>({
-    theme: 'dark',
-    focusMode: false,
-    language: 'en',
-    sounds: { enabled: true, newChat: true, newMessage: true, mention: true, volume: 70 },
+function PreferencesContent() {
+  const { theme, setTheme } = useTheme();
+  const [prefs, setPrefs] = useState<Partial<AgentPreferences>>({ 
+    theme: 'dark', 
+    focusMode: false, 
+    sounds: { enabled: true, volume: 70, newChat: true, newMessage: true, mention: true },
     autoScroll: true,
     enterToSend: true,
     showTypingIndicator: true,
@@ -350,723 +256,382 @@ function PreferencesTab() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    settingsService.getPreferences()
-      .then((data) => {
-        setPrefs(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    settingsService.getPreferences().then(setPrefs).catch(() => {}).finally(() => setLoading(false));
   }, []);
-
-  const handleThemeChange = (theme: Theme) => {
-    setPrefs({ ...prefs, theme });
-    setTheme(theme); // Apply immediately
-  };
 
   const handleSave = async () => {
     setSaving(true);
-    try {
-      await settingsService.updatePreferences(prefs);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {}
+    try { await settingsService.updatePreferences(prefs); setSaved(true); setTimeout(() => setSaved(false), 2000); } catch {}
     setSaving(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
+  if(loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin"/></div>;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       {/* Appearance */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-lg font-semibold text-white mb-4">Appearance</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Theme</label>
-            <div className="flex gap-3">
-              {(['light', 'dark', 'system'] as const).map((theme) => (
-                <button
-                  key={theme}
-                  onClick={() => handleThemeChange(theme)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${
-                    currentTheme === theme
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-gray-700 text-gray-400 hover:border-gray-600'
-                  }`}
-                >
-                  {theme === 'light' && <Sun className="w-4 h-4" />}
-                  {theme === 'dark' && <Moon className="w-4 h-4" />}
-                  {theme === 'system' && <Monitor className="w-4 h-4" />}
-                  <span className="capitalize">{theme}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-white font-medium">Focus Mode</p>
-              <p className="text-sm text-gray-400">Hide distractions while chatting</p>
-            </div>
-            <ToggleSwitch
-              checked={prefs.focusMode || false}
-              onChange={(v) => setPrefs({ ...prefs, focusMode: v })}
-            />
-          </div>
+      <SectionCard title="Apariencia" description="Personaliza el aspecto de la interfaz.">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+           {[ {id: 'light', icon: Sun, label: 'Claro'}, {id: 'dark', icon: Moon, label: 'Oscuro'}, {id: 'system', icon: Monitor, label: 'Sistema'} ].map(opt => (
+             <button 
+               key={opt.id}
+               onClick={() => { setTheme(opt.id as Theme); setPrefs({...prefs, theme: opt.id as Theme}); }}
+               className={`flex flex-col items-center gap-3 p-4 rounded-xl border transition-all ${theme === opt.id ? 'bg-indigo-600/10 border-indigo-500/50 text-indigo-400 ring-1 ring-indigo-500/20' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+             >
+                <opt.icon className="w-6 h-6" />
+                <span className="text-sm font-medium">{opt.label}</span>
+             </button>
+           ))}
         </div>
-      </div>
+        <ToggleRow 
+            label="Modo Enfoque" 
+            desc="Ocultar distracciones y paneles secundarios"
+            checked={prefs.focusMode || false} 
+            onChange={(v) => setPrefs({ ...prefs, focusMode: v })} 
+            icon={EyeOff}
+        />
+      </SectionCard>
 
       {/* Sounds */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          {prefs.sounds?.enabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          Sounds
-        </h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <p className="text-white">Enable Sounds</p>
-            <ToggleSwitch
-              checked={prefs.sounds?.enabled || false}
-              onChange={(v) => setPrefs({ ...prefs, sounds: { ...prefs.sounds!, enabled: v } })}
-            />
-          </div>
-          {prefs.sounds?.enabled && (
-            <>
-              <div className="flex items-center justify-between py-2">
-                <p className="text-gray-300">New chat sound</p>
-                <ToggleSwitch
-                  checked={prefs.sounds?.newChat || false}
-                  onChange={(v) => setPrefs({ ...prefs, sounds: { ...prefs.sounds!, newChat: v } })}
-                />
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <p className="text-gray-300">New message sound</p>
-                <ToggleSwitch
-                  checked={prefs.sounds?.newMessage || false}
-                  onChange={(v) => setPrefs({ ...prefs, sounds: { ...prefs.sounds!, newMessage: v } })}
-                />
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <p className="text-gray-300">Mention sound</p>
-                <ToggleSwitch
-                  checked={prefs.sounds?.mention || false}
-                  onChange={(v) => setPrefs({ ...prefs, sounds: { ...prefs.sounds!, mention: v } })}
-                />
-              </div>
-              <div className="py-2">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-gray-300">Volume</p>
-                  <span className="text-sm text-gray-400">{prefs.sounds?.volume}%</span>
+      <SectionCard title="Sonidos y Alertas" description="Configura los efectos de audio.">
+         <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-zinc-900 rounded-lg text-zinc-400"><Volume2 className="w-5 h-5"/></div>
+                    <div><p className="text-white font-medium text-sm">Activar Sonidos</p><p className="text-xs text-zinc-500">Silenciar todas las alertas</p></div>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={prefs.sounds?.volume || 70}
-                  onChange={(e) => setPrefs({ ...prefs, sounds: { ...prefs.sounds!, volume: parseInt(e.target.value) } })}
-                  className="w-full accent-primary"
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+                <ToggleSwitch checked={prefs.sounds?.enabled || false} onChange={v => setPrefs({...prefs, sounds: {...prefs.sounds!, enabled: v}})} />
+            </div>
+            
+            {prefs.sounds?.enabled && (
+               <div className="pl-4 ml-3 border-l-2 border-zinc-800 space-y-5 pt-2">
+                  <div className="space-y-3 px-2">
+                     <div className="flex justify-between text-xs font-bold text-zinc-500 "><span>Volumen Maestro</span><span>{prefs.sounds.volume}%</span></div>
+                     <input type="range" min="0" max="100" value={prefs.sounds.volume} onChange={(e) => setPrefs({...prefs, sounds: {...prefs.sounds!, volume: parseInt(e.target.value)}})} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"/>
+                  </div>
+                  <div className="space-y-2">
+                      <ToggleRow label="Sonido Nuevo Chat" checked={prefs.sounds.newChat!} onChange={v => setPrefs({...prefs, sounds: {...prefs.sounds!, newChat: v}})} small />
+                      <ToggleRow label="Sonido Nuevo Mensaje" checked={prefs.sounds.newMessage!} onChange={v => setPrefs({...prefs, sounds: {...prefs.sounds!, newMessage: v}})} small />
+                      <ToggleRow label="Sonido Menciones" checked={prefs.sounds.mention!} onChange={v => setPrefs({...prefs, sounds: {...prefs.sounds!, mention: v}})} small />
+                  </div>
+               </div>
+            )}
+         </div>
+      </SectionCard>
 
-      {/* Chat Behavior */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-lg font-semibold text-white mb-4">Chat Behavior</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-white">Auto-scroll to new messages</p>
-              <p className="text-sm text-gray-400">Automatically scroll when new messages arrive</p>
-            </div>
-            <ToggleSwitch
-              checked={prefs.autoScroll || false}
-              onChange={(v) => setPrefs({ ...prefs, autoScroll: v })}
+      {/* Chat Behavior (Restored!) */}
+      <SectionCard title="Comportamiento del Chat" description="Ajusta cómo funciona la mensajería.">
+         <div className="space-y-3">
+            <ToggleRow 
+                label="Auto-scroll" 
+                desc="Bajar automáticamente al recibir mensajes" 
+                checked={prefs.autoScroll!} 
+                onChange={v => setPrefs({...prefs, autoScroll: v})} 
+                icon={Layout} 
             />
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-white">Enter to send</p>
-              <p className="text-sm text-gray-400">Press Enter to send messages (Shift+Enter for new line)</p>
-            </div>
-            <ToggleSwitch
-              checked={prefs.enterToSend || false}
-              onChange={(v) => setPrefs({ ...prefs, enterToSend: v })}
+            <ToggleRow 
+                label="Enter para enviar" 
+                desc="Usa Shift+Enter para salto de línea" 
+                checked={prefs.enterToSend!} 
+                onChange={v => setPrefs({...prefs, enterToSend: v})} 
+                icon={Keyboard} 
             />
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-white">Show typing indicator</p>
-              <p className="text-sm text-gray-400">Let users know when you're typing</p>
-            </div>
-            <ToggleSwitch
-              checked={prefs.showTypingIndicator || false}
-              onChange={(v) => setPrefs({ ...prefs, showTypingIndicator: v })}
+            <ToggleRow 
+                label="Indicador de escritura" 
+                desc="Mostrar cuando estás escribiendo" 
+                checked={prefs.showTypingIndicator!} 
+                onChange={v => setPrefs({...prefs, showTypingIndicator: v})} 
+                icon={MessageSquare} 
             />
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <p className="text-white">Keyboard shortcuts</p>
-              <p className="text-sm text-gray-400">Enable keyboard shortcuts for quick actions</p>
-            </div>
-            <ToggleSwitch
-              checked={prefs.shortcutsEnabled || false}
-              onChange={(v) => setPrefs({ ...prefs, shortcutsEnabled: v })}
+            <ToggleRow 
+                label="Atajos de teclado" 
+                desc="Habilitar hotkeys para acciones rápidas" 
+                checked={prefs.shortcutsEnabled!} 
+                onChange={v => setPrefs({...prefs, shortcutsEnabled: v})} 
+                icon={Zap} 
             />
-          </div>
-        </div>
-      </div>
+         </div>
+      </SectionCard>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saved ? 'Saved!' : 'Save Preferences'}
-        </button>
+      <div className="flex justify-end pt-4">
+        <SaveButton onClick={handleSave} loading={saving} saved={saved} />
       </div>
     </div>
   );
 }
 
-// ============= NOTIFICATIONS TAB =============
+// ============= 3. NOTIFICATIONS TAB =============
 
-const defaultNotifications: settingsService.NotificationSettings = {
-  email: { enabled: true, onNewChat: true, onMention: true, onAssignment: true, dailyDigest: false },
-  inApp: { enabled: true, sound: true, onNewMessage: true, onNewChat: true, onMention: true },
-  telegram: { enabled: false, onNewChat: false, onMention: false },
-  desktop: { enabled: true, onNewMessage: true, onNewChat: true }
-};
+const defaultNotifs: settingsService.NotificationSettings = { email: { enabled: true, onNewChat: true, onMention: true, onAssignment: true, dailyDigest: false }, inApp: { enabled: true, sound: true, onNewMessage: true, onNewChat: true, onMention: true }, telegram: {
+  enabled: false,
+  onNewChat: false,
+  onMention: false
+}, desktop: { enabled: true, onNewMessage: true, onNewChat: true } };
 
-function NotificationsTab() {
-  const [notifs, setNotifs] = useState<settingsService.NotificationSettings>(defaultNotifications);
+function NotificationsContent() {
+  const [notifs, setNotifs] = useState(defaultNotifs);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    settingsService.getNotifications()
-      .then((data) => {
-        // Merge with defaults to ensure all properties exist
-        setNotifs({
-          email: { ...defaultNotifications.email, ...data?.email },
-          inApp: { ...defaultNotifications.inApp, ...data?.inApp },
-          telegram: { ...defaultNotifications.telegram, ...data?.telegram },
-          desktop: { ...defaultNotifications.desktop, ...data?.desktop }
-        });
-      })
-      .catch(() => {
-        // Use defaults
-        setNotifs(defaultNotifications);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { settingsService.getNotifications().then(data => setNotifs({...defaultNotifs, ...data})).finally(() => setLoading(false)); }, []);
+  const handleSave = async () => { setSaving(true); try { await settingsService.updateNotifications(notifs); setSaved(true); setTimeout(() => setSaved(false), 2000); } catch {} setSaving(false); };
 
-  const handleSave = async () => {
-    if (!notifs) return;
-    setSaving(true);
-    try {
-      await settingsService.updateNotifications(notifs);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {}
-    setSaving(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
+  if(loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin"/></div>;
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Email Notifications */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Email Notifications</h2>
-          <ToggleSwitch
-            checked={notifs.email.enabled}
-            onChange={(v) => setNotifs({ ...notifs, email: { ...notifs.email, enabled: v } })}
-          />
-        </div>
-        {notifs.email.enabled && (
-          <div className="space-y-3 pl-4 border-l-2 border-gray-700">
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">New chat assigned</p>
-              <ToggleSwitch
-                checked={notifs.email.onAssignment}
-                onChange={(v) => setNotifs({ ...notifs, email: { ...notifs.email, onAssignment: v } })}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">When mentioned</p>
-              <ToggleSwitch
-                checked={notifs.email.onMention}
-                onChange={(v) => setNotifs({ ...notifs, email: { ...notifs.email, onMention: v } })}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">Daily digest</p>
-              <ToggleSwitch
-                checked={notifs.email.dailyDigest}
-                onChange={(v) => setNotifs({ ...notifs, email: { ...notifs.email, dailyDigest: v } })}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="space-y-6">
+      {/* Email Config */}
+      <SectionCard title="Correo Electrónico" description="Alertas enviadas a tu email registrado.">
+         <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800">
+            <span className="text-zinc-200 font-medium">Habilitar Emails</span>
+            <ToggleSwitch checked={notifs.email.enabled} onChange={(v) => setNotifs({...notifs, email: {...notifs.email, enabled: v}})} />
+         </div>
+         {notifs.email.enabled && (
+             <div className="space-y-3">
+                 <ToggleRow label="Nuevo chat asignado" checked={notifs.email.onAssignment} onChange={(v) => setNotifs({...notifs, email: {...notifs.email, onAssignment: v}})} small />
+                 <ToggleRow label="Menciones (@tu)" checked={notifs.email.onMention} onChange={(v) => setNotifs({...notifs, email: {...notifs.email, onMention: v}})} small />
+                 <ToggleRow label="Resumen diario" checked={notifs.email.dailyDigest} onChange={(v) => setNotifs({...notifs, email: {...notifs.email, dailyDigest: v}})} small />
+             </div>
+         )}
+      </SectionCard>
 
-      {/* In-App Notifications */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">In-App Notifications</h2>
-          <ToggleSwitch
-            checked={notifs.inApp.enabled}
-            onChange={(v) => setNotifs({ ...notifs, inApp: { ...notifs.inApp, enabled: v } })}
-          />
-        </div>
-        {notifs.inApp.enabled && (
-          <div className="space-y-3 pl-4 border-l-2 border-gray-700">
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">New message</p>
-              <ToggleSwitch
-                checked={notifs.inApp.onNewMessage}
-                onChange={(v) => setNotifs({ ...notifs, inApp: { ...notifs.inApp, onNewMessage: v } })}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">New chat</p>
-              <ToggleSwitch
-                checked={notifs.inApp.onNewChat}
-                onChange={(v) => setNotifs({ ...notifs, inApp: { ...notifs.inApp, onNewChat: v } })}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">Play sound</p>
-              <ToggleSwitch
-                checked={notifs.inApp.sound}
-                onChange={(v) => setNotifs({ ...notifs, inApp: { ...notifs.inApp, sound: v } })}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      {/* In-App Config */}
+      <SectionCard title="Notificaciones In-App" description="Alertas dentro del dashboard.">
+         <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800">
+            <span className="text-zinc-200 font-medium">Habilitar In-App</span>
+            <ToggleSwitch checked={notifs.inApp.enabled} onChange={(v) => setNotifs({...notifs, inApp: {...notifs.inApp, enabled: v}})} />
+         </div>
+         {notifs.inApp.enabled && (
+             <div className="space-y-3">
+                 <ToggleRow label="Nuevos mensajes" checked={notifs.inApp.onNewMessage} onChange={(v) => setNotifs({...notifs, inApp: {...notifs.inApp, onNewMessage: v}})} small />
+                 <ToggleRow label="Nuevos chats" checked={notifs.inApp.onNewChat} onChange={(v) => setNotifs({...notifs, inApp: {...notifs.inApp, onNewChat: v}})} small />
+                 <ToggleRow label="Sonido de alerta" checked={notifs.inApp.sound} onChange={(v) => setNotifs({...notifs, inApp: {...notifs.inApp, sound: v}})} small />
+             </div>
+         )}
+      </SectionCard>
 
-      {/* Desktop Notifications */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Desktop Notifications</h2>
-          <ToggleSwitch
-            checked={notifs.desktop.enabled}
-            onChange={(v) => setNotifs({ ...notifs, desktop: { ...notifs.desktop, enabled: v } })}
-          />
-        </div>
-        {notifs.desktop.enabled && (
-          <div className="space-y-3 pl-4 border-l-2 border-gray-700">
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">New message</p>
-              <ToggleSwitch
-                checked={notifs.desktop.onNewMessage}
-                onChange={(v) => setNotifs({ ...notifs, desktop: { ...notifs.desktop, onNewMessage: v } })}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <p className="text-gray-300">New chat</p>
-              <ToggleSwitch
-                checked={notifs.desktop.onNewChat}
-                onChange={(v) => setNotifs({ ...notifs, desktop: { ...notifs.desktop, onNewChat: v } })}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Desktop Config (Restored!) */}
+      <SectionCard title="Escritorio (Push)" description="Notificaciones del navegador.">
+         <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800">
+            <span className="text-zinc-200 font-medium">Habilitar Push</span>
+            <ToggleSwitch checked={notifs.desktop.enabled} onChange={(v) => setNotifs({...notifs, desktop: {...notifs.desktop, enabled: v}})} />
+         </div>
+         {notifs.desktop.enabled && (
+             <div className="space-y-3">
+                 <ToggleRow label="Nuevos mensajes" checked={notifs.desktop.onNewMessage} onChange={(v) => setNotifs({...notifs, desktop: {...notifs.desktop, onNewMessage: v}})} small />
+                 <ToggleRow label="Nuevos chats" checked={notifs.desktop.onNewChat} onChange={(v) => setNotifs({...notifs, desktop: {...notifs.desktop, onNewChat: v}})} small />
+             </div>
+         )}
+      </SectionCard>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saved ? 'Saved!' : 'Save Notifications'}
-        </button>
-      </div>
+      <div className="flex justify-end pt-4"><SaveButton onClick={handleSave} loading={saving} saved={saved} /></div>
     </div>
   );
 }
 
-// ============= SECURITY TAB =============
+// ============= 4. SECURITY CONTENT =============
 
-function SecurityTab() {
+function SecurityContent() {
   const [sessions, setSessions] = useState<AgentSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
-  const [showPasswords, setShowPasswords] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
-  const logout = useAuthStore((s) => s.logout);
+  const [pwd, setPwd] = useState({ current: '', new: '', confirm: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [changing, setChanging] = useState(false);
 
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  const loadSessions = async () => {
-    setLoading(true);
-    try {
-      const data = await settingsService.getSessions();
-      setSessions(data.sessions);
-      setCurrentSessionId(data.currentSessionId);
-    } catch {}
-    setLoading(false);
-  };
-
+  useEffect(() => { loadSessions(); }, []);
+  const loadSessions = async () => { try { const data = await settingsService.getSessions(); setSessions(data.sessions); } catch {} setLoading(false); };
+  
   const handleChangePassword = async () => {
-    setPasswordError('');
-    setPasswordSuccess(false);
-    
-    if (passwordData.new !== passwordData.confirm) {
-      setPasswordError('Passwords do not match');
-      return;
-    }
-    if (passwordData.new.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      return;
-    }
-
-    setChangingPassword(true);
-    try {
-      await settingsService.changePassword(passwordData.current, passwordData.new);
-      setPasswordSuccess(true);
-      setPasswordData({ current: '', new: '', confirm: '' });
-      setTimeout(() => setPasswordSuccess(false), 3000);
-    } catch (err: any) {
-      setPasswordError(err.message || 'Failed to change password');
-    }
-    setChangingPassword(false);
+    if(pwd.new !== pwd.confirm) { setError('Las contraseñas no coinciden'); return; }
+    if(pwd.new.length < 8) { setError('Mínimo 8 caracteres'); return; }
+    setChanging(true); setError(''); setSuccess(false);
+    try { await settingsService.changePassword(pwd.current, pwd.new); setSuccess(true); setPwd({ current: '', new: '', confirm: '' }); setTimeout(() => setSuccess(false), 3000); } 
+    catch (e: any) { setError(e.message || 'Error al cambiar contraseña'); }
+    finally { setChanging(false); }
   };
 
-  const handleRevokeSession = async (sessionId: string) => {
-    try {
-      await settingsService.revokeSession(sessionId);
-      setSessions(sessions.filter((s) => s._id !== sessionId));
-    } catch {}
-  };
-
-  const handleRevokeAll = async () => {
-    try {
-      const result = await settingsService.revokeAllOtherSessions();
-      loadSessions();
-      alert(`Revoked ${result.revokedCount} sessions`);
-    } catch {}
-  };
-
-  const getDeviceIcon = (type: string) => {
-    switch (type) {
-      case 'mobile': return Smartphone;
-      case 'tablet': return Tablet;
-      default: return Monitor;
-    }
-  };
+  const handleRevoke = async (id: string) => { try { await settingsService.revokeSession(id); setSessions(sessions.filter(s => s._id !== id)); } catch {} };
+  const handleRevokeAll = async () => { try { await settingsService.revokeAllOtherSessions(); loadSessions(); } catch {} };
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Change Password */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-lg font-semibold text-white mb-4">Change Password</h2>
-        <div className="space-y-4">
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-300 mb-1">Current Password</label>
-            <input
-              type={showPasswords ? 'text' : 'password'}
-              value={passwordData.current}
-              onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
-            />
+    <div className="space-y-6">
+       <SectionCard title="Cambiar Contraseña" description="Actualiza tu clave de acceso periódicamente.">
+          <div className="space-y-4 max-w-lg">
+             <InputGroup label="Contraseña Actual" type="password" value={pwd.current} onChange={v => setPwd({...pwd, current: v})} />
+             <InputGroup label="Nueva Contraseña" type="password" value={pwd.new} onChange={v => setPwd({...pwd, new: v})} />
+             <InputGroup label="Confirmar Contraseña" type="password" value={pwd.confirm} onChange={v => setPwd({...pwd, confirm: v})} />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">New Password</label>
-            <input
-              type={showPasswords ? 'text' : 'password'}
-              value={passwordData.new}
-              onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
-            />
+          {error && <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4"/>{error}</div>}
+          {success && <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm flex items-center gap-2"><Check className="w-4 h-4"/>Contraseña actualizada</div>}
+          <div className="mt-6 flex justify-end">
+             <SaveButton onClick={handleChangePassword} loading={changing} label="Actualizar Contraseña" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Confirm New Password</label>
-            <input
-              type={showPasswords ? 'text' : 'password'}
-              value={passwordData.confirm}
-              onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
-            />
-          </div>
+       </SectionCard>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="showPasswords"
-              checked={showPasswords}
-              onChange={(e) => setShowPasswords(e.target.checked)}
-              className="rounded border-gray-700 bg-gray-800"
-            />
-            <label htmlFor="showPasswords" className="text-sm text-gray-400">Show passwords</label>
+       <SectionCard title="Sesiones Activas" description="Dispositivos donde has iniciado sesión.">
+          <div className="flex justify-end mb-4 gap-2">
+             <button onClick={loadSessions} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"><RefreshCw className="w-4 h-4"/></button>
+             {sessions.length > 1 && <button onClick={handleRevokeAll} className="text-xs text-red-400 hover:text-red-300 hover:underline">Cerrar todas las demás</button>}
           </div>
-
-          {passwordError && (
-            <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              {passwordError}
-            </div>
-          )}
-          {passwordSuccess && (
-            <div className="p-3 bg-secondary/10 border border-secondary/20 rounded-lg text-secondary text-sm flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              Password changed successfully!
-            </div>
-          )}
-
-          <button
-            onClick={handleChangePassword}
-            disabled={changingPassword || !passwordData.current || !passwordData.new || !passwordData.confirm}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-          >
-            {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-            Change Password
-          </button>
-        </div>
-      </div>
-
-      {/* Active Sessions */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Active Sessions</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={loadSessions}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            {sessions.length > 1 && (
-              <button
-                onClick={handleRevokeAll}
-                className="text-sm text-danger hover:underline"
-              >
-                Sign out all other sessions
-              </button>
-            )}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {sessions.map((session) => {
-              const DeviceIcon = getDeviceIcon(session.deviceType);
-              const isCurrent = session._id === currentSessionId || session.isCurrent;
-              
-              return (
-                <div
-                  key={session._id}
-                  className={`flex items-center gap-4 p-4 rounded-lg border ${
-                    isCurrent ? 'border-primary/30 bg-primary/5' : 'border-gray-700 bg-gray-800/50'
-                  }`}
-                >
-                  <div className="p-2 bg-gray-700 rounded-lg">
-                    <DeviceIcon className="w-5 h-5 text-gray-300" />
+          {loading ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-500"/> : (
+            <div className="space-y-3">
+              {sessions.map(s => (
+                <div key={s._id} className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${s.isCurrent ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-zinc-950 border-zinc-800'}`}>
+                  <div className="flex items-center gap-4">
+                     <div className={`p-2.5 rounded-xl border ${s.isCurrent ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-zinc-900 text-zinc-400 border-zinc-800'}`}>
+                        {s.deviceType === 'mobile' ? <Smartphone className="w-5 h-5"/> : <Laptop className="w-5 h-5"/>}
+                     </div>
+                     <div>
+                        <div className="flex items-center gap-2">
+                           <span className={`text-sm font-medium ${s.isCurrent ? 'text-white' : 'text-zinc-200'}`}>{s.os} • {s.browser}</span>
+                           {s.isCurrent && <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20">Actual</span>}
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5">{s.ip} • {new Date(s.lastSeenAt).toLocaleString()}</p>
+                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-white font-medium">{session.browser || 'Unknown browser'}</p>
-                      {isCurrent && (
-                        <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-400">
-                      {session.os || 'Unknown OS'} • {session.location || session.ip || 'Unknown location'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Last seen: {new Date(session.lastSeenAt).toLocaleString()}
-                    </p>
-                  </div>
-                  {!isCurrent && (
-                    <button
-                      onClick={() => handleRevokeSession(session._id)}
-                      className="p-2 text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                      title="Sign out this session"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
-                  )}
+                  {!s.isCurrent && <button onClick={() => handleRevoke(s._id)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><LogOut className="w-4 h-4"/></button>}
                 </div>
-              );
-            })}
-            {sessions.length === 0 && (
-              <p className="text-center text-gray-500 py-8">No active sessions found</p>
-            )}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+       </SectionCard>
     </div>
   );
 }
 
-// ============= ACTIVITY TAB =============
+// ============= 5. ACTIVITY CONTENT =============
 
-function ActivityTab() {
+function ActivityContent() {
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    loadActivity();
-  }, [page]);
-
-  const loadActivity = async () => {
-    setLoading(true);
-    try {
-      const data = await settingsService.getActivity(page, 20);
-      setActivities(data.activities);
-      setTotalPages(data.pages);
-    } catch {}
-    setLoading(false);
+  const loadActivity = async (p: number) => {
+      setLoading(true);
+      try { const data = await settingsService.getActivity(p, 20); setActivities(data.activities); setTotalPages(data.pages); setPage(p); } 
+      catch {} finally { setLoading(false); }
   };
 
-  const getActivityIcon = (type: AgentActivity['type']) => {
-    switch (type) {
-      case 'login': return { icon: User, color: 'text-secondary' };
-      case 'logout': return { icon: LogOut, color: 'text-gray-400' };
-      case 'status_change': return { icon: RefreshCw, color: 'text-primary' };
-      case 'chat_opened': return { icon: Eye, color: 'text-blue-400' };
-      case 'chat_closed': return { icon: X, color: 'text-orange-400' };
-      case 'password_changed': return { icon: Shield, color: 'text-warning' };
-      case 'session_revoked': return { icon: AlertTriangle, color: 'text-danger' };
-      default: return { icon: History, color: 'text-gray-400' };
-    }
-  };
+  useEffect(() => { loadActivity(1); }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
+  const getIcon = (type: string) => {
+      if(type.includes('login')) return User;
+      if(type.includes('logout')) return LogOut;
+      if(type.includes('chat')) return MessageSquare;
+      if(type.includes('password')) return Shield;
+      return RefreshCw;
+  };
 
   return (
-    <div className="max-w-2xl">
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-          <button
-            onClick={loadActivity}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="divide-y divide-gray-800">
-          {activities.map((activity) => {
-            const { icon: Icon, color } = getActivityIcon(activity.type);
-            return (
-              <div key={activity._id} className="flex items-start gap-4 p-4">
-                <div className={`p-2 bg-gray-800 rounded-lg ${color}`}>
-                  <Icon className="w-4 h-4" />
+    <div className="space-y-6">
+        <SectionCard title="Historial de Actividad" description="Registro reciente de acciones en tu cuenta.">
+            <div className="flex justify-end mb-4"><button onClick={() => loadActivity(page)} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded"><RefreshCw className="w-4 h-4"/></button></div>
+            {loading ? <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-indigo-500 animate-spin"/></div> : (
+                <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden">
+                    <div className="divide-y divide-zinc-800">
+                    {activities.map(a => {
+                        const Icon = getIcon(a.type);
+                        return (
+                            <div key={a._id} className="p-4 flex items-start gap-4 hover:bg-zinc-900/50 transition-colors">
+                                <div className="p-2 bg-zinc-900 rounded-lg text-zinc-400 border border-zinc-800"><Icon className="w-4 h-4"/></div>
+                                <div className="flex-1">
+                                    <p className="text-zinc-200 text-sm font-medium">{a.description}</p>
+                                    <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 font-mono">
+                                        <span>{new Date(a.createdAt).toLocaleString()}</span>
+                                        <span>•</span>
+                                        <span>{a.ip}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {activities.length === 0 && <div className="p-8 text-center text-zinc-500">No hay actividad reciente</div>}
+                    </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-white">{activity.description}</p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                    <span>{new Date(activity.createdAt).toLocaleString()}</span>
-                    {activity.ip && (
-                      <>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Globe className="w-3 h-3" />
-                          {activity.ip}
-                        </span>
-                      </>
-                    )}
-                  </div>
+            )}
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex justify-center gap-2 mt-6">
+                    <button onClick={() => loadActivity(Math.max(1, page - 1))} disabled={page === 1} className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-sm disabled:opacity-50">Anterior</button>
+                    <span className="px-4 py-2 text-zinc-500 text-sm">Página {page} de {totalPages}</span>
+                    <button onClick={() => loadActivity(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-sm disabled:opacity-50">Siguiente</button>
                 </div>
-              </div>
-            );
-          })}
-          {activities.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
-              No activity found
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-800 flex items-center justify-center gap-2">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="text-gray-400 px-4">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </div>
+            )}
+        </SectionCard>
     </div>
   );
 }
 
-// ============= TOGGLE SWITCH COMPONENT =============
+// ============= UI HELPERS (Premium Zinc) =============
 
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function SectionCard({ title, description, children }: any) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-sm">
+      <div className="mb-6">
+        <h3 className="text-lg font-bold text-white tracking-tight">{title}</h3>
+        <p className="text-sm text-zinc-400 mt-1">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InputGroup({ label, icon: Icon, value, onChange, type = 'text', placeholder, className }: { label: string; icon?: any; value: string; onChange?: (v: string) => void; type?: string; placeholder?: string; className?: string }) {
+  return (
+    <div className={`space-y-2 ${className}`}>
+      <label className="text-xs font-bold text-zinc-500 uppercaseflex items-center gap-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5" />} {label}
+      </label>
+      <input 
+        type={type} 
+        value={value}
+        onChange={(e) => onChange && onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-sm placeholder-zinc-600" 
+      />
+    </div>
+  );
+}
+
+function ToggleRow({ label, desc, checked, onChange, icon: Icon, small }: { label: string; desc?: string; checked: boolean; onChange: (v: boolean) => void; icon?: any; small?: boolean }) {
+    return (
+        <div className={`flex items-center justify-between p-3 rounded-xl hover:bg-zinc-950/50 border border-transparent hover:border-zinc-800/50 transition-all cursor-pointer ${small ? 'py-2' : ''}`} onClick={() => onChange(!checked)}>
+            <div className="flex items-center gap-3">
+                {Icon && <div className={`p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-400 ${small ? 'p-1.5' : ''}`}><Icon className={`${small ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}/></div>}
+                <div>
+                    <p className={`text-zinc-200 font-medium ${small ? 'text-xs' : 'text-sm'}`}>{label}</p>
+                    {desc && <p className="text-[10px] text-zinc-500 mt-0.5">{desc}</p>}
+                </div>
+            </div>
+            <ToggleSwitch checked={checked} onChange={onChange} small={small} />
+        </div>
+    );
+}
+
+function ToggleSwitch({ checked, onChange, small }: { checked: boolean; onChange: (v: boolean) => void; small?: boolean }) {
   return (
     <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? 'bg-primary' : 'bg-gray-600'
-      }`}
+      onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
+      className={`relative inline-flex items-center rounded-full transition-colors border ${checked ? 'bg-indigo-600 border-indigo-600' : 'bg-zinc-950 border-zinc-700'} ${small ? 'h-5 w-9' : 'h-6 w-11'}`}
     >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
+      <span className={`inline-block bg-white rounded-full transition-transform shadow-sm ${small ? 'h-3 w-3' : 'h-4 w-4'} ${checked ? (small ? 'translate-x-5' : 'translate-x-6') : 'translate-x-1'}`} />
     </button>
   );
+}
+
+function SaveButton({ onClick, loading, saved, label = 'Guardar Cambios' }: any) {
+    return (
+        <button 
+            onClick={onClick} 
+            disabled={loading}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:transform-none ${saved ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
+        >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : saved ? <Check className="w-4 h-4"/> : <Save className="w-4 h-4"/>}
+            {saved ? 'Guardado' : label}
+        </button>
+    );
 }

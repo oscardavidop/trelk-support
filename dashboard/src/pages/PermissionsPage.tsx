@@ -851,7 +851,7 @@ export default function PermissionsPage() {
                                                     </div>
 
                                                     <div className="mt-3 flex items-center justify-between">
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border ${ROLE_COLORS[agent.role] || 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium uppercaseborder ${ROLE_COLORS[agent.role] || 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
                                                             {agent.role}
                                                         </span>
 
@@ -941,7 +941,7 @@ export default function PermissionsPage() {
 
                                                 {/* Permission Categories Grid */}
                                                 <div className="space-y-4">
-                                                    <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-widest pl-1">Configuración de Permisos</h3>
+                                                    <h3 className="text-sm font-medium text-zinc-400 tracking-widest pl-1">Configuración de Permisos</h3>
                                                     {Object.entries(categories).map(([categoryKey, category]) => {
                                                         const style = CATEGORY_STYLES[categoryKey] || { color: 'text-zinc-400', bgColor: 'bg-zinc-800' };
                                                         const isExpanded = expandedCategories.has(categoryKey);
@@ -1054,7 +1054,7 @@ export default function PermissionsPage() {
                                                         <Shield className="w-6 h-6" style={{ color: role.color }} />
                                                     </div>
                                                     {role.isSystem && (
-                                                        <span className="px-2 py-1 bg-zinc-800 text-zinc-400 text-[10px] uppercase font-bold tracking-wider rounded border border-zinc-700">
+                                                        <span className="px-2 py-1 bg-zinc-800 text-zinc-400 text-[10px] font-boldrounded border border-zinc-700">
                                                             Sistema
                                                         </span>
                                                     )}
@@ -1113,7 +1113,7 @@ export default function PermissionsPage() {
                                                         </div>
 
                                                         <div className="flex items-center gap-2 pl-2 mt-3">
-                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${request.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercaseborder ${request.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                                                                     request.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                                                                         'bg-red-500/10 text-red-500 border-red-500/20'
                                                                 }`}>
@@ -1279,7 +1279,7 @@ function StatBadge({ icon: Icon, count, label, color, bg }: any) {
             </div>
             <div className="flex flex-col leading-none">
                 <span className={`font-bold ${color}`}>{count}</span>
-                <span className="text-[10px] uppercase font-bold text-zinc-500">{label}</span>
+                <span className="text-[10px] font-bold text-zinc-500">{label}</span>
             </div>
         </div>
     );

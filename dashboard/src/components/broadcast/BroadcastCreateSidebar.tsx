@@ -1043,7 +1043,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
 
             {/* 1. Campaign Info */}
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Información de Campaña</h3>
+              <h3 className="text-xs font-bold text-zinc-500 tracking-widest">Información de Campaña</h3>
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-2">Nombre Interno</label>
                 <input
@@ -1058,7 +1058,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
 
             {/* 2. Message Type */}
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Contenido del Mensaje</h3>
+              <h3 className="text-xs font-bold text-zinc-500 tracking-widest">Contenido del Mensaje</h3>
               <div className="grid grid-cols-3 gap-3">
                 {MESSAGE_TYPES.map(({ type, label, icon }) => (
                   <button
@@ -1216,7 +1216,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
 
             {/* 4. Targeting */}
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Destinatarios</h3>
+              <h3 className="text-xs font-bold text-zinc-500 tracking-widest">Destinatarios</h3>
               <div className="grid grid-cols-2 gap-3">
                 <TargetBtn
                   active={formData.targetType === 'all'}

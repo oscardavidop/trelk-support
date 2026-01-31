@@ -48,7 +48,7 @@ export async function updateAccount(updates: Partial<AccountData>): Promise<Acco
   });
   const data = await res.json();
   if (!data.ok) throw new Error(data.message || 'Failed to update account');
-  return data.account;
+  return data.agent;
 }
 
 // ============= PREFERENCES =============

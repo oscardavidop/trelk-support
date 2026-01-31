@@ -95,7 +95,7 @@ export default function QuickReplyDropdown({
       
       {/* Header */}
       <div className="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900">
-        <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 ">
           <Zap className="w-3 h-3 text-amber-500" />
           <span>Respuestas Rápidas</span>
         </div>
