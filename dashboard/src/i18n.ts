@@ -30,19 +30,8 @@ export function getLanguage() {
     return i18n.language
 }
 
-const isProd =
-    typeof window !== 'undefined' &&
-    window.location.hostname !== 'localhost'
 
-if (isProd) {
-    i18n.use(
-        resourcesToBackend((lng: string, ns: string) =>
-            import(`./locales/${lng}/${ns}.json`)
-        )
-    )
-} else {
-    i18n.use(HttpBackend)
-}
+i18n.use(HttpBackend)
 
 i18n
     .use(initReactI18next)
@@ -52,6 +41,9 @@ i18n
         ns: ['common'],
         defaultNS: 'common',
         preload: [detectLanguage()],
+        backend: {
+            loadPath: '/locales/{{lng}}/{{ns}}.json',
+        },
         react: {
             useSuspense: false,
         },

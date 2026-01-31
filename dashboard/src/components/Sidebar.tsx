@@ -12,6 +12,7 @@ import {
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
 import { updateAgentStatus } from '../services/socket';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   agent: Agent | null;
@@ -22,6 +23,7 @@ const COLLAPSED_ROUTES = ['/dashboard/flows', '/dashboard/chat'];
 const HIDDEN_ROUTES = ['/dashboard/chat'];
 
 export default function Sidebar({ agent, stats }: SidebarProps) {
+  const { t } = useTranslation('common');
   const location = useLocation();
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
@@ -88,42 +90,46 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
     permission: string | null;
     badge?: number;
   };
-  
+
   // Navigation Config
   const navItems: {
     section: string;
     items: NavItem[];
   }[] = [
     {
-      section: 'Principal', items: [
-        { path: '/dashboard', icon: LayoutDashboard, label: 'Overview', permission: null },
-        { path: '/dashboard/chat', icon: MessageCircle, label: 'Chat', permission: 'chats.read' },
-        { path: '/dashboard/contacts', icon: Contact, label: 'Contactos', permission: 'contacts.read' },
+      section: t('sidebar.sections.principal'),
+      items: [
+        { path: '/dashboard', icon: LayoutDashboard, label: t('sidebar.nav.overview'), permission: null },
+        { path: '/dashboard/chat', icon: MessageCircle, label: t('sidebar.nav.chat'), permission: 'chats.read' },
+        { path: '/dashboard/contacts', icon: Contact, label: t('sidebar.nav.contacts'), permission: 'contacts.read' },
       ]
     },
     {
-      section: 'Operaciones', items: [
-        { path: '/dashboard/broadcast', icon: Megaphone, label: 'Broadcast', permission: 'broadcast.read' },
-        { path: '/dashboard/supervisor', icon: Eye, label: 'Supervisor', permission: 'supervisor.monitor' },
-        { path: '/dashboard/flows', icon: GitBranch, label: 'Flow Builder', permission: 'flows.read' },
+      section: t('sidebar.sections.operations'),
+      items: [
+        { path: '/dashboard/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
+        { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
+        { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
       ]
     },
     {
-      section: 'Gestión', items: [
-        { path: '/dashboard/agents', icon: Users, label: 'Agentes', permission: 'agents.read' },
-        { path: '/dashboard/saved-replies', icon: MessageSquare, label: 'Respuestas', permission: 'replies.write' },
-        { path: '/dashboard/custom-fields', icon: ListChecks, label: 'Campos', permission: 'customFields.read' },
-        { path: '/dashboard/texts', icon: Languages, label: 'Textos', permission: 'settings.write' },
+      section: t('sidebar.sections.management'),
+      items: [
+        { path: '/dashboard/agents', icon: Users, label: t('sidebar.nav.agents'), permission: 'agents.read' },
+        { path: '/dashboard/saved-replies', icon: MessageSquare, label: t('sidebar.nav.replies'), permission: 'replies.write' },
+        { path: '/dashboard/custom-fields', icon: ListChecks, label: t('sidebar.nav.fields'), permission: 'customFields.read' },
+        { path: '/dashboard/texts', icon: Languages, label: t('sidebar.nav.texts'), permission: 'settings.write' },
       ]
     },
     {
-      section: 'Sistema', items: [
-        { path: '/dashboard/audit', icon: Activity, label: 'Actividad', permission: 'system.audit' },
-        { path: '/dashboard/exports', icon: Download, label: 'Exportar', permission: 'exports.create' },
-        { path: '/dashboard/system', icon: Server, label: 'Monitor', permission: 'system.read' },
-        {path: '/dashboard/system-control', icon: Sliders, label: 'Control', permission: 'system.admin' },
-        { path: '/dashboard/permissions', icon: KeyRound, label: 'Permisos', permission: 'agents.permissions' },
-        { path: '/dashboard/settings', icon: Settings, label: 'Ajustes', permission: 'settings.read' },
+      section: t('sidebar.sections.system'),
+      items: [
+        { path: '/dashboard/audit', icon: Activity, label: t('sidebar.nav.activity'), permission: 'system.audit' },
+        { path: '/dashboard/exports', icon: Download, label: t('sidebar.nav.exports'), permission: 'exports.create' },
+        { path: '/dashboard/system', icon: Server, label: t('sidebar.nav.monitor'), permission: 'system.read' },
+        { path: '/dashboard/system-control', icon: Sliders, label: t('sidebar.nav.control'), permission: 'system.admin' },
+        { path: '/dashboard/permissions', icon: KeyRound, label: t('sidebar.nav.permissions'), permission: 'agents.permissions' },
+        { path: '/dashboard/settings', icon: Settings, label: t('sidebar.nav.settings'), permission: 'settings.read' },
       ]
     }
   ];
@@ -221,12 +227,12 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
           return (
             <div key={groupIdx}>
               {!isCollapsed && (
-                <h3 className="px-3 text-[10px] font-bold text-zinc-500 uppercasemb-2">
+                <h3 className="px-3 text-[10px] font-bold text-zinc-500 uppercasemb-2 uppercase">
                   {group.section}
                 </h3>
               ) || (
-                groupIdx > 0 && <div className="border-t border-zinc-800 my-2" />
-              )}
+                  groupIdx > 0 && <div className="border-t border-zinc-800 my-2" />
+                )}
               <div className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const isActive = location.pathname === item.path;
@@ -362,8 +368,8 @@ function MenuLink({ icon: Icon, label, onClick, danger }: { icon: React.Componen
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${danger
-          ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
-          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+        ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
+        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
         }`}
     >
       <Icon className="w-4 h-4" />

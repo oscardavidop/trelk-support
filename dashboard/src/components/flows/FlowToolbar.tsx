@@ -1,10 +1,10 @@
-/**
- * FlowToolbar - Top toolbar for flow editor
- * With Undo/Redo, Status controls, and Actions
- */
-
 import React, { useState } from 'react';
 import type { FlowStatus } from '../../types/flow';
+import { 
+  ArrowLeft, Undo2, Redo2, Save, Play, Pause, 
+  MoreVertical, History, Trash2, Maximize, PanelRightClose, PanelRightOpen,
+  CheckCircle2, Clock, PlayCircle
+} from 'lucide-react';
 
 interface FlowToolbarProps {
   flowName: string;
@@ -55,20 +55,19 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
   const getStatusBadge = () => {
     const styles: Record<FlowStatus, { bg: string; text: string; label: string }> = {
-      draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-400', label: 'Borrador' },
-      published: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400', label: 'Publicado' },
-      archived: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', label: 'Archivado' },
-      disabled: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', label: 'Desactivado' },
+      draft: { bg: 'bg-zinc-800', text: 'text-zinc-400', label: 'Borrador' },
+      published: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Publicado' },
+      archived: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Archivado' },
+      disabled: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Desactivado' },
     };
     const style = styles[flowStatus] || styles.draft;
     return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-transparent ${style.bg} ${style.text}`}>
         {style.label}
       </span>
     );
   };
 
-  // Format last saved time
   const formatLastSaved = () => {
     if (!lastSaved) return null;
     const now = new Date();
@@ -79,203 +78,123 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
   };
 
   return (
-    <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
-      {/* Left section */}
+    <div className="h-16 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-4 select-none relative z-20">
+      
+      {/* Left: Navigation & Info */}
       <div className="flex items-center gap-4">
-        {/* Back button */}
         <button
           onClick={onClose}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          title="Volver"
+          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+          title="Volver al dashboard"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
+          <ArrowLeft className="w-5 h-5" />
         </button>
 
-        {/* Flow name and status */}
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {flowName}
-          </h1>
+          <h1 className="text-lg font-bold text-white tracking-tight">{flowName}</h1>
           {getStatusBadge()}
+          
           {hasChanges ? (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 animate-pulse">
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-medium border border-amber-500/20 animate-pulse">
+              {isLoading ? <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"/> : <span className="w-1.5 h-1.5 rounded-full bg-amber-400"/>}
               {isLoading ? 'Guardando...' : 'Sin guardar'}
             </span>
           ) : lastSaved ? (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-              ✓ Guardado {formatLastSaved()}
+            <span className="hidden sm:flex items-center gap-1.5 text-[12px] text-zinc-500">
+              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              Guardado {formatLastSaved()}
             </span>
           ) : null}
         </div>
 
         {/* Divider */}
-        <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
+        <div className="h-6 w-px bg-zinc-800 mx-2 hidden sm:block" />
 
         {/* Undo/Redo */}
         {!readOnly && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onUndo}
-              disabled={!canUndo}
-              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Deshacer (Ctrl+Z)"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-              </svg>
+          <div className="hidden sm:flex items-center gap-1">
+            <button onClick={onUndo} disabled={!canUndo} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors" title="Deshacer (Ctrl+Z)">
+              <Undo2 className="w-4 h-4" />
             </button>
-            <button
-              onClick={onRedo}
-              disabled={!canRedo}
-              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Rehacer (Ctrl+Shift+Z)"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
-              </svg>
+            <button onClick={onRedo} disabled={!canRedo} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors" title="Rehacer (Ctrl+Shift+Z)">
+              <Redo2 className="w-4 h-4" />
             </button>
           </div>
         )}
       </div>
 
-      {/* Center section - View controls */}
-      <div className="flex items-center gap-2">
-        {/* Toggle palette */}
+      {/* Center: View Controls */}
+      <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
         <button
           onClick={onTogglePalette}
-          className={`p-2 rounded-lg transition-colors ${
-            isPaletteOpen
-              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-          title={isPaletteOpen ? 'Ocultar panel de nodos' : 'Mostrar panel de nodos'}
+          className={`p-1.5 rounded-md transition-colors ${isPaletteOpen ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+          title={isPaletteOpen ? 'Ocultar panel' : 'Mostrar panel'}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-          </svg>
+          {isPaletteOpen ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
         </button>
-
-        {/* Center view */}
         <button
           onClick={onCenterView}
-          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
           title="Centrar vista"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
+          <Maximize className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Right section - Actions */}
-      <div className="flex items-center gap-2">
-        {/* Version History */}
-        <button
-          onClick={onVersionHistory}
-          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          title="Historial de versiones"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-
+      {/* Right: Actions */}
+      <div className="flex items-center gap-3">
+        
         {/* Simulate */}
-        <button
-          onClick={onSimulate}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-sm font-medium">Simular</span>
+        <button onClick={onSimulate} disabled={isLoading} className="flex items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg border border-transparent hover:border-zinc-700 transition-all text-xs font-medium">
+          <PlayCircle className="w-4 h-4 text-indigo-400" />
+          <span className="hidden sm:inline">Simular</span>
         </button>
 
         {!readOnly && (
           <>
             {/* Save */}
-            <button
-              onClick={onSave}
-              disabled={isLoading || !hasChanges}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            <button 
+              onClick={onSave} 
+              disabled={isLoading || !hasChanges} 
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border transition-all text-xs font-bold
+                ${hasChanges 
+                  ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-900/20' 
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-500 cursor-not-allowed opacity-70'}
+              `}
             >
-              {isLoading ? (
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-              )}
-              <span className="text-sm font-medium">Guardar</span>
+              <Save className="w-4 h-4" />
+              <span>Guardar</span>
             </button>
 
-            {/* Publish/Unpublish */}
+            {/* Publish Toggle */}
             {flowStatus === 'published' ? (
-              <button
-                onClick={onUnpublish}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-                title="Desactivar flow"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium">Desactivar</span>
+              <button onClick={onUnpublish} disabled={isLoading} className="flex items-center gap-2 px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 rounded-lg transition-all text-xs font-bold">
+                <Pause className="w-3.5 h-3.5" />
+                <span>Pausar</span>
               </button>
             ) : (
-              <button
-                onClick={onPublish}
-                disabled={isLoading || hasChanges}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={hasChanges ? 'Guarda primero los cambios' : 'Publicar flow'}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium">Publicar</span>
+              <button onClick={onPublish} disabled={isLoading || hasChanges} className="flex items-center gap-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 rounded-lg transition-all text-xs font-bold shadow-lg shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Publicar</span>
               </button>
             )}
 
-            {/* More menu */}
+            {/* Context Menu */}
             <div className="relative">
-              <button
-                onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Más opciones"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                </svg>
+              <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+                <MoreVertical className="w-5 h-5" />
               </button>
               
               {showMoreMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20">
-                    <button
-                      onClick={() => { onVersionHistory(); setShowMoreMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Historial de versiones
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-20 overflow-hidden ring-1 ring-white/10 animate-in fade-in slide-in-from-top-1">
+                    <button onClick={() => { onVersionHistory(); setShowMoreMenu(false); }} className="w-full px-4 py-2.5 text-left text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white flex items-center gap-2 transition-colors">
+                      <History className="w-4 h-4 text-zinc-500" /> Historial de versiones
                     </button>
-                    <button
-                      onClick={() => { onDelete(); setShowMoreMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Eliminar flow
+                    <div className="h-px bg-zinc-800 my-1" />
+                    <button onClick={() => { onDelete(); setShowMoreMenu(false); }} className="w-full px-4 py-2.5 text-left text-xs font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors">
+                      <Trash2 className="w-4 h-4" /> Eliminar flujo
                     </button>
                   </div>
                 </>

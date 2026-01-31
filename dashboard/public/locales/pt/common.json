@@ -4,5 +4,37 @@
   "menu.dashboard": "Dashboard",
   "menu.chat": "Chat",
   "menu.flows": "Fluxos",
-  "menu.settings": "Configurações"
+  "menu.settings": "Configurações",
+  "sidebar": {
+    "sections": {
+      "principal": "Principal",
+      "operations": "Operações",
+      "management": "Gestão",
+      "system": "Sistema"
+    },
+    "nav": {
+      "overview": "Visão Geral",
+      "chat": "Chat",
+      "contacts": "Contatos",
+      "broadcast": "Broadcast",
+      "supervisor": "Supervisor",
+      "flowBuilder": "Construtor de Fluxos",
+      "agents": "Agentes",
+      "replies": "Respostas",
+      "fields": "Campos",
+      "texts": "Textos",
+      "activity": "Atividade",
+      "exports": "Exportar",
+      "monitor": "Monitor",
+      "control": "Controle",
+      "permissions": "Permissões",
+      "settings": "Configurações"
+    }
+  },
+  "footer": {
+    "statusTitle": "Status",
+    "myAccount": "Minha Conta",
+    "preferences": "Preferências",
+    "logout": "Sair"
+  }
 }

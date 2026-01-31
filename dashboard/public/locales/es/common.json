@@ -1,8 +1,40 @@
 {
-  "app.title": "Panel de Soporte",
-  "menu.home": "Inicio",
-  "menu.dashboard": "Dashboard",
-  "menu.chat": "Chat",
-  "menu.flows": "Flujos",
-  "menu.settings": "Configuración"
+    "app.title": "Panel de Soporte",
+    "menu.home": "Inicio",
+    "menu.dashboard": "Dashboard",
+    "menu.chat": "Chat",
+    "menu.flows": "Flujos",
+    "menu.settings": "Configuración",
+    "sidebar": {
+        "sections": {
+            "principal": "Principal",
+            "operations": "Operaciones",
+            "management": "Gestión",
+            "system": "Sistema"
+        },
+        "nav": {
+            "overview": "Overview",
+            "chat": "Chat",
+            "contacts": "Contactos",
+            "broadcast": "Broadcast",
+            "supervisor": "Supervisor",
+            "flowBuilder": "Flow Builder",
+            "agents": "Agentes",
+            "replies": "Respuestas",
+            "fields": "Campos",
+            "texts": "Textos",
+            "activity": "Actividad",
+            "exports": "Exportar",
+            "monitor": "Monitor",
+            "control": "Control",
+            "permissions": "Permisos",
+            "settings": "Ajustes"
+        }
+    },
+    "footer": {
+        "statusTitle": "Estado",
+        "myAccount": "Mi Cuenta",
+        "preferences": "Preferencias",
+        "logout": "Cerrar Sesión"
+    }
 }

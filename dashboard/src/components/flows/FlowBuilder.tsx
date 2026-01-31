@@ -1,29 +1,13 @@
 /**
  * FlowBuilder - Visual Flow Editor
- * Main canvas component using React Flow
+ * Refactored: Premium Zinc Style
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-
 import ReactFlow, {
-  Controls,
-  Background,
-  MiniMap,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Panel,
-  useReactFlow,
-  ReactFlowProvider,
-  MarkerType,
-  BackgroundVariant,
-} from 'reactflow';
-import type {
-  Node,
-  Edge,
-  Connection,
-  NodeTypes,
-  EdgeTypes,
+  Controls, Background, MiniMap, useNodesState, useEdgesState, addEdge,
+  Panel, useReactFlow, ReactFlowProvider, MarkerType, BackgroundVariant,
+ type Node, type Edge, type Connection, type NodeTypes, type EdgeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -39,31 +23,25 @@ import NodePalette from './NodePalette';
 import NodeConfigPanel from './NodeConfigPanel';
 import FlowToolbar from './FlowToolbar';
 import { getFlows } from '../../services/flow.service';
+import { Zap, GitFork, PlayCircle, MousePointerClick } from 'lucide-react';
 
-// Custom node types
+// Custom node & edge types
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
   condition: ConditionNode,
   action: ActionNode,
   delay: DelayNode,
   end: EndNode,
-  branch: ConditionNode, // Use condition node for branches too
+  branch: ConditionNode,
 };
 
-// Custom edge types
-const edgeTypes: EdgeTypes = {
-  deletable: DeletableEdge,
-};
+const edgeTypes: EdgeTypes = { deletable: DeletableEdge };
 
-// Custom edge style
 const defaultEdgeOptions = {
   type: 'deletable',
   animated: false,
-  style: { strokeWidth: 2, stroke: '#94A3B8' },
-  markerEnd: {
-    type: MarkerType.ArrowClosed,
-    color: '#94A3B8',
-  },
+  style: { strokeWidth: 2, stroke: '#52525b' }, // Zinc-600
+  markerEnd: { type: MarkerType.ArrowClosed, color: '#52525b' },
 };
 
 interface FlowBuilderProps {
@@ -81,431 +59,186 @@ interface FlowBuilderProps {
   lastSaved?: Date | null;
 }
 
-// History state for Undo/Redo
-interface HistoryState {
-  nodes: Node[];
-  edges: Edge[];
-}
-
+// History state
+interface HistoryState { nodes: Node[]; edges: Edge[]; }
 const MAX_HISTORY_LENGTH = 50;
 
-// Convert our FlowNode to ReactFlow Node
-const toReactFlowNodes = (flowNodes: FlowNode[] | undefined): Node[] => {
-  if (!flowNodes || !Array.isArray(flowNodes)) return [];
-  return flowNodes.map((node) => ({
-    id: node.id,
-    type: node.type,
-    position: node.position,
-    data: {
-      label: node.label,
-      config: node.config,
-      metadata: node.metadata,
-    },
+// Converters
+const toReactFlowNodes = (flowNodes: FlowNode[] | undefined): Node[] => 
+  (flowNodes || []).map(node => ({
+    id: node.id, type: node.type, position: node.position,
+    data: { label: node.label, config: node.config, metadata: node.metadata },
   }));
-};
 
-// Convert our FlowEdge to ReactFlow Edge
-const toReactFlowEdges = (flowEdges: FlowEdge[] | undefined): Edge[] => {
-  if (!flowEdges || !Array.isArray(flowEdges)) return [];
-  return flowEdges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    sourceHandle: edge.sourceHandle,
-    targetHandle: edge.targetHandle,
-    label: edge.label,
-    ...defaultEdgeOptions,
-    animated: edge.animated,
+const toReactFlowEdges = (flowEdges: FlowEdge[] | undefined): Edge[] => 
+  (flowEdges || []).map(edge => ({
+    id: edge.id, source: edge.source, target: edge.target,
+    sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle,
+    label: edge.label, ...defaultEdgeOptions, animated: edge.animated,
   }));
-};
 
-// Convert ReactFlow Node back to FlowNode
-const toFlowNodes = (reactFlowNodes: Node[]): FlowNode[] => {
-  return reactFlowNodes.map((node) => ({
-    id: node.id,
-    type: node.type as NodeType,
-    label: node.data.label,
-    config: node.data.config,
-    position: node.position,
-    metadata: node.data.metadata,
+const toFlowNodes = (reactNodes: Node[]): FlowNode[] => 
+  reactNodes.map(node => ({
+    id: node.id, type: node.type as NodeType, label: node.data.label,
+    config: node.data.config, position: node.position, metadata: node.data.metadata,
   }));
-};
 
-// Convert ReactFlow Edge back to FlowEdge
-const toFlowEdges = (reactFlowEdges: Edge[]): FlowEdge[] => {
-  return reactFlowEdges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    sourceHandle: edge.sourceHandle || undefined,
-    targetHandle: edge.targetHandle || undefined,
-    label: typeof edge.label === 'string' ? edge.label : undefined,
-    animated: edge.animated,
+const toFlowEdges = (reactEdges: Edge[]): FlowEdge[] => 
+  reactEdges.map(edge => ({
+    id: edge.id, source: edge.source, target: edge.target,
+    sourceHandle: edge.sourceHandle || undefined, targetHandle: edge.targetHandle || undefined,
+    label: typeof edge.label === 'string' ? edge.label : undefined, animated: edge.animated,
   }));
-};
 
 function FlowBuilderInner({
-  flow,
-  onSave,
-  onAutoSave,
-  onPublish,
-  onUnpublish,
-  onSimulate,
-  onClose,
-  onDelete,
-  onVersionHistory,
-  isLoading = false,
-  readOnly = false,
-  lastSaved,
+  flow, onSave, onAutoSave, onPublish, onUnpublish, onSimulate,
+  onClose, onDelete, onVersionHistory, isLoading = false, readOnly = false, lastSaved,
 }: FlowBuilderProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project, getNodes, getEdges, setCenter } = useReactFlow();
   
-  // State
-  const [nodes, setNodes, onNodesChange] = useNodesState(
-    flow ? toReactFlowNodes(flow.nodes) : []
-  );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(
-    flow ? toReactFlowEdges(flow.edges) : []
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState(flow ? toReactFlowNodes(flow.nodes) : []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(flow ? toReactFlowEdges(flow.edges) : []);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isPaletteOpen, setIsPaletteOpen] = useState(true);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // Available flows for button actions (cached list)
   const [availableFlows, setAvailableFlows] = useState<{ id: string; name: string }[]>([]);
 
-  // Load available flows for dropdown selectors
+  // Load flows for config
   useEffect(() => {
-    const loadFlows = async () => {
-      try {
-        const result = await getFlows({ limit: 100 });
-        setAvailableFlows(
-          result.flows.map((f) => ({ id: f._id, name: f.name }))
-        );
-      } catch (error) {
-        console.error('Error loading flows:', error);
-      }
-    };
-    loadFlows();
+    getFlows({ limit: 100 }).then(res => setAvailableFlows(res.flows.map(f => ({ id: f._id, name: f.name })))).catch(console.error);
   }, []);
 
-  // Convert current nodes to NodeOption format for dropdowns
-  const nodeOptions = useMemo(() => 
-    nodes.map((n) => ({ 
-      id: n.id, 
-      label: (n.data?.label as string) || n.id 
-    }))
-  , [nodes]);
+  const nodeOptions = useMemo(() => nodes.map(n => ({ id: n.id, label: (n.data?.label as string) || n.id })), [nodes]);
 
-  // Undo/Redo history
+  // History Management
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoingRef = useRef(false);
-  
-  // Track if we can undo/redo
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  const saveHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Save current state to history
   const saveToHistory = useCallback(() => {
     if (isUndoingRef.current) return;
-    
-    const currentState: HistoryState = {
-      nodes: JSON.parse(JSON.stringify(nodes)),
-      edges: JSON.parse(JSON.stringify(edges)),
-    };
-    
+    const currentState: HistoryState = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
     setHistory(prev => {
-      // If we're not at the end, cut off future history
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push(currentState);
-      
-      // Limit history length
-      if (newHistory.length > MAX_HISTORY_LENGTH) {
-        newHistory.shift();
-      }
-      
+      if (newHistory.length > MAX_HISTORY_LENGTH) newHistory.shift();
       return newHistory;
     });
     setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY_LENGTH - 1));
   }, [nodes, edges, historyIndex]);
 
-  // Initialize history on mount
   useEffect(() => {
     if (flow && history.length === 0) {
-      const initialState: HistoryState = {
-        nodes: toReactFlowNodes(flow.nodes),
-        edges: toReactFlowEdges(flow.edges),
-      };
-      setHistory([initialState]);
+      setHistory([{ nodes: toReactFlowNodes(flow.nodes), edges: toReactFlowEdges(flow.edges) }]);
       setHistoryIndex(0);
     }
   }, [flow]);
 
-  // Debounced history save on changes
-  const saveHistoryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (isUndoingRef.current || !flow) return;
-    
-    if (saveHistoryTimeoutRef.current) {
-      clearTimeout(saveHistoryTimeoutRef.current);
-    }
-    
-    saveHistoryTimeoutRef.current = setTimeout(() => {
-      saveToHistory();
-    }, 500);
-    
-    return () => {
-      if (saveHistoryTimeoutRef.current) {
-        clearTimeout(saveHistoryTimeoutRef.current);
-      }
-    };
+    if (saveHistoryTimeoutRef.current) clearTimeout(saveHistoryTimeoutRef.current);
+    saveHistoryTimeoutRef.current = setTimeout(saveToHistory, 500);
+    return () => { if (saveHistoryTimeoutRef.current) clearTimeout(saveHistoryTimeoutRef.current); };
   }, [nodes, edges]);
 
-  // Undo function
   const handleUndo = useCallback(() => {
-    if (!canUndo) return;
-    
+    if (historyIndex <= 0) return;
     isUndoingRef.current = true;
     const prevState = history[historyIndex - 1];
-    setNodes(prevState.nodes);
-    setEdges(prevState.edges);
+    setNodes(prevState.nodes); setEdges(prevState.edges);
     setHistoryIndex(prev => prev - 1);
-    
-    setTimeout(() => {
-      isUndoingRef.current = false;
-    }, 100);
-  }, [canUndo, history, historyIndex, setNodes, setEdges]);
+    setTimeout(() => { isUndoingRef.current = false; }, 100);
+  }, [history, historyIndex, setNodes, setEdges]);
 
-  // Redo function
   const handleRedo = useCallback(() => {
-    if (!canRedo) return;
-    
+    if (historyIndex >= history.length - 1) return;
     isUndoingRef.current = true;
     const nextState = history[historyIndex + 1];
-    setNodes(nextState.nodes);
-    setEdges(nextState.edges);
+    setNodes(nextState.nodes); setEdges(nextState.edges);
     setHistoryIndex(prev => prev + 1);
-    
-    setTimeout(() => {
-      isUndoingRef.current = false;
-    }, 100);
-  }, [canRedo, history, historyIndex, setNodes, setEdges]);
+    setTimeout(() => { isUndoingRef.current = false; }, 100);
+  }, [history, historyIndex, setNodes, setEdges]);
 
-  // Keyboard shortcuts for Undo/Redo
+  // Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (readOnly) return;
-      
-      // Undo: Ctrl+Z or Cmd+Z
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      }
-      
-      // Redo: Ctrl+Shift+Z or Cmd+Shift+Z or Ctrl+Y
-      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') ||
-          ((e.ctrlKey || e.metaKey) && e.key === 'y')) {
-        e.preventDefault();
-        handleRedo();
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') || ((e.ctrlKey || e.metaKey) && e.key === 'y')) { e.preventDefault(); handleRedo(); }
     };
-    
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo, readOnly]);
 
-  // Track changes and trigger auto-save
+  // Auto-save & Change detection
   useEffect(() => {
     if (flow) {
-      const currentNodes = JSON.stringify(toFlowNodes(nodes));
-      const currentEdges = JSON.stringify(toFlowEdges(edges));
-      const originalNodes = JSON.stringify(flow.nodes);
-      const originalEdges = JSON.stringify(flow.edges);
-      const changed = currentNodes !== originalNodes || currentEdges !== originalEdges;
+      const changed = JSON.stringify(toFlowNodes(nodes)) !== JSON.stringify(flow.nodes) || JSON.stringify(toFlowEdges(edges)) !== JSON.stringify(flow.edges);
       setHasChanges(changed);
-      
-      // Trigger auto-save if there are changes and not undoing
-      if (changed && !isUndoingRef.current && onAutoSave) {
-        onAutoSave(toFlowNodes(nodes), toFlowEdges(edges));
-      }
+      if (changed && !isUndoingRef.current && onAutoSave) onAutoSave(toFlowNodes(nodes), toFlowEdges(edges));
     }
   }, [nodes, edges, flow, onAutoSave]);
 
-  // Handle connection (edge creation)
-  const onConnect = useCallback(
-    (params: Connection) => {
-      if (readOnly) return;
-      
-      const newEdge = {
-        ...params,
-        id: `edge-${Date.now()}`,
-        ...defaultEdgeOptions,
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
-    },
-    [setEdges, readOnly]
-  );
+  // Flow Handlers
+  const onConnect = useCallback((params: Connection) => {
+    if (readOnly) return;
+    setEdges(eds => addEdge({ ...params, id: `edge-${Date.now()}`, ...defaultEdgeOptions }, eds));
+  }, [setEdges, readOnly]);
 
-  // Handle node click
-  const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      setSelectedNode(node);
-      setIsConfigOpen(true);
-    },
-    []
-  );
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => { setSelectedNode(node); setIsConfigOpen(true); }, []);
+  const onPaneClick = useCallback(() => { setSelectedNode(null); setIsConfigOpen(false); }, []);
+  
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
+    if (readOnly) return;
+    const ids = new Set(deletedNodes.map(n => n.id));
+    setEdges(eds => eds.filter(e => !ids.has(e.source) && !ids.has(e.target)));
+    if (selectedNode && ids.has(selectedNode.id)) { setSelectedNode(null); setIsConfigOpen(false); }
+  }, [selectedNode, setEdges, readOnly]);
 
-  // Handle pane click (deselect)
-  const onPaneClick = useCallback(() => {
-    setSelectedNode(null);
-    setIsConfigOpen(false);
-  }, []);
+  const onAddNode = useCallback((type: NodeType, label: string, config: any) => {
+    if (readOnly) return;
+    const newNode: Node = {
+      id: `${type}-${Date.now()}`, type, position: { x: 250, y: nodes.length * 100 + 50 },
+      data: { label, config, metadata: { color: NODE_COLORS[type] } },
+    };
+    setNodes(nds => [...nds, newNode]);
+    setSelectedNode(newNode); setIsConfigOpen(true);
+  }, [nodes, setNodes, readOnly]);
 
-  // Handle node deletion
-  const onNodesDelete = useCallback(
-    (deletedNodes: Node[]) => {
-      if (readOnly) return;
-      
-      // Also delete connected edges
-      const deletedNodeIds = new Set(deletedNodes.map((n) => n.id));
-      setEdges((eds) =>
-        eds.filter(
-          (e) => !deletedNodeIds.has(e.source) && !deletedNodeIds.has(e.target)
-        )
-      );
-      
-      // Clear selection if deleted
-      if (selectedNode && deletedNodeIds.has(selectedNode.id)) {
-        setSelectedNode(null);
-        setIsConfigOpen(false);
-      }
-    },
-    [selectedNode, setEdges, readOnly]
-  );
+  const onNodeConfigChange = useCallback((nodeId: string, label: string, config: any) => {
+    if (readOnly) return;
+    setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, label, config } } : n));
+  }, [setNodes, readOnly]);
 
-  // Add new node from palette
-  const onAddNode = useCallback(
-    (type: NodeType, label: string, config: any) => {
-      if (readOnly) return;
-
-      const id = `${type}-${Date.now()}`;
-      const newNode: Node = {
-        id,
-        type,
-        position: {
-          x: 250,
-          y: nodes.length * 100 + 50,
-        },
-        data: {
-          label,
-          config,
-          metadata: {
-            color: NODE_COLORS[type],
-          },
-        },
-      };
-
-      setNodes((nds) => [...nds, newNode]);
-      setSelectedNode(newNode);
-      setIsConfigOpen(true);
-    },
-    [nodes, setNodes, readOnly]
-  );
-
-  // Update node configuration
-  const onNodeConfigChange = useCallback(
-    (nodeId: string, label: string, config: any) => {
-      if (readOnly) return;
-
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === nodeId) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                label,
-                config,
-              },
-            };
-          }
-          return node;
-        })
-      );
-    },
-    [setNodes, readOnly]
-  );
-
-  // Handle drag over for drop
-  const onDragOver = useCallback((event: React.DragEvent) => {
+  const onDragOver = useCallback((event: React.DragEvent) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }, []);
+  
+  const onDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
+    if (readOnly || !reactFlowWrapper.current) return;
+    const type = event.dataTransfer.getData('application/reactflow/type') as NodeType;
+    const label = event.dataTransfer.getData('application/reactflow/label');
+    const config = JSON.parse(event.dataTransfer.getData('application/reactflow/config') || '{}');
+    if (!type) return;
 
-  // Handle drop from palette
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      if (readOnly) return;
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const position = project({ x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+    const newNode: Node = {
+      id: `${type}-${Date.now()}`, type, position,
+      data: { label, config, metadata: { color: NODE_COLORS[type] } },
+    };
+    setNodes(nds => [...nds, newNode]);
+  }, [project, setNodes, readOnly]);
 
-      const type = event.dataTransfer.getData('application/reactflow/type') as NodeType;
-      const label = event.dataTransfer.getData('application/reactflow/label');
-      const config = JSON.parse(event.dataTransfer.getData('application/reactflow/config') || '{}');
-
-      if (!type || !reactFlowWrapper.current) return;
-
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      });
-
-      const id = `${type}-${Date.now()}`;
-      const newNode: Node = {
-        id,
-        type,
-        position,
-        data: {
-          label,
-          config,
-          metadata: {
-            color: NODE_COLORS[type],
-          },
-        },
-      };
-
-      setNodes((nds) => [...nds, newNode]);
-    },
-    [project, setNodes, readOnly]
-  );
-
-  // Save flow
   const handleSave = useCallback(() => {
-    const flowNodes = toFlowNodes(getNodes());
-    const flowEdges = toFlowEdges(getEdges());
-    onSave(flowNodes, flowEdges);
+    onSave(toFlowNodes(getNodes()), toFlowEdges(getEdges()));
     setHasChanges(false);
   }, [getNodes, getEdges, onSave]);
 
-  // Center view
-  const handleCenterView = useCallback(() => {
-    if (nodes.length > 0) {
-      const firstNode = nodes[0];
-      setCenter(firstNode.position.x, firstNode.position.y, { zoom: 1, duration: 800 });
-    }
-  }, [nodes, setCenter]);
-
-  // MiniMap node color
-  const minimapNodeColor = useCallback((node: Node) => {
-    return NODE_COLORS[node.type as NodeType] || '#6B7280';
-  }, []);
-
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-100 dark:bg-gray-900">
-      {/* Toolbar */}
+    <div className="h-screen w-full flex flex-col bg-black">
       <FlowToolbar
         flowName={flow?.name || 'Nuevo Flow'}
         flowStatus={flow?.status || 'draft'}
@@ -516,30 +249,25 @@ function FlowBuilderInner({
         onUnpublish={onUnpublish}
         onSimulate={onSimulate}
         onClose={onClose}
-        onCenterView={handleCenterView}
+        onCenterView={() => nodes.length > 0 && setCenter(nodes[0].position.x, nodes[0].position.y, { zoom: 1, duration: 800 })}
         onTogglePalette={() => setIsPaletteOpen(!isPaletteOpen)}
         onVersionHistory={onVersionHistory}
         onDelete={onDelete}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
         isPaletteOpen={isPaletteOpen}
         readOnly={readOnly}
         lastSaved={lastSaved}
       />
 
       <div className="flex-1 flex relative overflow-hidden">
-        {/* Node Palette (Left Sidebar) */}
-        {isPaletteOpen && !readOnly && (
-          <NodePalette onAddNode={onAddNode} />
-        )}
+        {isPaletteOpen && !readOnly && <NodePalette onAddNode={onAddNode} />}
 
-        {/* Canvas */}
-        <div className="flex-1 h-full" ref={reactFlowWrapper}>
+        <div className="flex-1 h-full relative" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={nodes} edges={edges}
             onNodesChange={readOnly ? undefined : onNodesChange}
             onEdgesChange={readOnly ? undefined : onEdgesChange}
             onConnect={onConnect}
@@ -559,50 +287,33 @@ function FlowBuilderInner({
             deleteKeyCode={readOnly ? null : 'Delete'}
             selectionKeyCode={readOnly ? null : 'Shift'}
             multiSelectionKeyCode={readOnly ? null : 'Meta'}
-            panOnScroll
-            zoomOnScroll
-            className="bg-gray-50 dark:bg-gray-900"
+            panOnScroll zoomOnScroll
+            className="bg-zinc-950"
           >
-            <Controls
-              showInteractive={!readOnly}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
+            <Controls className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden [&>button]:border-b [&>button]:border-zinc-800 [&>button]:bg-zinc-900 [&>button]:fill-zinc-400 [&>button:hover]:bg-zinc-800" showInteractive={!readOnly} />
+            <MiniMap 
+              nodeColor={n => NODE_COLORS[n.type as NodeType] || '#52525b'} 
+              maskColor="rgba(9, 9, 11, 0.8)" 
+              className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl" 
             />
-            <MiniMap
-              nodeColor={minimapNodeColor}
-              maskColor="rgba(0, 0, 0, 0.1)"
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
-            />
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={15}
-              size={1}
-              color="#94A3B8"
-            />
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#3f3f46" />
 
-            {/* Empty state */}
             {nodes.length === 0 && (
               <Panel position="top-center" className="mt-32">
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center max-w-md">
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 text-center max-w-md ring-1 ring-white/10">
+                  <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                    <MousePointerClick className="w-8 h-8 text-indigo-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Comienza tu automatización
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Arrastra un nodo de trigger desde el panel izquierdo para comenzar a construir tu flow.
+                  <h3 className="text-xl font-bold text-white mb-2">Lienzo vacío</h3>
+                  <p className="text-zinc-400 mb-6 leading-relaxed">
+                    Arrastra nodos desde el panel izquierdo para comenzar a diseñar tu flujo conversacional.
                   </p>
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-500">
-                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                    <span>Trigger</span>
-                    <span className="mx-2">→</span>
-                    <span className="w-3 h-3 bg-amber-500 rounded-full"></span>
-                    <span>Condición</span>
-                    <span className="mx-2">→</span>
-                    <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                    <span>Acción</span>
+                  <div className="flex items-center justify-center gap-3 text-xs text-zinc-500 font-mono bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
+                    <span className="flex items-center gap-1.5"><Zap className="w-3 h-3 text-emerald-500"/> Trigger</span>
+                    <span className="text-zinc-700">→</span>
+                    <span className="flex items-center gap-1.5"><GitFork className="w-3 h-3 text-amber-500"/> Lógica</span>
+                    <span className="text-zinc-700">→</span>
+                    <span className="flex items-center gap-1.5"><PlayCircle className="w-3 h-3 text-blue-500"/> Acción</span>
                   </div>
                 </div>
               </Panel>
@@ -610,14 +321,10 @@ function FlowBuilderInner({
           </ReactFlow>
         </div>
 
-        {/* Node Configuration Panel (Right Sidebar) */}
         {isConfigOpen && selectedNode && (
           <NodeConfigPanel
             node={selectedNode}
-            onClose={() => {
-              setSelectedNode(null);
-              setIsConfigOpen(false);
-            }}
+            onClose={() => { setSelectedNode(null); setIsConfigOpen(false); }}
             onChange={onNodeConfigChange}
             readOnly={readOnly}
             nodes={nodeOptions}
@@ -629,7 +336,6 @@ function FlowBuilderInner({
   );
 }
 
-// Wrapper with ReactFlow Provider
 export default function FlowBuilder(props: FlowBuilderProps) {
   return (
     <ReactFlowProvider>
