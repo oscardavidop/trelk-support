@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import type { MessageBlock, KeyboardConfig, TextBlock } from '../../types/flow';
+import { CheckCheck, Eye, EyeOff, FileText, Play } from 'lucide-react';
 
 interface MessagePreviewProps {
   blocks: MessageBlock[];
@@ -165,29 +166,23 @@ function renderFormattedContent(content: string, parseMode?: string): React.Reac
 export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, className = '', defaultExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  if (blocks.length === 0) {
-    return null;
-  }
+  if (blocks.length === 0) return null;
 
-  // Renderizar botones como los vería Telegram
+  // Renderizado de Teclado Inline
   const renderKeyboard = (keyboard: KeyboardConfig | undefined) => {
-    if (!keyboard || keyboard.type !== 'inline' || !keyboard.rows || keyboard.rows.length === 0) {
-      return null;
-    }
+    if (!keyboard || keyboard.type !== 'inline' || !keyboard.rows?.length) return null;
 
     return (
-      <div className="mt-3 space-y-1">
+      <div className="mt-2 space-y-1">
         {keyboard.rows.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex gap-1 flex-wrap">
+          <div key={rowIdx} className="flex gap-1 w-full">
             {row.buttons.map((btn, btnIdx) => (
-              <button
+              <div
                 key={btnIdx}
-                disabled
-                className="text-xs px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex-1 min-w-max"
-                title={btn.text}
+                className="flex-1 min-w-0 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded px-3 py-2 text-center cursor-default transition-colors border border-white/5 shadow-sm"
               >
-                {btn.text}
-              </button>
+                <span className="text-xs font-medium text-white block truncate">{btn.text}</span>
+              </div>
             ))}
           </div>
         ))}
@@ -195,97 +190,69 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
     );
   };
 
-  // Renderizar un bloque de contenido
+  // Renderizado de Bloques
   const renderContent = () => {
     return (
       <div className="space-y-2">
         {blocks.map((block, idx) => (
-          <div key={`${block.id}-${idx}`}>
+          <div key={`${block.id}-${idx}`} className="space-y-1">
+            
+            {/* Texto */}
             {block.type === 'text' && (
-              <div className="text-sm text-white whitespace-pre-wrap break-words">
-                {renderFormattedContent(block.content || '', (block as TextBlock).parseMode)}
-              </div>
+              <div>{renderFormattedContent(block.content || '', (block as TextBlock).parseMode)}</div>
             )}
+
+            {/* Imagen */}
             {block.type === 'image' && block.url && (
-              <div className="flex flex-col gap-2">
-                <img
-                  src={block.url}
-                  alt="Preview"
-                  className="max-w-full h-auto rounded max-h-48 object-cover bg-gray-200 dark:bg-gray-700"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                {block.caption && (
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    {block.caption}
-                  </div>
-                )}
-              </div>
-            )}
-            {block.type === 'document' && block.url && (
-              <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
-                    {block.filename || 'Documento'}
-                  </div>
-                  {block.caption && (
-                    <div className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                      {block.caption}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {block.type === 'audio' && block.url && (
-              <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                    {(block as any).isVoiceNote ? '🎙️ Nota de voz' : 'Audio'}
-                  </div>
-                  {(block as any).caption && (
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {(block as any).caption}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {block.type === 'video' && block.url && (
-              <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                    Video
-                  </div>
-                  {block.caption && (
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {block.caption}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {block.type === 'delay' && (
-              <div className="flex items-center gap-2 p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-xs text-amber-700 dark:text-amber-300">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 2m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>⏳ Esperar {block.seconds}s</span>
+              <div className="rounded-lg overflow-hidden mb-1 relative">
+                <img src={block.url} alt="Media" className="w-full h-auto object-cover max-h-[300px]" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                {/* Gradient overlay for text readability if caption exists could be added here */}
               </div>
             )}
 
-            {/* Mostrar teclado del bloque si existe */}
+            {/* Documento */}
+            {block.type === 'document' && block.url && (
+              <div className="flex items-center gap-3 p-2 bg-black/10 rounded-lg">
+                <div className="p-2 bg-blue-500 rounded-full text-white">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate text-white">{block.filename || 'Archivo'}</div>
+                  <div className="text-xs opacity-70">Documento</div>
+                </div>
+              </div>
+            )}
+
+            {/* Audio */}
+            {block.type === 'audio' && block.url && (
+              <div className="flex items-center gap-3 p-2 bg-black/10 rounded-lg">
+                <div className="p-2 bg-blue-500 rounded-full text-white">
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                </div>
+                <div className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                   <div className="w-1/3 h-full bg-white/80" />
+                </div>
+                <div className="text-xs font-mono opacity-80">0:15</div>
+              </div>
+            )}
+
+            {/* Caption Global */}
+            {['image', 'video', 'document', 'audio'].includes(block.type) && (block as any).caption && (
+              <div className="text-sm mt-1">{renderFormattedContent((block as any).caption)}</div>
+            )}
+
+            {/* Delay Indicator (Visual only, not bubble) */}
+            {block.type === 'delay' && (
+              <div className="flex justify-center my-2">
+                 <span className="text-[10px] bg-black/20 text-white/60 px-2 py-0.5 rounded-full">
+                   ⏳ Esperando {(block as any).seconds}s...
+                 </span>
+              </div>
+            )}
+
+            {/* Teclado Inline asociado al bloque */}
             {block.type !== 'delay' && (block as any).keyboard && renderKeyboard((block as any).keyboard)}
+
           </div>
         ))}
       </div>
@@ -293,62 +260,54 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
   };
 
   return (
-    <div className={`mt-4 ${className}`}>
-      {/* Header colapsable */}
+    <div className={`mt-4 border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950 ${className}`}>
+      
+      {/* Header Toggle */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/50 dark:hover:to-cyan-900/50 transition-all"
+        className="w-full flex items-center justify-between px-4 py-3 bg-zinc-900/50 hover:bg-zinc-900 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          <div className="text-left">
-            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
-              Vista previa del mensaje
-            </span>
-            <span className="text-xs text-blue-600 dark:text-blue-400">
-              {isExpanded ? 'Cerrar' : 'Abre para ver cómo se verá en Telegram'}
-            </span>
+          <div className="p-1.5 bg-sky-500/10 rounded text-sky-400">
+            {isExpanded ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </div>
+          <span className="text-xs font-bold text-zinc-300 uppercase tracking-wide">Vista Previa (Telegram)</span>
         </div>
-        <svg
-          className={`w-5 h-5 text-blue-600 dark:text-blue-400 transition-transform duration-200 ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-        </svg>
+        <span className="text-[10px] text-zinc-500 font-medium">
+          {isExpanded ? 'Ocultar' : 'Mostrar'}
+        </span>
       </button>
 
-      {/* Preview Content */}
+      {/* Preview Content Area */}
       {isExpanded && (
-        <div className="mt-2 p-4 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-800/30 border border-gray-200 dark:border-gray-700 rounded-lg">
-          {/* Telegram Style Chat Bubble */}
-          <div className="flex justify-end mb-3">
-            <div className="max-w-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-tr-none p-4 space-y-2 shadow-lg">
+        <div className="relative p-4 bg-[#0e1621] bg-opacity-95" style={{ 
+          backgroundImage: 'url("https://web.telegram.org/img/bg_0.png")', // Telegram Dark Pattern (Optional)
+          backgroundSize: 'cover'
+        }}>
+          {/* Mock Time Header */}
+          <div className="text-center mb-4">
+            <span className="bg-black/20 text-white/60 text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+              Hoy
+            </span>
+          </div>
+
+          <div className="flex flex-col items-end space-y-2">
+            {/* The Bubble */}
+            <div className="max-w-[85%] bg-[#2b5278] text-white rounded-2xl rounded-tr-sm p-2.5 shadow-sm relative group">
               {renderContent()}
+              
+              {/* Meta Info (Time & Check) */}
+              <div className="flex justify-end items-center gap-1 mt-1 select-none">
+                <span className="text-[10px] text-sky-200/60">12:45 PM</span>
+                <CheckCheck className="w-3 h-3 text-sky-400" />
+              </div>
             </div>
           </div>
 
-          {/* Info Footer */}
-          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
-              <span>Actualización en tiempo real</span>
-            </div>
-            <span className="text-blue-600 dark:text-blue-400 font-medium">Telegram</span>
-          </div>
         </div>
       )}
     </div>
   );
 };
 
-export default MessagePreview;
+

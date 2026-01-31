@@ -267,6 +267,7 @@ export interface DataCollectionConfig {
 // ============= ENHANCED ACTION CONFIG =============
 
 export interface ActionConfig {
+  description: string;
   actionType: ActionType;
   // Legacy text content (backward compatible)
   messageContent?: string;
@@ -726,14 +727,78 @@ export interface UpdateFlowInput {
 // ============= NODE DEFAULTS =============
 
 export const NODE_COLORS: Record<NodeType, string> = {
-  trigger: '#10B981', // green
-  condition: '#F59E0B', // amber
-  action: '#3B82F6', // blue
-  delay: '#8B5CF6', // purple
-  branch: '#EC4899', // pink
-  end: '#6B7280', // gray
+  trigger: '#10b981',   // Emerald-500
+  condition: '#f59e0b', // Amber-500
+  action: '#3b82f6',    // Blue-500
+  delay: '#8b5cf6',     // Violet-500
+  branch: '#ec4899',    // Pink-500 (Si usas un nodo de rama separado)
+  end: '#71717a',       // Zinc-500 (Actualizado de Gray para coincidir con el tema)
 };
 
+export const NODE_STYLES: Record<NodeType, {
+  border: string;
+  ring: string;
+  handle: string;
+  iconBg: string;
+  iconBorder: string;
+  iconColor: string;
+  titleColor: string;
+}> = {
+  trigger: {
+    border: 'border-emerald-500',
+    ring: 'ring-emerald-500/20',
+    handle: '!bg-emerald-500',
+    iconBg: 'bg-emerald-500/10',
+    iconBorder: 'border-emerald-500/20',
+    iconColor: 'text-emerald-400',
+    titleColor: 'text-emerald-500',
+  },
+  condition: {
+    border: 'border-amber-500',
+    ring: 'ring-amber-500/20',
+    handle: '!bg-amber-500',
+    iconBg: 'bg-amber-500/10',
+    iconBorder: 'border-amber-500/20',
+    iconColor: 'text-amber-400',
+    titleColor: 'text-amber-500',
+  },
+  action: {
+    border: 'border-indigo-500', // Usamos Indigo para acciones generales
+    ring: 'ring-indigo-500/20',
+    handle: '!bg-indigo-500',
+    iconBg: 'bg-indigo-500/10',
+    iconBorder: 'border-indigo-500/20',
+    iconColor: 'text-indigo-400',
+    titleColor: 'text-indigo-500',
+  },
+  delay: {
+    border: 'border-violet-500',
+    ring: 'ring-violet-500/20',
+    handle: '!bg-violet-500',
+    iconBg: 'bg-violet-500/10',
+    iconBorder: 'border-violet-500/20',
+    iconColor: 'text-violet-400',
+    titleColor: 'text-violet-500',
+  },
+  branch: {
+    border: 'border-pink-500',
+    ring: 'ring-pink-500/20',
+    handle: '!bg-pink-500',
+    iconBg: 'bg-pink-500/10',
+    iconBorder: 'border-pink-500/20',
+    iconColor: 'text-pink-400',
+    titleColor: 'text-pink-500',
+  },
+  end: {
+    border: 'border-zinc-500',
+    ring: 'ring-zinc-500/20',
+    handle: '!bg-zinc-400',
+    iconBg: 'bg-zinc-800',
+    iconBorder: 'border-zinc-700',
+    iconColor: 'text-zinc-300',
+    titleColor: 'text-zinc-400',
+  },
+};
 export const TRIGGER_LABELS: Record<TriggerType, string> = {
   chat_created: 'Chat creado',
   message_received: 'Mensaje recibido',
@@ -847,3 +912,54 @@ export const DELAY_LABELS: Record<DelayType, string> = {
   until_business_hours: 'Hasta horario laboral',
   until_condition: 'Hasta condición',
 };
+
+interface NodeOption {
+  id: string;
+  label: string;
+}
+
+interface FlowOption {
+  id: string;
+  name: string;
+}
+
+export interface BlockEditorProps<T extends MessageBlock> {
+  block: T;
+  onChange: (updates: Partial<T>) => void;
+  onDelete: () => void;
+  onInsertVariable: (variable: string) => void;
+  readOnly?: boolean;
+  nodes?: NodeOption[];
+  flows?: FlowOption[];
+}
+
+export interface MessageEditorProps {
+  config: ActionConfig;
+  onChange: (updates: Partial<ActionConfig>) => void;
+  readOnly?: boolean;
+  /** Lista de nodos del flow actual para el selector */
+  nodes?: NodeOption[];
+  /** Lista de flows disponibles para el selector */
+  flows?: FlowOption[];
+}
+
+
+export interface BlockKeyboardEditorProps {
+  keyboard?: KeyboardConfig;
+  onChange: (keyboard: KeyboardConfig | undefined) => void;
+  readOnly?: boolean;
+  nodeId?: string; // For generating unique callback data
+  nodes?: NodeOption[];
+  flows?: FlowOption[];
+}
+
+export interface ButtonCardProps {
+  button: KeyboardButton;
+  keyboardType: 'inline' | 'reply';
+  onUpdate: (updates: Partial<KeyboardButton>) => void;
+  onRemove: () => void;
+  readOnly?: boolean;
+  nodeId?: string;
+  nodes?: NodeOption[];
+  flows?: FlowOption[];
+}

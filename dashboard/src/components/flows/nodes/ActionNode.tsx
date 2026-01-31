@@ -1,22 +1,26 @@
 /**
- * ActionNode - Flow action node component
- * Now with dynamic button handles for flow routing
+ * ActionNode - Premium Zinc Refactor
+ * Flow action node with dynamic button routing handles
  */
 
 import React, { memo, useMemo } from 'react';
-import type { JSX } from 'react';
-import { Handle, Position } from 'reactflow';
-import type { NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
+import {
+  MessageSquare, CalendarClock, ArrowRightLeft, UserCog,
+  FolderInput, Tag, StickyNote, Ban, Webhook, Code2,
+  Database, XCircle, RotateCcw, ClipboardList,
+  MessageCircleQuestion, ListStart, PenLine, Eraser,
+  Workflow, MoreHorizontal, Zap, Layers, Reply,
+  KeyboardOff,
+  LucideKeyboard
+} from 'lucide-react';
+
 import type {
   ActionConfig,
   ActionType,
   KeyboardButton,
   MessageBlock,
-  TextBlock,
-  ImageBlock,
-  DocumentBlock,
-  AudioBlock,
-  VideoBlock
+  TextBlock
 } from '../../../types/flow';
 import { ACTION_LABELS } from '../../../types/flow';
 import NodeWrapper from './NodeWrapper';
@@ -26,23 +30,19 @@ import NodeWrapper from './NodeWrapper';
 interface ActionNodeData {
   label: string;
   config: ActionConfig;
-  metadata?: {
-    color?: string;
-    icon?: string;
-    description?: string;
-  };
 }
 
-// Extract all buttons from message blocks that have onClick actions
+// Helper: Extract all buttons from config
 function extractAllButtons(config: ActionConfig): KeyboardButton[] {
   const buttons: KeyboardButton[] = [];
 
   // From message blocks
   if (config.messageBlocks) {
     for (const block of config.messageBlocks) {
-      const typedBlock = block as TextBlock | ImageBlock | DocumentBlock | AudioBlock | VideoBlock;
-      if ('keyboard' in typedBlock && typedBlock.keyboard?.rows) {
-        for (const row of typedBlock.keyboard.rows) {
+      // Cast genérico seguro para acceder a propiedades comunes
+      const anyBlock = block as any;
+      if (anyBlock.keyboard?.rows) {
+        for (const row of anyBlock.keyboard.rows) {
           for (const btn of row.buttons) {
             buttons.push(btn);
           }
@@ -63,206 +63,50 @@ function extractAllButtons(config: ActionConfig): KeyboardButton[] {
   return buttons;
 }
 
-const getActionIcon = (actionType: ActionType) => {
-  const icons: Record<ActionType, JSX.Element> = {
-    send_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-      </svg>
-    ),
-    schedule_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    transfer_chat: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    ),
-    assign_agent: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
-    change_category: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-    ),
-    add_tag: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-      </svg>
-    ),
-    remove_tag: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-      </svg>
-    ),
-    create_note: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-    ),
-    block_user: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-      </svg>
-    ),
-    call_webhook: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-      </svg>
-    ),
-    api_call: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-      </svg>
-    ),
-    set_custom_field: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-      </svg>
-    ),
-    close_chat: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    ),
-    reopen_chat: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    ),
-    send_survey: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-    escalate: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-      </svg>
-    ),
-    wait_for_response: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-      </svg>
-    ),
-    add_to_queue: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-      </svg>
-    ),
-    // === NEW TELEGRAM ACTIONS ===
-    edit_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-    ),
-    delete_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-    ),
-    edit_keyboard: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="2" y="6" width="20" height="12" rx="2" strokeWidth={2}/>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
-      </svg>
-    ),
-    remove_keyboard: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="2" y="6" width="20" height="12" rx="2" strokeWidth={2}/>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 10h.01M18 10h.01M8 14h8M3 3l18 18" />
-      </svg>
-    ),
-    send_reply_keyboard: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="2" y="14" width="20" height="6" rx="1" strokeWidth={2}/>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 17h.01M10 17h.01M14 17h.01M18 17h.01M12 3v8m0 0l-3-3m3 3l3-3" />
-      </svg>
-    ),
-    remove_reply_keyboard: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="2" y="14" width="20" height="6" rx="1" strokeWidth={2}/>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-      </svg>
-    ),
-    send_chat_action: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <circle cx="12" cy="12" r="10" strokeWidth={2}/>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01" />
-      </svg>
-    ),
-    pin_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-      </svg>
-    ),
-    unpin_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5zM3 3l18 18" />
-      </svg>
-    ),
-    save_message_id: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-      </svg>
-    ),
-    delay_action: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    send_location: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    send_contact: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
-    send_sticker: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    copy_message: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-      </svg>
-    ),
-    run_subflow: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-      </svg>
-    ),
-  };
-  return icons[actionType] || (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  );
+// Helper: Get Icon and Color Theme based on Action Type
+const getActionVisuals = (type?: ActionType ) => {
+  switch (type) {
+    case 'send_message': return { icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+    case 'schedule_message': return { icon: CalendarClock, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+    case 'transfer_chat': return { icon: ArrowRightLeft, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' };
+    case 'assign_agent': return { icon: UserCog, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' };
+    case 'change_category': return { icon: FolderInput, color: 'text-sky-400', bg: 'bg-sky-500/10', border: 'border-sky-500/20' };
+    case 'add_tag': return { icon: Tag, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+    case 'remove_tag': return { icon: Tag, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+    case 'create_note': return { icon: StickyNote, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+    case 'block_user': return { icon: Ban, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+    case 'call_webhook': return { icon: Webhook, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+    case 'api_call': return { icon: Code2, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
+    case 'set_custom_field': return { icon: Database, color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' };
+    case 'close_chat': return { icon: XCircle, color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' };
+    case 'reopen_chat': return { icon: RotateCcw, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+    case 'send_survey': return { icon: ClipboardList, color: 'text-teal-400', bg: 'bg-teal-500/10', border: 'border-teal-500/20' };
+    case 'wait_for_response': return { icon: MessageCircleQuestion, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' };
+    case 'add_to_queue': return { icon: ListStart, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+    case 'edit_message': return { icon: PenLine, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+    case 'delete_message': return { icon: Eraser, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+    case 'run_subflow': return { icon: Workflow, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' };
+    case 'remove_keyboard': return { icon: KeyboardOff, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+    case 'edit_keyboard': return { icon: LucideKeyboard, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+    default: return { icon: Zap, color: 'text-zinc-400', bg: 'bg-zinc-800', border: 'border-zinc-700' };
+  }
 };
 
 // --- Component ---
 
 function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
   const actionType = data.config?.actionType;
+  const visuals = getActionVisuals(actionType);
+  const Icon = visuals.icon;
   const actionLabel = actionType ? (ACTION_LABELS[actionType] || actionType) : 'Acción';
 
-  // Extract buttons for dynamic handles
+  // 1. Extract buttons for handles
   const buttons = useMemo(() => {
     if (!data.config) return [];
     return extractAllButtons(data.config);
   }, [data.config]);
 
-  // Only show button handles for buttons with goto_node or continue mode
+  // 2. Filter buttons that need handles (continue or goto_node)
   const buttonHandles = useMemo(() => {
     return buttons.filter(btn => {
       const mode = btn.onClick?.mode || 'continue';
@@ -270,40 +114,44 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
     });
   }, [buttons]);
 
-  const hasButtons = actionType === 'send_message' && buttonHandles.length > 0;
+  const hasButtons = (actionType === 'send_message' || actionType === 'send_survey') && buttonHandles.length > 0;
 
-  // --- Preview Logic ---
+  // 3. Preview Logic
   const getActionPreview = () => {
     if (!data.config) return null;
 
     switch (actionType) {
       case 'send_message':
         const textBlock = data.config.messageBlocks?.find((b: any) => b.type === 'text') as TextBlock | undefined;
+        // Prioritize block content, fallback to legacy
         const text = textBlock?.content || data.config.messageContent;
+        const blockCount = data.config.messageBlocks?.length || 0;
 
         if (text) {
           return (
-            <div className="relative pl-3 border-l-2 border-blue-300 dark:border-blue-700">
-              <p className="text-xs text-gray-600 dark:text-gray-300 italic truncate max-w-[180px]">
-                "{text.substring(0, 40)}{text.length > 40 ? '...' : ''}"
-              </p>
+            <div className="space-y-1">
+              <div className="relative pl-2 border-l-2 border-zinc-700">
+                <p className="text-[10px] text-zinc-400 italic truncate max-w-[180px] leading-tight">
+                  "{text.substring(0, 50)}{text.length > 50 ? '...' : ''}"
+                </p>
+              </div>
+              {blockCount > 1 && (
+                <div className="flex items-center gap-1 text-[9px] text-zinc-500">
+                  <Layers className="w-3 h-3" /> +{blockCount - 1} bloques más
+                </div>
+              )}
             </div>
           );
         }
-        return (
-          <div className="mt-2 text-xs text-gray-400 italic">
-            {data.config.messageBlocks?.length || 0} bloques configurados
-          </div>
-        );
+        return <span className="text-[10px] text-zinc-500 italic">Mensaje sin texto</span>;
 
       case 'add_tag':
       case 'remove_tag':
         return data.config.tagName ? (
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-[10px] text-gray-400 uppercase">{actionType === 'add_tag' ? 'Añadir:' : 'Quitar:'}</span>
+          <div className="flex items-center gap-2 mt-1">
             <span
-              className="px-2 py-0.5 rounded text-xs font-medium text-white shadow-sm"
-              style={{ backgroundColor: data.config.tagColor || '#3B82F6' }}
+              className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-sm"
+              style={{ backgroundColor: data.config.tagColor || (actionType === 'add_tag' ? '#3B82F6' : '#EF4444') }}
             >
               {data.config.tagName}
             </span>
@@ -312,32 +160,40 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
 
       case 'call_webhook':
         return data.config.webhookUrl ? (
-          <div className="mt-2 flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-1.5 rounded border border-gray-100 dark:border-gray-700">
-            <span className={`text-[10px] font-bold px-1 rounded ${data.config.webhookMethod === 'POST' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-              }`}>
+          <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 mt-1">
+            <span className={`text-[9px] font-bold ${data.config.webhookMethod === 'POST' ? 'text-blue-400' : 'text-emerald-400'}`}>
               {data.config.webhookMethod || 'POST'}
             </span>
-            <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
-              {(() => {
-                try { return new URL(data.config.webhookUrl).hostname; }
-                catch { return data.config.webhookUrl; }
-              })()}
+            <span className="text-[10px] text-zinc-500 truncate max-w-[140px] font-mono">
+              {(() => { try { return new URL(data.config.webhookUrl).pathname; } catch { return '...'; } })()}
             </span>
           </div>
         ) : null;
 
       case 'schedule_message':
         return data.config.scheduleDelay ? (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
-            <svg className="w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            <span>Espera: <b>{data.config.scheduleDelay} min</b></span>
+          <div className="flex items-center gap-1.5 mt-1 text-amber-400/80 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10">
+            <CalendarClock className="w-3 h-3" />
+            <span className="text-[10px] font-medium">Espera: {data.config.scheduleDelay} min</span>
+          </div>
+        ) : null;
+
+      case 'set_custom_field':
+        return data.config.customFieldName ? (
+          <div className="flex flex-col gap-0.5 mt-1">
+            <span className="text-[9px] text-zinc-500 font-mono bg-zinc-900 px-1 rounded w-fit">
+              {data.config.customFieldName}
+            </span>
+            <span className="text-[10px] text-violet-400 font-bold truncate">
+              = {data.config.customFieldValue}
+            </span>
           </div>
         ) : null;
 
       default:
         return (
-          <div className="text-xs text-gray-600 dark:text-gray-400 italic">
-            {actionLabel}
+          <div className="text-[10px] text-zinc-500 italic mt-1">
+            {data.config.description || 'Sin configuración adicional'}
           </div>
         );
     }
@@ -348,13 +204,13 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
       <div
         className={`
           relative flex flex-col
-          bg-white dark:bg-gray-900 
-          rounded-xl shadow-xl 
-          border-2 min-w-[240px] max-w-[280px]
+          bg-zinc-950 
+          rounded-xl shadow-2xl 
+          border-[1.5px] min-w-[240px] max-w-[260px]
           transition-all duration-200
           ${selected
-            ? 'border-blue-500 ring-4 ring-blue-500/20'
-            : 'border-blue-400/60 dark:border-blue-600/60 hover:border-blue-500'
+            ? 'border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'border-zinc-800 hover:border-zinc-700'
           }
         `}
       >
@@ -362,90 +218,74 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-4 !h-4 !-top-2 !bg-blue-500 !border-2 !border-white dark:!border-gray-900 transition-transform hover:scale-125"
+          className="!w-3 !h-3 !-top-1.5 !bg-zinc-200 !border-2 !border-zinc-950 transition-transform hover:scale-125 hover:!bg-indigo-400"
         />
 
         {/* --- HEADER --- */}
-        <div className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 p-3 rounded-t-xl border-b border-blue-100 dark:border-blue-800/50 flex items-center gap-3">
-          <div className={`
-            flex items-center justify-center w-8 h-8 rounded-lg shadow-sm border
-            ${selected
-              ? 'bg-blue-500 text-white border-blue-600'
-              : 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700'
-            }
-          `}>
-            {getActionIcon(actionType) || (
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-            )}
+        <div className={`p-3 rounded-t-xl border-b border-zinc-800/50 flex items-center gap-3 bg-zinc-900/30`}>
+          <div className={`flex items-center justify-center w-8 h-8 rounded-lg border ${visuals.bg} ${visuals.border} ${visuals.color}`}>
+            <Icon className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight truncate">
-              {data.label || 'Acción'}
-            </div>
-            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium uppercasemt-0.5 truncate">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
               {actionLabel}
+            </div>
+            <div className="font-bold text-zinc-200 text-xs leading-tight truncate">
+              {data.label || 'Nodo de Acción'}
             </div>
           </div>
         </div>
 
-        {/* --- BODY --- */}
+        {/* --- BODY PREVIEW --- */}
         <div className="p-3">
           {getActionPreview()}
 
-          {/* LISTA DE BOTONES (Si existen) */}
+          {/* LISTA DE BOTONES (Salidas Dinámicas) */}
           {hasButtons && (
-            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-gray-400 ">Opciones</span>
-                <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 rounded-full">{buttonHandles.length}</span>
-              </div>
-
-              <div className="space-y-2">
-                {buttonHandles.slice(0, 4).map((btn, index) => (
-                  <div
-                    key={btn.id}
-                    className="relative flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 px-2 py-1.5 rounded-md group hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <div className={`w-1.5 h-1.5 rounded-full ${btn.onClick?.mode === 'goto_node' ? 'bg-purple-500' : 'bg-blue-500'}`} />
-                      <span className="text-xs text-gray-700 dark:text-gray-300 truncate font-medium">
-                        {btn.text}
-                      </span>
-                    </div>
-                    <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-
-                    {/* HANDLE INTEGRADO EN EL BOTÓN */}
-                    <Handle
-                      type="source"
-                      position={Position.Right}
-                      id={`btn-${btn.id}`}
-                      className={`!w-2.5 !h-2.5 !border-2 !border-white dark:!border-gray-800 ${btn.onClick?.mode === 'goto_node' ? '!bg-purple-500' : '!bg-blue-500'}`}
-                      style={{ right: '-14px', top: '50%', transform: 'translateY(-50%)' }}
-                    />
+            <div className="mt-3 pt-3 border-t border-zinc-800/50 space-y-2">
+              {buttonHandles.map((btn) => (
+                <div
+                  key={btn.id}
+                  className="relative flex items-center justify-between bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 rounded-lg group hover:border-indigo-500/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Reply className="w-3 h-3 text-zinc-600 rotate-180 scale-y-[-1]" />
+                    <span className="text-[10px] font-medium text-zinc-300 truncate max-w-[160px]">
+                      {btn.text}
+                    </span>
                   </div>
-                ))}
-                {buttonHandles.length > 4 && (
-                  <div className="text-center text-[10px] text-gray-400 italic">
-                    + {buttonHandles.length - 4} opciones más...
-                  </div>
-                )}
-              </div>
+
+                  {/* Handle Right */}
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={`btn-${btn.id}`}
+                    className={`!w-2.5 !h-2.5 !border-2 !border-zinc-950 !bg-indigo-500 transition-transform group-hover:scale-125`}
+                    style={{ right: '-14px', top: '50%', transform: 'translateY(-50%)' }}
+                  />
+                </div>
+              ))}
+
+              {buttonHandles.length === 0 && (
+                <div className="text-[9px] text-zinc-600 text-center italic">Sin botones conectables</div>
+              )}
             </div>
           )}
         </div>
 
-        {/* --- HANDLE DE SALIDA POR DEFECTO --- */}
-        {/* Solo se muestra si NO hay botones, para flujo continuo */}
-        {!hasButtons && (
+        {/* --- OUTPUT HANDLE DEFAULT --- */}
+        {/* Solo mostrar si NO hay botones o si la acción permite continuar de todos modos (ej. schedule) */}
+        {(!hasButtons) && (
           <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
             <Handle
               type="source"
               position={Position.Bottom}
               id="default"
-              className="!relative !transform-none !w-3.5 !h-3.5 !bg-blue-500 !border-2 !border-white dark:!border-gray-900 transition-transform hover:scale-125 shadow-sm"
+              className="!relative !transform-none !w-3 !h-3 !bg-zinc-200 !border-2 !border-zinc-950 transition-transform hover:scale-125 hover:!bg-indigo-400"
             />
           </div>
         )}
+
       </div>
     </NodeWrapper>
   );

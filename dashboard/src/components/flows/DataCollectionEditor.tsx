@@ -1,9 +1,14 @@
 /**
- * DataCollectionEditor - UI for configuring wait_for_response action
- * Allows collecting user input with validation
+ * DataCollectionEditor - Premium Zinc Refactor
+ * UI for configuring wait_for_response action
  */
 
 import React, { useState } from 'react';
+import {
+  Type, Mail, Phone, Hash, Link, Calendar, List,
+  Variable, Plus, Trash2, AlertCircle, CheckCircle2,
+  ChevronDown, MessageSquare, Settings2, Clock, RotateCw
+} from 'lucide-react';
 import type {
   DataCollectionConfig,
   DataCollectionType,
@@ -11,34 +16,20 @@ import type {
   ActionConfig,
 } from '../../types/flow';
 
-// Iconos inline para evitar dependencias externas en este snippet
-const Icons = {
-  Text: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>,
-  Email: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-  Phone: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>,
-  Number: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>,
-  Url: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>,
-  Date: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-  Choice: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>,
-  Variable: () => <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>,
-  Plus: () => <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-  Trash: () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-};
-
 interface DataCollectionEditorProps {
   config: ActionConfig;
   onChange: (updates: Partial<ActionConfig>) => void;
   readOnly?: boolean;
 }
 
-const VALIDATION_TYPES: { value: DataCollectionType; label: string; icon: React.FC }[] = [
-  { value: 'text', label: 'Texto', icon: Icons.Text },
-  { value: 'email', label: 'Email', icon: Icons.Email },
-  { value: 'phone', label: 'Teléfono', icon: Icons.Phone },
-  { value: 'number', label: 'Número', icon: Icons.Number },
-  { value: 'url', label: 'Web URL', icon: Icons.Url },
-  { value: 'date', label: 'Fecha', icon: Icons.Date },
-  { value: 'choice', label: 'Opciones', icon: Icons.Choice },
+const VALIDATION_TYPES: { value: DataCollectionType; label: string; icon: any }[] = [
+  { value: 'text', label: 'Texto', icon: Type },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'phone', label: 'Teléfono', icon: Phone },
+  { value: 'number', label: 'Número', icon: Hash },
+  { value: 'url', label: 'URL', icon: Link },
+  { value: 'date', label: 'Fecha', icon: Calendar },
+  { value: 'choice', label: 'Opciones', icon: List },
 ];
 
 const AVAILABLE_VARIABLES = [
@@ -46,6 +37,9 @@ const AVAILABLE_VARIABLES = [
   { path: 'user.lastName', label: 'Apellido' },
   { path: 'user.username', label: 'Username' },
 ];
+
+// Estilo base para inputs
+const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder-zinc-600";
 
 const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
   config,
@@ -68,17 +62,11 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
     });
   };
 
+  // --- Logic Helpers ---
   const addChoice = () => {
     const choices = dataCollection.choices || [];
     updateDataCollection({
-      choices: [
-        ...choices,
-        {
-          id: Date.now().toString(),
-          label: `Opción ${choices.length + 1}`,
-          value: `opt_${choices.length + 1}`,
-        },
-      ],
+      choices: [...choices, { id: Date.now().toString(), label: `Opción ${choices.length + 1}`, value: `opt_${choices.length + 1}` }],
     });
   };
 
@@ -89,95 +77,83 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
   };
 
   const removeChoice = (index: number) => {
-    const choices = (dataCollection.choices || []).filter((_, i) => i !== index);
-    updateDataCollection({ choices });
+    updateDataCollection({ choices: (dataCollection.choices || []).filter((_, i) => i !== index) });
   };
 
   const insertVariable = (variable: string) => {
-    const newQuestion = dataCollection.question + `{{${variable}}}`;
-    updateDataCollection({ question: newQuestion });
+    updateDataCollection({ question: (dataCollection.question || '') + `{{${variable}}}` });
     setShowVariables(false);
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 w-full max-w-full">
 
       {/* 1. Header Card */}
-      <div className="bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-800 border border-purple-100 dark:border-purple-800/50 rounded-xl p-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300 rounded-lg">
-            <Icons.Choice />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Recolección de Datos</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              El bot pausará y esperará una respuesta del usuario. Esta respuesta se validará y se guardará en una variable.
-            </p>
-          </div>
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 flex items-start gap-4">
+        <div className="p-2.5 bg-violet-500/10 rounded-xl border border-violet-500/20 text-violet-400 shrink-0">
+          <MessageSquare className="w-5 h-5" />
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-zinc-200">Recolección de Datos</h4>
+          <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+            El bot detendrá el flujo para esperar una respuesta del usuario, la validará y guardará el resultado en una variable.
+          </p>
         </div>
       </div>
 
       {/* 2. Question Input */}
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
-            Pregunta al usuario
-          </label>
+          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Pregunta al Usuario</label>
+          <button
+            type="button"
+            onClick={() => setShowVariables(!showVariables)}
+            className="flex items-center gap-1.5 text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded transition-colors border border-zinc-700"
+          >
+            <Variable className="w-3 h-3" /> Insertar Variable
+          </button>
 
-          {/* Variable Inserter */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowVariables(!showVariables)}
-              className="flex items-center gap-1 text-[10px] bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded transition-colors"
-            >
-              <Icons.Variable /> Insertar Variable
-            </button>
-            {showVariables && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowVariables(false)} />
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900/50 text-[10px] font-bold text-gray-400 uppercase">Variables Disponibles</div>
-                  {AVAILABLE_VARIABLES.map((v) => (
-                    <button
-                      key={v.path}
-                      onClick={() => insertVariable(v.path)}
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20 text-gray-700 dark:text-gray-200 transition-colors"
-                    >
-                      {v.label} <span className="opacity-50 ml-1 font-mono text-[10px]">
-                        {'{{' + v.path + '}}'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          {/* Variable Dropdown */}
+          {showVariables && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowVariables(false)} />
+              <div className="absolute right-0 top-7 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-2 bg-zinc-950 border-b border-zinc-800 text-[10px] font-bold text-zinc-500 uppercase">Disponibles</div>
+                {AVAILABLE_VARIABLES.map((v) => (
+                  <button
+                    key={v.path}
+                    onClick={() => insertVariable(v.path)}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-violet-500/10 hover:text-violet-300 text-zinc-400 transition-colors flex justify-between items-center group"
+                  >
+                    <span>{v.label}</span>
+                    <span className="opacity-0 group-hover:opacity-100 font-mono text-[9px] text-zinc-600">{`{{${v.path.split('.')[1]}}}`}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="relative">
+        <div className="relative group">
           <textarea
             value={dataCollection.question || ''}
             onChange={(e) => updateDataCollection({ question: e.target.value })}
             disabled={readOnly}
             rows={3}
-            className="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder-gray-400 resize-none shadow-sm"
-            placeholder="Ej: Hola, ¿podrías indicarme tu correo electrónico?"
+            className={`${inputBase} w-full px-4 py-3 resize-none leading-relaxed`}
+            placeholder="Ej: Hola {{user.firstName}}, ¿cuál es tu correo electrónico?"
           />
-          {/* Decoración esquina */}
-          <div className="absolute bottom-2 right-2 opacity-20 pointer-events-none">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className="text-gray-500"><path d="M10 10H0L10 0V10Z" /></svg>
+          <div className="absolute bottom-2 right-2 pointer-events-none opacity-50">
+            <div className="w-2 h-2 border-r border-b border-zinc-600" />
           </div>
         </div>
       </div>
 
-      {/* 3. Variable Name Input */}
+      {/* 3. Variable Name */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
-          Guardar respuesta en
-        </label>
-        <div className="flex items-center">
-          <div className="bg-gray-100 dark:bg-gray-800 border border-r-0 border-gray-200 dark:border-gray-700 rounded-l-lg px-3 py-2 text-sm text-gray-500 font-mono select-none">
+        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Guardar respuesta en</label>
+        <div className="flex items-center group focus-within:ring-1 focus-within:ring-violet-500/50 rounded-lg transition-all">
+          <div className="bg-zinc-950 border border-r-0 border-zinc-800 rounded-l-lg px-3 py-2.5 text-xs text-zinc-500 font-mono select-none">
             {'{{variables.'}
           </div>
           <input
@@ -185,10 +161,10 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
             value={dataCollection.variableName || ''}
             onChange={(e) => updateDataCollection({ variableName: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
             disabled={readOnly}
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 font-mono transition-all z-10"
+            className="flex-1 px-0 py-2.5 text-xs border-y border-zinc-800 bg-zinc-950 text-violet-400 font-mono focus:outline-none placeholder-zinc-700"
             placeholder="email_usuario"
           />
-          <div className="bg-gray-100 dark:bg-gray-800 border border-l-0 border-gray-200 dark:border-gray-700 rounded-r-lg px-3 py-2 text-sm text-gray-500 font-mono select-none">
+          <div className="bg-zinc-950 border border-l-0 border-zinc-800 rounded-r-lg px-3 py-2.5 text-xs text-zinc-500 font-mono select-none">
             {'}}'}
           </div>
         </div>
@@ -196,12 +172,11 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 4. Validation Type Grid */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
-          Tipo de Validación
-        </label>
+        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Dato Esperado</label>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {VALIDATION_TYPES.map((type) => {
             const isSelected = dataCollection.validationType === type.value;
+            const Icon = type.icon;
             return (
               <button
                 key={type.value}
@@ -209,13 +184,13 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
                 onClick={() => updateDataCollection({ validationType: type.value })}
                 disabled={readOnly}
                 className={`
-                  flex flex-col items-center justify-center p-2 rounded-lg border transition-all duration-200 gap-1.5
+                  flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-2
                   ${isSelected
-                    ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-300 ring-1 ring-purple-500 shadow-sm'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-purple-300 hover:bg-gray-50 dark:hover:bg-gray-700'}
+                    ? 'bg-violet-500/10 border-violet-500/50 text-violet-300 ring-1 ring-violet-500/20'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 hover:border-zinc-700'}
                 `}
               >
-                <type.icon />
+                <Icon className={`w-4 h-4 ${isSelected ? 'text-violet-400' : 'text-zinc-500'}`} />
                 <span className="text-[10px] font-medium">{type.label}</span>
               </button>
             );
@@ -223,85 +198,87 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
         </div>
       </div>
 
-      {/* 5. Choices Editor (Conditional) */}
+      {/* 5. Choices Editor */}
       {dataCollection.validationType === 'choice' && (
-        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">Opciones Definidas</span>
-            <span className="text-[10px] bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">{(dataCollection.choices || []).length}</span>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Opciones de Respuesta</label>
+            <span className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">
+              {(dataCollection.choices || []).length}
+            </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-2 space-y-2">
             {(dataCollection.choices || []).map((choice, index) => (
-              <div key={choice.id} className="flex items-center gap-2 group">
+              <div key={choice.id} className="flex items-center gap-2 group animate-in slide-in-from-left-2 duration-300">
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <input
                     type="text"
                     value={choice.label}
                     onChange={(e) => updateChoice(index, { label: e.target.value })}
-                    disabled={readOnly}
-                    className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:border-purple-500 focus:outline-none"
-                    placeholder="Etiqueta (ej. Sí)"
+                    className={`${inputBase} px-2 py-1.5 text-xs bg-zinc-900 border-zinc-800 focus:border-violet-500`}
+                    placeholder="Etiqueta"
                   />
                   <input
                     type="text"
                     value={choice.value}
                     onChange={(e) => updateChoice(index, { value: e.target.value })}
-                    disabled={readOnly}
-                    className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:border-purple-500 focus:outline-none font-mono text-gray-500"
-                    placeholder="Valor (ej. yes)"
+                    className={`${inputBase} px-2 py-1.5 text-xs bg-zinc-900 border-zinc-800 font-mono text-zinc-400 focus:border-violet-500`}
+                    placeholder="Valor"
                   />
                 </div>
                 {!readOnly && (
                   <button
                     onClick={() => removeChoice(index)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                   >
-                    <Icons.Trash />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
             ))}
-          </div>
 
-          {!readOnly && (
-            <button
-              onClick={addChoice}
-              className="w-full py-1.5 flex items-center justify-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 border border-dashed border-purple-300 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
-            >
-              <Icons.Plus /> Añadir Opción
-            </button>
-          )}
+            {!readOnly && (
+              <button
+                onClick={addChoice}
+                className="w-full py-2 flex items-center justify-center gap-2 text-xs font-medium text-violet-400 hover:text-violet-300 border border-dashed border-zinc-800 hover:border-violet-500/30 rounded-lg bg-zinc-900/50 hover:bg-zinc-900 transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" /> Añadir Opción
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* 6. Error Message Input */}
-      <div>
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide mb-1.5 block">
-          Mensaje de error (si falla validación)
-        </label>
+      {/* 6. Error Message */}
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje de Error</label>
         <input
           type="text"
           value={dataCollection.errorMessage || ''}
           onChange={(e) => updateDataCollection({ errorMessage: e.target.value })}
           disabled={readOnly}
-          className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-400 transition-all placeholder-gray-400"
-          placeholder="Ej: Lo siento, ese no parece un email válido."
+          className={`${inputBase} w-full px-3 py-2 text-red-300 border-red-900/30 focus:border-red-500/50 placeholder-red-900/50`}
+          placeholder="Ej: Formato no válido, intenta de nuevo."
         />
       </div>
 
-      {/* 7. Advanced Settings (Accordion Style) */}
-      <details className="group border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden transition-all">
-        <summary className="flex items-center align-center justify-between px-4 py-3 cursor-pointer list-none hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors">
-          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Configuración Avanzada (Intentos, Tiempo)</span>
-          <svg className="w-4 h-4 text-gray-400 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      {/* 7. Advanced Settings (Styled Details) */}
+      <details className="group border border-zinc-800 rounded-xl bg-zinc-900/30 overflow-hidden transition-all [&_summary::-webkit-details-marker]:hidden">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-zinc-900 transition-colors">
+          <div className="flex items-center gap-2 text-zinc-400 group-hover:text-zinc-200">
+            <Settings2 className="w-3.5 h-3.5" />
+            <span className="text-xs font-medium">Configuración Avanzada</span>
+          </div>
+          <ChevronDown className="w-4 h-4 text-zinc-500 transition-transform group-open:rotate-180" />
         </summary>
 
-        <div className="p-4 pt-0 border-t border-gray-200 dark:border-gray-700 space-y-4 mt-3">
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Máx. Intentos</label>
+        <div className="p-4 pt-0 border-t border-zinc-800 space-y-4 mt-2 animate-in slide-in-from-top-2">
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <div className="space-y-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-1">
+                <RotateCw className="w-3 h-3" /> Máx. Intentos
+              </label>
               <input
                 type="number"
                 min={1}
@@ -309,84 +286,76 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
                 value={dataCollection.maxRetries || 3}
                 onChange={(e) => updateDataCollection({ maxRetries: parseInt(e.target.value) || 3 })}
                 disabled={readOnly}
-                /* CORRECCIÓN: Añadido text-gray-900 dark:text-gray-100 */
-                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className={`${inputBase} w-full px-3 py-2 text-center`}
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Expiración (min)</label>
+            <div className="space-y-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Expiración (min)
+              </label>
               <input
                 type="number"
                 min={1}
                 value={dataCollection.expiresInMinutes || 30}
                 onChange={(e) => updateDataCollection({ expiresInMinutes: parseInt(e.target.value) || 30 })}
                 disabled={readOnly}
-                /* CORRECCIÓN: Añadido text-gray-900 dark:text-gray-100 */
-                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className={`${inputBase} w-full px-3 py-2 text-center`}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Acción al expirar</label>
+          <div className="space-y-1">
+            <label className="text-[10px] text-zinc-500 uppercase font-bold">Si expira sin respuesta</label>
             <select
               value={dataCollection.onExpireAction || 'continue'}
               onChange={(e) => updateDataCollection({ onExpireAction: e.target.value as any })}
               disabled={readOnly}
-              /* CORRECCIÓN: Añadido text-gray-900 dark:text-gray-100 */
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer"
+              className={`${inputBase} w-full px-3 py-2 cursor-pointer appearance-none`}
             >
-              <option value="continue">Continuar flujo (sin dato)</option>
-              <option value="end_flow">Terminar flujo</option>
+              <option value="continue">Continuar flujo (Variable vacía)</option>
+              <option value="end_flow">Terminar flujo inmediatamente</option>
             </select>
           </div>
 
-          {/* Extra Validation for TEXT */}
           {dataCollection.validationType === 'text' && (
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-              <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Límites de Texto</label>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="pt-2 border-t border-zinc-800 space-y-3">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold">Validación de Texto</span>
+              <div className="grid grid-cols-2 gap-3">
                 <input
-                  type="number"
-                  placeholder="Min chars"
-                  /* CORRECCIÓN: Añadido text-gray-900 dark:text-gray-100 y placeholder-gray-400 */
-                  className="px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  type="number" placeholder="Min chars"
                   value={dataCollection.validation?.minLength || ''}
                   onChange={(e) => updateDataCollection({ validation: { ...dataCollection.validation, type: 'text', minLength: parseInt(e.target.value) } })}
+                  className={`${inputBase} px-2 py-1.5`}
                 />
                 <input
-                  type="number"
-                  placeholder="Max chars"
-                  /* CORRECCIÓN: Añadido text-gray-900 dark:text-gray-100 */
-                  className="px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  type="number" placeholder="Max chars"
                   value={dataCollection.validation?.maxLength || ''}
                   onChange={(e) => updateDataCollection({ validation: { ...dataCollection.validation, type: 'text', maxLength: parseInt(e.target.value) } })}
+                  className={`${inputBase} px-2 py-1.5`}
                 />
               </div>
               <input
-                type="text"
-                placeholder="Regex Pattern (Opcional)"
-                /* CORRECCIÓN: Añadido text-gray-900 dark:text-gray-100 */
-                className="mt-2 w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                type="text" placeholder="Regex Pattern (Opcional)"
                 value={dataCollection.validation?.pattern || ''}
                 onChange={(e) => updateDataCollection({ validation: { ...dataCollection.validation, type: 'text', pattern: e.target.value } })}
+                className={`${inputBase} w-full px-3 py-2 font-mono text-xs text-orange-300 border-orange-900/30 focus:border-orange-500`}
               />
             </div>
           )}
         </div>
       </details>
 
-      {/* 8. Success Status Bar */}
+      {/* 8. Status Footer */}
       {dataCollection.variableName && (
-        <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
-          <div className="p-1 bg-green-100 dark:bg-green-900 rounded-full text-green-600">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+        <div className="flex items-center gap-3 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+          <div className="p-1 bg-emerald-500/10 rounded-full text-emerald-500">
+            <CheckCircle2 className="w-4 h-4" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-green-700 dark:text-green-300">Configuración válida</span>
-            <span className="text-[10px] text-green-600 dark:text-green-400">
-              Se guardará en <code className="font-mono bg-green-100 dark:bg-green-900/50 px-1 rounded">variables.{dataCollection.variableName}</code>
-            </span>
+          <div>
+            <p className="text-xs font-bold text-emerald-400">Configuración válida</p>
+            <p className="text-[10px] text-emerald-500/70 font-mono mt-0.5">
+              Variable: {dataCollection.variableName}
+            </p>
           </div>
         </div>
       )}

@@ -171,7 +171,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       </div>
 
       {/* Content Area */}
-      <div className="relative min-h-[100px]">
+      <div className="relative">
         
         {/* MODE: URL */}
         {mode === 'url' && (

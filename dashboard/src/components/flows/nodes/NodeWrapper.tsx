@@ -1,10 +1,18 @@
 /**
- * NodeWrapper - Wrapper for flow nodes with context menu and hover actions
+ * NodeWrapper - Premium Zinc Refactor
+ * Wrapper for flow nodes with styled context menu and hover actions
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from 'reactflow';
+import { 
+  Copy, 
+  CopyPlus, 
+  Trash2, 
+  Scan, 
+  MoreHorizontal 
+} from 'lucide-react';
 
 interface NodeWrapperProps {
   nodeId: string;
@@ -19,11 +27,9 @@ interface ContextMenuState {
   y: number;
 }
 
-export const NodeWrapper: React.FC<NodeWrapperProps> = ({
+const NodeWrapper: React.FC<NodeWrapperProps> = ({
   nodeId,
-  selected,
   children,
-  onDelete,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ show: false, x: 0, y: 0 });
@@ -31,28 +37,23 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const { getNode, setNodes, setEdges, setCenter } = useReactFlow();
 
-  // Close context menu on click outside or Escape key
+  // --- Effect: Handle clicks outside & scroll ---
   useEffect(() => {
     if (!contextMenu.show) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      // Check if click is outside the menu
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setContextMenu({ show: false, x: 0, y: 0 });
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setContextMenu({ show: false, x: 0, y: 0 });
-      }
+      if (e.key === 'Escape') setContextMenu({ show: false, x: 0, y: 0 });
     };
 
-    const handleScroll = () => {
-      setContextMenu({ show: false, x: 0, y: 0 });
-    };
+    const handleScroll = () => setContextMenu({ show: false, x: 0, y: 0 });
     
-    // Use setTimeout to avoid catching the same click that opened the menu
+    // Defer event listener to avoid immediate trigger
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('click', handleClickOutside);
@@ -70,19 +71,14 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
     };
   }, [contextMenu.show]);
 
-  // Handle right click
+  // --- Handlers ---
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    setContextMenu({
-      show: true,
-      x: e.clientX,
-      y: e.clientY,
-    });
+    setContextMenu({ show: true, x: e.clientX, y: e.clientY });
   }, []);
 
-  // Delete node
   const handleDelete = useCallback((e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -91,7 +87,6 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
     setContextMenu({ show: false, x: 0, y: 0 });
   }, [nodeId, setNodes, setEdges]);
 
-  // Duplicate node
   const handleDuplicate = useCallback((e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -102,14 +97,8 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
     const newNode = {
       ...node,
       id: newId,
-      position: {
-        x: node.position.x + 50,
-        y: node.position.y + 50,
-      },
-      data: {
-        ...node.data,
-        label: `${node.data.label} (copia)`,
-      },
+      position: { x: node.position.x + 50, y: node.position.y + 50 },
+      data: { ...node.data, label: `${node.data.label} (copia)` },
       selected: false,
     };
 
@@ -117,24 +106,17 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
     setContextMenu({ show: false, x: 0, y: 0 });
   }, [nodeId, getNode, setNodes]);
 
-  // Copy node to clipboard
   const handleCopy = useCallback((e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
     const node = getNode(nodeId);
     if (!node) return;
 
-    const nodeData = {
-      type: node.type,
-      data: node.data,
-    };
-    
-    // Store in localStorage for paste operation
+    const nodeData = { type: node.type, data: node.data };
     localStorage.setItem('flow-clipboard', JSON.stringify(nodeData));
     setContextMenu({ show: false, x: 0, y: 0 });
   }, [nodeId, getNode]);
 
-  // Center on node
   const handleCenter = useCallback((e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -145,69 +127,51 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
     setContextMenu({ show: false, x: 0, y: 0 });
   }, [nodeId, getNode, setCenter]);
 
-  // Context menu portal
+  // --- Render: Context Menu Portal ---
   const contextMenuPortal = contextMenu.show && createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 min-w-[160px]"
-      style={{
-        left: contextMenu.x,
-        top: contextMenu.y,
-      }}
+      className="fixed z-[9999] min-w-[180px] bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5"
+      style={{ left: contextMenu.x, top: contextMenu.y }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Duplicate */}
+      <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Acciones</div>
+      
       <button
-        onMouseDown={(e) => handleDuplicate(e)}
-        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        onMouseDown={handleDuplicate}
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
       >
-        <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-        </svg>
-        Duplicar
+        <CopyPlus className="w-3.5 h-3.5 text-zinc-500" /> Duplicar
       </button>
 
-      {/* Copy */}
       <button
-        onMouseDown={(e) => handleCopy(e)}
-        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        onMouseDown={handleCopy}
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
       >
-        <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-        Copiar
+        <Copy className="w-3.5 h-3.5 text-zinc-500" /> Copiar
       </button>
 
-      <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-
-      {/* Center view */}
       <button
-        onMouseDown={(e) => handleCenter(e)}
-        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        onMouseDown={handleCenter}
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
       >
-        <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-        </svg>
-        Centrar vista
+        <Scan className="w-3.5 h-3.5 text-zinc-500" /> Centrar Vista
       </button>
 
-      <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
+      <div className="h-px bg-zinc-800 my-1 mx-1" />
 
-      {/* Delete */}
       <button
-        onMouseDown={(e) => handleDelete(e)}
-        className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+        onMouseDown={handleDelete}
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-        Eliminar
+        <Trash2 className="w-3.5 h-3.5" /> Eliminar
       </button>
     </div>,
     document.body
   );
 
+  // --- Render: Main Component ---
   return (
     <>
       <div
@@ -217,40 +181,33 @@ export const NodeWrapper: React.FC<NodeWrapperProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         onContextMenu={handleContextMenu}
       >
-        {/* Hover Actions (top right corner) */}
+        {/* Hover Actions (Floating Toolbar) */}
         {isHovered && !contextMenu.show && (
-          <div 
-            className="absolute -top-3 -right-3 z-20 flex gap-1"
-          >
-            {/* Copy button */}
+          <div className="absolute -top-5 right-0 z-50 flex gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            {/* Botón Copiar */}
             <button
-              onMouseDown={(e) => handleCopy(e)}
-              className="nodrag nopan w-6 h-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg flex items-center justify-center transition-colors cursor-pointer"
+              onMouseDown={handleCopy}
+              className="nodrag nopan w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 shadow-lg flex items-center justify-center transition-all"
               title="Copiar"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+              <Copy className="w-2.5 h-2.5" />
             </button>
             
-            {/* Delete button */}
+            {/* Botón Eliminar */}
             <button
-              onMouseDown={(e) => handleDelete(e)}
-              className="nodrag nopan w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg flex items-center justify-center transition-colors cursor-pointer"
+              onMouseDown={handleDelete}
+              className="nodrag nopan w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 shadow-lg flex items-center justify-center transition-all"
               title="Eliminar"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <Trash2 className="w-2.5 h-2.5" />
             </button>
           </div>
         )}
 
-        {/* Node content */}
+        {/* Node Content */}
         {children}
       </div>
 
-      {/* Context Menu (rendered via portal) */}
       {contextMenuPortal}
     </>
   );

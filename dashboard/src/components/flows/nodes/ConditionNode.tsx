@@ -1,55 +1,43 @@
 /**
- * ConditionNode - Flow condition/branch node component
+ * ConditionNode - Premium Zinc Refactor
+ * Logic branching node (If/Else)
  */
+
 import React, { memo } from 'react';
-import { Handle, Position } from 'reactflow';
-import type { NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { 
+  GitFork, 
+  CheckCircle2, 
+  XCircle, 
+  ListFilter,
+  ArrowDownWideNarrow
+} from 'lucide-react';
+
 import type { ConditionConfig } from '../../../types/flow';
 import NodeWrapper from './NodeWrapper';
-
-// Iconos inline para no depender de librerías externas en este snippet
-const SplitIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.87l-4.2-4.2a2 2 0 0 0-2.8 2.8l1.586 1.586" /><path d="M12 13.7l4.2-4.2a2 2 0 0 0 2.8 2.8l-1.586 1.586" /></svg>
-);
 
 interface ConditionNodeData {
   label: string;
   config: ConditionConfig;
-  metadata?: {
-    color?: string;
-    icon?: string;
-    description?: string;
-  };
 }
 
 function ConditionNode({ data, selected, id }: NodeProps<ConditionNodeData>) {
   const groups = data.config?.groups || [];
   const groupOperator = data.config?.groupOperator || 'AND';
-
-  // Calcular total de reglas
   const totalRules = groups.reduce((acc, group) => acc + (group.rules?.length || 0), 0);
-
-  // Obtener la primera regla para la previsualización
-  const firstRule = groups[0]?.rules?.[0];
-
-  // Helper para acortar texto
-  const truncate = (str: string | number, len: number = 20) => {
-    const s = String(str);
-    return s.length > len ? s.substring(0, len) + '...' : s;
-  };
 
   return (
     <NodeWrapper nodeId={id} selected={selected}>
       <div
         className={`
           relative flex flex-col
-          bg-white dark:bg-gray-900 
-          rounded-xl shadow-xl 
-          border-2 min-w-[140px] max-w-[200px] max-h-[180px]
+          bg-zinc-950 
+          rounded-xl shadow-2xl 
+          border-[1.5px] min-w-[200px] max-w-[240px]
           transition-all duration-200
-          ${selected
-            ? 'border-amber-500 ring-4 ring-amber-500/20'
-            : 'border-amber-400/60 dark:border-amber-600/60 hover:border-amber-500'
+          ${selected 
+            ? 'border-amber-500 ring-2 ring-amber-500/20' 
+            : 'border-zinc-800 hover:border-zinc-700'
           }
         `}
       >
@@ -57,70 +45,93 @@ function ConditionNode({ data, selected, id }: NodeProps<ConditionNodeData>) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-4 !h-4 !-top-2 !bg-amber-500 !border-2 !border-white dark:!border-gray-900 transition-transform hover:scale-125"
+          className="!w-3 !h-3 !-top-1.5 !bg-zinc-200 !border-2 !border-zinc-950 transition-transform hover:scale-125 hover:!bg-amber-400"
         />
 
         {/* --- HEADER --- */}
-        <div className="bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/20 dark:to-gray-900 p-3 rounded-t-xl border-b border-amber-100 dark:border-amber-800/50 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className={`p-1.5 rounded-md ${selected ? 'bg-amber-500 text-white' : 'bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-400'}`}>
-              <SplitIcon />
+        <div className="p-3 rounded-t-xl border-b border-zinc-800/50 flex items-center gap-3 bg-zinc-900/30">
+          
+          {/* Icon Box */}
+          <div className={`
+            flex items-center justify-center w-8 h-8 rounded-lg border
+            ${selected
+              ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+              : 'bg-zinc-900 border-zinc-800 text-amber-600 dark:text-amber-500'
+            }
+          `}>
+            <GitFork className="w-4 h-4" />
+          </div>
+
+          {/* Titles */}
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
+              Condición Lógica
             </div>
-            <div>
-              <div className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight">
-                {data.label || 'Condición'}
-              </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercasemt-0.5">
-                Lógica {groupOperator === 'AND' ? 'Y' : 'O'}
-              </div>
+            <div className="font-bold text-zinc-200 text-xs leading-tight truncate">
+              {data.label || 'Evaluar'}
             </div>
           </div>
         </div>
 
         {/* --- BODY --- */}
         <div className="p-3 space-y-3">
+          
+          {/* Operator Badge */}
+          <div className="flex items-center justify-between">
+             <span className="text-[10px] font-bold text-zinc-500">Operador Global</span>
+             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
+               groupOperator === 'AND' 
+                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                 : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+             }`}>
+               {groupOperator === 'AND' ? 'Y (AND)' : 'O (OR)'}
+             </span>
+          </div>
+
+          {/* Rules Summary */}
           {totalRules > 0 ? (
-            <div className="flex justify-center">
-              <span className="text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                {totalRules} reglas añadidas
-              </span>
+            <div className="flex items-center gap-2 p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+               <ListFilter className="w-3.5 h-3.5 text-zinc-500" />
+               <span className="text-[10px] text-zinc-400">
+                 Se evalúan <strong>{totalRules}</strong> reglas
+               </span>
             </div>
           ) : (
-            <div className="text-center py-2 text-xs text-gray-400 italic">
-              Sin condiciones configuradas
+            <div className="text-center py-1">
+               <span className="text-[10px] text-zinc-600 italic">Sin reglas definidas</span>
             </div>
           )}
         </div>
 
-        {/* --- FOOTER (Outputs) --- */}
-        <div className="flex border-t border-gray-100 dark:border-gray-800">
-          {/* Lado VERDADERO */}
-          <div className="flex-1 py-2 flex items-center justify-center border-r border-gray-100 dark:border-gray-800 relative group/yes">
-            <span className="text-xs font-bold text-green-600 dark:text-green-400 group-hover/yes:text-green-500 transition-colors">
-              Sí (True)
-            </span>
+        {/* --- FOOTER (Outputs Split) --- */}
+        <div className="flex border-t border-zinc-800 h-10">
+          
+          {/* YES Branch */}
+          <div className="flex-1 flex items-center justify-center gap-1.5 border-r border-zinc-800 relative group bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors rounded-bl-xl">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">Sí</span>
+            
             <Handle
               type="source"
               position={Position.Bottom}
-              id="yes" // ID crítico para conectar bordes específicos
-              className="!w-3 !h-3 !bg-green-500 !border-2 !border-white dark:!border-gray-900 !bottom-[-7px]"
-              style={{ left: '50%' }} // Centrado en su mitad
+              id="yes"
+              className="!w-2.5 !h-2.5 !bg-emerald-500 !border-2 !border-zinc-950 !bottom-[-6px] transition-transform group-hover:scale-125"
             />
           </div>
 
-          {/* Lado FALSO */}
-          <div className="flex-1 py-2 flex items-center justify-center relative group/no">
-            <span className="text-xs font-bold text-red-600 dark:text-red-400 group-hover/no:text-red-500 transition-colors">
-              No (False)
-            </span>
+          {/* NO Branch */}
+          <div className="flex-1 flex items-center justify-center gap-1.5 relative group bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-br-xl">
+            <XCircle className="w-3.5 h-3.5 text-red-500" />
+            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">No</span>
+            
             <Handle
               type="source"
               position={Position.Bottom}
-              id="no" // ID crítico para conectar bordes específicos
-              className="!w-3 !h-3 !bg-red-500 !border-2 !border-white dark:!border-gray-900 !bottom-[-7px]"
-              style={{ left: '50%' }} // Centrado en su mitad
+              id="no"
+              className="!w-2.5 !h-2.5 !bg-red-500 !border-2 !border-zinc-950 !bottom-[-6px] transition-transform group-hover:scale-125"
             />
           </div>
+
         </div>
       </div>
     </NodeWrapper>

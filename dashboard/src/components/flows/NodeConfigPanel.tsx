@@ -21,7 +21,8 @@ import ApiCallEditor from './ApiCallEditor';
 import renderTriggerConfig from './config/RenderTriggerConfig';
 import RenderConditionConfig from './config/RenderConditionConfig';
 import RenderDelayConfig from './config/RenderDelayConfig';
-import { Activity, BarChart3, ChevronDown, ClipboardList, Clock, Contact, Database, Info, MapPin, Phone, PlayCircle, ShieldCheck, Sparkles, Star, User, UserCog, Variable } from 'lucide-react';
+import { Activity, AlignLeft, ArrowRightLeft, Ban, BarChart3, Calendar, CalendarClock, CheckCircle2Icon, ChevronDown, ClipboardList, Clock, Contact, Database, Eraser, EyeOff, FileWarning, FolderInput, Globe, Hash, Info, Keyboard, KeyboardOff, Layers, LayoutList, MapPin, MessageSquare, Palette, PenLine, Phone, PlayCircle, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Star, StickyNote, Tag, Timer, Trash2, User, UserCog, Variable, Webhook, Workflow, XCircle, Zap } from 'lucide-react';
+
 
 // Tipos simplificados para las listas de nodos y flows
 interface NodeOption {
@@ -99,6 +100,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <PlayCircle className="w-3.5 h-3.5" /> Tipo de Acción
           </label>
 
+
           <div className="relative group">
             <select
               value={actionConfig.actionType || ''}
@@ -138,339 +140,389 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           </div>
         )}
 
-        {/* Schedule message - PROGRAMAR MENSAJE */}
+        {/* Schedule Message Config */}
         {actionConfig.actionType === 'schedule_message' && (
-          <div className="space-y-4 mt-4">
-            {/* Tipo de programación */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                ⏱️ Tipo de programación
-              </label>
-              <select
-                value={actionConfig.scheduleMessageConfig?.type || actionConfig.scheduleType || 'after_inactivity'}
-                onChange={(e) => {
-                  const scheduleType = e.target.value as 'fixed_time' | 'after_inactivity' | 'on_event';
-                  const newScheduleConfig = {
-                    ...(actionConfig.scheduleMessageConfig || {}),
-                    type: scheduleType,
-                  };
-                  const newConfig = {
-                    ...config,
-                    scheduleMessageConfig: newScheduleConfig,
-                    scheduleType: scheduleType === 'on_event' ? 'fixed_time' : scheduleType, // legacy support
-                  };
-                  setConfig(newConfig);
-                  onChange(node.id, label, newConfig);
-                }}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="after_inactivity">⏳ Después de inactividad</option>
-                <option value="fixed_time">📅 Fecha y hora específica</option>
-                <option value="on_event">🎯 Al ocurrir un evento</option>
-              </select>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-violet-500/10 rounded-lg border border-violet-500/20 text-violet-400">
+                <CalendarClock className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Programar Mensaje</h4>
+                <p className="text-[10px] text-zinc-500">Envío diferido o condicional</p>
+              </div>
             </div>
 
-            {/* Config según tipo */}
-            {(actionConfig.scheduleMessageConfig?.type || actionConfig.scheduleType || 'after_inactivity') === 'after_inactivity' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Minutos de inactividad
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={1440}
-                  value={actionConfig.scheduleMessageConfig?.delayMinutes || actionConfig.scheduleDelay || 30}
-                  onChange={(e) => {
-                    const delay = parseInt(e.target.value) || 30;
-                    const newScheduleConfig = {
-                      ...(actionConfig.scheduleMessageConfig || {}),
-                      type: 'after_inactivity' as const,
-                      delayMinutes: delay,
-                    };
-                    const newConfig = {
-                      ...config,
-                      scheduleMessageConfig: newScheduleConfig,
-                      scheduleDelay: delay, // legacy support
-                    };
-                    setConfig(newConfig);
-                    onChange(node.id, label, newConfig);
-                  }}
-                  disabled={readOnly}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="30"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  El mensaje se enviará después de X minutos sin respuesta del usuario
-                </p>
+            {/* Schedule Type Selector */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Programación</label>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { value: 'after_inactivity', label: 'Por Inactividad', icon: Timer },
+                  { value: 'fixed_time', label: 'Fecha Específica', icon: Calendar },
+                  { value: 'on_event', label: 'Por Evento', icon: Zap },
+                ].map((type) => {
+                  const currentType = actionConfig.scheduleMessageConfig?.type || actionConfig.scheduleType || 'after_inactivity';
+                  const isSelected = currentType === type.value;
+                  const Icon = type.icon;
+
+                  return (
+                    <button
+                      key={type.value}
+                      onClick={() => {
+                        if (readOnly) return;
+                        const newConfig = {
+                          ...config,
+                          scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), type: type.value as any },
+                          scheduleType: type.value === 'on_event' ? 'fixed_time' : type.value,
+                        };
+                        setConfig(newConfig);
+                        onChange(node.id, label, newConfig);
+                      }}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm transition-all ${isSelected
+                        ? 'bg-violet-500/10 border-violet-500/50 text-violet-300'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                        }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {type.label}
+                      {isSelected && <div className="ml-auto w-2 h-2 bg-violet-500 rounded-full shadow-[0_0_8px] shadow-violet-500/50" />}
+                    </button>
+                  );
+                })}
               </div>
-            )}
-
-            {(actionConfig.scheduleMessageConfig?.type) === 'fixed_time' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Fecha y hora programada
-                </label>
-                <input
-                  type="datetime-local"
-                  value={(() => {
-                    // Convert ISO string back to local datetime-local format
-                    const isoString = actionConfig.scheduleMessageConfig?.scheduledAt;
-                    if (!isoString) return '';
-                    const date = new Date(isoString);
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const hours = String(date.getHours()).padStart(2, '0');
-                    const minutes = String(date.getMinutes()).padStart(2, '0');
-                    return `${year}-${month}-${day}T${hours}:${minutes}`;
-                  })()}
-                  onChange={(e) => {
-                    // Parse datetime-local as local time
-                    const value = e.target.value;
-                    const [datePart, timePart] = value.split('T');
-                    const [year, month, day] = datePart.split('-').map(Number);
-                    const [hours, minutes] = timePart.split(':').map(Number);
-                    const localDate = new Date(year, month - 1, day, hours, minutes);
-
-                    const newScheduleConfig = {
-                      ...(actionConfig.scheduleMessageConfig || {}),
-                      type: 'fixed_time' as const,
-                      scheduledAt: localDate.toISOString(),
-                    };
-                    const newConfig = {
-                      ...config,
-                      scheduleMessageConfig: newScheduleConfig,
-                    };
-                    setConfig(newConfig);
-                    onChange(node.id, label, newConfig);
-                  }}
-                  disabled={readOnly}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  También puedes usar variables: {"{{date.tomorrow}}"}, {"{{date.next_week}}"}
-                </p>
-              </div>
-            )}
-
-            {(actionConfig.scheduleMessageConfig?.type) === 'on_event' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Evento disparador
-                </label>
-                <select
-                  value={actionConfig.scheduleMessageConfig?.triggerEvent || ''}
-                  onChange={(e) => {
-                    const newScheduleConfig = {
-                      ...(actionConfig.scheduleMessageConfig || {}),
-                      type: 'on_event' as const,
-                      triggerEvent: e.target.value as any,
-                    };
-                    const newConfig = {
-                      ...config,
-                      scheduleMessageConfig: newScheduleConfig,
-                    };
-                    setConfig(newConfig);
-                    onChange(node.id, label, newConfig);
-                  }}
-                  disabled={readOnly}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleccionar evento...</option>
-                  <option value="agent_online">👤 Agente se conecta</option>
-                  <option value="chat_assigned">📋 Chat es asignado</option>
-                  <option value="chat_reopened">🔄 Chat es reabierto</option>
-                  <option value="sla_warning">⚠️ Alerta de SLA</option>
-                  <option value="chat_transferred">🔀 Chat es transferido</option>
-                </select>
-              </div>
-            )}
-
-            {/* Mensaje a enviar */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                📝 Mensaje a enviar
-              </label>
-              <textarea
-                value={actionConfig.scheduleMessageConfig?.messageContent || actionConfig.messageContent || ''}
-                onChange={(e) => {
-                  const newScheduleConfig = {
-                    ...(actionConfig.scheduleMessageConfig || {}),
-                    messageContent: e.target.value,
-                  };
-                  const newConfig = {
-                    ...config,
-                    scheduleMessageConfig: newScheduleConfig,
-                    messageContent: e.target.value, // legacy support
-                  };
-                  setConfig(newConfig);
-                  onChange(node.id, label, newConfig);
-                }}
-                disabled={readOnly}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                placeholder="Hola {{user.firstName}}, ¿sigues ahí?..."
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Soporta variables: {"{{user.firstName}}"}, {"{{agent.name}}"}, {"{{session.id}}"}
-              </p>
             </div>
 
-            {/* Opciones de cancelación */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                🚫 Cancelar automáticamente si:
-              </label>
+            <div className="h-px bg-zinc-800 w-full" />
+
+            {/* Configuration based on Type */}
+            <div className="space-y-4">
+
+              {/* 1. After Inactivity */}
+              {(actionConfig.scheduleMessageConfig?.type || actionConfig.scheduleType || 'after_inactivity') === 'after_inactivity' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tiempo de Espera</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={actionConfig.scheduleMessageConfig?.delayMinutes || actionConfig.scheduleDelay || 30}
+                      onChange={(e) => {
+                        const delay = parseInt(e.target.value) || 30;
+                        const newConfig = {
+                          ...config,
+                          scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), type: 'after_inactivity', delayMinutes: delay },
+                          scheduleDelay: delay,
+                        };
+                        setConfig(newConfig);
+                        onChange(node.id, label, newConfig);
+                      }}
+                      disabled={readOnly}
+                      className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-center font-mono focus:border-violet-500 outline-none"
+                    />
+                    <span className="text-sm text-zinc-400">minutos sin respuesta del usuario</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Fixed Time */}
+              {(actionConfig.scheduleMessageConfig?.type) === 'fixed_time' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Fecha y Hora</label>
+                  <input
+                    type="datetime-local"
+                    value={(() => {
+                      const isoString = actionConfig.scheduleMessageConfig?.scheduledAt;
+                      if (!isoString) return '';
+                      const date = new Date(isoString);
+                      // Format for datetime-local input
+                      const pad = (n: number) => n.toString().padStart(2, '0');
+                      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                    })()}
+                    onChange={(e) => {
+                      const localDate = new Date(e.target.value);
+                      const newConfig = {
+                        ...config,
+                        scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), type: 'fixed_time', scheduledAt: localDate.toISOString() },
+                      };
+                      setConfig(newConfig);
+                      onChange(node.id, label, newConfig);
+                    }}
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono focus:border-violet-500 outline-none appearance-none"
+                  />
+                  <p className="text-[10px] text-zinc-500">Variables soportadas: <code className="text-zinc-300">{`{{date.tomorrow}}`}</code></p>
+                </div>
+              )}
+
+              {/* 3. On Event */}
+              {(actionConfig.scheduleMessageConfig?.type) === 'on_event' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Evento Disparador</label>
+                  <select
+                    value={actionConfig.scheduleMessageConfig?.triggerEvent || ''}
+                    onChange={(e) => {
+                      const newConfig = {
+                        ...config,
+                        scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), type: 'on_event', triggerEvent: e.target.value as any },
+                      };
+                      setConfig(newConfig);
+                      onChange(node.id, label, newConfig);
+                    }}
+                    disabled={readOnly}
+                    className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:border-violet-500 outline-none"
+                  >
+                    <option value="">Seleccionar evento...</option>
+                    <option value="agent_online">👤 Agente se conecta</option>
+                    <option value="chat_assigned">📋 Chat es asignado</option>
+                    <option value="chat_reopened">🔄 Chat es reabierto</option>
+                    <option value="sla_warning">⚠️ Alerta de SLA</option>
+                    <option value="chat_transferred">🔀 Chat es transferido</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Message Content */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                  <MessageSquare className="w-3 h-3" /> Contenido del Mensaje
+                </label>
+                <textarea
+                  value={actionConfig.scheduleMessageConfig?.messageContent || actionConfig.messageContent || ''}
+                  onChange={(e) => {
+                    const newConfig = {
+                      ...config,
+                      scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), messageContent: e.target.value },
+                      messageContent: e.target.value,
+                    };
+                    setConfig(newConfig);
+                    onChange(node.id, label, newConfig);
+                  }}
+                  disabled={readOnly}
+                  rows={4}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 placeholder-zinc-600 focus:border-violet-500 outline-none resize-none"
+                  placeholder="Hola {{user.firstName}}, ¿sigues ahí?..."
+                />
+              </div>
+
+              {/* Cancel Conditions */}
+              <div className="space-y-3 pt-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Condiciones de Cancelación</label>
+
+                <label className="flex items-center gap-3 p-2 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
                     checked={actionConfig.scheduleMessageConfig?.cancelOnUserResponse ?? true}
                     onChange={(e) => {
-                      const newScheduleConfig = {
-                        ...(actionConfig.scheduleMessageConfig || {}),
-                        cancelOnUserResponse: e.target.checked,
-                      };
-                      const newConfig = {
-                        ...config,
-                        scheduleMessageConfig: newScheduleConfig,
-                      };
+                      const newConfig = { ...config, scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), cancelOnUserResponse: e.target.checked } };
                       setConfig(newConfig);
                       onChange(node.id, label, newConfig);
                     }}
                     disabled={readOnly}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-violet-500 focus:ring-offset-0"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    El usuario responde antes
-                  </span>
+                  <span className="text-xs text-zinc-300">Si el usuario responde antes</span>
                 </label>
-                <label className="flex items-center gap-2">
+
+                <label className="flex items-center gap-3 p-2 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
                     checked={actionConfig.scheduleMessageConfig?.cancelOnChatClose ?? true}
                     onChange={(e) => {
-                      const newScheduleConfig = {
-                        ...(actionConfig.scheduleMessageConfig || {}),
-                        cancelOnChatClose: e.target.checked,
-                      };
-                      const newConfig = {
-                        ...config,
-                        scheduleMessageConfig: newScheduleConfig,
-                      };
+                      const newConfig = { ...config, scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), cancelOnChatClose: e.target.checked } };
                       setConfig(newConfig);
                       onChange(node.id, label, newConfig);
                     }}
                     disabled={readOnly}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-violet-500 focus:ring-offset-0"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    El chat se cierra
-                  </span>
-                </label>
-              </div>
-            </div>
 
-            {/* Expiración */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                ⏰ Expirar después de (horas)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={168}
-                value={actionConfig.scheduleMessageConfig?.expiresInHours || 24}
-                onChange={(e) => {
-                  const newScheduleConfig = {
-                    ...(actionConfig.scheduleMessageConfig || {}),
-                    expiresInHours: parseInt(e.target.value) || 24,
-                  };
-                  const newConfig = {
-                    ...config,
-                    scheduleMessageConfig: newScheduleConfig,
-                  };
-                  setConfig(newConfig);
-                  onChange(node.id, label, newConfig);
-                }}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="24"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Si no se puede enviar, el mensaje expirará después de este tiempo
-              </p>
+                  <span className="text-xs text-zinc-300">Si el chat se cierra</span>
+                </label>
+
+              </div>
+
+
+              {/* Expiration */}
+              <div className="flex items-center gap-3 p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
+                <Clock className="w-4 h-4 text-red-400" />
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold text-red-400 uppercase tracking-wide block mb-1">Expiración</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={168}
+                      value={actionConfig.scheduleMessageConfig?.expiresInHours || 24}
+                      onChange={(e) => {
+                        const newConfig = { ...config, scheduleMessageConfig: { ...(actionConfig.scheduleMessageConfig || {}), expiresInHours: parseInt(e.target.value) || 24 } };
+                        setConfig(newConfig);
+                        onChange(node.id, label, newConfig);
+                      }}
+                      disabled={readOnly}
+                      className="w-16 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-center text-xs text-white focus:border-red-500 outline-none"
+                    />
+                    <span className="text-xs text-zinc-500">horas antes de descartar</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
 
-        {/* Add tag */}
+        {/* Add/Remove Tag Config */}
         {(actionConfig.actionType === 'add_tag' || actionConfig.actionType === 'remove_tag') && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Nombre del tag
-              </label>
-              <input
-                type="text"
-                value={actionConfig.tagName || ''}
-                onChange={(e) => updateConfig('tagName', e.target.value)}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: urgente"
-              />
-            </div>
-            {actionConfig.actionType === 'add_tag' && (
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className={`p-2 rounded-lg border ${actionConfig.actionType === 'add_tag'
+                ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
+                }`}>
+                <Tag className="w-4 h-4" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Color
-                </label>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">
+                  {actionConfig.actionType === 'add_tag' ? 'Añadir Etiqueta' : 'Quitar Etiqueta'}
+                </h4>
+                <p className="text-[10px] text-zinc-500">
+                  {actionConfig.actionType === 'add_tag' ? 'Marca el chat para organizarlo' : 'Elimina una marca existente'}
+                </p>
+              </div>
+            </div>
+
+            {/* Tag Name Input */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre del Tag</label>
+              <div className="relative group">
+                {actionConfig.actionType === 'add_tag' ? (
+                  <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
+                ) : (
+                  <Trash2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
+                )}
                 <input
-                  type="color"
-                  value={actionConfig.tagColor || '#3B82F6'}
-                  onChange={(e) => updateConfig('tagColor', e.target.value)}
+                  type="text"
+                  value={actionConfig.tagName || ''}
+                  onChange={(e) => updateConfig('tagName', e.target.value)}
                   disabled={readOnly}
-                  className="w-12 h-8 rounded cursor-pointer"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                  placeholder="Ej: vip_customer"
                 />
               </div>
+            </div>
+
+            {/* Color Picker (Only for Add) */}
+            {actionConfig.actionType === 'add_tag' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                  <Palette className="w-3 h-3" /> Color de Etiqueta
+                </label>
+                <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-lg p-2">
+                  <input
+                    type="color"
+                    value={actionConfig.tagColor || '#3B82F6'}
+                    onChange={(e) => updateConfig('tagColor', e.target.value)}
+                    disabled={readOnly}
+                    className="w-8 h-8 rounded cursor-pointer border-none bg-transparent p-0"
+                  />
+                  <input
+                    type="text"
+                    value={actionConfig.tagColor || '#3B82F6'}
+                    onChange={(e) => updateConfig('tagColor', e.target.value)}
+                    className="bg-transparent text-xs text-zinc-300 font-mono outline-none uppercase w-20"
+                  />
+                </div>
+              </div>
             )}
-          </>
+
+            {/* Live Preview */}
+            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg flex flex-col items-center justify-center gap-2">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold">Vista Previa</span>
+              <div className="flex gap-2">
+                <span
+                  className="px-2.5 py-1 rounded-full text-xs font-medium text-white shadow-sm flex items-center gap-1.5 transition-all"
+                  style={{ backgroundColor: actionConfig.actionType === 'add_tag' ? (actionConfig.tagColor || '#3B82F6') : '#52525b' }}
+                >
+                  <Tag className="w-3 h-3 fill-current opacity-20" />
+                  {actionConfig.tagName || 'Nombre del Tag'}
+                </span>
+              </div>
+            </div>
+
+          </div>
         )}
 
-        {/* Webhook */}
+        {/* Call Webhook Config */}
         {actionConfig.actionType === 'call_webhook' && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                URL
-              </label>
-              <input
-                type="url"
-                value={actionConfig.webhookUrl || ''}
-                onChange={(e) => updateConfig('webhookUrl', e.target.value)}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://api.example.com/webhook"
-              />
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-pink-500/10 rounded-lg border border-pink-500/20 text-pink-400">
+                <Webhook className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Webhook Simple</h4>
+                <p className="text-[10px] text-zinc-500">Notificación HTTP básica</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Método
+
+            {/* Combined Method & URL Input (Omnibar) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <Globe className="w-3.5 h-3.5" /> Endpoint Destino
               </label>
-              <select
-                value={actionConfig.webhookMethod || 'POST'}
-                onChange={(e) => updateConfig('webhookMethod', e.target.value)}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-              </select>
+
+              <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-pink-500/50 focus-within:border-pink-500 transition-all">
+
+                {/* Method Select */}
+                <div className="relative border-r border-zinc-800 bg-zinc-950/30">
+                  <select
+                    value={actionConfig.webhookMethod || 'POST'}
+                    onChange={(e) => updateConfig('webhookMethod', e.target.value)}
+                    disabled={readOnly}
+                    className={`h-full pl-3 pr-8 appearance-none bg-transparent text-xs font-bold outline-none cursor-pointer transition-colors ${(actionConfig.webhookMethod || 'POST') === 'GET' ? 'text-emerald-400' :
+                      (actionConfig.webhookMethod || 'POST') === 'POST' ? 'text-blue-400' :
+                        (actionConfig.webhookMethod || 'POST') === 'PUT' ? 'text-amber-400' :
+                          'text-red-400'
+                      }`}
+                  >
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                  </select>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                    <ChevronDown className="w-3 h-3" />
+                  </div>
+                </div>
+
+                {/* URL Input */}
+                <input
+                  type="url"
+                  value={actionConfig.webhookUrl || ''}
+                  onChange={(e) => updateConfig('webhookUrl', e.target.value)}
+                  disabled={readOnly}
+                  className="flex-1 px-3 py-2.5 bg-transparent text-sm text-white font-mono placeholder-zinc-700 outline-none min-w-0"
+                  placeholder="https://api.mi-sistema.com/hook"
+                />
+              </div>
             </div>
-          </>
+
+            {/* Info Note */}
+            <div className="flex items-start gap-2 p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+              <Info className="w-3.5 h-3.5 text-pink-500/50 mt-0.5 shrink-0" />
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Este nodo envía automáticamente el contexto del chat (usuario, mensajes) en el cuerpo JSON. Para configuraciones avanzadas (Headers, Auth), usa la acción <strong>API Call</strong>.
+              </p>
+            </div>
+
+          </div>
         )}
 
         {/* API Call - Advanced HTTP Request */}
@@ -488,20 +540,45 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           </div>
         )}
 
-        {/* Create note */}
+
+        {/* Create Note Config */}
         {actionConfig.actionType === 'create_note' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Contenido de la nota
-            </label>
-            <textarea
-              value={actionConfig.noteContent || ''}
-              onChange={(e) => updateConfig('noteContent', e.target.value)}
-              disabled={readOnly}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nota interna..."
-            />
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 text-amber-400">
+                <StickyNote className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Nota Interna</h4>
+                <p className="text-[10px] text-zinc-500">Solo visible para agentes y admins</p>
+              </div>
+            </div>
+
+            {/* Note Content Textarea */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <AlignLeft className="w-3.5 h-3.5" /> Contenido
+              </label>
+              <textarea
+                value={actionConfig.noteContent || ''}
+                onChange={(e) => updateConfig('noteContent', e.target.value)}
+                disabled={readOnly}
+                rows={4}
+                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none resize-none transition-all leading-relaxed"
+                placeholder="Escribe detalles sobre el cliente o el contexto de la conversación..."
+              />
+            </div>
+
+            {/* Privacy Badge */}
+            <div className="flex items-center gap-2 p-2.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+              <EyeOff className="w-3.5 h-3.5 text-amber-500/60" />
+              <p className="text-xs text-zinc-500">
+                <span className="text-amber-500/80 font-medium">Privado:</span> Este texto NO se enviará al usuario. Se guardará en el historial del chat.
+              </p>
+            </div>
+
           </div>
         )}
 
@@ -578,66 +655,144 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
           </div>
         )}
-        {/* Change category */}
+
+        {/* Change Category Config */}
         {actionConfig.actionType === 'change_category' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Nueva categoría
-            </label>
-            <select
-              value={actionConfig.categoryName || ''}
-              onChange={(e) => updateConfig('categoryName', e.target.value)}
-              disabled={readOnly}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Seleccionar categoría...</option>
-              {CATEGORY_OPTIONS.map((cat) => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
+                <FolderInput className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Clasificación</h4>
+                <p className="text-[10px] text-zinc-500">Organiza el chat en una bandeja específica</p>
+              </div>
+            </div>
+
+            {/* Category Select */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5" /> Nueva Categoría
+              </label>
+
+              <div className="relative group">
+                <select
+                  value={actionConfig.categoryName || ''}
+                  onChange={(e) => updateConfig('categoryName', e.target.value)}
+                  disabled={readOnly}
+                  className="w-full pl-4 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="">Seleccionar categoría...</option>
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <option key={cat.value} value={cat.value} className="bg-zinc-900 text-zinc-300">
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Custom Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
-        {/* Block user */}
+        {/* Block User Config */}
         {actionConfig.actionType === 'block_user' && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Duración del bloqueo (horas)
-              </label>
-              <input
-                type="number"
-                value={actionConfig.blockDurationHours || 24}
-                onChange={(e) => updateConfig('blockDurationHours', parseInt(e.target.value))}
-                disabled={readOnly}
-                min={1}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20 text-red-400">
+                <Ban className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Bloquear Usuario</h4>
+                <p className="text-[10px] text-zinc-500">Restringe el acceso al bot temporalmente</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Razón del bloqueo
-              </label>
-              <input
-                type="text"
-                value={actionConfig.blockReason || ''}
-                onChange={(e) => updateConfig('blockReason', e.target.value)}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Spam, comportamiento abusivo, etc."
-              />
+
+            {/* Duration Input */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Duración del bloqueo</label>
+              <div className="relative group">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
+                <input
+                  type="number"
+                  value={actionConfig.blockDurationHours || 24}
+                  onChange={(e) => updateConfig('blockDurationHours', parseInt(e.target.value))}
+                  disabled={readOnly}
+                  min={1}
+                  className="w-full pl-9 pr-12 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 font-medium">Horas</span>
+              </div>
             </div>
-          </>
+
+            {/* Reason Input */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Motivo (Interno)</label>
+              <div className="relative group">
+                <FileWarning className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
+                <input
+                  type="text"
+                  value={actionConfig.blockReason || ''}
+                  onChange={(e) => updateConfig('blockReason', e.target.value)}
+                  disabled={readOnly}
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                  placeholder="Ej: Spam, lenguaje ofensivo..."
+                />
+              </div>
+            </div>
+
+          </div>
         )}
 
-        {/* Close/Reopen chat - no extra config needed */}
+        {/* Close/Reopen Chat Config */}
         {(actionConfig.actionType === 'close_chat' || actionConfig.actionType === 'reopen_chat') && (
-          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {actionConfig.actionType === 'close_chat'
-                ? '✓ El chat se cerrará automáticamente al ejecutar esta acción.'
-                : '✓ El chat se reabrirá automáticamente al ejecutar esta acción.'}
-            </p>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual Dymanic */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              {actionConfig.actionType === 'close_chat' ? (
+                <>
+                  <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20 text-red-400">
+                    <XCircle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Cerrar Chat</h4>
+                    <p className="text-[10px] text-zinc-500">Finalizar sesión actual</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400">
+                    <RotateCcw className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Reabrir Chat</h4>
+                    <p className="text-[10px] text-zinc-500">Reactivar sesión archivada</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Info Box */}
+            <div className="flex items-start gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+              <CheckCircle2Icon className={`w-4 h-4 mt-0.5 shrink-0 ${actionConfig.actionType === 'close_chat' ? 'text-red-500/50' : 'text-emerald-500/50'
+                }`} />
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                {actionConfig.actionType === 'close_chat'
+                  ? 'Esta acción marcará la conversación como "Resuelta" y la archivará automáticamente. No se requiere configuración adicional.'
+                  : 'Esta acción moverá la conversación de vuelta a la bandeja de "Abiertos" o "Pendientes" para ser atendida nuevamente.'}
+              </p>
+            </div>
+
           </div>
         )}
 
@@ -784,87 +939,169 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
         {/* ============= NEW TELEGRAM ACTIONS UI ============= */}
 
-        {/* Edit Message */}
+        {/* Edit Message Config */}
         {actionConfig.actionType === 'edit_message' && (
-          <div className="space-y-4 mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
-              <span className="font-semibold">Editar Mensaje</span>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mensaje objetivo</label>
-              <select
-                value={(actionConfig as any).editMessageConfig?.targetType || 'last_bot_message'}
-                onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, targetType: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              >
-                <option value="last_bot_message">Último mensaje del bot</option>
-                <option value="variable">ID desde variable</option>
-                <option value="specific_id">ID específico</option>
-              </select>
-            </div>
-            {(actionConfig as any).editMessageConfig?.targetType === 'variable' && (
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 text-amber-400">
+                <PenLine className="w-4 h-4" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Variable con ID</label>
-                <input
-                  type="text"
-                  value={(actionConfig as any).editMessageConfig?.messageIdVariable || ''}
-                  onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, messageIdVariable: e.target.value })}
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Editar Mensaje</h4>
+                <p className="text-[10px] text-zinc-500">Modifica contenido enviado previamente</p>
+              </div>
+            </div>
+
+            {/* Target Select */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje a Editar</label>
+              <div className="relative group">
+                <select
+                  value={(actionConfig as any).editMessageConfig?.targetType || 'last_bot_message'}
+                  onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, targetType: e.target.value })}
                   disabled={readOnly}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                  placeholder="saved_message_id"
-                />
+                  className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="last_bot_message">🤖 Último mensaje del bot</option>
+                  <option value="variable">📦 ID desde variable</option>
+                  <option value="specific_id">🆔 ID específico</option>
+                </select>
+
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Conditional Input: Variable */}
+            {(actionConfig as any).editMessageConfig?.targetType === 'variable' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre de Variable</label>
+                <div className="relative group">
+                  <Variable className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
+                  <input
+                    type="text"
+                    value={(actionConfig as any).editMessageConfig?.messageIdVariable || ''}
+                    onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, messageIdVariable: e.target.value })}
+                    disabled={readOnly}
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
+                    placeholder="saved_message_id"
+                  />
+                </div>
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nuevo texto</label>
+
+            {/* Conditional Input: Specific ID */}
+            {(actionConfig as any).editMessageConfig?.targetType === 'specific_id' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">ID del Mensaje</label>
+                <div className="relative group">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
+                  <input
+                    type="text"
+                    value={(actionConfig as any).editMessageConfig?.messageId || ''}
+                    onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, messageId: e.target.value })}
+                    disabled={readOnly}
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
+                    placeholder="msg_12345"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* New Text Content */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <MessageSquare className="w-3 h-3" /> Nuevo Contenido
+              </label>
               <textarea
                 value={(actionConfig as any).editMessageConfig?.newText || ''}
                 onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, newText: e.target.value })}
                 disabled={readOnly}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder="Nuevo contenido del mensaje..."
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 placeholder-zinc-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none resize-none transition-all"
+                placeholder="Escribe el nuevo texto del mensaje..."
               />
             </div>
+
           </div>
         )}
 
-        {/* Delete Message */}
+        {/* Delete Message Config */}
         {actionConfig.actionType === 'delete_message' && (
-          <div className="space-y-4 mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-              <span className="font-semibold">Eliminar Mensaje</span>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mensaje a eliminar</label>
-              <select
-                value={(actionConfig as any).deleteMessageConfig?.targetType || 'last_bot_message'}
-                onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, targetType: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              >
-                <option value="last_bot_message">Último mensaje del bot</option>
-                <option value="last_user_message">Último mensaje del usuario</option>
-                <option value="variable">ID desde variable</option>
-                <option value="specific_id">ID específico</option>
-              </select>
-            </div>
-            {(actionConfig as any).deleteMessageConfig?.targetType === 'variable' && (
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20 text-red-400">
+                <Eraser className="w-4 h-4" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Variable con ID</label>
-                <input
-                  type="text"
-                  value={(actionConfig as any).deleteMessageConfig?.messageIdVariable || ''}
-                  onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, messageIdVariable: e.target.value })}
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Eliminar Mensaje</h4>
+                <p className="text-[10px] text-zinc-500">Gestión del historial de chat</p>
+              </div>
+            </div>
+
+            {/* Target Select */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje a eliminar</label>
+              <div className="relative group">
+                <select
+                  value={(actionConfig).deleteMessageConfig?.targetType || 'last_bot_message'}
+                  onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, targetType: e.target.value })}
                   disabled={readOnly}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                  placeholder="message_to_delete"
-                />
+                  className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="last_bot_message">🤖 Último mensaje del bot</option>
+                  <option value="last_user_message">👤 Último mensaje del usuario</option>
+                  <option value="variable">📦 ID desde variable</option>
+                  <option value="specific_id">🆔 ID específico</option>
+                </select>
+
+                {/* Custom Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Conditional Inputs */}
+            {(actionConfig as any).deleteMessageConfig?.targetType === 'variable' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre de la Variable</label>
+                <div className="relative group">
+                  <Variable className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
+                  <input
+                    type="text"
+                    value={(actionConfig as any).deleteMessageConfig?.messageIdVariable || ''}
+                    onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, messageIdVariable: e.target.value })}
+                    disabled={readOnly}
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                    placeholder="message_id_var"
+                  />
+                </div>
               </div>
             )}
+
+            {(actionConfig as any).deleteMessageConfig?.targetType === 'specific_id' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">ID del Mensaje</label>
+                <div className="relative group">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
+                  <input
+                    type="text"
+                    value={(actionConfig as any).deleteMessageConfig?.messageId || ''}
+                    onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, messageId: e.target.value })}
+                    disabled={readOnly}
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                    placeholder="msg_123456789"
+                  />
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
@@ -938,35 +1175,87 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           </div>
         )}
 
-        {/* Delay Action */}
         {actionConfig.actionType === 'delay_action' && (
-          <div className="space-y-4 mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-              <span className="font-semibold">Esperar (Delay)</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-violet-500/10 rounded-lg border border-violet-500/20 text-violet-400">
+                <Timer className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Pausa (Delay)</h4>
+                <p className="text-[10px] text-zinc-500">Controla el ritmo de la conversación</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Segundos de espera</label>
-              <input
-                type="number"
-                value={(actionConfig as any).delayActionConfig?.delaySeconds || 2}
-                onChange={(e) => updateConfig('delayActionConfig', { ...(actionConfig as any).delayActionConfig, delaySeconds: parseInt(e.target.value) })}
-                disabled={readOnly}
-                min={1}
-                max={300}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              />
+
+            {/* Time Input & Visualizer */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Duración de la pausa</label>
+              <div className="flex items-center gap-4">
+
+                {/* Number Input */}
+                <div className="relative w-24">
+                  <input
+                    type="number"
+                    value={(actionConfig as any).delayActionConfig?.delaySeconds || 2}
+                    onChange={(e) => updateConfig('delayActionConfig', { ...(actionConfig as any).delayActionConfig, delaySeconds: Math.max(1, parseInt(e.target.value) || 1) })}
+                    disabled={readOnly}
+                    min={1}
+                    max={300}
+                    className="w-full pl-3 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all text-center"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 font-bold select-none">s</span>
+                </div>
+
+                {/* Visual Progress Bar (Decorativo) */}
+                <div className="flex-1 flex flex-col justify-center gap-1.5 opacity-80">
+                  <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                    <div
+                      className="h-full bg-gradient-to-r from-violet-600 to-fuchsia-500 transition-all duration-500 rounded-full"
+                      style={{ width: `${Math.min((((actionConfig as any).delayActionConfig?.delaySeconds || 2) / 60) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-zinc-600 font-medium uppercase tracking-wider">
+                    <span>1s</span>
+                    <span>60s+</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={(actionConfig as any).delayActionConfig?.showTyping || false}
-                onChange={(e) => updateConfig('delayActionConfig', { ...(actionConfig as any).delayActionConfig, showTyping: e.target.checked })}
-                disabled={readOnly}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <label className="text-sm text-gray-700 dark:text-gray-300">Mostrar "escribiendo..." durante la espera</label>
-            </div>
+
+            {/* Show Typing Toggle Card */}
+            <label className={`
+            flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all group
+            ${(actionConfig as any).delayActionConfig?.showTyping
+                ? 'bg-violet-500/5 border-violet-500/30'
+                : 'bg-zinc-900/30 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'}
+          `}>
+              <div className="mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={(actionConfig as any).delayActionConfig?.showTyping || false}
+                  onChange={(e) => updateConfig('delayActionConfig', { ...(actionConfig as any).delayActionConfig, showTyping: e.target.checked })}
+                  disabled={readOnly}
+                  className="w-4 h-4 rounded bg-zinc-900 border-zinc-600 text-violet-500 focus:ring-violet-500/20 focus:ring-offset-0"
+                />
+              </div>
+              <div className="flex-1">
+                <div className={`flex items-center gap-2 mb-0.5 text-xs font-bold transition-colors ${(actionConfig as any).delayActionConfig?.showTyping ? 'text-violet-300' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                  <Keyboard className="w-3.5 h-3.5" />
+                  <span>Simular escritura</span>
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  Muestra el estado <span className="font-mono text-violet-400">"escribiendo..."</span> en el chat del usuario mientras dura la pausa.
+                </p>
+              </div>
+              {(actionConfig as any).delayActionConfig?.showTyping && (
+                <div className="p-1.5 bg-violet-500/20 rounded-full animate-pulse">
+                  <Activity className="w-3 h-3 text-violet-400" />
+                </div>
+              )}
+            </label>
+
           </div>
         )}
 
@@ -1013,39 +1302,72 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           </div>
         )}
 
-        {/* Save Message ID */}
+        {/* Save Message ID Config */}
         {actionConfig.actionType === 'save_message_id' && (
-          <div className="space-y-4 mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
-              <span className="font-semibold">Guardar ID de Mensaje</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400">
+                <Save className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Guardar ID</h4>
+                <p className="text-[10px] text-zinc-500">Captura el identificador único de un mensaje</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de la variable</label>
-              <input
-                type="text"
-                value={(actionConfig as any).saveMessageIdConfig?.variableName || ''}
-                onChange={(e) => updateConfig('saveMessageIdConfig', { ...(actionConfig as any).saveMessageIdConfig, variableName: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 font-mono"
-                placeholder="mensaje_guardado"
-              />
+
+            {/* Variable Name Input (Styled as code syntax) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Variable className="w-3 h-3" /> Nombre de la Variable
+              </label>
+              <div className="flex items-center group focus-within:ring-1 focus-within:ring-emerald-500/50 rounded-lg transition-all">
+                <div className="bg-zinc-900 border border-r-0 border-zinc-800 rounded-l-lg px-3 py-2.5 text-xs text-zinc-500 font-mono select-none">
+                  {'{{variables.'}
+                </div>
+                <input
+                  type="text"
+                  value={(actionConfig as any).saveMessageIdConfig?.variableName || ''}
+                  onChange={(e) => updateConfig('saveMessageIdConfig', { ...(actionConfig as any).saveMessageIdConfig, variableName: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
+                  disabled={readOnly}
+                  className="flex-1 px-0 py-2.5 text-xs border-y border-zinc-800 bg-zinc-900 text-emerald-400 font-mono focus:outline-none placeholder-zinc-700"
+                  placeholder="mensaje_guardado"
+                />
+                <div className="bg-zinc-900 border border-l-0 border-zinc-800 rounded-r-lg px-3 py-2.5 text-xs text-zinc-500 font-mono select-none">
+                  {'}}'}
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Origen del mensaje</label>
-              <select
-                value={(actionConfig as any).saveMessageIdConfig?.messageSource || 'last_bot_message'}
-                onChange={(e) => updateConfig('saveMessageIdConfig', { ...(actionConfig as any).saveMessageIdConfig, messageSource: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              >
-                <option value="last_bot_message">Último mensaje del bot</option>
-                <option value="last_user_message">Último mensaje del usuario</option>
-              </select>
+
+            {/* Message Source Select */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare className="w-3 h-3" /> Origen del Mensaje
+              </label>
+              <div className="relative group">
+                <select
+                  value={(actionConfig as any).saveMessageIdConfig?.messageSource || 'last_bot_message'}
+                  onChange={(e) => updateConfig('saveMessageIdConfig', { ...(actionConfig as any).saveMessageIdConfig, messageSource: e.target.value })}
+                  disabled={readOnly}
+                  className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="last_bot_message">🤖 Último mensaje del bot</option>
+                  <option value="last_user_message">👤 Último mensaje del usuario</option>
+                </select>
+
+                {/* Custom Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-gray-500">
-              Usa <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{`{{variables.${(actionConfig as any).saveMessageIdConfig?.variableName || 'mensaje_guardado'}}}`}</code> para referenciar este ID después.
-            </p>
+
+            {/* Info Footer */}
+            <div className="text-[10px] text-zinc-500 bg-zinc-900/50 p-2 rounded border border-zinc-800/50">
+              Podrás usar este ID en acciones como <strong>"Editar Mensaje"</strong> o <strong>"Eliminar Mensaje"</strong>.
+            </div>
+
           </div>
         )}
 
@@ -1163,89 +1485,164 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           </div>
         )}
 
-        {/* Run Subflow */}
+        {/* Run Subflow Config */}
         {actionConfig.actionType === 'run_subflow' && (
-          <div className="space-y-4 mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 14 20 9 15 4" /><path d="M4 20v-7a4 4 0 0 1 4-4h12" /></svg>
-              <span className="font-semibold">Ejecutar Sub-Flow</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20 text-orange-400">
+                <Workflow className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Ejecutar Sub-Flujo</h4>
+                <p className="text-[10px] text-zinc-500">Conecta y reutiliza otros flujos</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Flow a ejecutar</label>
-              <select
-                value={(actionConfig as any).subflowConfig?.flowId || ''}
-                onChange={(e) => updateConfig('subflowConfig', { ...(actionConfig as any).subflowConfig, flowId: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              >
-                <option value="">Seleccionar flow...</option>
-                {flows.map((flow) => (
-                  <option key={flow.id} value={flow.id}>{flow.name}</option>
-                ))}
-              </select>
-            </div>
+
+            {/* Flow Selector */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={(actionConfig as any).subflowConfig?.passVariables || false}
-                  onChange={(e) => updateConfig('subflowConfig', { ...(actionConfig as any).subflowConfig, passVariables: e.target.checked })}
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Flujo Destino</label>
+              <div className="relative group">
+                <select
+                  value={(actionConfig as any).subflowConfig?.flowId || ''}
+                  onChange={(e) => updateConfig('subflowConfig', { ...(actionConfig as any).subflowConfig, flowId: e.target.value })}
                   disabled={readOnly}
-                  className="w-4 h-4 rounded border-gray-300"
-                />
-                <label className="text-sm text-gray-700 dark:text-gray-300">Pasar variables al sub-flow</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={(actionConfig as any).subflowConfig?.waitForCompletion || false}
-                  onChange={(e) => updateConfig('subflowConfig', { ...(actionConfig as any).subflowConfig, waitForCompletion: e.target.checked })}
-                  disabled={readOnly}
-                  className="w-4 h-4 rounded border-gray-300"
-                />
-                <label className="text-sm text-gray-700 dark:text-gray-300">Esperar a que termine (síncrono)</label>
+                  className="w-full pl-4 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="">Seleccionar flujo...</option>
+                  {flows.map((flow) => (
+                    <option key={flow.id} value={flow.id} className="bg-zinc-900 text-zinc-300">
+                      {flow.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Custom Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
               </div>
             </div>
+
+            {/* Options Cards */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Configuración de Ejecución</label>
+
+              {/* Pass Variables Option */}
+              <label className="flex items-start gap-3 p-3 rounded-lg border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 hover:border-zinc-700 cursor-pointer transition-all group">
+                <div className="mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={(actionConfig as any).subflowConfig?.passVariables || false}
+                    onChange={(e) => updateConfig('subflowConfig', { ...(actionConfig as any).subflowConfig, passVariables: e.target.checked })}
+                    disabled={readOnly}
+                    className="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-orange-500 focus:ring-orange-500/20 focus:ring-offset-0"
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <ArrowRightLeft className="w-3.5 h-3.5 text-zinc-400" />
+                    <span className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">Compartir Contexto</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">
+                    El sub-flujo tendrá acceso a todas las variables y datos del usuario actual.
+                  </p>
+                </div>
+              </label>
+
+              {/* Wait For Completion Option */}
+              <label className="flex items-start gap-3 p-3 rounded-lg border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 hover:border-zinc-700 cursor-pointer transition-all group">
+                <div className="mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={(actionConfig as any).subflowConfig?.waitForCompletion || false}
+                    onChange={(e) => updateConfig('subflowConfig', { ...(actionConfig as any).subflowConfig, waitForCompletion: e.target.checked })}
+                    disabled={readOnly}
+                    className="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-orange-500 focus:ring-orange-500/20 focus:ring-offset-0"
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                    <span className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">Ejecución Síncrona</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">
+                    Este flujo se pausará hasta que el sub-flujo termine. Si se desactiva, ambos correrán en paralelo.
+                  </p>
+                </div>
+              </label>
+            </div>
+
           </div>
         )}
 
-        {/* Remove keyboard actions - simple info */}
+        {/* Remove Keyboard Actions */}
         {(actionConfig.actionType === 'remove_keyboard' || actionConfig.actionType === 'remove_reply_keyboard') && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              ✓ {actionConfig.actionType === 'remove_keyboard'
-                ? 'Se eliminará el teclado inline del último mensaje del bot.'
-                : 'Se eliminará el teclado reply (menú persistente).'}
-            </p>
-          </div>
-        )}
-
-        {/* Edit keyboard - basic */}
-        {actionConfig.actionType === 'edit_keyboard' && (
-          <div className="space-y-4 mt-4 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
-            <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2" /><path d="M6 8h.001" /><path d="M10 8h.001" /><path d="M14 8h.001" /><path d="M18 8h.001" /><path d="M8 12h.001" /><path d="M12 12h.001" /><path d="M16 12h.001" /><path d="M7 16h10" /></svg>
-              <span className="font-semibold">Editar Teclado Inline</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
+            <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20 text-red-400 shrink-0">
+              <KeyboardOff className="w-5 h-5" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Operación</label>
-              <select
-                value={(actionConfig as any).editKeyboardConfig?.operation || 'replace'}
-                onChange={(e) => updateConfig('editKeyboardConfig', { ...(actionConfig as any).editKeyboardConfig, operation: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              >
-                <option value="replace">Reemplazar teclado completo</option>
-                <option value="remove">Eliminar teclado</option>
-                <option value="disable_button">Desactivar botón (próximamente)</option>
-              </select>
+              <h4 className="text-sm font-bold text-zinc-200">
+                {actionConfig.actionType === 'remove_keyboard' ? 'Eliminar Teclado Inline' : 'Eliminar Menú Reply'}
+              </h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                {actionConfig.actionType === 'remove_keyboard'
+                  ? 'Se eliminarán los botones interactivos adjuntos al último mensaje del bot.'
+                  : 'Se cerrará el menú de opciones persistente (teclado inferior) del usuario.'}
+              </p>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              💡 Para configurar botones avanzados, usa "Enviar mensaje" con teclado inline.
-            </p>
           </div>
         )}
 
+        {/* Edit Keyboard Config */}
+        {actionConfig.actionType === 'edit_keyboard' && (
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/20 text-cyan-400">
+                <LayoutList className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Editar Teclado</h4>
+                <p className="text-[10px] text-zinc-500">Modificar botones existentes</p>
+              </div>
+            </div>
+
+            {/* Operation Select */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Operación</label>
+              <div className="relative group">
+                <select
+                  value={(actionConfig as any).editKeyboardConfig?.operation || 'replace'}
+                  onChange={(e) => updateConfig('editKeyboardConfig', { ...(actionConfig as any).editKeyboardConfig, operation: e.target.value })}
+                  disabled={readOnly}
+                  className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="replace">Reemplazar teclado completo</option>
+                  <option value="remove">Eliminar teclado</option>
+                  <option value="disable_button">Desactivar botón (próximamente)</option>
+                </select>
+
+                {/* Custom Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Hint Card */}
+            <div className="flex gap-2 p-2.5 bg-zinc-900/50 rounded-lg border border-zinc-800">
+              <Info className="w-4 h-4 text-zinc-500 mt-0.5 shrink-0" />
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
+                Para una gestión más avanzada de botones, te recomendamos usar la acción <strong>"Enviar Mensaje"</strong> y configurar el teclado directamente en los bloques.
+              </p>
+            </div>
+
+          </div>
+        )}
         {/* Send sticker - basic */}
         {actionConfig.actionType === 'send_sticker' && (
           <div className="space-y-4 mt-4 p-4 bg-pink-50 dark:bg-pink-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
@@ -1269,6 +1666,10 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             </p>
           </div>
         )}
+
+
+
+
       </div>
     );
   };
@@ -1367,7 +1768,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
       {/* Footer */}
       {!readOnly && (
-        <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex gap-3 shrink-0">
+        <div className="p-2 border-t border-zinc-800 bg-zinc-950 flex gap-3 shrink-0">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2.5 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl font-medium transition-all"
