@@ -6,7 +6,7 @@ export { User, type IUser } from './models/User.js';
 export { Agent, type IAgent, type AgentRole, type OnlineStatus, type IAgentMetrics, type IPermissionsOverride } from './models/Agent.js';
 export { Role, type IRole, initializeSystemRoles, ALL_PERMISSIONS, PERMISSION_CATEGORIES, DEFAULT_ROLE_PERMISSIONS } from './models/Role.js';
 export { AgentPreferences, type IAgentPreferences, getOrCreatePreferences } from './models/AgentPreferences.js';
-export { AgentSession, type IAgentSession, createSession, getActiveSessions, invalidateSession, invalidateAllSessionsExcept } from './models/AgentSession.js';
+export { AgentSession, type IAgentSession, createSession, getActiveSessions, invalidateSession, invalidateAllSessionsExcept, invalidateAllAgentSessions } from './models/AgentSession.js';
 export { AgentActivity, type IAgentActivity, type ActivityType, logActivity, getRecentActivities } from './models/AgentActivity.js';
 export { ChatSession, type IChatSession, type SessionStatus, type SatisfactionLevel, type IPostChatSurvey, type ClosedByType } from './models/ChatSession.js';
 export { Message, type IMessage, type MessageSender, type MessageType } from './models/Message.js';
@@ -33,4 +33,17 @@ export {
   type CustomFieldType 
 } from './models/CustomField.js';
 export { AuditLog, type IAuditLog, type AuditCategory, type AuditSeverity } from './models/AuditLog.js';
+export { 
+  PasswordResetToken, 
+  type IPasswordResetToken, 
+  type ResetTokenStatus,
+  generateSecureToken,
+  hashToken,
+  createResetToken,
+  validateAndConsumeToken,
+  validateTokenOnly,
+  revokeAllTokensForAgent,
+  getPendingTokensCount,
+  cleanupExpiredTokens,
+} from './models/PasswordResetToken.js';
 export { connectDatabase, disconnectDatabase } from './connection.js';

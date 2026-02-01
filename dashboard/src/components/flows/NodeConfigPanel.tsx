@@ -21,7 +21,7 @@ import ApiCallEditor from './ApiCallEditor';
 import renderTriggerConfig from './config/RenderTriggerConfig';
 import RenderConditionConfig from './config/RenderConditionConfig';
 import RenderDelayConfig from './config/RenderDelayConfig';
-import { Activity, AlignLeft, ArrowRightLeft, Ban, BarChart3, Calendar, CalendarClock, CheckCircle2Icon, ChevronDown, ClipboardList, Clock, Contact, Database, Eraser, EyeOff, FileWarning, FolderInput, Globe, Hash, Info, Keyboard, KeyboardOff, Layers, LayoutList, MapPin, MessageSquare, Palette, PenLine, Phone, PlayCircle, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Star, StickyNote, Tag, Timer, Trash2, User, UserCog, Variable, Webhook, Workflow, XCircle, Zap } from 'lucide-react';
+import { Activity, AlignLeft, ArrowRightLeft, Ban, BarChart3, BellOff, Calendar, CalendarClock, CheckCircle2Icon, ChevronDown, ClipboardList, Clock, Contact, Database, Eraser, EyeOff, FileKey, FileWarning, FolderInput, Globe, Hash, Info, Keyboard, KeyboardOff, Layers, LayoutList, MapPin, MessageSquare, Palette, PenLine, Phone, Pin, PinOff, PlayCircle, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Star, Sticker, StickyNote, Tag, Timer, Trash2, User, UserCog, Variable, Webhook, Workflow, XCircle, Zap } from 'lucide-react';
 
 
 // Tipos simplificados para las listas de nodos y flows
@@ -337,7 +337,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                       onChange(node.id, label, newConfig);
                     }}
                     disabled={readOnly}
-                    className="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-violet-500 focus:ring-offset-0"
+                  // className="w-4 h-4 rounded bg-zinc-800 border-zinc-600 text-violet-500 focus:ring-offset-0"
                   />
 
                   <span className="text-xs text-zinc-300">Si el chat se cierra</span>
@@ -1212,7 +1212,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <div className="flex-1 flex flex-col justify-center gap-1.5 opacity-80">
                   <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
                     <div
-                      className="h-full bg-gradient-to-r from-violet-600 to-fuchsia-500 transition-all duration-500 rounded-full"
+                      className="h-full bg-linear-to-r from-violet-600 to-fuchsia-500 transition-all duration-500 rounded-full"
                       style={{ width: `${Math.min((((actionConfig as any).delayActionConfig?.delaySeconds || 2) / 60) * 100, 100)}%` }}
                     />
                   </div>
@@ -1258,47 +1258,84 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
           </div>
         )}
-
-        {/* Pin Message */}
+        {/* Pin Message Config */}
         {actionConfig.actionType === 'pin_message' && (
-          <div className="space-y-4 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
-            <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /></svg>
-              <span className="font-semibold">Fijar Mensaje</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 text-amber-400">
+                <Pin className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Fijar Mensaje</h4>
+                <p className="text-[10px] text-zinc-500">Ancla un mensaje en la parte superior del chat</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mensaje a fijar</label>
-              <select
-                value={(actionConfig as any).pinMessageConfig?.targetType || 'last_bot_message'}
-                onChange={(e) => updateConfig('pinMessageConfig', { ...(actionConfig as any).pinMessageConfig, targetType: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              >
-                <option value="last_bot_message">Último mensaje del bot</option>
-                <option value="variable">ID desde variable</option>
-              </select>
+
+            {/* Target Select */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje a fijar</label>
+              <div className="relative group">
+                <select
+                  value={(actionConfig as any).pinMessageConfig?.targetType || 'last_bot_message'}
+                  onChange={(e) => updateConfig('pinMessageConfig', { ...(actionConfig as any).pinMessageConfig, targetType: e.target.value })}
+                  disabled={readOnly}
+                  className="w-full pl-3 pr-10 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none appearance-none cursor-pointer transition-all hover:border-zinc-700"
+                >
+                  <option value="last_bot_message">🤖 Último mensaje del bot</option>
+                  <option value="variable">🔗 ID desde variable</option>
+                </select>
+
+                {/* Custom Arrow */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover:text-zinc-400 transition-colors">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={(actionConfig as any).pinMessageConfig?.disableNotification ?? true}
-                onChange={(e) => updateConfig('pinMessageConfig', { ...(actionConfig as any).pinMessageConfig, disableNotification: e.target.checked })}
-                disabled={readOnly}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <label className="text-sm text-gray-700 dark:text-gray-300">Sin notificación al usuario</label>
-            </div>
+
+            {/* Disable Notification Toggle Card */}
+            <label className={`
+            flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all group
+            ${(actionConfig as any).pinMessageConfig?.disableNotification
+                ? 'bg-amber-500/5 border-amber-500/30'
+                : 'bg-zinc-900/30 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'}
+          `}>
+              <div className="mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={(actionConfig as any).pinMessageConfig?.disableNotification ?? true}
+                  onChange={(e) => updateConfig('pinMessageConfig', { ...(actionConfig as any).pinMessageConfig, disableNotification: e.target.checked })}
+                  disabled={readOnly}
+                  className="w-4 h-4 rounded bg-zinc-900 border-zinc-600 text-amber-500 focus:ring-amber-500/20 focus:ring-offset-0"
+                />
+              </div>
+              <div className="flex-1">
+                <div className={`flex items-center gap-2 mb-0.5 text-xs font-bold transition-colors ${(actionConfig as any).pinMessageConfig?.disableNotification ? 'text-amber-300' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                  <BellOff className="w-3.5 h-3.5" />
+                  <span>Fijar silenciosamente</span>
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  Si se activa, el usuario no recibirá una notificación sonora cuando el mensaje sea anclado.
+                </p>
+              </div>
+            </label>
+
           </div>
         )}
 
-        {/* Unpin Message */}
+        {/* Unpin Message Config */}
         {actionConfig.actionType === 'unpin_message' && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mt-4">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" /><line x1="2" y1="2" x2="22" y2="22" strokeWidth="2" /></svg>
-              <span className="font-semibold">Desfijar Mensaje</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
+            <div className="p-2.5 bg-zinc-900 rounded-xl border border-zinc-800 text-zinc-400 shrink-0">
+              <PinOff className="w-5 h-5" />
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Se desfijará el último mensaje fijado del chat.</p>
+            <div>
+              <h4 className="text-sm font-bold text-zinc-200">Desfijar Mensaje</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Se retirará el último mensaje anclado en la conversación, devolviéndolo al flujo normal.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1643,27 +1680,47 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
           </div>
         )}
-        {/* Send sticker - basic */}
+        {/* Send Sticker Config */}
         {actionConfig.actionType === 'send_sticker' && (
-          <div className="space-y-4 mt-4 p-4 bg-pink-50 dark:bg-pink-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
-            <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 mb-2">
-              <span className="text-xl">🎨</span>
-              <span className="font-semibold">Enviar Sticker</span>
+          <div className="mt-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-5 animate-in fade-in slide-in-from-top-2">
+
+            {/* Header Visual */}
+            <div className="flex items-center gap-3 pb-2 border-b border-zinc-800/50">
+              <div className="p-2 bg-pink-500/10 rounded-lg border border-pink-500/20 text-pink-400">
+                <Sticker className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Enviar Sticker</h4>
+                <p className="text-[10px] text-zinc-500">Envía una pegatina usando su identificador único</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">File ID del sticker</label>
-              <input
-                type="text"
-                value={(actionConfig as any).stickerConfig?.stickerId || ''}
-                onChange={(e) => updateConfig('stickerConfig', { stickerSource: 'file_id', stickerId: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 font-mono text-sm"
-                placeholder="CAACAgIAAxkBAAI..."
-              />
+
+            {/* Sticker ID Input */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                <FileKey className="w-3 h-3" /> File ID del Sticker
+              </label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={(actionConfig).stickerConfig?.stickerId || ''}
+                  onChange={(e) => updateConfig('stickerConfig', { stickerSource: 'file_id', stickerId: e.target.value })}
+                  disabled={readOnly}
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-pink-300 font-mono focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 outline-none transition-all placeholder-zinc-700"
+                  placeholder="CAACAgIAAxkBAAI..."
+                />
+                <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 group-focus-within:text-pink-500 transition-colors" />
+              </div>
             </div>
-            <p className="text-xs text-gray-500">
-              Obtén el file_id enviando el sticker al bot y revisando los logs.
-            </p>
+
+            {/* Info Hint */}
+            <div className="flex items-start gap-2 p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+              <Info className="w-4 h-4 text-zinc-500 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-zinc-500 leading-relaxed">
+                Para obtener el <strong>File ID</strong>, envía el sticker deseado al bot (@userinfobot o similar) y copia el código que te devuelve.
+              </p>
+            </div>
+
           </div>
         )}
 
@@ -1710,7 +1767,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
   const { label: typeLabel, color } = getNodeMeta();
   return (
-    <div className="w-[420px] h-full bg-zinc-900 border-l border-zinc-800 flex flex-col overflow-hidden shadow-2xl">
+    <div className="h-full w-[420px] max-w-[420px] min-w-[420px] shrink-0 bg-zinc-900 border-l border-zinc-800 flex flex-col overflow-hidden shadow-2xl" >
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-2 border-b border-zinc-800 bg-zinc-950 shrink-0">

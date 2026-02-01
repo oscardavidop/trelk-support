@@ -269,9 +269,10 @@ export async function resetActiveChats(agentId: string, count = 0): Promise<void
   await Agent.updateOne({ _id: agentId }, { activeChats: count });
 }
 
-export async function sendNewPasswordTelegramMessage(telegramId: number, newPassword: string): Promise<void> {
-  // Placeholder for sending Telegram message logic
-  sendMessage(telegramId, `Hi there! Your new password is: \`${newPassword}\`.\n\nPlease change it after logging in.`, { parseMode: 'Markdown' });
+export async function sendNewPasswordTelegramMessage(telegramId: number, newPassword: string, agentName?: string): Promise<void> {
+  // Usar el servicio de notificaciones de Telegram para enviar la contraseña temporal
+  const { sendTemporaryPasswordTelegram } = await import('./telegram-notifications.js');
+  await sendTemporaryPasswordTelegram(telegramId, newPassword, agentName);
 }
 
 /** 

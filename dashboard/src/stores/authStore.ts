@@ -10,11 +10,13 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  forcePasswordChange: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setAgent: (agent: Agent | null) => void;
   updateAgentFields: (fields: Partial<Agent>) => void;
   setToken: (token: string | null) => void;
+  setForcePasswordChange: (value: boolean) => void;
   checkAuth: () => Promise<void>;
 }
 
@@ -27,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       isLoading: true,
+      forcePasswordChange: false,
 
       login: async (email: string, password: string) => {
         try {
@@ -45,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
               token: data.token,
               isAuthenticated: true,
               isLoading: false,
+              forcePasswordChange: data.forcePasswordChange || false,
             });
             
             // Store permissions from login response
@@ -90,6 +94,7 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
             isLoading: false,
+            forcePasswordChange: false,
           });
         }
       },
@@ -99,6 +104,7 @@ export const useAuthStore = create<AuthState>()(
         agent: state.agent ? { ...state.agent, ...fields } : null,
       })),
       setToken: (token) => set({ token }),
+      setForcePasswordChange: (value) => set({ forcePasswordChange: value }),
 
       checkAuth: async () => {
         const { token } = get();
@@ -129,6 +135,7 @@ export const useAuthStore = create<AuthState>()(
               token: data.token,
               isAuthenticated: true,
               isLoading: false,
+              forcePasswordChange: data.forcePasswordChange || false,
             });
             
             // Refresh permissions on auth check
@@ -166,7 +173,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'trelk-support-auth',
-      partialize: (state) => ({ token: state.token }),
+      partialize: (state) => ({ token: state.token, forcePasswordChange: state.forcePasswordChange }),
     }
   )
 );

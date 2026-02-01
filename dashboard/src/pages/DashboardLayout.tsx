@@ -17,7 +17,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, agent, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, agent, checkAuth, forcePasswordChange } = useAuthStore();
   const stats = useChatStore((state) => state.stats);
   const { showSupervisorPanel, toggleSupervisorPanel } = useSupervisorStore();
   const { isEnabled: isFocusMode, toggleFocusMode, disableFocusMode } = useFocusModeStore();
@@ -104,7 +104,11 @@ export default function DashboardLayout() {
     if (!isLoading && !isAuthenticated) {
       navigate('/login');
     }
-  }, [isLoading, isAuthenticated, navigate]);
+    // Redirect to force-change-password if required
+    if (!isLoading && isAuthenticated && forcePasswordChange) {
+      navigate('/force-change-password');
+    }
+  }, [isLoading, isAuthenticated, forcePasswordChange, navigate]);
 
   // Initialize socket once when authenticated
   // We use a ref to track initialization and avoid re-running on agent updates

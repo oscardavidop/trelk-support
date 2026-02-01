@@ -138,6 +138,13 @@ export interface IAgent extends Document {
   // Whether the agent can request permissions (can be blocked by admin)
   canRequestPermissions?: boolean;
   
+  // Password management
+  forcePasswordChange?: boolean;         // Force user to change password on next login
+  lastPasswordChangeAt?: Date;           // When password was last changed
+  passwordResetBlockedUntil?: Date;      // Rate limit: blocked until this time
+  passwordResetAttempts?: number;        // Number of reset attempts in current window
+  passwordResetAttemptsResetAt?: Date;   // When to reset the attempt counter
+  
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -241,6 +248,27 @@ const AgentSchema = new Schema<IAgent>(
     canRequestPermissions: {
       type: Boolean,
       default: true,
+    },
+    // Password management
+    forcePasswordChange: {
+      type: Boolean,
+      default: false,
+    },
+    lastPasswordChangeAt: {
+      type: Date,
+      default: null,
+    },
+    passwordResetBlockedUntil: {
+      type: Date,
+      default: null,
+    },
+    passwordResetAttempts: {
+      type: Number,
+      default: 0,
+    },
+    passwordResetAttemptsResetAt: {
+      type: Date,
+      default: null,
     },
     // Survey metrics
     metrics: {

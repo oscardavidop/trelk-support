@@ -3,7 +3,8 @@ import type { FlowStatus } from '../../types/flow';
 import { 
   ArrowLeft, Undo2, Redo2, Save, Play, Pause, 
   MoreVertical, History, Trash2, Maximize, PanelRightClose, PanelRightOpen,
-  CheckCircle2, Clock, PlayCircle
+  CheckCircle2, Clock, PlayCircle,
+  Fullscreen
 } from 'lucide-react';
 
 interface FlowToolbarProps {
@@ -139,6 +140,20 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
         >
           <Maximize className="w-4 h-4" />
         </button>
+        <button
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen();
+            } else {
+              document.exitFullscreen();
+            }
+          }}
+          className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+          title="Pantalla completa"
+        >
+          <Fullscreen className="w-4 h-4" />
+        </button>
+        
       </div>
 
       {/* Right: Actions */}

@@ -299,7 +299,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
 
       {/* Footer Info */}
       <div className="p-3 border-t border-zinc-800 bg-zinc-900/30">
-        <p className="text-[10px] text-zinc-500 text-center flex items-center justify-center gap-1.5">
+        <p className="text-[12px] text-zinc-500 text-center flex items-center justify-center gap-1.5">
           <MousePointerClick className="w-3 h-3" />
           Arrastra para añadir al flujo
         </p>

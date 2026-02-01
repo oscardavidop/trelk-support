@@ -1,6 +1,13 @@
+import React from 'react';
+import { 
+  Globe, 
+  User, 
+  Database, 
+  Lock, 
+  Info, 
+  Languages 
+} from 'lucide-react';
 import type { ActionConfig } from "../../../types/flow";
-
-
 
 interface I18nConfigProps {
   config: ActionConfig;
@@ -34,198 +41,193 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
   };
 
   return (
-    <div className="border border-purple-200 dark:border-purple-800 rounded-xl p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="p-1.5 bg-purple-100 dark:bg-purple-900 rounded-lg">
-          <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-          </svg>
+    <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2">
+      
+      {/* 1. Header */}
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50 flex items-center gap-3">
+        <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
+          <Globe className="w-4 h-4" />
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            🌐 Configuración de Textos i18n
+          <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">
+            Configuración i18n
           </h4>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400">
-            Configura cómo obtener el idioma para los textos multilingüe
+          <p className="text-[10px] text-zinc-500">
+            Fuente de idioma para {detectedTextKeys.length} textos detectados
           </p>
         </div>
       </div>
 
-      {/* Detected keys */}
-      <div className="mb-3 p-2 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-        <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400 tracking-wide">
-          Textos detectados:
-        </span>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {detectedTextKeys.map((key, i) => (
-            <span 
-              key={i}
-              className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded text-[10px] font-mono"
-            >
-              {`{{TEXT.${key}}}`}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Language source selector */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-          ¿De dónde obtener el idioma?
-        </label>
+      <div className="p-4 space-y-4">
         
-        {/* Option: User Language */}
-        <label className={`
-          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-          ${i18nConfig.source === 'user_language'
-            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
-          }
-        `}>
-          <input
-            type="radio"
-            name="i18n-source"
-            checked={i18nConfig.source === 'user_language'}
-            onChange={() => updateI18nConfig({ source: 'user_language', customFieldName: undefined, variableName: undefined, fixedLanguage: undefined })}
-            disabled={readOnly}
-            className="mt-0.5 text-purple-500"
-          />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
-              👤 Idioma del usuario
+        {/* 2. Detected Keys Badge Area */}
+        {detectedTextKeys.length > 0 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-2.5">
+            <div className="flex items-center gap-2 mb-2">
+              <Languages className="w-3 h-3 text-indigo-400" />
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Variables Detectadas</span>
             </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400">
-              Usa el idioma configurado en el perfil del usuario (user.language)
+            <div className="flex flex-wrap gap-1.5">
+              {detectedTextKeys.map((key, i) => (
+                <span 
+                  key={i}
+                  className="px-2 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded text-[10px] font-mono"
+                >
+                  {`{{TEXT.${key}}}`}
+                </span>
+              ))}
             </div>
           </div>
-        </label>
+        )}
 
-        {/* Option: Custom Field */}
-        <label className={`
-          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-          ${i18nConfig.source === 'custom_field'
-            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
-          }
-        `}>
-          <input
-            type="radio"
-            name="i18n-source"
-            checked={i18nConfig.source === 'custom_field'}
-            onChange={() => updateI18nConfig({ source: 'custom_field', variableName: undefined, fixedLanguage: undefined })}
-            disabled={readOnly}
-            className="mt-0.5 text-purple-500"
-          />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
-              📋 Campo personalizado
-            </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
-              Usa el valor de un campo personalizado del usuario (ej: "lang", "preferred_language")
-            </div>
-            {i18nConfig.source === 'custom_field' && (
-              <input
-                type="text"
-                value={i18nConfig.customFieldName || ''}
-                onChange={(e) => updateI18nConfig({ customFieldName: e.target.value })}
-                placeholder="Nombre del campo (ej: lang)"
-                disabled={readOnly}
-                className="w-full px-2 py-1.5 text-xs border border-purple-300 dark:border-purple-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500"
-                onClick={(e) => e.stopPropagation()}
-              />
-            )}
+        {/* 3. Source Selection Grid */}
+        <div className="space-y-3">
+          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Fuente del Idioma</label>
+          
+          <div className="grid grid-cols-1 gap-2">
+            
+            {/* Option: User Language */}
+            <label className={`
+              relative flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all group
+              ${i18nConfig.source === 'user_language'
+                ? 'bg-indigo-500/5 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.1)]'
+                : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800'
+              }
+            `}>
+              <div className="mt-0.5">
+                <input
+                  type="radio"
+                  name="i18n-source"
+                  checked={i18nConfig.source === 'user_language'}
+                  onChange={() => updateI18nConfig({ source: 'user_language', customFieldName: undefined, variableName: undefined, fixedLanguage: undefined })}
+                  disabled={readOnly}
+                  className="hidden" // Ocultamos el radio nativo, usamos estilos de tarjeta
+                />
+                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${i18nConfig.source === 'user_language' ? 'border-indigo-500' : 'border-zinc-600'}`}>
+                  {i18nConfig.source === 'user_language' && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className={`text-xs font-bold flex items-center gap-2 ${i18nConfig.source === 'user_language' ? 'text-indigo-400' : 'text-zinc-300'}`}>
+                  <User className="w-3.5 h-3.5" /> Idioma del Usuario
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+                  Utiliza la configuración regional del perfil de Telegram del usuario.
+                </p>
+              </div>
+            </label>
+
+            {/* Option: Custom Field */}
+            <label className={`
+              relative flex flex-col p-3 rounded-lg border cursor-pointer transition-all group gap-2
+              ${i18nConfig.source === 'custom_field'
+                ? 'bg-indigo-500/5 border-indigo-500/50'
+                : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+              }
+            `}>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="i18n-source"
+                    checked={i18nConfig.source === 'custom_field'}
+                    onChange={() => updateI18nConfig({ source: 'custom_field', variableName: undefined, fixedLanguage: undefined })}
+                    disabled={readOnly}
+                    className="hidden"
+                  />
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${i18nConfig.source === 'custom_field' ? 'border-indigo-500' : 'border-zinc-600'}`}>
+                    {i18nConfig.source === 'custom_field' && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className={`text-xs font-bold flex items-center gap-2 ${i18nConfig.source === 'custom_field' ? 'text-indigo-400' : 'text-zinc-300'}`}>
+                    <Database className="w-3.5 h-3.5" /> Campo Personalizado
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Obtiene el código desde un campo de la base de datos.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Conditional Input */}
+              {i18nConfig.source === 'custom_field' && (
+                <div className="pl-7 animate-in fade-in zoom-in-95 duration-200">
+                  <input
+                    type="text"
+                    value={i18nConfig.customFieldName || ''}
+                    onChange={(e) => updateI18nConfig({ customFieldName: e.target.value })}
+                    placeholder="Ej: preferred_lang"
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              )}
+            </label>
+
+            {/* Option: Fixed Language */}
+            <label className={`
+              relative flex flex-col p-3 rounded-lg border cursor-pointer transition-all group gap-2
+              ${i18nConfig.source === 'fixed'
+                ? 'bg-indigo-500/5 border-indigo-500/50'
+                : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+              }
+            `}>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  <input
+                    type="radio"
+                    name="i18n-source"
+                    checked={i18nConfig.source === 'fixed'}
+                    onChange={() => updateI18nConfig({ source: 'fixed', customFieldName: undefined, variableName: undefined, fixedLanguage: 'es' })}
+                    disabled={readOnly}
+                    className="hidden"
+                  />
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${i18nConfig.source === 'fixed' ? 'border-indigo-500' : 'border-zinc-600'}`}>
+                    {i18nConfig.source === 'fixed' && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className={`text-xs font-bold flex items-center gap-2 ${i18nConfig.source === 'fixed' ? 'text-indigo-400' : 'text-zinc-300'}`}>
+                    <Lock className="w-3.5 h-3.5" /> Idioma Fijo
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Fuerza un idioma específico para esta acción.
+                  </p>
+                </div>
+              </div>
+
+              {/* Conditional Select */}
+              {i18nConfig.source === 'fixed' && (
+                <div className="pl-7 animate-in fade-in zoom-in-95 duration-200">
+                  <select
+                    value={i18nConfig.fixedLanguage || 'es'}
+                    onChange={(e) => updateI18nConfig({ fixedLanguage: e.target.value })}
+                    disabled={readOnly}
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {SUPPORTED_LANGUAGES.map(lang => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.flag} {lang.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </label>
+
           </div>
-        </label>
+        </div>
 
-        {/* Option: Variable */}
-        <label className={`
-          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-          ${i18nConfig.source === 'variable'
-            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
-          }
-        `}>
-          <input
-            type="radio"
-            name="i18n-source"
-            checked={i18nConfig.source === 'variable'}
-            onChange={() => updateI18nConfig({ source: 'variable', customFieldName: undefined, fixedLanguage: undefined })}
-            disabled={readOnly}
-            className="mt-0.5 text-purple-500"
-          />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
-              📦 Variable del flow
-            </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
-              Usa el valor de una variable de sesión del flow
-            </div>
-            {i18nConfig.source === 'variable' && (
-              <input
-                type="text"
-                value={i18nConfig.variableName || ''}
-                onChange={(e) => updateI18nConfig({ variableName: e.target.value })}
-                placeholder="Nombre de variable (ej: userLanguage)"
-                disabled={readOnly}
-                className="w-full px-2 py-1.5 text-xs border border-purple-300 dark:border-purple-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500"
-                onClick={(e) => e.stopPropagation()}
-              />
-            )}
-          </div>
-        </label>
-
-        {/* Option: Fixed Language */}
-        <label className={`
-          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-          ${i18nConfig.source === 'fixed'
-            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-white dark:bg-gray-800'
-          }
-        `}>
-          <input
-            type="radio"
-            name="i18n-source"
-            checked={i18nConfig.source === 'fixed'}
-            onChange={() => updateI18nConfig({ source: 'fixed', customFieldName: undefined, variableName: undefined, fixedLanguage: 'es' })}
-            disabled={readOnly}
-            className="mt-0.5 text-purple-500"
-          />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
-              🔒 Idioma fijo
-            </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
-              Usa siempre un idioma específico
-            </div>
-            {i18nConfig.source === 'fixed' && (
-              <select
-                value={i18nConfig.fixedLanguage || 'es'}
-                onChange={(e) => updateI18nConfig({ fixedLanguage: e.target.value })}
-                disabled={readOnly}
-                className="w-full px-2 py-1.5 text-xs border border-purple-300 dark:border-purple-700 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {SUPPORTED_LANGUAGES.map(lang => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.flag} {lang.name} ({lang.code})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        </label>
-      </div>
-
-      {/* Info box */}
-      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div className="flex items-start gap-2">
-          <span className="text-blue-500 text-sm">💡</span>
-          <p className="text-[10px] text-blue-700 dark:text-blue-300">
-            Los textos deben estar definidos en <strong>/admin/texts</strong> con traducciones para cada idioma. 
-            Si el idioma no está disponible, se usará español como fallback.
+        {/* 4. Info Footer */}
+        <div className="flex items-start gap-2 p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+          <Info className="w-4 h-4 text-zinc-500 mt-0.5 shrink-0" />
+          <p className="text-[10px] text-zinc-500 leading-relaxed">
+            Asegúrate de que las claves detectadas estén definidas en el módulo <strong>/admin/texts</strong>. Si falta una traducción, se usará el idioma por defecto (Español).
           </p>
         </div>
+
       </div>
     </div>
   );

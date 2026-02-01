@@ -39,6 +39,19 @@ export { AdminAuditLog, type IAdminAuditLog } from './AdminAuditLog.js';
 
 // Enterprise models - Security
 export { UserRateLimit, type IUserRateLimit, type ViolationType } from './UserRateLimit.js';
+export { 
+  PasswordResetToken, 
+  type IPasswordResetToken, 
+  type ResetTokenStatus,
+  generateSecureToken,
+  hashToken,
+  createResetToken,
+  validateAndConsumeToken,
+  validateTokenOnly,
+  revokeAllTokensForAgent,
+  getPendingTokensCount,
+  cleanupExpiredTokens,
+} from './PasswordResetToken.js';
 
 // Enterprise models - Export
 export { ExportJob, type IExportJob, type ExportFormat, type ExportStatus } from './ExportJob.js';

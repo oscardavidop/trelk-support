@@ -234,7 +234,8 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
   );
 
   /**
-   * Reset agent password
+   * Reset agent password (generates random password and sends via Telegram)
+   * For sending reset link via Telegram, use /api/admin/agents/:agentId/send-password-reset
    * Requires: agents.write
    */
   fastify.post<{ Params: AgentParams; Body: ResetPasswordBody }>(
@@ -249,10 +250,29 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
         return reply.code(404).send({ ok: false, error: 'Agent not found' });
       }
 
+      if (!agent.telegramId) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Agent does not have a Telegram ID set. Cannot send new password.'
+        });
+      }
       const newPassword = generatePassword();
 
       await updateAgentPassword(agentId, newPassword);
-      agent.telegramId && sendNewPasswordTelegramMessage(agent.telegramId, newPassword);
+
+      // Marcar que debe cambiar la contraseña al iniciar sesión
+      const { Agent } = await import('../database/index.js');
+      await Agent.updateOne({ _id: agentId }, {
+        forcePasswordChange: true,
+        lastPasswordChangeAt: new Date()
+      });
+
+      // Revocar todos los tokens de reset pendientes
+      const { revokeAllTokensForAgent } = await import('../database/index.js');
+      await revokeAllTokensForAgent(agentId, request.agent!._id.toString(), 'password_regenerated');
+
+      // Enviar contraseña por Telegram
+      agent.telegramId && sendNewPasswordTelegramMessage(agent.telegramId, newPassword, agent.name);
 
       logger.info('api', {
         action: 'agent_password_reset',

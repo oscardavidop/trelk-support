@@ -178,6 +178,23 @@ export async function invalidateAllSessionsExcept(
 }
 
 /**
+ * Invalidate ALL sessions for an agent (including current)
+ * Used for password reset and security events
+ */
+export async function invalidateAllAgentSessions(agentId: string): Promise<number> {
+  const result = await AgentSession.updateMany(
+    { agentId, isActive: true },
+    { 
+      $set: { 
+        isActive: false, 
+        logoutAt: new Date() 
+      } 
+    }
+  );
+  return result.modifiedCount;
+}
+
+/**
  * Update session last seen
  */
 export async function updateSessionLastSeen(tokenHash: string): Promise<void> {

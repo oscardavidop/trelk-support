@@ -1,7 +1,5 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
 /* ============= THEME SYSTEM ============= */
 
 /* Semantic Color Tokens - These are the ONLY colors used in components */
@@ -76,7 +74,7 @@ body {
   --input-border-focus: #2563eb;
   --input-placeholder: #6b7280;
 }
-
+/* 
 @layer base {
   h1 {
     @apply text-2xl font-semibold tracking-tight;
@@ -96,7 +94,7 @@ body {
   small {
     @apply text-xs text-zinc-400;
   }
-}
+} */
 
 
 /* ============= LIGHT THEME ============= */
@@ -462,10 +460,6 @@ input[type=number]::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* Para Firefox */
-input[type=number] {
-  -moz-appearance: textfield;
-}
 
 /* ============= THEME-AWARE UTILITY CLASSES ============= */
 /* Use these for gradual migration of components */
@@ -970,84 +964,70 @@ input[type=number] {
   color: var(--text-primary) !important;
 }
 
-/* ===== Dashboard Checkbox Card ===== */
+/* ===== Premium Zinc Checkbox Style ===== */
 
-.checkbox-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgb(39 39 42); /* zinc-800 */
-  background: rgba(24, 24, 27, 0.6); /* zinc-900/60 */
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 
-.checkbox-card:hover {
-  background: rgb(24 24 27); /* zinc-900 */
-}
-
-.checkbox-card input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Checkbox visual */
-.checkbox-indicator {
-  margin-top: 0.25rem;
+  width: 1rem; /* 16px */
   height: 1rem;
-  width: 1rem;
-  border-radius: 0.25rem;
-  border: 1px solid rgb(82 82 91); /* zinc-600 */
-  background: rgb(24 24 27); /* zinc-900 */
-  display: flex;
+  border-radius: 0.25rem; /* rounded */
+
+  /* Fondo oscuro profundo (Zinc-900) y borde sutil (Zinc-700) */
+  background-color: rgb(24 24 27); 
+  border: 1px solid rgb(63 63 70); 
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  flex-shrink: 0; /* Vital para layouts flex */
+  position: relative;
+
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Punto interno */
-.checkbox-indicator::after {
+/* Hover State */
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: rgb(113 113 122); /* zinc-500 */
+  background-color: rgb(39 39 42); /* zinc-800 */
+}
+
+/* Checked State - Usando Indigo (Primary Theme) */
+input[type="checkbox"]:checked {
+  background-color: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(99 102 241);
+}
+
+/* Check Icon (Pseudo-element) */
+input[type="checkbox"]::after {
   content: "";
-  height: 0.5rem;
-  width: 0.5rem;
-  background: white;
-  border-radius: 0.125rem;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  width: 0.3em;
+  height: 0.55em;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+  opacity: 0; /* Oculto por defecto para animar */
+  transition: opacity 0.2s ease;
 }
 
-/* Checked */
-.checkbox-card input:checked + .checkbox-indicator {
-  background: rgb(79 70 229); /* indigo-600 */
-  border-color: rgb(99 102 241); /* indigo-500 */
-}
-
-.checkbox-card input:checked + .checkbox-indicator::after {
+/* Mostrar icono al estar checked */
+input[type="checkbox"]:checked::after {
   opacity: 1;
 }
 
-/* Disabled */
-.checkbox-card input:disabled + .checkbox-indicator {
+/* Focus Ring (Accesibilidad) */
+input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(24 24 27), 0 0 0 4px rgb(99 102 241);
+}
+
+/* Disabled State */
+input[type="checkbox"]:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+  background-color: rgb(39 39 42); /* zinc-800 */
+  border-color: rgb(63 63 70); /* zinc-700 */
 }
-
-.checkbox-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.checkbox-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgb(244 244 245); /* zinc-100 */
-}
-
-.checkbox-description {
-  font-size: 0.75rem;
-  color: rgb(161 161 170); /* zinc-400 */
-}
-

@@ -103,6 +103,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       token: result.token,
       permissions: result.permissions,
       sessionsInvalidated: result.sessionsInvalidated,
+      forcePasswordChange: result.forcePasswordChange,
     };
   });
 
@@ -149,6 +150,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       agent: result.agent,
       token: result.token,
       permissions: result.permissions,
+      forcePasswordChange: result.forcePasswordChange,
     };
   });
 

@@ -28,6 +28,7 @@ export interface AuthResult {
   permissions?: string[];
   error?: string;
   sessionsInvalidated?: number;
+  forcePasswordChange?: boolean;
 }
 
 /**
@@ -111,12 +112,16 @@ export async function loginAgent(
     // Get effective permissions for the response
     const permissions = await getEffectivePermissions(agent._id.toString());
     
+    // Check if password change is required
+    const forcePasswordChange = agent.forcePasswordChange === true;
+    
     return {
       success: true,
       agent: agentData!,
       token,
       permissions,
       sessionsInvalidated,
+      forcePasswordChange,
     };
   } catch (error) {
     console.error('Login error:', error);
@@ -182,11 +187,15 @@ export async function refreshToken(token: string): Promise<AuthResult> {
   const newToken = generateToken(agent);
   const permissions = await getEffectivePermissions(agent._id.toString());
   
+  // Check if password change is required
+  const forcePasswordChange = agent.forcePasswordChange === true;
+  
   return {
     success: true,
     agent,
     token: newToken,
     permissions,
+    forcePasswordChange,
   };
 }
 

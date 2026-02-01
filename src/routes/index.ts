@@ -29,6 +29,7 @@ import { registerContactsProRoutes } from './contacts-pro.routes.js';
 import { broadcastRoutes } from './broadcast.routes.js';
 import { registerPermissionRoutes } from './permissions.routes.js';
 import { registerPermissionRequestRoutes } from './permissionRequest.routes.js';
+import { registerPasswordResetRoutes } from './password-reset.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -36,6 +37,11 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   
   // Auth routes first (public routes without authentication)
   await registerAuthRoutes(fastify);
+  
+  // Password Reset routes (public + admin protected)
+  await fastify.register(async (passwordResetRoutes) => {
+    await registerPasswordResetRoutes(passwordResetRoutes);
+  });
   
   // Upload routes (requires auth)
   await fastify.register(async (uploadRoutes) => {

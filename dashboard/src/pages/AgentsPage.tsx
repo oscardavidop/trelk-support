@@ -29,7 +29,8 @@ import {
   Star,
   CheckCircle,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  CheckCircle2
 } from 'lucide-react';
 import type { Agent, OnlineStatus } from '../types';
 
@@ -860,27 +861,185 @@ function DeleteModal({ agent, isSaving, onDelete, onClose }: any) {
 }
 
 function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
+  const [mode, setMode] = useState<'link' | 'generate'>('link');
+  const token = useAuthStore.getState().token;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSendLink = async () => {
+    setIsSubmitting(true);
+    setResult(null);
+    try {
+      const res = await fetch(`/api/admin/agents/${agent._id}/send-password-reset`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setResult({ success: true, message: data.message || 'Enlace enviado por Telegram' });
+      } else {
+        setResult({ success: false, message: data.error || 'Error al enviar enlace' });
+      }
+    } catch {
+      setResult({ success: false, message: 'Error de conexión' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    setIsSubmitting(true);
+    setResult(null);
+    try {
+      const res = await fetch(`/api/admin/agents/${agent._id}/reset-password`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setResult({ success: true, message: 'Contraseña temporal generada y enviada por Telegram' });
+      } else {
+        setResult({ success: false, message: data.error || 'Error al generar contraseña' });
+      }
+    } catch {
+      setResult({ success: false, message: 'Error de conexión' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const hasTelegram = !!agent.telegramId;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 p-6 text-center">
-        <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
-          <Key className="w-8 h-8 text-amber-500" />
+      <div className="w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800 p-6">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
+            <Key className="w-8 h-8 text-indigo-500" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Restablecer Contraseña</h2>
+          <p className="text-zinc-400 text-sm">
+            <span className="text-white font-medium">{agent.name}</span>
+            {hasTelegram ? (
+              <span className="ml-2 text-emerald-400 text-xs">✓ Telegram vinculado</span>
+            ) : (
+              <span className="ml-2 text-amber-400 text-xs">⚠ Sin Telegram</span>
+            )}
+          </p>
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Resetear Contraseña</h2>
-        <p className="text-zinc-400 mb-6">
-          Se generará una nueva contraseña temporal para <span className="text-white font-medium">{agent.name}</span> y se enviará por correo.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
-          <button
-            onClick={onReset}
-            disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-amber-900/20"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-            <span>Confirmar</span>
-          </button>
-        </div>
+
+        {!result ? (
+          <>
+            {/* Mode Selection */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                onClick={() => setMode('link')}
+                disabled={!hasTelegram}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'link'
+                    ? 'border-indigo-500 bg-indigo-500/10'
+                    : 'border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800'
+                  } ${!hasTelegram && 'opacity-50 cursor-not-allowed'}`}
+              >
+                <MessageSquare className={`w-5 h-5 mb-2 ${mode === 'link' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+                <p className={`font-medium ${mode === 'link' ? 'text-white' : 'text-zinc-300'}`}>
+                  Enviar enlace
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  El agente elige su contraseña
+                </p>
+              </button>
+              <button
+                onClick={() => setMode('generate')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'generate'
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800'
+                  }`}
+              >
+                <Key className={`w-5 h-5 mb-2 ${mode === 'generate' ? 'text-amber-400' : 'text-zinc-500'}`} />
+                <p className={`font-medium ${mode === 'generate' ? 'text-white' : 'text-zinc-300'}`}>
+                  Generar temporal
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Contraseña aleatoria
+                </p>
+              </button>
+            </div>
+
+            {/* Info box */}
+            <div className="bg-zinc-800/50 rounded-lg p-3 mb-6 text-sm text-zinc-400">
+              {mode === 'link' ? (
+                <p>Se enviará un enlace seguro por Telegram. El enlace expira en 15 minutos.</p>
+              ) : (
+                <p>Se generará una contraseña temporal y se enviará por Telegram. El agente deberá cambiarla.</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={mode === 'link' ? handleSendLink : handleGenerate}
+                disabled={isSubmitting || (mode === 'link' && !hasTelegram)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all font-medium shadow-lg ${mode === 'link'
+                    ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'
+                    : 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20'
+                  } text-white disabled:opacity-50`}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mode === 'link' ? (
+                  <MessageSquare className="w-4 h-4" />
+                ) : (
+                  <Key className="w-4 h-4" />
+                )}
+                <span>{mode === 'link' ? 'Enviar Enlace' : 'Generar'}</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Result */
+          <div className="flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+
+            {/* 1. Icon Container with Glow Effect */}
+            <div className={`
+    relative w-16 h-16 rounded-full flex items-center justify-center mb-5
+    ${result.success
+                ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+                : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)]'
+              }
+  `}>
+              {result.success ? (
+                <CheckCircle2 className="w-8 h-8 animate-in zoom-in duration-300" />
+              ) : (
+                <AlertCircle className="w-8 h-8 animate-in zoom-in duration-300" />
+              )}
+            </div>
+
+            {/* 2. Status Title */}
+            <h3 className="text-lg font-bold text-white mb-2 tracking-tight">
+              {result.success ? '¡Operación Exitosa!' : 'Algo salió mal'}
+            </h3>
+
+            {/* 3. Detailed Message */}
+            <p className={`text-sm mb-8 max-w-[260px] leading-relaxed ${result.success ? 'text-zinc-400' : 'text-red-300/80'}`}>
+              {result.message}
+            </p>
+
+            {/* 4. Action Button */}
+            <button
+              onClick={onClose}
+              className="w-full px-6 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl transition-all font-medium text-xs uppercase tracking-wider shadow-sm"
+            >
+              Cerrar
+            </button>
+
+          </div>
+        )}
       </div>
     </div>
   );

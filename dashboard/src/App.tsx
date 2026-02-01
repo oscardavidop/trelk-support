@@ -1,6 +1,8 @@
 // Trelk Support Dashboard - Main App
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import DashboardLayout from './pages/DashboardLayout';
 import OverviewPage from './pages/OverviewPage';
 import ChatPage from './pages/ChatPage';
@@ -37,6 +39,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/force-change-password" element={<ForceChangePasswordPage />} />
           {/* Redirect legacy /chat/:sessionId URLs to new format */}
           <Route path="/chat/:sessionId" element={<ChatRedirect />} />
           <Route path="/dashboard" element={<DashboardLayout />}>

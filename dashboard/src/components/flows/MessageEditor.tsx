@@ -1,9 +1,10 @@
 /**
  * MessageEditor - Advanced message configuration for Flow Builder
  * Supports blocks (text, image, document, audio, video, delay) and keyboards
+ * NOW WITH DRAG & DROP SUPPORT
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import type {
   MessageBlock,
   TextBlock,
@@ -14,73 +15,81 @@ import type {
   DelayBlock,
   MessageEditorProps,
 } from '../../types/flow';
-import { MessagePreview } from './MessagePreview';
-import { FileUpload } from './FileUpload';
 import {
   Type, Image as ImageIcon, FileText, Mic, Video,
-  Clock, AlertTriangle, Plus, Languages, Layers
+  Clock, AlertTriangle, Plus, Languages, Layers,
+  GripVertical, // Nuevo icono para el agarre
+  GripHorizontal
 } from 'lucide-react';
 import I18nConfigPanel from './components/I18nConfigPanel';
 
+// --- IMPORTS PARA DRAG & DROP ---
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// --- COMPONENTES EDITORES EXISTENTES ---
+import { TextBlockEditor } from './components/TextBlockEditor';
+import { ImageBlockEditor } from './components/ImageBlockEditor';
+import { DocumentBlockEditor } from './components/DocumentBlockEditor';
+import { AudioBlockEditor } from './components/AudioBlockEditor';
+import { VideoBlockEditor } from './components/VideoBlockEditor';
+import { DelayBlockEditor } from './components/DelayBlockEditor';
+
+// --- UTILIDADES ---
 function detectTextKeys(blocks: MessageBlock[]): string[] {
   const keys = new Set<string>();
   const textPattern = /\{\{TEXT\.([A-Z0-9_]+)\}\}/g;
-
   for (const block of blocks) {
-    // Check text content
     if ('content' in block && block.content) {
       let match;
-      while ((match = textPattern.exec(block.content)) !== null) {
-        keys.add(match[1]);
-      }
+      while ((match = textPattern.exec(block.content)) !== null) keys.add(match[1]);
     }
-    // Check caption
     if ('caption' in block && block.caption) {
       let match;
-      while ((match = textPattern.exec(block.caption)) !== null) {
-        keys.add(match[1]);
-      }
+      while ((match = textPattern.exec(block.caption)) !== null) keys.add(match[1]);
     }
-    // Check button texts in keyboard
     if ('keyboard' in block && block.keyboard?.rows) {
       for (const row of block.keyboard.rows) {
         for (const btn of row.buttons) {
           if (btn.text) {
             let match;
-            while ((match = textPattern.exec(btn.text)) !== null) {
-              keys.add(match[1]);
-            }
+            while ((match = textPattern.exec(btn.text)) !== null) keys.add(match[1]);
           }
         }
       }
     }
   }
-
   return Array.from(keys);
 }
 
-
-// Helper function to extract all buttons from blocks and check for issues
 function getButtonValidation(blocks: MessageBlock[]): { hasWarnings: boolean; warnings: string[] } {
   const warnings: string[] = [];
-
   for (const block of blocks) {
     if ('keyboard' in block && block.keyboard?.rows) {
       for (const row of block.keyboard.rows) {
         for (const btn of row.buttons) {
           const mode = btn.onClick?.mode || 'continue';
-
-          // Check for buttons with goto_node but no target
           if (mode === 'goto_node' && !btn.onClick?.targetNodeId && !btn.targetNodeId) {
             warnings.push(`El botón "${btn.text}" tiene acción "Ir a nodo" pero no tiene nodo destino configurado`);
           }
-
-          // Check for buttons with goto_flow but no target
           if (mode === 'goto_flow' && !btn.onClick?.targetFlowId && !btn.targetFlowId) {
             warnings.push(`El botón "${btn.text}" tiene acción "Ir a flow" pero no tiene flow destino configurado`);
           }
-
-          // Check for URL buttons without URL
           if (mode === 'url' && !btn.onClick?.url && !btn.url) {
             warnings.push(`El botón "${btn.text}" tiene acción "Abrir URL" pero no tiene URL configurada`);
           }
@@ -88,20 +97,9 @@ function getButtonValidation(blocks: MessageBlock[]): { hasWarnings: boolean; wa
       }
     }
   }
-
   return { hasWarnings: warnings.length > 0, warnings };
 }
 
-
-import {
-  TextBlockEditor,
-  
-} from './components/TextBlockEditor';
-import { ImageBlockEditor } from './components/ImageBlockEditor';
-import { DocumentBlockEditor } from './components/DocumentBlockEditor';
-import { AudioBlockEditor } from './components/AudioBlockEditor';
-import { VideoBlockEditor } from './components/VideoBlockEditor';
-import { DelayBlockEditor } from './components/DelayBlockEditor';
 const BLOCK_TYPES = [
   { type: 'text', label: 'Texto', icon: Type, color: 'text-zinc-300' },
   { type: 'image', label: 'Imagen', icon: ImageIcon, color: 'text-purple-400' },
@@ -111,15 +109,66 @@ const BLOCK_TYPES = [
   { type: 'delay', label: 'Espera', icon: Clock, color: 'text-yellow-400' },
 ] as const;
 
+// --- COMPONENTE WRAPPER SORTABLE ACTUALIZADO ---
+const SortableBlock = ({ id, children, readOnly }: { id: string, children: React.ReactNode, readOnly?: boolean }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`group relative ${isDragging ? 'opacity-70' : ''}`}>
+
+      {/* Handle de arrastre INTEGRADO EN EL HEADER */}
+      {!readOnly && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-3 left-50 z-10 cursor-grab active:cursor-grabbing p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/70 rounded-md transition-all touch-none"
+          title="Arrastrar para reordenar"
+        >
+          <GripHorizontal className="w-4 h-4" /> {/* Icono ligeramente más pequeño */}
+        </div>
+      )}
+
+      {/* Contenido del bloque (El editor en sí) */}
+      <div className="w-full">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// --- COMPONENTE PRINCIPAL ---
 const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnly, nodes = [], flows = [] }) => {
   const blocks = config.messageBlocks || [];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Validation & Helpers
   const validation = useMemo(() => getButtonValidation(blocks), [blocks]);
   const detectedTextKeys = useMemo(() => detectTextKeys(blocks), [blocks]);
   const hasI18nTexts = detectedTextKeys.length > 0;
 
-  // Initialize legacy content
   React.useEffect(() => {
     if (!config.messageBlocks && config.messageContent) {
       onChange({
@@ -133,17 +182,28 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
   }, []);
 
   // Handlers
-  const addBlock = (type: MessageBlock['type']) => {
-    const newBlock: Partial<MessageBlock> = { id: Date.now().toString(), type };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    // Init defaults
+    if (over && active.id !== over.id) {
+      const oldIndex = blocks.findIndex((block) => block.id === active.id);
+      const newIndex = blocks.findIndex((block) => block.id === over.id);
+
+      onChange({
+        messageBlocks: arrayMove(blocks, oldIndex, newIndex),
+      });
+    }
+  };
+
+  const addBlock = (type: MessageBlock['type']) => {
+    // ... (sin cambios aquí)
+    const newBlock: Partial<MessageBlock> = { id: Date.now().toString(), type };
     if (type === 'text') (newBlock as TextBlock).content = '';
     if (type === 'image') (newBlock as ImageBlock).url = '';
     if (type === 'document') (newBlock as DocumentBlock).url = '';
     if (type === 'audio') (newBlock as AudioBlock).url = '';
     if (type === 'video') (newBlock as VideoBlock).url = '';
     if (type === 'delay') (newBlock as DelayBlock).seconds = 1;
-
     onChange({ messageBlocks: [...blocks, newBlock as MessageBlock] });
   };
 
@@ -158,9 +218,10 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
   };
 
   const renderBlockEditor = (block: MessageBlock, index: number) => {
+    // ... (sin cambios aquí)
     const commonProps = {
       onDelete: () => deleteBlock(index),
-      onInsertVariable: () => { }, // Tu lógica aquí
+      onInsertVariable: () => { },
       readOnly,
       nodes,
       flows,
@@ -182,14 +243,7 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
 
       {/* 1. i18n Banner */}
       {hasI18nTexts && (
-        <div className="flex items-start gap-3 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl animate-in slide-in-from-top-2">
-          <Languages className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <h4 className="text-xs font-bold text-indigo-300">Internacionalización Detectada</h4>
-            {/* Aquí renderizarías tu I18nConfigPanel interno si es pequeño, o un botón para abrirlo */}
-            <I18nConfigPanel config={config} onChange={onChange} detectedTextKeys={detectedTextKeys} readOnly={readOnly} />
-          </div>
-        </div>
+        <I18nConfigPanel config={config} onChange={onChange} detectedTextKeys={detectedTextKeys} readOnly={readOnly} />
       )}
 
       {/* 2. Validation Warnings */}
@@ -205,19 +259,29 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
         </div>
       )}
 
-      {/* 3. Block Stack (Timeline) */}
-      <div className="space-y-4 relative">
-        {/* Timeline Line Decorator */}
+      {/* 3. Block Stack (Timeline + Drag & Drop) */}
+      <div className="space-y-4 relative"> {/* Añadido un pequeño padding izquierdo al contenedor */}
+        {/* Timeline Line Decorator - Regresada a su posición original */}
         {blocks.length > 1 && (
           <div className="absolute left-4 top-4 bottom-4 w-px bg-zinc-800 -z-10" />
         )}
 
-        {blocks.map((block, index) => (
-          <div key={block.id} className="relative animate-in fade-in slide-in-from-bottom-4 duration-300">
-            {/* Block Content */}
-            {renderBlockEditor(block, index)}
-          </div>
-        ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={blocks.map(b => b.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {blocks.map((block, index) => (
+              <SortableBlock key={block.id} id={block.id} readOnly={readOnly}>
+                {renderBlockEditor(block, index)}
+              </SortableBlock>
+            ))}
+          </SortableContext>
+        </DndContext>
 
         {/* Empty State */}
         {blocks.length === 0 && !readOnly && (
