@@ -105,7 +105,7 @@ export async function getGlobalMFASettings(): Promise<GlobalMFASettings> {
   const settings = await Settings.findOne();
   
   return {
-    mfaRequiredForAll: settings?.security?.mfaRequiredForAll || false,
+    mfaRequiredForAll: settings?.security?.twoFactorEnabled || false,
     mfaRequiredRoles: settings?.security?.mfaRequiredRoles || ['admin', 'supervisor'],
     mfaBypassIPs: settings?.security?.mfaBypassIPs || [],
     mfaTrustDevicesEnabled: settings?.security?.mfaTrustDevicesEnabled !== false,
@@ -1536,5 +1536,79 @@ export async function enableTelegramMFA(
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Error al activar Telegram MFA' };
+  }
+}
+
+/**
+ * Disable Telegram MFA method
+ */
+export async function disableTelegramMFA(
+  agentId: string,
+  options: { ip: string; userAgent?: string }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const agent = await Agent.findById(agentId);
+    if (!agent) {
+      return { success: false, error: 'Agente no encontrado' };
+    }
+
+    // Check if Telegram MFA is even enabled
+    if (!agent.security?.mfa?.methods?.telegram) {
+      return { success: false, error: 'Telegram MFA no está activado' };
+    }
+
+    // Check if enforced by admin
+    if (agent.security.mfa.enforcedByAdmin) {
+      // Check if agent has another method
+      if (!agent.security.mfa.methods?.totp) {
+        return { success: false, error: 'No puedes desactivar Telegram MFA porque MFA está forzado y no tienes otro método activo.' };
+      }
+    }
+
+    // Check global policy
+    const globalSettings = await getGlobalMFASettings();
+    if (globalSettings.mfaRequiredForAll || globalSettings.mfaRequiredRoles.includes(agent.role)) {
+      if (!agent.security.mfa.methods?.totp) {
+        return { success: false, error: 'No puedes desactivar Telegram MFA porque tu organización requiere MFA.' };
+      }
+    }
+
+    // Update agent
+    const hasTOTP = agent.security?.mfa?.methods?.totp || false;
+    await Agent.updateOne(
+      { _id: agentId },
+      {
+        $set: {
+          'security.mfa.methods.telegram': false,
+          'security.mfa.enabled': hasTOTP, // Only keep enabled if TOTP is active
+          'security.mfa.preferredMethod': hasTOTP ? 'totp' : null,
+        }
+      }
+    );
+
+    // Log audit
+    await logAudit({
+      action: 'mfa_method_removed',
+      category: 'security',
+      actorId: agentId,
+      actorType: 'agent',
+      actorName: agent.name,
+      targetType: 'agent',
+      targetId: agentId,
+      severity: 'high',
+      ip: options.ip,
+      userAgent: options.userAgent,
+      metadata: { method: 'telegram' },
+    });
+
+    logger.info('mfa-service', {
+      action: 'telegram_mfa_disabled',
+      agentId,
+    });
+
+    return { success: true };
+  } catch (error) {
+    logger.error('mfa-service', { action: 'telegram_mfa_disable_error', error: String(error) });
+    return { success: false, error: 'Error al desactivar Telegram MFA' };
   }
 }

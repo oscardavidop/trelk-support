@@ -318,7 +318,6 @@ export async function requestPasswordResetByEmail(
   }
   
   const agent = await Agent.findOne({ email: sanitizedEmail });
-  
   // Always return success to prevent email enumeration
   if (!agent) {
     // Log the attempt but return generic success

@@ -29,6 +29,7 @@ import {
   regenerateBackupCodesForAgent,
   setPreferredMFAMethod,
   enableTelegramMFA,
+  disableTelegramMFA,
   type MFAMethod,
 } from '../services/mfa.service.js';
 import { getMFASessionByToken } from '../database/index.js';
@@ -699,6 +700,35 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
       return {
         ok: true,
         message: 'Telegram MFA activado',
+      };
+    }
+  );
+
+  /**
+   * Disable Telegram MFA
+   * DELETE /api/auth/mfa/telegram
+   */
+  fastify.delete(
+    '/api/auth/mfa/telegram',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await disableTelegramMFA(
+        request.agent!._id.toString(),
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        message: 'Telegram MFA desactivado',
       };
     }
   );

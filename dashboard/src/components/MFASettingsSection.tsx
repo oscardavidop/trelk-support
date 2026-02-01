@@ -591,7 +591,9 @@ export default function MFASettingsSection() {
         credentials: 'include',
       });
       loadStatus();
-    } catch {}
+    } catch {
+      
+    }
   };
 
   const revokeAllDevices = async () => {
