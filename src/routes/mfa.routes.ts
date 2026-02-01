@@ -1,6 +1,6 @@
 /**
  * MFA Routes
- * API endpoints for Multi-Factor Authentication
+ * API endpoints for Multi-Factor Authentication (Telegram + TOTP)
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -22,6 +22,14 @@ import {
   adminRevokeBypass,
   getGlobalMFASettings,
   updateGlobalMFASettings,
+  // TOTP
+  startTOTPSetup,
+  completeTOTPSetup,
+  disableTOTP,
+  regenerateBackupCodesForAgent,
+  setPreferredMFAMethod,
+  enableTelegramMFA,
+  type MFAMethod,
 } from '../services/mfa.service.js';
 import { getMFASessionByToken } from '../database/index.js';
 import { logger } from '../services/logger.js';
@@ -34,6 +42,8 @@ interface VerifyMFABody {
   trustDevice?: boolean;
   deviceFingerprint?: string;
   deviceName?: string;
+  method?: MFAMethod;
+  isBackupCode?: boolean;
 }
 
 interface ResendCodeBody {
@@ -68,6 +78,15 @@ interface GlobalMFASettingsBody {
   mfaRequiredRoles?: string[];
   mfaBypassIPs?: string[];
   mfaTrustDevicesEnabled?: boolean;
+  mfaAllowedMethods?: MFAMethod[];
+}
+
+interface TOTPVerifyBody {
+  code: string;
+}
+
+interface SetPreferredMethodBody {
+  method: MFAMethod;
 }
 
 interface RevokeDeviceParams {
@@ -93,13 +112,13 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
   // ============= PUBLIC ROUTES (During Login) =============
 
   /**
-   * Verify MFA code
+   * Verify MFA code (supports Telegram, TOTP, and backup codes)
    * POST /api/auth/mfa/verify
    */
   fastify.post<{ Body: VerifyMFABody }>(
     '/api/auth/mfa/verify',
     async (request, reply) => {
-      const { loginToken, code, trustDevice, deviceFingerprint, deviceName } = request.body;
+      const { loginToken, code, trustDevice, deviceFingerprint, deviceName, method, isBackupCode } = request.body;
 
       if (!loginToken || !code) {
         return reply.code(400).send({
@@ -108,11 +127,19 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
         });
       }
 
-      // Validate code format
-      if (!/^\d{6}$/.test(code)) {
+      // Validate code format (6 digits for TOTP/Telegram, or backup code format)
+      if (!isBackupCode && !/^\d{6}$/.test(code)) {
         return reply.code(400).send({
           ok: false,
           error: 'El código debe ser de 6 dígitos',
+        });
+      }
+
+      // Backup codes have format XXXX-XXXX
+      if (isBackupCode && !/^[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(code)) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Formato de código de respaldo inválido',
         });
       }
 
@@ -124,6 +151,8 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
         trustDevice,
         deviceFingerprint,
         deviceName,
+        method,
+        isBackupCode,
       });
 
       if (!result.success) {
@@ -474,6 +503,206 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
     }
   );
 
+  // ============= TOTP ROUTES =============
+
+  /**
+   * Start TOTP setup - Generate secret and QR code
+   * POST /api/auth/mfa/totp/setup
+   */
+  fastify.post(
+    '/api/auth/mfa/totp/setup',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await startTOTPSetup(
+        request.agent!._id.toString(),
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        secret: result.secret,
+        qrCodeUri: result.qrCodeUri,
+        backupCodes: result.backupCodes,
+        message: 'Escanea el código QR con tu app autenticadora',
+      };
+    }
+  );
+
+  /**
+   * Complete TOTP setup - Verify first code
+   * POST /api/auth/mfa/totp/verify
+   */
+  fastify.post<{ Body: TOTPVerifyBody }>(
+    '/api/auth/mfa/totp/verify',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { code } = request.body;
+
+      if (!code || !/^\d{6}$/.test(code)) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'El código debe ser de 6 dígitos',
+        });
+      }
+
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await completeTOTPSetup(
+        request.agent!._id.toString(),
+        code,
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        message: 'TOTP configurado exitosamente',
+      };
+    }
+  );
+
+  /**
+   * Disable TOTP
+   * DELETE /api/auth/mfa/totp
+   */
+  fastify.delete(
+    '/api/auth/mfa/totp',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await disableTOTP(
+        request.agent!._id.toString(),
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        message: 'TOTP desactivado',
+      };
+    }
+  );
+
+  /**
+   * Regenerate backup codes
+   * POST /api/auth/mfa/totp/backup-codes
+   */
+  fastify.post(
+    '/api/auth/mfa/totp/backup-codes',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await regenerateBackupCodesForAgent(
+        request.agent!._id.toString(),
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        codes: result.codes,
+        message: 'Códigos de respaldo regenerados. Guárdalos en un lugar seguro.',
+      };
+    }
+  );
+
+  /**
+   * Set preferred MFA method
+   * PUT /api/auth/mfa/preferred-method
+   */
+  fastify.put<{ Body: SetPreferredMethodBody }>(
+    '/api/auth/mfa/preferred-method',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { method } = request.body;
+
+      if (!method || !['telegram', 'totp'].includes(method)) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Método inválido',
+        });
+      }
+
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await setPreferredMFAMethod(
+        request.agent!._id.toString(),
+        method,
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        message: 'Método preferido actualizado',
+      };
+    }
+  );
+
+  /**
+   * Enable Telegram MFA
+   * POST /api/auth/mfa/telegram/enable
+   */
+  fastify.post(
+    '/api/auth/mfa/telegram/enable',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await enableTelegramMFA(
+        request.agent!._id.toString(),
+        { ip, userAgent }
+      );
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        message: 'Telegram MFA activado',
+      };
+    }
+  );
+
   // ============= ADMIN ROUTES =============
 
   /**
@@ -708,6 +937,68 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
         message: `${count} dispositivos revocados`,
         count,
       };
+    }
+  );
+
+  /**
+   * Admin: Set preferred MFA method for agent
+   * PUT /api/admin/agents/:agentId/mfa/preferred-method
+   */
+  fastify.put<{ Params: AdminMFAParams; Body: { method: MFAMethod } }>(
+    '/api/admin/agents/:agentId/mfa/preferred-method',
+    { preHandler: requirePermission('agents.write') },
+    async (request, reply) => {
+      const { method } = request.body;
+      
+      if (!method || !['telegram', 'totp'].includes(method)) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Método inválido',
+        });
+      }
+
+      try {
+        const { Agent } = await import('../database/models/Agent.js');
+        const agent = await Agent.findById(request.params.agentId);
+        
+        if (!agent) {
+          return reply.code(404).send({
+            ok: false,
+            error: 'Agente no encontrado',
+          });
+        }
+
+        // Verify the method is actually configured for this agent
+        const status = await getMFAStatus(request.params.agentId);
+        if (!status.methods[method]) {
+          return reply.code(400).send({
+            ok: false,
+            error: `El método ${method} no está configurado para este agente`,
+          });
+        }
+
+        await Agent.updateOne(
+          { _id: request.params.agentId },
+          { preferredMfaMethod: method }
+        );
+
+        logger.info('admin', {
+          action: 'admin_set_preferred_mfa_method',
+          adminId: request.agent!._id.toString(),
+          targetAgentId: request.params.agentId,
+          method,
+        });
+
+        return {
+          ok: true,
+          message: `Método preferido establecido a ${method}`,
+        };
+      } catch (error) {
+        return reply.code(500).send({
+          ok: false,
+          error: 'Error al establecer método preferido',
+        });
+      }
     }
   );
 }

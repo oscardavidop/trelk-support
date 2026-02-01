@@ -76,4 +76,24 @@ export {
   revokeDevice,
   revokeAllDevices,
 } from './models/TrustedDevice.js';
+export {
+  TOTPSecret,
+  type ITOTPSecret,
+  TOTP_CONFIG,
+  generateTOTPSecret,
+  verifyTOTPCode,
+  generateBackupCodes,
+  hashBackupCode,
+  generateOTPAuthURI,
+  createTOTPSecret,
+  getTOTPSecret,
+  getTOTPDocument,
+  verifyTOTPSetup,
+  verifyAgentTOTP,
+  useBackupCode,
+  regenerateBackupCodes,
+  getBackupCodesStatus,
+  deleteTOTPSecret,
+  hasTOTPEnabled,
+} from './models/TOTPSecret.js';
 export { connectDatabase, disconnectDatabase } from './connection.js';

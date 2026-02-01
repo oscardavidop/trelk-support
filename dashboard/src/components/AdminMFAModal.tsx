@@ -2,9 +2,11 @@
 import { useState, useEffect } from 'react';
 import { 
   X, Shield, ShieldCheck, ShieldOff, Loader2, AlertTriangle, 
-  CheckCircle2, Clock, Smartphone, RefreshCw
+  CheckCircle2, Clock, Smartphone, RefreshCw, Send, QrCode, Star
 } from 'lucide-react';
 import type { Agent } from '../types';
+
+type MFAMethod = 'telegram' | 'totp';
 
 interface Props {
   agent: Agent;
@@ -15,12 +17,16 @@ interface Props {
 
 interface MFAAdminStatus {
   enabled: boolean;
+  methods: { telegram: boolean; totp: boolean };
+  preferredMethod?: MFAMethod;
   verifiedAt?: string;
   enforcedByAdmin?: boolean;
   bypassUntil?: string;
   disabledAt?: string;
   disabledBy?: { name: string };
   trustedDevicesCount: number;
+  totpConfigured?: boolean;
+  backupCodesStatus?: { total: number; used: number; remaining: number };
 }
 
 export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props) {
@@ -45,7 +51,8 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
       });
       const data = await res.json();
       if (data.ok) {
-        setStatus(data);
+        // The endpoint returns { ok, mfa: {...} }
+        setStatus(data.mfa);
       } else {
         setError(data.error || 'Error al cargar estado MFA');
       }
@@ -143,6 +150,34 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
         loadStatus();
       } else {
         setError(data.error || 'Error al conceder bypass');
+      }
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Set Preferred Method
+  const handleSetPreferredMethod = async (method: MFAMethod) => {
+    setActionLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`/api/admin/agents/${agent._id}/mfa/preferred-method`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ method }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSuccess(`Método preferido establecido: ${method === 'telegram' ? 'Telegram' : 'App Autenticador'}`);
+        loadStatus();
+      } else {
+        setError(data.error || 'Error al establecer método preferido');
       }
     } catch {
       setError('Error de conexión');
@@ -252,6 +287,79 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
                   </div>
                 )}
               </div>
+
+              {/* MFA Methods */}
+              {status?.enabled && (status?.methods?.telegram || status?.methods?.totp || status?.totpConfigured) && (
+                <div className="p-4 bg-zinc-800/50 border border-zinc-700 rounded-xl">
+                  <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-3">Métodos Configurados</p>
+                  <div className="space-y-2">
+                    {/* Telegram Method */}
+                    {status.methods?.telegram && (
+                      <div className={`flex items-center justify-between p-3 rounded-lg border ${
+                        status.preferredMethod === 'telegram' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-zinc-900/50 border-zinc-700'
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${status.preferredMethod === 'telegram' ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                            <Send className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-sm text-zinc-200">Telegram</span>
+                            {status.preferredMethod === 'telegram' && (
+                              <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                                <Star className="w-3 h-3" /> Preferido
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {status.preferredMethod !== 'telegram' && status.methods?.totp && (
+                          <button
+                            onClick={() => handleSetPreferredMethod('telegram')}
+                            disabled={actionLoading}
+                            className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-700 transition-colors"
+                          >
+                            Hacer preferido
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* TOTP Method */}
+                    {(status.methods?.totp || status.totpConfigured) && (
+                      <div className={`flex items-center justify-between p-3 rounded-lg border ${
+                        status.preferredMethod === 'totp' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-zinc-900/50 border-zinc-700'
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${status.preferredMethod === 'totp' ? 'bg-purple-500/20 text-purple-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                            <QrCode className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-sm text-zinc-200">App Autenticador</span>
+                            {status.preferredMethod === 'totp' && (
+                              <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                                <Star className="w-3 h-3" /> Preferido
+                              </span>
+                            )}
+                            {status.backupCodesStatus && (
+                              <span className="ml-2 text-[10px] text-zinc-500">
+                                {status.backupCodesStatus.remaining}/{status.backupCodesStatus.total} códigos respaldo
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {status.preferredMethod !== 'totp' && status.methods?.telegram && (
+                          <button
+                            onClick={() => handleSetPreferredMethod('totp')}
+                            disabled={actionLoading}
+                            className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-700 transition-colors"
+                          >
+                            Hacer preferido
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Bypass Status */}
               {status?.bypassUntil && new Date(status.bypassUntil) > new Date() && (

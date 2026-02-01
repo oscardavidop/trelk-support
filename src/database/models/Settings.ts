@@ -66,6 +66,7 @@ export interface ISecuritySettings {
   mfaRequiredRoles?: string[];
   mfaBypassIPs?: string[];
   mfaTrustDevicesEnabled?: boolean;
+  mfaAllowedMethods?: ('telegram' | 'totp')[];
 }
 
 export interface INotificationSettings {

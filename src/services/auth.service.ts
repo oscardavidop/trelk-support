@@ -34,6 +34,10 @@ export interface AuthResult {
   mfaLoginToken?: string;
   mfaError?: string;
   mfaExpiresIn?: number;
+  // Multi-method MFA fields
+  mfaAvailableMethods?: ('telegram' | 'totp')[];
+  mfaPreferredMethod?: 'telegram' | 'totp';
+  mfaSelectedMethod?: 'telegram' | 'totp';
 }
 
 /**
@@ -59,6 +63,7 @@ export async function loginAgent(
   options?: {
     skipMFA?: boolean;        // For internal calls after MFA verification
     deviceFingerprint?: string;
+    preferredMethod?: 'telegram' | 'totp';  // Preferred MFA method
   }
 ): Promise<AuthResult> {
   try {
@@ -88,16 +93,20 @@ export async function loginAgent(
         ip: deviceInfo?.ip,
         userAgent: deviceInfo?.browser,
         deviceFingerprint: options?.deviceFingerprint,
+        preferredMethod: options?.preferredMethod,
       });
       
       if (mfaResult.required) {
-        // MFA is required - return pending state
+        // MFA is required - return pending state with method info
         return {
           success: true,
           mfaRequired: true,
           mfaLoginToken: mfaResult.loginToken,
           mfaError: mfaResult.error,
           mfaExpiresIn: mfaResult.expiresIn,
+          mfaAvailableMethods: mfaResult.availableMethods,
+          mfaPreferredMethod: mfaResult.preferredMethod,
+          mfaSelectedMethod: mfaResult.selectedMethod,
         };
       }
     }

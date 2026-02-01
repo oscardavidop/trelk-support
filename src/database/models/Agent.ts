@@ -147,6 +147,11 @@ export interface IAgent extends Document {
   
   // MFA (Multi-Factor Authentication)
   mfaEnabled: boolean;                   // Whether MFA is enabled for this agent
+  mfaMethods: {                          // Which MFA methods are enabled
+    telegram: boolean;
+    totp: boolean;
+  };
+  preferredMfaMethod?: 'telegram' | 'totp';  // User's preferred method
   mfaVerifiedAt?: Date;                  // When MFA was first verified/enabled
   mfaDisabledAt?: Date;                  // When MFA was disabled
   mfaDisabledBy?: Types.ObjectId;        // Admin who disabled MFA (if admin action)
@@ -283,6 +288,15 @@ const AgentSchema = new Schema<IAgent>(
       type: Boolean,
       default: false,
       index: true,
+    },
+    mfaMethods: {
+      telegram: { type: Boolean, default: false },
+      totp: { type: Boolean, default: false },
+    },
+    preferredMfaMethod: {
+      type: String,
+      enum: ['telegram', 'totp'],
+      default: null,
     },
     mfaVerifiedAt: {
       type: Date,

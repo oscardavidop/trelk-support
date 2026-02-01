@@ -3,13 +3,20 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { 
   Shield, AlertCircle, Loader2, RefreshCw, 
-  ArrowLeft, CheckCircle2, Clock, Smartphone
+  ArrowLeft, CheckCircle2, Clock, Smartphone,
+  Send, QrCode, Key
 } from 'lucide-react';
+
+type MFAMethod = 'telegram' | 'totp';
 
 interface MFAVerifyState {
   loginToken: string;
   expiresIn?: number;
   email?: string;
+  // Multi-method fields
+  availableMethods?: MFAMethod[];
+  preferredMethod?: MFAMethod;
+  selectedMethod?: MFAMethod;
 }
 
 export default function MFAVerifyPage() {
@@ -20,8 +27,15 @@ export default function MFAVerifyPage() {
   // Get state passed from login
   const state = location.state as MFAVerifyState | null;
   
-  // Code input state (6 digits)
+  // Method selection
+  const [currentMethod, setCurrentMethod] = useState<MFAMethod>(
+    state?.selectedMethod || state?.preferredMethod || 'telegram'
+  );
+  const [isBackupCode, setIsBackupCode] = useState(false);
+  
+  // Code input state (6 digits for TOTP/Telegram, 9 for backup codes with dash)
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [backupCode, setBackupCode] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   // UI state
@@ -32,7 +46,7 @@ export default function MFAVerifyPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [trustDevice, setTrustDevice] = useState(false);
   
-  // Timer state
+  // Timer state (only for Telegram)
   const [timeLeft, setTimeLeft] = useState(state?.expiresIn || 120);
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -125,10 +139,15 @@ export default function MFAVerifyPage() {
 
   // Verify code
   const handleVerify = async (codeString?: string) => {
-    const fullCode = codeString || code.join('');
+    const fullCode = isBackupCode ? backupCode : (codeString || code.join(''));
     
-    if (fullCode.length !== 6) {
+    if (!isBackupCode && fullCode.length !== 6) {
       setError('Ingresa el código de 6 dígitos');
+      return;
+    }
+    
+    if (isBackupCode && !fullCode.match(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/i)) {
+      setError('Formato de código de respaldo inválido (XXXX-XXXX)');
       return;
     }
     
@@ -143,6 +162,8 @@ export default function MFAVerifyPage() {
         body: JSON.stringify({
           loginToken: state!.loginToken,
           code: fullCode,
+          method: currentMethod,
+          isBackupCode,
           trustDevice,
           deviceFingerprint: await getDeviceFingerprint(),
         }),
@@ -284,6 +305,10 @@ export default function MFAVerifyPage() {
     );
   }
 
+  // Has multiple methods available
+  const hasMultipleMethods = (state?.availableMethods?.length ?? 0) > 1;
+  const availableMethods = state?.availableMethods || ['telegram'];
+
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden selection:bg-indigo-500/30">
       {/* Background */}
@@ -296,25 +321,70 @@ export default function MFAVerifyPage() {
           <div className="inline-flex items-center justify-center mb-4">
             <img src="/assets/img/logo-dark.png" alt="Trelk Logo" className="h-14 w-auto" />
           </div>
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-500/20 rounded-full mb-4">
-            <Shield className="w-6 h-6 text-indigo-400" />
+          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 ${
+            currentMethod === 'telegram' ? 'bg-blue-500/20' : 'bg-purple-500/20'
+          }`}>
+            {currentMethod === 'telegram' ? (
+              <Send className="w-6 h-6 text-blue-400" />
+            ) : (
+              <QrCode className="w-6 h-6 text-purple-400" />
+            )}
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Verificación de Seguridad</h1>
           <p className="text-zinc-400 text-sm">
-            Ingresa el código de 6 dígitos enviado a tu Telegram
+            {isBackupCode 
+              ? 'Ingresa uno de tus códigos de respaldo'
+              : currentMethod === 'telegram'
+                ? 'Ingresa el código de 6 dígitos enviado a tu Telegram'
+                : 'Ingresa el código de tu app autenticador'
+            }
           </p>
         </div>
 
         {/* Card */}
         <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-8 shadow-2xl">
           
-          {/* Timer */}
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Clock className={`w-4 h-4 ${timeLeft < 30 ? 'text-amber-400' : 'text-zinc-400'}`} />
-            <span className={`text-sm font-mono ${timeLeft < 30 ? 'text-amber-400' : 'text-zinc-400'}`}>
-              {timeLeft > 0 ? `Expira en ${formatTime(timeLeft)}` : 'Código expirado'}
-            </span>
-          </div>
+          {/* Method Selector (if multiple methods available) */}
+          {hasMultipleMethods && !isBackupCode && (
+            <div className="flex gap-2 mb-6">
+              {availableMethods.includes('telegram') && (
+                <button
+                  onClick={() => { setCurrentMethod('telegram'); setCode(['', '', '', '', '', '']); setError(''); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
+                    currentMethod === 'telegram'
+                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 border border-zinc-700'
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Telegram</span>
+                </button>
+              )}
+              {availableMethods.includes('totp') && (
+                <button
+                  onClick={() => { setCurrentMethod('totp'); setCode(['', '', '', '', '', '']); setError(''); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
+                    currentMethod === 'totp'
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 border border-zinc-700'
+                  }`}
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>App</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Timer (only for Telegram) */}
+          {currentMethod === 'telegram' && !isBackupCode && (
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Clock className={`w-4 h-4 ${timeLeft < 30 ? 'text-amber-400' : 'text-zinc-400'}`} />
+              <span className={`text-sm font-mono ${timeLeft < 30 ? 'text-amber-400' : 'text-zinc-400'}`}>
+                {timeLeft > 0 ? `Expira en ${formatTime(timeLeft)}` : 'Código expirado'}
+              </span>
+            </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -331,26 +401,65 @@ export default function MFAVerifyPage() {
             </div>
           )}
 
-          {/* Code Input */}
-          <div className="flex justify-center gap-2 mb-6" onPaste={handlePaste}>
-            {code.map((digit, index) => (
+          {/* Code Input - Regular */}
+          {!isBackupCode && (
+            <div className="flex justify-center gap-2 mb-6" onPaste={handlePaste}>
+              {code.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={el => { inputRefs.current[index] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={e => handleInputChange(index, e.target.value)}
+                  onKeyDown={e => handleKeyDown(index, e)}
+                  disabled={isVerifying || (currentMethod === 'telegram' && timeLeft === 0)}
+                  className={`w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all
+                    ${digit 
+                      ? currentMethod === 'telegram' 
+                        ? 'border-blue-500 bg-blue-500/10' 
+                        : 'border-purple-500 bg-purple-500/10' 
+                      : 'border-zinc-700 bg-zinc-800/50'}
+                    ${isVerifying || (currentMethod === 'telegram' && timeLeft === 0) 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : currentMethod === 'telegram'
+                        ? 'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                        : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'}
+                    text-white outline-none`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Backup Code Input */}
+          {isBackupCode && (
+            <div className="mb-6">
               <input
-                key={index}
-                ref={el => { inputRefs.current[index] = el; }}
                 type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={e => handleInputChange(index, e.target.value)}
-                onKeyDown={e => handleKeyDown(index, e)}
-                disabled={isVerifying || timeLeft === 0}
-                className={`w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all
-                  ${digit ? 'border-indigo-500 bg-indigo-500/10' : 'border-zinc-700 bg-zinc-800/50'}
-                  ${isVerifying || timeLeft === 0 ? 'opacity-50 cursor-not-allowed' : 'focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'}
-                  text-white outline-none`}
+                value={backupCode}
+                onChange={e => {
+                  const val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+                  if (val.length <= 9) {
+                    // Auto-add dash after 4 chars
+                    if (val.length === 4 && !val.includes('-')) {
+                      setBackupCode(val + '-');
+                    } else {
+                      setBackupCode(val);
+                    }
+                  }
+                  setError('');
+                }}
+                placeholder="XXXX-XXXX"
+                disabled={isVerifying}
+                className="w-full text-center text-2xl font-mono font-bold py-4 px-4 rounded-xl border-2 border-zinc-700 bg-zinc-800/50 text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-zinc-600"
+                autoFocus
               />
-            ))}
-          </div>
+              <p className="text-xs text-zinc-500 text-center mt-2">
+                Ingresa uno de tus códigos de respaldo de 8 caracteres
+              </p>
+            </div>
+          )}
 
           {/* Trust Device Checkbox */}
           <label className="flex items-center gap-3 mb-6 cursor-pointer group">
@@ -378,8 +487,18 @@ export default function MFAVerifyPage() {
           {/* Verify Button */}
           <button
             onClick={() => handleVerify()}
-            disabled={isVerifying || code.join('').length !== 6 || timeLeft === 0}
-            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            disabled={
+              isVerifying || 
+              (isBackupCode ? !backupCode.match(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/i) : code.join('').length !== 6) || 
+              (currentMethod === 'telegram' && !isBackupCode && timeLeft === 0)
+            }
+            className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 text-white font-medium rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+              isBackupCode
+                ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-500/25'
+                : currentMethod === 'telegram'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/25'
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/25'
+            }`}
           >
             {isVerifying ? (
               <>
@@ -387,32 +506,52 @@ export default function MFAVerifyPage() {
                 <span>Verificando...</span>
               </>
             ) : (
-              <span>Verificar Código</span>
+              <span>Verificar {isBackupCode ? 'Código de Respaldo' : 'Código'}</span>
             )}
           </button>
 
-          {/* Resend */}
-          <div className="mt-6 text-center">
-            <p className="text-zinc-500 text-sm mb-2">¿No recibiste el código?</p>
-            <button
-              onClick={handleResend}
-              disabled={isResending || resendCooldown > 0}
-              className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isResending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              {resendCooldown > 0 
-                ? `Reenviar en ${resendCooldown}s`
-                : 'Reenviar código'
-              }
-            </button>
-          </div>
+          {/* Resend (only for Telegram) */}
+          {currentMethod === 'telegram' && !isBackupCode && (
+            <div className="mt-6 text-center">
+              <p className="text-zinc-500 text-sm mb-2">¿No recibiste el código?</p>
+              <button
+                onClick={handleResend}
+                disabled={isResending || resendCooldown > 0}
+                className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isResending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                {resendCooldown > 0 
+                  ? `Reenviar en ${resendCooldown}s`
+                  : 'Reenviar código'
+                }
+              </button>
+            </div>
+          )}
+
+          {/* Backup Code Toggle (only for TOTP users) */}
+          {availableMethods.includes('totp') && (
+            <div className="mt-6 pt-6 border-t border-zinc-800">
+              <button
+                onClick={() => {
+                  setIsBackupCode(!isBackupCode);
+                  setCode(['', '', '', '', '', '']);
+                  setBackupCode('');
+                  setError('');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-white text-sm transition-colors"
+              >
+                <Key className="w-4 h-4" />
+                {isBackupCode ? 'Usar código de app' : 'Usar código de respaldo'}
+              </button>
+            </div>
+          )}
 
           {/* Back to login */}
-          <div className="mt-6 pt-6 border-t border-zinc-800">
+          <div className={`mt-6 ${!availableMethods.includes('totp') ? 'pt-6 border-t border-zinc-800' : ''}`}>
             <button
               onClick={() => navigate('/login')}
               className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-white text-sm transition-colors"

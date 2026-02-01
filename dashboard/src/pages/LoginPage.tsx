@@ -61,6 +61,10 @@ export default function LoginPage() {
               loginToken: data.mfaLoginToken,
               expiresIn: data.mfaExpiresIn || 120,
               email: email,
+              // Multi-method MFA fields
+              availableMethods: data.mfaAvailableMethods || ['telegram'],
+              preferredMethod: data.mfaPreferredMethod,
+              selectedMethod: data.mfaSelectedMethod,
             },
             replace: true,
           });
