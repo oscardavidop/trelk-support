@@ -163,12 +163,12 @@ export async function updateGlobalMFASettings(
  */
 export async function isMFARequired(agent: IAgent, ip?: string): Promise<boolean> {
   // Check if agent has MFA bypass active
-  if (agent.mfaBypassUntil && agent.mfaBypassUntil > new Date()) {
+  if (agent.security.mfa.bypassUntil && agent.security.mfa.bypassUntil > new Date()) {
     return false;
   }
 
   // Check if agent has MFA enabled
-  if (agent.mfaEnabled) {
+  if (agent.security.mfa.enabled) {
     return true;
   }
 
@@ -191,7 +191,7 @@ export async function isMFARequired(agent: IAgent, ip?: string): Promise<boolean
   }
 
   // Check if enforced by admin
-  if (agent.mfaEnforcedByAdmin) {
+  if (agent.security.mfa.enforcedByAdmin) {
     return true;
   }
 
@@ -207,15 +207,15 @@ export async function getAgentMFAMethods(agent: IAgent): Promise<MFAMethod[]> {
   const methods: MFAMethod[] = [];
   
   // Check Telegram - support both new system (mfaMethods.telegram) and legacy (mfaEnabled + telegramId)
-  const hasTelegramNewSystem = agent.telegramId && agent.mfaMethods?.telegram;
-  const hasTelegramLegacy = agent.telegramId && agent.mfaEnabled && !agent.mfaMethods?.telegram && !agent.mfaMethods?.totp;
+  const hasTelegramNewSystem = agent.telegramId && agent.security.mfa.methods?.telegram;
+  const hasTelegramLegacy = agent.telegramId && agent.security.mfa.enabled && !agent.security.mfa.methods?.telegram && !agent.security.mfa.methods?.totp;
   
   if (hasTelegramNewSystem || hasTelegramLegacy) {
     methods.push('telegram');
   }
   
   // Check TOTP
-  if (agent.mfaMethods?.totp) {
+  if (agent.security.mfa.methods?.totp) {
     const hasTOTP = await hasTOTPEnabled(agent._id);
     if (hasTOTP) {
       methods.push('totp');
@@ -278,8 +278,8 @@ export async function initiateMFA(
     // Determine which method to use
     const selectedMethod = options.preferredMethod && availableMethods.includes(options.preferredMethod)
       ? options.preferredMethod
-      : agent.preferredMfaMethod && availableMethods.includes(agent.preferredMfaMethod)
-        ? agent.preferredMfaMethod
+      : agent.security.mfa.preferredMethod && availableMethods.includes(agent.security.mfa.preferredMethod)
+        ? agent.security.mfa.preferredMethod
         : availableMethods[0];
 
     // If TOTP selected, no need to send code - user enters from app
@@ -301,7 +301,7 @@ export async function initiateMFA(
         required: true,
         loginToken,
         availableMethods,
-        preferredMethod: agent.preferredMfaMethod,
+        preferredMethod: agent.security.mfa.preferredMethod,
         selectedMethod: 'totp',
         message: 'Ingresa el código de tu app autenticadora',
         expiresIn: 5 * 60,
@@ -350,7 +350,7 @@ export async function initiateMFA(
           required: true,
           loginToken: existingSession.loginToken,
           availableMethods,
-          preferredMethod: agent.preferredMfaMethod,
+          preferredMethod: agent.security.mfa.preferredMethod,
           selectedMethod: 'telegram',
           message: 'Ya se envió un código de verificación a tu Telegram',
           expiresIn,
@@ -405,7 +405,7 @@ export async function initiateMFA(
         required: true,
         loginToken,
         availableMethods,
-        preferredMethod: agent.preferredMfaMethod,
+        preferredMethod: agent.security.mfa.preferredMethod,
         selectedMethod: 'telegram',
         message: 'Se ha enviado un código de verificación a tu Telegram',
         expiresIn: MFA_CONFIG.CODE_EXPIRY_MINUTES * 60,
@@ -495,7 +495,7 @@ export async function verifyMFA(
       }
     }
     // TOTP verification
-    else if (options.method === 'totp' || (agent.mfaMethods?.totp && !agent.mfaMethods?.telegram)) {
+    else if (options.method === 'totp' || (agent.security.mfa.methods?.totp && !agent.security.mfa.methods?.telegram)) {
       // Validate code format (6 digits)
       if (!code || !/^\d{6}$/.test(code)) {
         return { success: false, error: 'El código debe ser de 6 dígitos' };
@@ -697,7 +697,7 @@ export async function startMFAActivation(
       return { success: false, error: 'Agente no encontrado' };
     }
 
-    if (agent.mfaEnabled) {
+    if (agent.security.mfa.enabled) {
       return { success: false, error: 'MFA ya está activado' };
     }
 
@@ -758,10 +758,10 @@ export async function completeMFAActivation(
     await Agent.updateOne(
       { _id: agentId },
       {
-        mfaEnabled: true,
-        mfaVerifiedAt: new Date(),
-        mfaDisabledAt: null,
-        mfaDisabledBy: null,
+        'security.mfa.enabled': true,
+        'security.mfa.verifiedAt': new Date(),
+        'security.mfa.disabledAt': null,
+        'security.mfa.disabledBy': null,
       }
     );
 
@@ -817,12 +817,12 @@ export async function disableMFA(
       return { success: false, error: 'Agente no encontrado' };
     }
 
-    if (!agent.mfaEnabled) {
+    if (!agent.security.mfa.enabled) {
       return { success: false, error: 'MFA no está activado' };
     }
 
     // Check if MFA was enforced by admin
-    if (agent.mfaEnforcedByAdmin) {
+    if (agent.security.mfa.enforcedByAdmin) {
       return { success: false, error: 'MFA fue activado por un administrador y no puede ser desactivado' };
     }
 
@@ -836,8 +836,8 @@ export async function disableMFA(
     await Agent.updateOne(
       { _id: agentId },
       {
-        mfaEnabled: false,
-        mfaDisabledAt: new Date(),
+        'security.mfa.enabled': false,
+        'security.mfa.disabledAt': new Date(),
       }
     );
 
@@ -899,11 +899,11 @@ export async function adminEnableMFA(
     await Agent.updateOne(
       { _id: targetAgentId },
       {
-        mfaEnabled: true,
-        mfaEnforcedByAdmin: true,
-        mfaVerifiedAt: new Date(),
-        mfaDisabledAt: null,
-        mfaDisabledBy: null,
+        'security.mfa.enabled': true,
+        'security.mfa.enforcedByAdmin': true,
+        'security.mfa.verifiedAt': new Date(),
+        'security.mfa.disabledAt': null,
+        'security.mfa.disabledBy': null,
       }
     );
 
@@ -951,10 +951,10 @@ export async function adminDisableMFA(
     await Agent.updateOne(
       { _id: targetAgentId },
       {
-        mfaEnabled: false,
-        mfaEnforcedByAdmin: false,
-        mfaDisabledAt: new Date(),
-        mfaDisabledBy: adminId,
+        'security.mfa.enabled': false,
+        'security.mfa.enforcedByAdmin': false,
+        'security.mfa.disabledAt': new Date(),
+        'security.mfa.disabledBy': adminId,
       }
     );
 
@@ -1005,7 +1005,7 @@ export async function adminBypassMFA(
 
     await Agent.updateOne(
       { _id: targetAgentId },
-      { mfaBypassUntil: bypassUntil }
+      { 'security.mfa.bypassUntil': bypassUntil }
     );
 
     const agent = await Agent.findById(targetAgentId);
@@ -1048,7 +1048,7 @@ export async function adminRevokeBypass(
   try {
     await Agent.updateOne(
       { _id: targetAgentId },
-      { mfaBypassUntil: null }
+      { 'security.mfa.bypassUntil': null }
     );
 
     // Log audit
@@ -1173,20 +1173,20 @@ export async function getMFAStatus(agentId: string): Promise<{
 
   // Detect legacy Telegram MFA: mfaEnabled=true but mfaMethods.telegram not set
   // This happens for agents that enabled MFA before the multi-method system was implemented
-  const hasTelegramLegacy = !!(agent.mfaEnabled && agent.telegramId && !agent.mfaMethods?.telegram && !agent.mfaMethods?.totp);
-  const telegramEnabled = !!(agent.mfaMethods?.telegram || hasTelegramLegacy);
+  const hasTelegramLegacy = !!(agent.security.mfa.enabled && agent.telegramId && !agent.security.mfa.methods?.telegram && !agent.security.mfa.methods?.totp);
+  const telegramEnabled = !!(agent.security.mfa.methods?.telegram || hasTelegramLegacy);
 
   return {
-    enabled: agent.mfaEnabled || false,
+    enabled: agent.security.mfa.enabled || false,
     methods: {
       telegram: telegramEnabled,
-      totp: agent.mfaMethods?.totp || false,
+      totp: agent.security.mfa.methods?.totp || false,
     },
-    preferredMethod: agent.preferredMfaMethod,
-    verifiedAt: agent.mfaVerifiedAt,
-    enforcedByAdmin: agent.mfaEnforcedByAdmin || false,
-    hasBypass: !!(agent.mfaBypassUntil && agent.mfaBypassUntil > new Date()),
-    bypassUntil: agent.mfaBypassUntil,
+    preferredMethod: agent.security.mfa.preferredMethod,
+    verifiedAt: agent.security.mfa.verifiedAt,
+    enforcedByAdmin: agent.security.mfa.enforcedByAdmin || false,
+    hasBypass: !!(agent.security.mfa.bypassUntil && agent.security.mfa.bypassUntil > new Date()),
+    bypassUntil: agent.security.mfa.bypassUntil,
     trustedDevicesCount: trustedDevices.length,
     globalRequired: globalSettings.mfaRequiredForAll,
     roleRequired: globalSettings.mfaRequiredRoles.includes(agent.role),
@@ -1260,11 +1260,11 @@ export async function completeTOTPSetup(
     await Agent.updateOne(
       { _id: agentId },
       {
-        mfaEnabled: true,
-        'mfaMethods.totp': true,
-        mfaVerifiedAt: agent.mfaVerifiedAt || new Date(),
+        'security.mfa.enabled': true,
+        'security.mfa.methods.totp': true,
+        'security.mfa.verifiedAt': agent.security.mfa.verifiedAt || new Date(),
         // Set preferred method to TOTP if not already set
-        preferredMfaMethod: agent.preferredMfaMethod || 'totp',
+        'security.mfa.preferredMethod': agent.security.mfa.preferredMethod || 'totp',
       }
     );
 
@@ -1309,9 +1309,9 @@ export async function disableTOTP(
     }
 
     // Check if enforced by admin
-    if (agent.mfaEnforcedByAdmin) {
+    if (agent.security.mfa.enforcedByAdmin) {
       // Check if agent has another method
-      if (!agent.mfaMethods?.telegram) {
+      if (!agent.security.mfa.methods?.telegram) {
         return { success: false, error: 'No puedes desactivar TOTP porque MFA está forzado y no tienes otro método activo.' };
       }
     }
@@ -1319,7 +1319,7 @@ export async function disableTOTP(
     // Check global policy
     const globalSettings = await getGlobalMFASettings();
     if (globalSettings.mfaRequiredForAll || globalSettings.mfaRequiredRoles.includes(agent.role)) {
-      if (!agent.mfaMethods?.telegram) {
+      if (!agent.security.mfa.methods?.telegram) {
         return { success: false, error: 'No puedes desactivar TOTP porque la política de seguridad requiere MFA.' };
       }
     }
@@ -1328,13 +1328,13 @@ export async function disableTOTP(
     await deleteTOTPSecret(agentId);
 
     // Update agent
-    const hasTelegram = agent.mfaMethods?.telegram || false;
+    const hasTelegram = agent.security.mfa.methods?.telegram || false;
     await Agent.updateOne(
       { _id: agentId },
       {
-        'mfaMethods.totp': false,
-        mfaEnabled: hasTelegram, // Only keep enabled if telegram is active
-        preferredMfaMethod: hasTelegram ? 'telegram' : null,
+        'security.mfa.methods.totp': false,
+        'security.mfa.enabled': hasTelegram, // Only keep enabled if telegram is active
+        'security.mfa.preferredMethod': hasTelegram ? 'telegram' : null,
       }
     );
 
@@ -1424,16 +1424,16 @@ export async function setPreferredMFAMethod(
     }
 
     // Verify the method is enabled
-    if (method === 'telegram' && !agent.mfaMethods?.telegram) {
+    if (method === 'telegram' && !agent.security.mfa.methods?.telegram) {
       return { success: false, error: 'Telegram MFA no está activado' };
     }
-    if (method === 'totp' && !agent.mfaMethods?.totp) {
+    if (method === 'totp' && !agent.security.mfa.methods?.totp) {
       return { success: false, error: 'TOTP no está configurado' };
     }
 
     await Agent.updateOne(
       { _id: agentId },
-      { preferredMfaMethod: method }
+      { 'security.mfa.preferredMethod': method }
     );
 
     // Log audit
@@ -1477,10 +1477,10 @@ export async function enableTelegramMFA(
     await Agent.updateOne(
       { _id: agentId },
       {
-        mfaEnabled: true,
-        'mfaMethods.telegram': true,
-        mfaVerifiedAt: agent.mfaVerifiedAt || new Date(),
-        preferredMfaMethod: agent.preferredMfaMethod || 'telegram',
+        'security.mfa.enabled': true,
+        'security.mfa.methods.telegram': true,
+        'security.mfa.verifiedAt': agent.security.mfa.verifiedAt || new Date(),
+        'security.mfa.preferredMethod': agent.security.mfa.preferredMethod || 'telegram',
       }
     );
 

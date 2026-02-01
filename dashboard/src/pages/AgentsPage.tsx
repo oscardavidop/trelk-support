@@ -525,7 +525,7 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
           <div className="flex items-center gap-2">
             <span className="font-medium text-zinc-200 truncate">{agent.name}</span>
             {isCurrentUser && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-px rounded border border-emerald-500/30 font-medium">TÚ</span>}
-            {agent.mfaEnabled && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-px rounded border border-indigo-500/30 font-medium flex items-center gap-0.5"><Shield className="w-2.5 h-2.5"/>MFA</span>}
+            {agent.security?.mfa?.enabled && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-px rounded border border-indigo-500/30 font-medium flex items-center gap-0.5"><Shield className="w-2.5 h-2.5"/>MFA</span>}
           </div>
           <span className="text-xs text-zinc-500 truncate">{agent.email}</span>
         </div>
@@ -603,8 +603,8 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
             <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
             <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
             <DropdownItem
-              icon={agent.mfaEnabled ? ShieldCheck : Shield}
-              label={agent.mfaEnabled ? 'Gestionar MFA' : 'Configurar MFA'}
+              icon={agent.security?.mfa?.enabled ? ShieldCheck : Shield}
+              label={agent.security?.mfa?.enabled ? 'Gestionar MFA' : 'Configurar MFA'}
               onClick={onMFA}
             />
             <DropdownItem

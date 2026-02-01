@@ -496,12 +496,13 @@ export default function MFASettingsSection() {
     setDisableError('');
     
     try {
+      // Both methods use DELETE with password
       const endpoint = disableMethod === 'totp' 
         ? '/api/auth/mfa/totp' 
-        : '/api/auth/mfa/disable';
+        : '/api/auth/mfa/telegram';
       
       const res = await fetch(endpoint, {
-        method: disableMethod === 'totp' ? 'DELETE' : 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ password: disablePassword }),

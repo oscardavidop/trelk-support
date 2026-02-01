@@ -70,19 +70,19 @@ async function checkAgentRateLimit(agentId: string): Promise<RateLimitResult> {
   const now = new Date();
 
   // Check if blocked
-  if (agent.passwordResetBlockedUntil && agent.passwordResetBlockedUntil > now) {
+  if (agent.security.password.resetBlockedUntil && agent.security.password.resetBlockedUntil > now) {
     return {
       allowed: false,
-      blockedUntil: agent.passwordResetBlockedUntil,
-      error: `Demasiados intentos. Intenta de nuevo después de ${agent.passwordResetBlockedUntil.toLocaleTimeString('es-ES')}`,
+      blockedUntil: agent.security.password.resetBlockedUntil,
+      error: `Demasiados intentos. Intenta de nuevo después de ${agent.security.password.resetBlockedUntil.toLocaleTimeString('es-ES')}`,
     };
   }
 
   // Reset counter if window expired
-  const windowStart = agent.passwordResetAttemptsResetAt || new Date(0);
+  const windowStart = agent.security.password.resetAttemptsResetAt || new Date(0);
   const windowExpired = now.getTime() - windowStart.getTime() > 60 * 60 * 1000; // 1 hour
 
-  let attempts = windowExpired ? 0 : (agent.passwordResetAttempts || 0);
+  let attempts = windowExpired ? 0 : (agent.security.password.resetAttempts || 0);
   
   // Check if rate limited
   if (attempts >= RATE_LIMIT.maxRequestsPerHour) {
@@ -91,9 +91,9 @@ async function checkAgentRateLimit(agentId: string): Promise<RateLimitResult> {
     await Agent.updateOne(
       { _id: agentId },
       { 
-        passwordResetBlockedUntil: blockedUntil,
-        passwordResetAttempts: 0,
-        passwordResetAttemptsResetAt: blockedUntil,
+        'security.password.resetBlockedUntil': blockedUntil,
+        'security.password.resetAttempts': 0,
+        'security.password.resetAttemptsResetAt': blockedUntil,
       }
     );
 
@@ -108,8 +108,8 @@ async function checkAgentRateLimit(agentId: string): Promise<RateLimitResult> {
   await Agent.updateOne(
     { _id: agentId },
     {
-      $inc: { passwordResetAttempts: 1 },
-      ...(windowExpired ? { passwordResetAttemptsResetAt: now } : {}),
+      $inc: { 'security.password.resetAttempts': 1 },
+      ...(windowExpired ? { 'security.password.resetAttemptsResetAt': now } : {}),
     }
   );
 
@@ -436,10 +436,10 @@ export async function completePasswordReset(
 
     // 4. Update password
     agent.password = newPassword;
-    agent.forcePasswordChange = false;
-    agent.lastPasswordChangeAt = new Date();
-    agent.passwordResetAttempts = 0;
-    agent.passwordResetBlockedUntil = undefined;
+    agent.security.password.forceChange = false;
+    agent.security.password.lastChangedAt = new Date();
+    agent.security.password.resetAttempts = 0;
+    agent.security.password.resetBlockedUntil = undefined;
     await agent.save();
 
     // 5. Invalidate all existing sessions
@@ -502,7 +502,7 @@ export async function forcePasswordChange(
   try {
     const agent = await Agent.findByIdAndUpdate(
       agentId,
-      { forcePasswordChange: true },
+      { 'security.password.forceChange': true },
       { new: true }
     );
 
@@ -551,7 +551,7 @@ export async function completeForcedPasswordChange(
     }
 
     // 2. Check if force change is required
-    if (!agent.forcePasswordChange) {
+    if (!agent.security.password.forceChange) {
       return { success: false, error: 'No se requiere cambio de contraseña' };
     }
 
@@ -569,8 +569,8 @@ export async function completeForcedPasswordChange(
 
     // 4. Update password
     agent.password = newPassword;
-    agent.forcePasswordChange = false;
-    agent.lastPasswordChangeAt = new Date();
+    agent.security.password.forceChange = false;
+    agent.security.password.lastChangedAt = new Date();
     await agent.save();
 
     // 5. Log audit
@@ -699,5 +699,5 @@ function validatePasswordStrength(password: string): PasswordValidation {
  */
 export async function checkPasswordChangeRequired(agentId: string): Promise<boolean> {
   const agent = await Agent.findById(agentId);
-  return agent?.forcePasswordChange === true;
+  return agent?.security?.password?.forceChange === true;
 }

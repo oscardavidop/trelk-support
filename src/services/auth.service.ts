@@ -152,7 +152,7 @@ export async function loginAgent(
     const permissions = await getEffectivePermissions(agent._id.toString());
     
     // Check if password change is required
-    const forcePasswordChange = agent.forcePasswordChange === true;
+    const forcePasswordChange = agent.security.password.forceChange === true;
     
     return {
       success: true,
@@ -267,7 +267,7 @@ export async function completeLoginAfterMFA(
     const permissions = await getEffectivePermissions(agentId);
     
     // Check if password change is required
-    const forcePasswordChange = agent.forcePasswordChange === true;
+    const forcePasswordChange = agent.security.password.forceChange === true;
     
     logger.info('auth', {
       action: 'mfa_login_completed',
@@ -306,7 +306,7 @@ export async function refreshToken(token: string): Promise<AuthResult> {
   const permissions = await getEffectivePermissions(agent._id.toString());
   
   // Check if password change is required
-  const forcePasswordChange = agent.forcePasswordChange === true;
+  const forcePasswordChange = agent.security.password.forceChange === true;
   
   return {
     success: true,

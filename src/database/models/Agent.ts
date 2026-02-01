@@ -95,6 +95,42 @@ export interface IPermissionsOverride {
   deny: string[];    // Permissions explicitly denied
 }
 
+/**
+ * Security settings for password management
+ */
+export interface IPasswordSecurity {
+  forceChange: boolean;              // Force user to change password on next login
+  lastChangedAt?: Date;              // When password was last changed
+  resetBlockedUntil?: Date;          // Rate limit: blocked until this time
+  resetAttempts: number;             // Number of reset attempts in current window
+  resetAttemptsResetAt?: Date;       // When to reset the attempt counter
+}
+
+/**
+ * Security settings for MFA (Multi-Factor Authentication)
+ */
+export interface IMFASecurity {
+  enabled: boolean;                  // Whether MFA is enabled for this agent
+  methods: {                         // Which MFA methods are enabled
+    telegram: boolean;
+    totp: boolean;
+  };
+  preferredMethod?: 'telegram' | 'totp';  // User's preferred method
+  verifiedAt?: Date;                 // When MFA was first verified/enabled
+  disabledAt?: Date;                 // When MFA was disabled
+  disabledBy?: Types.ObjectId;       // Admin who disabled MFA (if admin action)
+  bypassUntil?: Date;                // Temporary bypass (for admin recovery)
+  enforcedByAdmin: boolean;          // If MFA was forced by admin (cannot disable)
+}
+
+/**
+ * Combined security settings
+ */
+export interface ISecuritySettings {
+  password: IPasswordSecurity;
+  mfa: IMFASecurity;
+}
+
 export interface IAgent extends Document {
   _id: Types.ObjectId;
   name: string;
@@ -138,25 +174,8 @@ export interface IAgent extends Document {
   // Whether the agent can request permissions (can be blocked by admin)
   canRequestPermissions?: boolean;
   
-  // Password management
-  forcePasswordChange?: boolean;         // Force user to change password on next login
-  lastPasswordChangeAt?: Date;           // When password was last changed
-  passwordResetBlockedUntil?: Date;      // Rate limit: blocked until this time
-  passwordResetAttempts?: number;        // Number of reset attempts in current window
-  passwordResetAttemptsResetAt?: Date;   // When to reset the attempt counter
-  
-  // MFA (Multi-Factor Authentication)
-  mfaEnabled: boolean;                   // Whether MFA is enabled for this agent
-  mfaMethods: {                          // Which MFA methods are enabled
-    telegram: boolean;
-    totp: boolean;
-  };
-  preferredMfaMethod?: 'telegram' | 'totp';  // User's preferred method
-  mfaVerifiedAt?: Date;                  // When MFA was first verified/enabled
-  mfaDisabledAt?: Date;                  // When MFA was disabled
-  mfaDisabledBy?: Types.ObjectId;        // Admin who disabled MFA (if admin action)
-  mfaBypassUntil?: Date;                 // Temporary bypass (for admin recovery)
-  mfaEnforcedByAdmin?: boolean;          // If MFA was forced by admin (cannot disable)
+  // Security settings (password + MFA) - new nested structure
+  security: ISecuritySettings;
   
   createdAt: Date;
   updatedAt: Date;
@@ -262,62 +281,67 @@ const AgentSchema = new Schema<IAgent>(
       type: Boolean,
       default: true,
     },
-    // Password management
-    forcePasswordChange: {
-      type: Boolean,
-      default: false,
-    },
-    lastPasswordChangeAt: {
-      type: Date,
-      default: null,
-    },
-    passwordResetBlockedUntil: {
-      type: Date,
-      default: null,
-    },
-    passwordResetAttempts: {
-      type: Number,
-      default: 0,
-    },
-    passwordResetAttemptsResetAt: {
-      type: Date,
-      default: null,
-    },
-    // MFA (Multi-Factor Authentication)
-    mfaEnabled: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-    mfaMethods: {
-      telegram: { type: Boolean, default: false },
-      totp: { type: Boolean, default: false },
-    },
-    preferredMfaMethod: {
-      type: String,
-      enum: ['telegram', 'totp'],
-      default: null,
-    },
-    mfaVerifiedAt: {
-      type: Date,
-      default: null,
-    },
-    mfaDisabledAt: {
-      type: Date,
-      default: null,
-    },
-    mfaDisabledBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'Agent',
-      default: null,
-    },
-    mfaBypassUntil: {
-      type: Date,
-      default: null,
-    },
-    mfaEnforcedByAdmin: {
-      type: Boolean,
-      default: false,
+    // Security settings (password + MFA)
+    security: {
+      password: {
+        forceChange: {
+          type: Boolean,
+          default: false,
+        },
+        lastChangedAt: {
+          type: Date,
+          default: null,
+        },
+        resetBlockedUntil: {
+          type: Date,
+          default: null,
+        },
+        resetAttempts: {
+          type: Number,
+          default: 0,
+        },
+        resetAttemptsResetAt: {
+          type: Date,
+          default: null,
+        },
+      },
+      mfa: {
+        enabled: {
+          type: Boolean,
+          default: false,
+          index: true,
+        },
+        methods: {
+          telegram: { type: Boolean, default: false },
+          totp: { type: Boolean, default: false },
+        },
+        preferredMethod: {
+          type: String,
+          enum: ['telegram', 'totp', null],
+          default: null,
+        },
+        verifiedAt: {
+          type: Date,
+          default: null,
+        },
+        disabledAt: {
+          type: Date,
+          default: null,
+        },
+        disabledBy: {
+          type: Schema.Types.ObjectId,
+          ref: 'Agent',
+          default: null,
+        },
+        bypassUntil: {
+          type: Date,
+          default: null,
+        },
+        enforcedByAdmin: {
+          type: Boolean,
+          default: false,
+        },
+      },
     },
     // Survey metrics
     metrics: {

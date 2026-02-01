@@ -96,15 +96,25 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
           ok: false,
           error: result.mfaError,
           mfaRequired: true,
+          mfaAvailableMethods: result.mfaAvailableMethods || [],
         });
       }
+      
+      // Determine the correct message based on selected method
+      const selectedMethod = result.mfaSelectedMethod || 'telegram';
+      const message = selectedMethod === 'totp'
+        ? 'Ingresa el código de tu app autenticadora'
+        : 'Se ha enviado un código de verificación a tu Telegram';
       
       return {
         ok: true,
         mfaRequired: true,
         mfaLoginToken: result.mfaLoginToken,
         mfaExpiresIn: result.mfaExpiresIn,
-        message: 'Se ha enviado un código de verificación a tu Telegram',
+        mfaAvailableMethods: result.mfaAvailableMethods || ['telegram'],
+        mfaPreferredMethod: result.mfaPreferredMethod,
+        mfaSelectedMethod: result.mfaSelectedMethod || 'telegram',
+        message,
       };
     }
 

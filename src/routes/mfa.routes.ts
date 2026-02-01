@@ -341,14 +341,14 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
     async (request, reply) => {
       const agent = request.agent!;
       
-      if (!agent.mfaEnabled) {
+      if (!agent.security.mfa.enabled) {
         return reply.code(400).send({
           ok: false,
           error: 'MFA no está activado',
         });
       }
 
-      if (agent.mfaEnforcedByAdmin) {
+      if (agent.security.mfa.enforcedByAdmin) {
         return reply.code(403).send({
           ok: false,
           error: 'MFA fue activado por un administrador y no puede ser desactivado',
@@ -979,7 +979,7 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
 
         await Agent.updateOne(
           { _id: request.params.agentId },
-          { preferredMfaMethod: method }
+          { 'security.mfa.preferredMethod': method }
         );
 
         logger.info('admin', {
