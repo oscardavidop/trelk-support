@@ -979,7 +979,7 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
 
         await Agent.updateOne(
           { _id: request.params.agentId },
-          { 'security.mfa.preferredMethod': method }
+          { $set: { 'security.mfa.preferredMethod': method } }
         );
 
         logger.info('admin', {

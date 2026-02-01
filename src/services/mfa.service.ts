@@ -254,7 +254,7 @@ export async function initiateMFA(
     // If no methods configured but MFA required, return error
     if (availableMethods.length === 0) {
       return {
-        required: true,
+        required: false,
         error: 'No tienes ningún método MFA configurado. Configura uno en Ajustes → Seguridad.',
         availableMethods: [],
       };
@@ -754,21 +754,32 @@ export async function completeMFAActivation(
       return { success: false, error: result.error };
     }
 
-    // Enable MFA
-    await Agent.updateOne(
-      { _id: agentId },
-      {
-        'security.mfa.enabled': true,
-        'security.mfa.verifiedAt': new Date(),
-        'security.mfa.disabledAt': null,
-        'security.mfa.disabledBy': null,
-      }
-    );
-
+    // Get agent to check current state
     const agent = await Agent.findById(agentId);
+    if (!agent) {
+      return { success: false, error: 'Agente no encontrado' };
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {
+      'security.mfa.enabled': true,
+      'security.mfa.methods.telegram': true,
+      'security.mfa.verifiedAt': new Date(),
+      'security.mfa.disabledAt': null,
+      'security.mfa.disabledBy': null,
+    };
+
+    // Set preferred method if not already set, or if no methods were active
+    if (!agent.security?.mfa?.preferredMethod || 
+        (!agent.security?.mfa?.methods?.totp && !agent.security?.mfa?.methods?.telegram)) {
+      updateData['security.mfa.preferredMethod'] = 'telegram';
+    }
+
+    // Enable MFA (using $set operator)
+    await Agent.updateOne({ _id: agentId }, { $set: updateData });
 
     // Send confirmation
-    if (agent?.telegramId) {
+    if (agent.telegramId) {
       await sendMFAAlertTelegram(agent.telegramId, 'enabled', agent.name);
     }
 
@@ -836,8 +847,10 @@ export async function disableMFA(
     await Agent.updateOne(
       { _id: agentId },
       {
-        'security.mfa.enabled': false,
-        'security.mfa.disabledAt': new Date(),
+        $set: {
+          'security.mfa.enabled': false,
+          'security.mfa.disabledAt': new Date(),
+        }
       }
     );
 
@@ -899,11 +912,13 @@ export async function adminEnableMFA(
     await Agent.updateOne(
       { _id: targetAgentId },
       {
-        'security.mfa.enabled': true,
-        'security.mfa.enforcedByAdmin': true,
-        'security.mfa.verifiedAt': new Date(),
-        'security.mfa.disabledAt': null,
-        'security.mfa.disabledBy': null,
+        $set: {
+          'security.mfa.enabled': true,
+          'security.mfa.enforcedByAdmin': true,
+          'security.mfa.verifiedAt': new Date(),
+          'security.mfa.disabledAt': null,
+          'security.mfa.disabledBy': null,
+        }
       }
     );
 
@@ -951,10 +966,12 @@ export async function adminDisableMFA(
     await Agent.updateOne(
       { _id: targetAgentId },
       {
-        'security.mfa.enabled': false,
-        'security.mfa.enforcedByAdmin': false,
-        'security.mfa.disabledAt': new Date(),
-        'security.mfa.disabledBy': adminId,
+        $set: {
+          'security.mfa.enabled': false,
+          'security.mfa.enforcedByAdmin': false,
+          'security.mfa.disabledAt': new Date(),
+          'security.mfa.disabledBy': adminId,
+        }
       }
     );
 
@@ -1005,7 +1022,7 @@ export async function adminBypassMFA(
 
     await Agent.updateOne(
       { _id: targetAgentId },
-      { 'security.mfa.bypassUntil': bypassUntil }
+      { $set: { 'security.mfa.bypassUntil': bypassUntil } }
     );
 
     const agent = await Agent.findById(targetAgentId);
@@ -1048,7 +1065,7 @@ export async function adminRevokeBypass(
   try {
     await Agent.updateOne(
       { _id: targetAgentId },
-      { 'security.mfa.bypassUntil': null }
+      { $set: { 'security.mfa.bypassUntil': null } }
     );
 
     // Log audit
@@ -1171,28 +1188,39 @@ export async function getMFAStatus(agentId: string): Promise<{
   const totpConfigured = await hasTOTPEnabled(agentId);
   const backupCodesStatus = totpConfigured ? await getBackupCodesStatus(agentId) : undefined;
 
+  // Safe access to security fields (may not exist for legacy agents)
+  const mfaSecurity = agent.security?.mfa;
+  
   // Detect legacy Telegram MFA: mfaEnabled=true but mfaMethods.telegram not set
   // This happens for agents that enabled MFA before the multi-method system was implemented
-  const hasTelegramLegacy = !!(agent.security.mfa.enabled && agent.telegramId && !agent.security.mfa.methods?.telegram && !agent.security.mfa.methods?.totp);
-  const telegramEnabled = !!(agent.security.mfa.methods?.telegram || hasTelegramLegacy);
+  const hasTelegramLegacy = !!(mfaSecurity?.enabled && agent.telegramId && !mfaSecurity?.methods?.telegram && !mfaSecurity?.methods?.totp);
+  const telegramEnabled = !!(mfaSecurity?.methods?.telegram || hasTelegramLegacy);
 
-  return {
-    enabled: agent.security.mfa.enabled || false,
+  const result = {
+    enabled: mfaSecurity?.enabled || false,
     methods: {
       telegram: telegramEnabled,
-      totp: agent.security.mfa.methods?.totp || false,
+      totp: mfaSecurity?.methods?.totp || false,
     },
-    preferredMethod: agent.security.mfa.preferredMethod,
-    verifiedAt: agent.security.mfa.verifiedAt,
-    enforcedByAdmin: agent.security.mfa.enforcedByAdmin || false,
-    hasBypass: !!(agent.security.mfa.bypassUntil && agent.security.mfa.bypassUntil > new Date()),
-    bypassUntil: agent.security.mfa.bypassUntil,
+    preferredMethod: mfaSecurity?.preferredMethod,
+    verifiedAt: mfaSecurity?.verifiedAt,
+    enforcedByAdmin: mfaSecurity?.enforcedByAdmin || false,
+    hasBypass: !!(mfaSecurity?.bypassUntil && mfaSecurity.bypassUntil > new Date()),
+    bypassUntil: mfaSecurity?.bypassUntil,
     trustedDevicesCount: trustedDevices.length,
     globalRequired: globalSettings.mfaRequiredForAll,
     roleRequired: globalSettings.mfaRequiredRoles.includes(agent.role),
     totpConfigured,
     backupCodesStatus: backupCodesStatus || undefined,
   };
+
+  logger.info('mfa-service', {
+    action: 'get_mfa_status_result',
+    agentId,
+    result: JSON.stringify(result),
+  });
+
+  return result;
 }
 
 // ============= TOTP MANAGEMENT =============
@@ -1260,11 +1288,13 @@ export async function completeTOTPSetup(
     await Agent.updateOne(
       { _id: agentId },
       {
-        'security.mfa.enabled': true,
-        'security.mfa.methods.totp': true,
-        'security.mfa.verifiedAt': agent.security.mfa.verifiedAt || new Date(),
-        // Set preferred method to TOTP if not already set
-        'security.mfa.preferredMethod': agent.security.mfa.preferredMethod || 'totp',
+        $set: {
+          'security.mfa.enabled': true,
+          'security.mfa.methods.totp': true,
+          'security.mfa.verifiedAt': agent.security?.mfa?.verifiedAt || new Date(),
+          // Set preferred method to TOTP if not already set
+          'security.mfa.preferredMethod': agent.security?.mfa?.preferredMethod || 'totp',
+        }
       }
     );
 
@@ -1328,13 +1358,15 @@ export async function disableTOTP(
     await deleteTOTPSecret(agentId);
 
     // Update agent
-    const hasTelegram = agent.security.mfa.methods?.telegram || false;
+    const hasTelegram = agent.security?.mfa?.methods?.telegram || false;
     await Agent.updateOne(
       { _id: agentId },
       {
-        'security.mfa.methods.totp': false,
-        'security.mfa.enabled': hasTelegram, // Only keep enabled if telegram is active
-        'security.mfa.preferredMethod': hasTelegram ? 'telegram' : null,
+        $set: {
+          'security.mfa.methods.totp': false,
+          'security.mfa.enabled': hasTelegram, // Only keep enabled if telegram is active
+          'security.mfa.preferredMethod': hasTelegram ? 'telegram' : null,
+        }
       }
     );
 
@@ -1433,7 +1465,7 @@ export async function setPreferredMFAMethod(
 
     await Agent.updateOne(
       { _id: agentId },
-      { 'security.mfa.preferredMethod': method }
+      { $set: { 'security.mfa.preferredMethod': method } }
     );
 
     // Log audit
@@ -1477,10 +1509,12 @@ export async function enableTelegramMFA(
     await Agent.updateOne(
       { _id: agentId },
       {
-        'security.mfa.enabled': true,
-        'security.mfa.methods.telegram': true,
-        'security.mfa.verifiedAt': agent.security.mfa.verifiedAt || new Date(),
-        'security.mfa.preferredMethod': agent.security.mfa.preferredMethod || 'telegram',
+        $set: {
+          'security.mfa.enabled': true,
+          'security.mfa.methods.telegram': true,
+          'security.mfa.verifiedAt': agent.security?.mfa?.verifiedAt || new Date(),
+          'security.mfa.preferredMethod': agent.security?.mfa?.preferredMethod || 'telegram',
+        }
       }
     );
 

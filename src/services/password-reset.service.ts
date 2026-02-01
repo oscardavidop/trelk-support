@@ -91,9 +91,11 @@ async function checkAgentRateLimit(agentId: string): Promise<RateLimitResult> {
     await Agent.updateOne(
       { _id: agentId },
       { 
-        'security.password.resetBlockedUntil': blockedUntil,
-        'security.password.resetAttempts': 0,
-        'security.password.resetAttemptsResetAt': blockedUntil,
+        $set: {
+          'security.password.resetBlockedUntil': blockedUntil,
+          'security.password.resetAttempts': 0,
+          'security.password.resetAttemptsResetAt': blockedUntil,
+        }
       }
     );
 
@@ -105,13 +107,13 @@ async function checkAgentRateLimit(agentId: string): Promise<RateLimitResult> {
   }
 
   // Increment counter
-  await Agent.updateOne(
-    { _id: agentId },
-    {
-      $inc: { 'security.password.resetAttempts': 1 },
-      ...(windowExpired ? { 'security.password.resetAttemptsResetAt': now } : {}),
-    }
-  );
+  const updateOps: Record<string, unknown> = {
+    $inc: { 'security.password.resetAttempts': 1 },
+  };
+  if (windowExpired) {
+    updateOps.$set = { 'security.password.resetAttemptsResetAt': now };
+  }
+  await Agent.updateOne({ _id: agentId }, updateOps);
 
   return {
     allowed: true,
