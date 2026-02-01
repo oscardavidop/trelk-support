@@ -68,7 +68,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
     },
     category: {
       type: String,
-      enum: ['message', 'session', 'agent', 'rule', 'settings', 'export', 'security', 'user', 'auth'],
+      enum: ['message', 'session', 'agent', 'rule', 'settings', 'export', 'security', 'user', 'auth', 'authentication'],
       required: true,
       index: true,
     },

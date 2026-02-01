@@ -18,6 +18,7 @@ import {
   getMFASessionByToken,
   canResendMFACode,
   isAgentMFABlocked,
+  getPendingMFASession,
   cancelAllMFASessions,
   trustDevice,
   isDeviceTrusted,
@@ -222,12 +223,25 @@ export async function initiateMFA(
       };
     }
 
-    // Check rate limit for code sending
-    const { canResend, waitSeconds } = await canResendMFACode(agent._id);
-    if (!canResend) {
+    // Check for existing pending session that can be reused
+    const existingSession = await getPendingMFASession(agent._id);
+    if (existingSession && existingSession.loginToken) {
+      // Calculate remaining time
+      const expiresIn = Math.floor((existingSession.expiresAt.getTime() - Date.now()) / 1000);
+      
+      logger.info('mfa-service', {
+        action: 'mfa_session_reused',
+        agentId: agent._id.toString(),
+        sessionId: existingSession._id.toString(),
+        expiresIn,
+      });
+      
+      // Reuse existing session - don't send a new code
       return {
         required: true,
-        error: `Espera ${waitSeconds} segundos antes de solicitar un nuevo código`,
+        loginToken: existingSession.loginToken,
+        message: 'Ya se envió un código de verificación a tu Telegram',
+        expiresIn,
       };
     }
 

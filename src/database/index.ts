@@ -57,8 +57,10 @@ export {
   createMFASession,
   verifyMFACode,
   getMFASessionByToken,
+  getVerifiedMFASession,
   canResendMFACode,
   isAgentMFABlocked,
+  getPendingMFASession,
   cancelAllMFASessions,
   cleanupExpiredMFASessions,
 } from './models/MFASession.js';

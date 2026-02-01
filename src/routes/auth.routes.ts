@@ -141,15 +141,14 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       }
 
       // Verify the MFA session was completed
-      const { verifyMFA } = await import('../services/mfa.service.js');
-      const { getMFASessionByToken } = await import('../database/index.js');
+      const { getVerifiedMFASession } = await import('../database/index.js');
       
-      const session = await getMFASessionByToken(loginToken);
+      const session = await getVerifiedMFASession(loginToken);
       
       // Check if session exists and is verified
       // Note: The actual verification happens in /api/auth/mfa/verify
       // This endpoint creates the actual session after MFA is confirmed
-      if (!session || session.status !== 'verified') {
+      if (!session) {
         return reply.code(401).send({ 
           ok: false, 
           error: 'Sesión MFA no verificada o expirada' 

@@ -293,11 +293,11 @@ export default function MFAVerifyPage() {
         
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-6">
-            <img src="/assets/img/logo-dark.png" alt="Trelk Logo" className="h-16 w-auto" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/assets/img/logo-dark.png" alt="Trelk Logo" className="h-14 w-auto" />
           </div>
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-500/20 rounded-full mb-4">
-            <Shield className="w-7 h-7 text-indigo-400" />
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-500/20 rounded-full mb-4">
+            <Shield className="w-6 h-6 text-indigo-400" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Verificación de Seguridad</h1>
           <p className="text-zinc-400 text-sm">
@@ -354,15 +354,20 @@ export default function MFAVerifyPage() {
 
           {/* Trust Device Checkbox */}
           <label className="flex items-center gap-3 mb-6 cursor-pointer group">
-            <div className="relative">
+            <div className="relative flex items-center justify-center">
               <input
                 type="checkbox"
                 checked={trustDevice}
                 onChange={e => setTrustDevice(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-5 h-5 border-2 border-zinc-600 rounded bg-zinc-800 peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all" />
-              <CheckCircle2 className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+              <div className="w-5 h-5 border-2 border-zinc-600 rounded bg-zinc-800 peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all flex items-center justify-center">
+                {trustDevice && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-400 group-hover:text-zinc-300">
               <Smartphone className="w-4 h-4" />

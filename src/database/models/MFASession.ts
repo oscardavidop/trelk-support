@@ -262,6 +262,13 @@ export async function getMFASessionByToken(loginToken: string): Promise<IMFASess
 }
 
 /**
+ * Get verified MFA session by login token (for completing login)
+ */
+export async function getVerifiedMFASession(loginToken: string): Promise<IMFASession | null> {
+  return MFASession.findOne({ loginToken, status: 'verified' });
+}
+
+/**
  * Check if agent can request new MFA code (rate limiting)
  */
 export async function canResendMFACode(agentId: string | Types.ObjectId): Promise<{
@@ -301,6 +308,17 @@ export async function isAgentMFABlocked(agentId: string | Types.ObjectId): Promi
   }
 
   return { blocked: false };
+}
+
+/**
+ * Get pending valid MFA session for an agent (for reuse during login)
+ */
+export async function getPendingMFASession(agentId: string | Types.ObjectId): Promise<IMFASession | null> {
+  return MFASession.findOne({
+    agentId: new Types.ObjectId(agentId.toString()),
+    status: 'pending',
+    expiresAt: { $gt: new Date() },
+  }).sort({ createdAt: -1 });
 }
 
 /**
