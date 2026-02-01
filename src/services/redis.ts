@@ -284,6 +284,25 @@ export async function del(key: string | string[]): Promise<number> {
 }
 
 /**
+ * Get TTL (Time To Live) of a key in seconds
+ * Returns -1 if key has no TTL, -2 if key doesn't exist
+ */
+export async function getTTL(key: string): Promise<number> {
+  if (!isRedisAvailable()) return -2;
+  
+  try {
+    operationCount++;
+    const ttl = await redisClient!.ttl(key);
+    lastSuccessfulOperation = Date.now();
+    return ttl;
+  } catch (error) {
+    errorCount++;
+    logger.error('redis', { action: 'ttl_error', key, error: String(error) });
+    return -2;
+  }
+}
+
+/**
  * Delete by pattern (for invalidation)
  */
 export async function delByPattern(pattern: string): Promise<number> {

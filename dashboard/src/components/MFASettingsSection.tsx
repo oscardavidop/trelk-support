@@ -257,6 +257,25 @@ export default function MFASettingsSection() {
     }
   };
 
+  const handleTelegramCodePaste = (index: number, e: React.ClipboardEvent) => {
+    const pasteData = e.clipboardData.getData('Text').trim();
+    if (!/^\d+$/.test(pasteData)) return;
+    const digits = pasteData.split('');
+    const newCode = [...telegramCode];
+    for (let i = 0; i < digits.length; i++) {
+      if (index + i < 6) {
+        newCode[index + i] = digits[i];
+      }
+    }
+    setTelegramCode(newCode);
+    const nextIndex = Math.min(5, index + digits.length - 1);
+    telegramInputRefs.current[nextIndex]?.focus();
+    e.preventDefault();
+    if (newCode.every(d => d) && newCode.join('').length === 6) {
+      verifyTelegramCode(newCode.join(''));
+    }
+  };
+
   const verifyTelegramCode = async (codeString?: string) => {
     const fullCode = codeString || telegramCode.join('');
     if (fullCode.length !== 6) return;
@@ -983,6 +1002,7 @@ export default function MFASettingsSection() {
                     value={digit}
                     onChange={e => handleTelegramCodeChange(index, e.target.value)}
                     onKeyDown={e => handleTelegramKeyDown(index, e)}
+                    onPaste={e => handleTelegramCodePaste(index, e)}
                     disabled={telegramLoading || timeLeft === 0}
                     className={`w-11 h-13 text-center text-xl font-bold rounded-lg border-2 transition-all
                       ${digit ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 bg-zinc-800'}

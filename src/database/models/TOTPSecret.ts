@@ -43,6 +43,11 @@ export interface ITOTPSecret extends Document {
     usedAt?: Date;             // When it was used (null = unused)
   }[];
   
+  // Anti-replay protection
+  lastUsedCode?: string;       // Hash of last used TOTP code
+  lastUsedAt?: Date;           // When last code was used
+  lastUsedCounter?: number;    // TOTP counter to prevent replay
+  
   // Status
   verified: boolean;           // Has user verified with a code?
   verifiedAt?: Date;
@@ -82,6 +87,19 @@ const TOTPSecretSchema = new Schema<ITOTPSecret>(
       codeHash: { type: String, required: true },
       usedAt: { type: Date, default: null },
     }],
+    // Anti-replay protection
+    lastUsedCode: {
+      type: String,
+      default: null,
+    },
+    lastUsedAt: {
+      type: Date,
+      default: null,
+    },
+    lastUsedCounter: {
+      type: Number,
+      default: null,
+    },
     verified: {
       type: Boolean,
       default: false,
@@ -241,25 +259,42 @@ function generateTOTPCode(secret: string, time?: number): string {
 }
 
 /**
- * Verify TOTP code with time window tolerance
+ * Get TOTP counter for a given time
  */
-export function verifyTOTPCode(secret: string, code: string): boolean {
-  if (!/^\d{6}$/.test(code)) return false;
+function getTOTPCounter(time?: number): number {
+  const now = time || Math.floor(Date.now() / 1000);
+  return Math.floor(now / TOTP_CONFIG.TIME_STEP);
+}
+
+/**
+ * Verify TOTP code with time window tolerance
+ * Returns counter if valid (for anti-replay), -1 if invalid
+ */
+export function verifyTOTPCodeWithCounter(secret: string, code: string): { valid: boolean; counter: number } {
+  if (!/^\d{6}$/.test(code)) return { valid: false, counter: -1 };
   
   const now = Math.floor(Date.now() / 1000);
   
   // Check current time and ±WINDOW steps
   for (let i = -TOTP_CONFIG.WINDOW; i <= TOTP_CONFIG.WINDOW; i++) {
     const time = now + (i * TOTP_CONFIG.TIME_STEP);
+    const counter = getTOTPCounter(time);
     const expectedCode = generateTOTPCode(secret, time);
     
     // Timing-safe comparison
     if (crypto.timingSafeEqual(Buffer.from(code), Buffer.from(expectedCode))) {
-      return true;
+      return { valid: true, counter };
     }
   }
   
-  return false;
+  return { valid: false, counter: -1 };
+}
+
+/**
+ * Verify TOTP code with time window tolerance (legacy, no anti-replay)
+ */
+export function verifyTOTPCode(secret: string, code: string): boolean {
+  return verifyTOTPCodeWithCounter(secret, code).valid;
 }
 
 /**
@@ -405,23 +440,50 @@ export async function verifyTOTPSetup(
 }
 
 /**
- * Verify TOTP code for login
+ * Verify TOTP code for login with anti-replay protection
  */
 export async function verifyAgentTOTP(
   agentId: string | Types.ObjectId,
   code: string
 ): Promise<{ success: boolean; error?: string }> {
-  const secret = await getTOTPSecret(agentId);
+  // Get the full document for anti-replay check
+  const doc = await TOTPSecret.findOne({ 
+    agentId: new Types.ObjectId(agentId.toString()),
+    verified: true,
+  });
   
-  if (!secret) {
+  if (!doc) {
     return { success: false, error: 'TOTP not configured' };
   }
   
-  const valid = verifyTOTPCode(secret, code);
+  // Decrypt secret
+  let secret: string;
+  try {
+    secret = decrypt(doc.secretEncrypted, doc.secretIv, doc.secretAuthTag);
+  } catch {
+    return { success: false, error: 'Error decrypting TOTP secret' };
+  }
+  
+  // Verify with counter for anti-replay
+  const { valid, counter } = verifyTOTPCodeWithCounter(secret, code);
   
   if (!valid) {
     return { success: false, error: 'Invalid code' };
   }
+  
+  // Anti-replay check: ensure this counter hasn't been used
+  if (doc.lastUsedCounter !== null && doc.lastUsedCounter !== undefined && counter <= doc.lastUsedCounter) {
+    return { success: false, error: 'Code already used. Wait for a new code.' };
+  }
+  
+  // Hash the code for logging (don't store plain)
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+  
+  // Update anti-replay tracking
+  doc.lastUsedCode = codeHash;
+  doc.lastUsedAt = new Date();
+  doc.lastUsedCounter = counter;
+  await doc.save();
   
   return { success: true };
 }

@@ -24,11 +24,15 @@ export interface IMFASession extends Document {
   attempts: number;              // Failed verification attempts
   maxAttempts: number;           // Max allowed attempts (default 3)
   verifiedAt?: Date;
+  verifiedExpiresAt?: Date;      // Short window to complete login after verification
   blockedUntil?: Date;           // If blocked due to too many attempts
   ip?: string;
   userAgent?: string;
+  verifiedIp?: string;           // IP that verified the code (for binding)
+  verifiedUserAgent?: string;    // UA that verified (for binding)
   telegramMessageId?: number;    // To potentially delete/update the message
   loginToken?: string;           // Temporary token to complete login after MFA
+  method?: 'telegram' | 'totp' | 'backup'; // Method used for verification
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +72,10 @@ const MFASessionSchema = new Schema<IMFASession>(
       type: Date,
       default: null,
     },
+    verifiedExpiresAt: {
+      type: Date,
+      default: null,
+    },
     blockedUntil: {
       type: Date,
       default: null,
@@ -78,12 +86,22 @@ const MFASessionSchema = new Schema<IMFASession>(
     userAgent: {
       type: String,
     },
+    verifiedIp: {
+      type: String,
+    },
+    verifiedUserAgent: {
+      type: String,
+    },
     telegramMessageId: {
       type: Number,
     },
     loginToken: {
       type: String,
       index: true,
+    },
+    method: {
+      type: String,
+      enum: ['telegram', 'totp', 'backup'],
     },
   },
   {
@@ -184,7 +202,8 @@ export async function createMFASession(
 export async function verifyMFACode(
   loginToken: string,
   code: string,
-  ip?: string
+  ip?: string,
+  userAgent?: string
 ): Promise<{ 
   valid: boolean; 
   session?: IMFASession; 
@@ -245,10 +264,20 @@ export async function verifyMFACode(
     };
   }
 
-  // Code is valid - mark session as verified
+  // Code is valid - mark session as verified with security metadata
   session.status = 'verified';
   session.verifiedAt = new Date();
-  if (ip) session.ip = ip;
+  // Set a short window to complete login (60 seconds) - security hardening
+  session.verifiedExpiresAt = new Date(Date.now() + 60 * 1000);
+  session.method = 'telegram'; // Telegram code verification
+  if (ip) {
+    session.ip = ip;
+    session.verifiedIp = ip;
+  }
+  if (userAgent) {
+    session.userAgent = userAgent;
+    session.verifiedUserAgent = userAgent;
+  }
   await session.save();
 
   return { valid: true, session };
@@ -263,9 +292,56 @@ export async function getMFASessionByToken(loginToken: string): Promise<IMFASess
 
 /**
  * Get verified MFA session by login token (for completing login)
+ * Includes security checks for time window and optional IP binding
  */
-export async function getVerifiedMFASession(loginToken: string): Promise<IMFASession | null> {
-  return MFASession.findOne({ loginToken, status: 'verified' });
+export async function getVerifiedMFASession(
+  loginToken: string,
+  options?: { ip?: string; strictIpBinding?: boolean }
+): Promise<IMFASession | null> {
+  const session = await MFASession.findOne({ loginToken, status: 'verified' });
+  
+  if (!session) return null;
+  
+  // Check if verification has expired (60 second window)
+  if (session.verifiedExpiresAt && session.verifiedExpiresAt < new Date()) {
+    // Mark as expired for audit trail
+    session.status = 'expired';
+    await session.save();
+    return null;
+  }
+  
+  // Optional strict IP binding - check if IP matches
+  if (options?.strictIpBinding && options.ip && session.verifiedIp) {
+    if (session.verifiedIp !== options.ip) {
+      // Log suspicious activity but don't block by default
+      // This could be a legitimate case (mobile network change, etc.)
+      // Set strictIpBinding: true only for high-security scenarios
+      return null;
+    }
+  }
+  
+  return session;
+}
+
+/**
+ * Consume verified MFA session (one-time use)
+ */
+export async function consumeVerifiedMFASession(loginToken: string): Promise<IMFASession | null> {
+  // Atomically find and mark as consumed to prevent race conditions
+  const session = await MFASession.findOneAndUpdate(
+    { 
+      loginToken, 
+      status: 'verified',
+      verifiedExpiresAt: { $gt: new Date() } // Must not be expired
+    },
+    { 
+      status: 'expired', // Consume the session
+      $set: { consumedAt: new Date() }
+    },
+    { new: false } // Return the original document before update
+  );
+  
+  return session;
 }
 
 /**

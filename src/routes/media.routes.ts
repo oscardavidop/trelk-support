@@ -100,13 +100,15 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
           return reply.status(404).send({ ok: false, error: 'File not found' });
         }
 
-        const localPath = file.file_path;
+        let localPath = file.file_path;
+        console.log('Serving local file:', localPath);
 
         // Security check - ensure path doesn't escape allowed directories
         // The path should be under the telegram-bot-api working directory
         if (!localPath.startsWith('/home/quinton/support/')) {
           console.error('Invalid file path:', localPath);
-          return reply.status(403).send({ ok: false, error: 'Access denied' });
+          localPath= './uploads/notfound.jpg'
+          // return reply.status(403).send({ ok: false, error: 'Access denied' });
         }
 
         // Check if file exists

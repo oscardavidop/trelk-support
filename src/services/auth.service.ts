@@ -38,6 +38,7 @@ export interface AuthResult {
   mfaAvailableMethods?: ('telegram' | 'totp')[];
   mfaPreferredMethod?: 'telegram' | 'totp';
   mfaSelectedMethod?: 'telegram' | 'totp';
+  mfaPendingMethodSelection?: boolean;
 }
 
 /**
@@ -107,6 +108,7 @@ export async function loginAgent(
           mfaAvailableMethods: mfaResult.availableMethods,
           mfaPreferredMethod: mfaResult.preferredMethod,
           mfaSelectedMethod: mfaResult.selectedMethod,
+          mfaPendingMethodSelection: mfaResult.pendingMethodSelection,
         };
       }
     }

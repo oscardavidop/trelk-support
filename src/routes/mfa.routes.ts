@@ -5,10 +5,12 @@
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { authMiddleware, requirePermission } from '../middleware/auth.js';
+import { mfaVerifyRateLimit, applyFailurePenalty } from '../middleware/rate-limit.js';
 import {
   initiateMFA,
   verifyMFA,
   resendMFACode,
+  requestTelegramMFACode,
   startMFAActivation,
   completeMFAActivation,
   disableMFA,
@@ -115,9 +117,11 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
   /**
    * Verify MFA code (supports Telegram, TOTP, and backup codes)
    * POST /api/auth/mfa/verify
+   * Rate limited to prevent brute force attacks
    */
   fastify.post<{ Body: VerifyMFABody }>(
     '/api/auth/mfa/verify',
+    { preHandler: mfaVerifyRateLimit },
     async (request, reply) => {
       const { loginToken, code, trustDevice, deviceFingerprint, deviceName, method, isBackupCode } = request.body;
 
@@ -157,6 +161,8 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
       });
 
       if (!result.success) {
+        // Apply penalty for failed verification
+        await applyFailurePenalty('mfaVerify', ip, 1);
         const statusCode = result.blockedUntil ? 429 : 401;
         return reply.code(statusCode).send({
           ok: false,
@@ -207,6 +213,42 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
       return {
         ok: true,
         message: 'Código reenviado a tu Telegram',
+      };
+    }
+  );
+
+  /**
+   * Request Telegram MFA code (for multi-method MFA - sends code on demand)
+   * POST /api/auth/mfa/telegram/request-code
+   */
+  fastify.post<{ Body: { loginToken: string } }>(
+    '/api/auth/mfa/telegram/request-code',
+    async (request, reply) => {
+      const { loginToken } = request.body;
+
+      if (!loginToken) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Token requerido',
+        });
+      }
+
+      const { ip, userAgent } = getClientInfo(request);
+
+      const result = await requestTelegramMFACode(loginToken, { ip, userAgent });
+
+      if (!result.success) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      return {
+        ok: true,
+        loginToken: result.loginToken,
+        expiresIn: result.expiresIn,
+        message: 'Código enviado a tu Telegram',
       };
     }
   );

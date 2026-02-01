@@ -7,6 +7,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { loginAgent, logoutAgent, refreshToken } from '../services/auth.service.js';
 import { createAgent } from '../services/agent.service.js';
 import { authMiddleware, requirePermission } from '../middleware/auth.js';
+import { authRateLimit, applyFailurePenalty } from '../middleware/rate-limit.js';
 import { ENV } from '../config/index.js';
 
 interface LoginBody {
@@ -65,14 +66,30 @@ function extractDeviceInfo(request: FastifyRequest, bodyDeviceInfo?: LoginBody['
   };
 }
 
+/**
+ * Helper to get client IP from request
+ */
+function getClientIp(request: FastifyRequest): string {
+  const forwarded = request.headers['x-forwarded-for'];
+  if (forwarded) {
+    const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    return ips.split(',')[0].trim();
+  }
+  return request.ip || 'unknown';
+}
+
 export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ============= PUBLIC ROUTES =============
 
   /**
    * Agent login
+   * Rate limited to prevent brute force attacks
    */
-  fastify.post<{ Body: LoginBody & { deviceFingerprint?: string } }>('/api/auth/login', async (request, reply) => {
+  fastify.post<{ Body: LoginBody & { deviceFingerprint?: string } }>(
+    '/api/auth/login',
+    { preHandler: authRateLimit },
+    async (request, reply) => {
     const { email, password, deviceInfo: bodyDeviceInfo, deviceFingerprint } = request.body;
 
     if (!email || !password) {
@@ -85,6 +102,8 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
     const result = await loginAgent(email, password, deviceInfo, { deviceFingerprint });
 
     if (!result.success && !result.mfaRequired) {
+      // Apply penalty for failed login attempt (brute force protection)
+      await applyFailurePenalty('auth', getClientIp(request), 2);
       return reply.code(401).send({ ok: false, error: result.error });
     }
 
@@ -102,9 +121,12 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       
       // Determine the correct message based on selected method
       const selectedMethod = result.mfaSelectedMethod || 'telegram';
-      const message = selectedMethod === 'totp'
-        ? 'Ingresa el código de tu app autenticadora'
-        : 'Se ha enviado un código de verificación a tu Telegram';
+      const isPendingSelection = result.mfaPendingMethodSelection || false;
+      const message = isPendingSelection
+        ? 'Selecciona tu método de verificación'
+        : selectedMethod === 'totp'
+          ? 'Ingresa el código de tu app autenticadora'
+          : 'Se ha enviado un código de verificación a tu Telegram';
       
       return {
         ok: true,
@@ -114,6 +136,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
         mfaAvailableMethods: result.mfaAvailableMethods || ['telegram'],
         mfaPreferredMethod: result.mfaPreferredMethod,
         mfaSelectedMethod: result.mfaSelectedMethod || 'telegram',
+        mfaPendingMethodSelection: isPendingSelection,
         message,
       };
     }
@@ -140,6 +163,11 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
   /**
    * Complete login after MFA verification
    * POST /api/auth/mfa/complete-login
+   * 
+   * Security: 
+   * - Session is consumed (one-time use) to prevent replay
+   * - 60-second window after verification
+   * - Optional IP binding for high-security
    */
   fastify.post<{ Body: { loginToken: string; deviceFingerprint?: string } }>(
     '/api/auth/mfa/complete-login',
@@ -150,18 +178,36 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
         return reply.code(400).send({ ok: false, error: 'Login token required' });
       }
 
-      // Verify the MFA session was completed
-      const { getVerifiedMFASession } = await import('../database/index.js');
+      // Get client IP for security logging and optional binding
+      const clientIp = request.ip || 
+        (request.headers['x-forwarded-for'] as string)?.split(',')[0] || 
+        'unknown';
+
+      // Consume the MFA session (one-time use, atomic operation)
+      const { consumeVerifiedMFASession } = await import('../database/index.js');
+      const { logAudit } = await import('../services/audit-log.service.js');
       
-      const session = await getVerifiedMFASession(loginToken);
+      const session = await consumeVerifiedMFASession(loginToken);
       
-      // Check if session exists and is verified
-      // Note: The actual verification happens in /api/auth/mfa/verify
-      // This endpoint creates the actual session after MFA is confirmed
+      // Check if session exists, is verified, and not expired
       if (!session) {
+        // Log failed attempt
+        await logAudit({
+          action: 'mfa_complete_login_failed',
+          category: 'authentication',
+          actorType: 'unknown',
+          actorId: 'unknown',
+          targetType: 'system',
+          targetId: 'mfa_session',
+          severity: 'medium',
+          ip: clientIp,
+          userAgent: request.headers['user-agent'],
+          metadata: { reason: 'session_not_found_or_expired', loginToken: loginToken.substring(0, 8) + '...' },
+        });
+        
         return reply.code(401).send({ 
           ok: false, 
-          error: 'Sesión MFA no verificada o expirada' 
+          error: 'Sesión MFA no verificada o expirada. Por favor, inicia sesión de nuevo.' 
         });
       }
 
@@ -177,6 +223,21 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       if (!result.success) {
         return reply.code(401).send({ ok: false, error: result.error });
       }
+
+      // Log successful MFA completion
+      await logAudit({
+        action: 'mfa_login_completed',
+        category: 'authentication',
+        actorType: 'agent',
+        actorId: agentId,
+        actorName: result.agent?.name,
+        targetType: 'agent',
+        targetId: agentId,
+        severity: 'low',
+        ip: clientIp,
+        userAgent: request.headers['user-agent'],
+        metadata: { method: session.method },
+      });
 
       // Set HTTP-only cookie
       reply.setCookie('token', result.token!, {

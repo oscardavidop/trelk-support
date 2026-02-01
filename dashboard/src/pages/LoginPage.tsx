@@ -75,6 +75,8 @@ export default function LoginPage() {
               availableMethods: data.mfaAvailableMethods || ["telegram"],
               preferredMethod: data.mfaPreferredMethod,
               selectedMethod: data.mfaSelectedMethod,
+              // New: indicates user needs to select method first (no code sent yet)
+              pendingMethodSelection: data.mfaPendingMethodSelection || false,
             },
             replace: true,
           });

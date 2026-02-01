@@ -43,6 +43,8 @@ import {
   getBackupCodesStatus,
   deleteTOTPSecret,
   hasTOTPEnabled,
+  // Session invalidation for security events
+  invalidateAllAgentSessions,
 } from '../database/index.js';
 import { sendMFACodeTelegram, sendMFAAlertTelegram } from './telegram-notifications.js';
 import { logAudit } from './audit-log.service.js';
@@ -62,6 +64,8 @@ export interface MFAInitResult {
   availableMethods?: MFAMethod[];
   preferredMethod?: MFAMethod;
   selectedMethod?: MFAMethod;
+  // When multiple methods, code is not sent automatically
+  pendingMethodSelection?: boolean;
 }
 
 export interface MFAVerifyResult {
@@ -275,7 +279,34 @@ export async function initiateMFA(
       }
     }
 
-    // Determine which method to use
+    // If multiple methods available, don't auto-send Telegram code
+    // Let the user select their preferred method first
+    if (availableMethods.length > 1) {
+      // Create a session without sending any code yet
+      const { loginToken } = await createMFASession(agent._id.toString(), {
+        ip: options.ip,
+        userAgent: options.userAgent,
+        expiryMinutes: 10, // 10 minutes to select method
+      });
+
+      logger.info('mfa-service', {
+        action: 'mfa_initiated_multi_method',
+        agentId: agent._id.toString(),
+        methods: availableMethods,
+      });
+
+      return {
+        required: true,
+        loginToken,
+        availableMethods,
+        preferredMethod: agent.security.mfa.preferredMethod,
+        pendingMethodSelection: true,
+        message: 'Selecciona tu método de verificación',
+        expiresIn: 10 * 60,
+      };
+    }
+
+    // Determine which method to use (single method case)
     const selectedMethod = options.preferredMethod && availableMethods.includes(options.preferredMethod)
       ? options.preferredMethod
       : agent.security.mfa.preferredMethod && availableMethods.includes(agent.security.mfa.preferredMethod)
@@ -460,12 +491,23 @@ export async function verifyMFA(
 
     let verificationSuccess = false;
     let errorMessage = '';
+    let methodUsed: 'telegram' | 'totp' | 'backup' = 'telegram';
 
     // Handle backup code
     if (options.isBackupCode) {
       const backupResult = await useBackupCode(agentId, code);
       if (backupResult.success) {
         verificationSuccess = true;
+        methodUsed = 'backup';
+        
+        // Mark MFA session as verified with security metadata
+        session.status = 'verified';
+        session.verifiedAt = new Date();
+        session.verifiedExpiresAt = new Date(Date.now() + 60 * 1000); // 60 second window
+        session.verifiedIp = options.ip;
+        session.verifiedUserAgent = options.userAgent;
+        session.method = 'backup';
+        await session.save();
         
         // Log backup code usage
         await logAudit({
@@ -504,10 +546,15 @@ export async function verifyMFA(
       const totpResult = await verifyAgentTOTP(agentId, code);
       if (totpResult.success) {
         verificationSuccess = true;
+        methodUsed = 'totp';
         
-        // Mark MFA session as verified
+        // Mark MFA session as verified with security metadata
         session.status = 'verified';
         session.verifiedAt = new Date();
+        session.verifiedExpiresAt = new Date(Date.now() + 60 * 1000); // 60 second window
+        session.verifiedIp = options.ip;
+        session.verifiedUserAgent = options.userAgent;
+        session.method = 'totp';
         await session.save();
       } else {
         // Increment attempt counter on session
@@ -537,8 +584,8 @@ export async function verifyMFA(
         return { success: false, error: 'El código debe ser de 6 dígitos' };
       }
 
-      // Verify the code
-      const result = await verifyMFACode(loginToken, code, options.ip);
+      // Verify the code with full security metadata
+      const result = await verifyMFACode(loginToken, code, options.ip, options.userAgent);
 
       if (!result.valid) {
         // Log failed attempt
@@ -588,7 +635,7 @@ export async function verifyMFA(
       }
     }
 
-    // Log successful verification
+    // Log successful verification with actual method used
     await logAudit({
       action: 'mfa_verification_success',
       category: 'authentication',
@@ -600,13 +647,13 @@ export async function verifyMFA(
       severity: 'low',
       ip: options.ip || 'unknown',
       userAgent: options.userAgent,
-      metadata: { method: options.method || 'telegram' },
+      metadata: { method: methodUsed },
     });
 
     logger.info('mfa-service', {
       action: 'mfa_verified',
       agentId,
-      method: options.method || 'telegram',
+      method: methodUsed,
     });
 
     return { success: true, agentId };
@@ -679,6 +726,90 @@ export async function resendMFACode(
   }
 }
 
+/**
+ * Request Telegram MFA code (used when user selects Telegram method in multi-method MFA)
+ * This sends the code on demand rather than automatically
+ */
+export async function requestTelegramMFACode(
+  loginToken: string,
+  options: {
+    ip?: string;
+    userAgent?: string;
+  }
+): Promise<{ success: boolean; error?: string; expiresIn?: number; loginToken?: string }> {
+  try {
+    // Get existing session
+    const session = await getMFASessionByToken(loginToken);
+    if (!session) {
+      return { success: false, error: 'Sesión de verificación expirada. Inicia sesión de nuevo.' };
+    }
+
+    const agentId = session.agentId.toString();
+
+    // Get agent
+    const agent = await Agent.findById(agentId);
+    if (!agent) {
+      return { success: false, error: 'Agente no encontrado' };
+    }
+
+    if (!agent.telegramId) {
+      return { success: false, error: 'No tienes Telegram vinculado' };
+    }
+
+    // Check if blocked
+    const { blocked, blockedUntil } = await isAgentMFABlocked(agentId);
+    if (blocked) {
+      return { 
+        success: false, 
+        error: `Demasiados intentos fallidos. Intenta de nuevo a las ${blockedUntil?.toLocaleTimeString('es-ES')}` 
+      };
+    }
+
+    // Create new session with code
+    const { code, loginToken: newToken } = await createMFASession(agentId, {
+      ip: options.ip,
+      userAgent: options.userAgent,
+      expiryMinutes: MFA_CONFIG.CODE_EXPIRY_MINUTES,
+    });
+
+    // Send code via Telegram
+    const sent = await sendMFACodeTelegram(agent.telegramId, code, agent.name);
+    if (!sent) {
+      return { success: false, error: 'Error al enviar código por Telegram' };
+    }
+
+    // Log audit
+    await logAudit({
+      action: 'mfa_code_sent',
+      category: 'authentication',
+      actorId: agentId,
+      actorType: 'agent',
+      actorName: agent.name,
+      actorEmail: agent.email,
+      targetType: 'agent',
+      targetId: agentId,
+      severity: 'low',
+      ip: options.ip || 'unknown',
+      userAgent: options.userAgent,
+      metadata: { method: 'telegram', trigger: 'user_selection' },
+    });
+
+    logger.info('mfa-service', {
+      action: 'mfa_telegram_code_requested',
+      agentId,
+    });
+
+    return { 
+      success: true, 
+      loginToken: newToken,
+      expiresIn: MFA_CONFIG.CODE_EXPIRY_MINUTES * 60 
+    };
+  } catch (error) {
+    logger.error('mfa-service', { action: 'request_telegram_code_error', error: String(error) });
+    return { success: false, error: 'Error al enviar código' };
+  }
+}
+
 // ============= MFA ENABLE/DISABLE =============
 
 /**
@@ -697,8 +828,9 @@ export async function startMFAActivation(
       return { success: false, error: 'Agente no encontrado' };
     }
 
-    if (agent.security.mfa.enabled) {
-      return { success: false, error: 'MFA ya está activado' };
+    // Check if MFA is enabled and Telegram is already configured
+    if (agent.security.mfa.enabled && agent.security.mfa.methods?.telegram) {
+      return { success: false, error: 'Telegram MFA ya está configurado' };
     }
 
     if (!agent.telegramId) {
@@ -721,13 +853,16 @@ export async function startMFAActivation(
     logger.info('mfa-service', {
       action: 'mfa_activation_started',
       agentId,
+      isAddingTelegram: agent.security.mfa.enabled,
     });
 
     return {
       success: true,
       loginToken,
       expiresIn: MFA_CONFIG.CODE_EXPIRY_MINUTES * 60,
-      message: 'Se ha enviado un código de verificación a tu Telegram',
+      message: agent.security.mfa.enabled 
+        ? 'Se ha enviado un código de verificación a tu Telegram para agregar este método'
+        : 'Se ha enviado un código de verificación a tu Telegram',
     };
   } catch (error) {
     logger.error('mfa-service', { action: 'start_activation_error', error: String(error) });
@@ -748,8 +883,8 @@ export async function completeMFAActivation(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Verify code
-    const result = await verifyMFACode(loginToken, code, options.ip);
+    // Verify code with full security metadata
+    const result = await verifyMFACode(loginToken, code, options.ip, options.userAgent);
     if (!result.valid) {
       return { success: false, error: result.error };
     }
@@ -837,8 +972,8 @@ export async function disableMFA(
       return { success: false, error: 'MFA fue activado por un administrador y no puede ser desactivado' };
     }
 
-    // Verify code
-    const result = await verifyMFACode(loginToken, verificationCode, options.ip);
+    // Verify code with full security metadata
+    const result = await verifyMFACode(loginToken, verificationCode, options.ip, options.userAgent);
     if (!result.valid) {
       return { success: false, error: result.error };
     }
@@ -1278,6 +1413,9 @@ export async function completeTOTPSetup(
       return { success: false, error: 'Agente no encontrado' };
     }
 
+    // Check if MFA was not previously enabled (first-time activation)
+    const isFirstTimeActivation = !agent.security?.mfa?.enabled;
+
     // Verify the code
     const result = await verifyTOTPSetup(agentId, code);
     if (!result.success) {
@@ -1298,6 +1436,20 @@ export async function completeTOTPSetup(
       }
     );
 
+    // SECURITY: Invalidate all existing sessions when MFA is first activated
+    // This ensures no sessions exist that bypassed MFA
+    if (isFirstTimeActivation) {
+      const invalidatedCount = await invalidateAllAgentSessions(agentId);
+      if (invalidatedCount > 0) {
+        logger.info('mfa-service', {
+          action: 'sessions_invalidated_on_mfa_activation',
+          agentId,
+          invalidatedCount,
+          method: 'totp',
+        });
+      }
+    }
+
     // Log audit
     await logAudit({
       action: 'mfa_method_added',
@@ -1310,7 +1462,7 @@ export async function completeTOTPSetup(
       severity: 'medium',
       ip: options.ip,
       userAgent: options.userAgent,
-      metadata: { method: 'totp' },
+      metadata: { method: 'totp', sessionsInvalidated: isFirstTimeActivation },
     });
 
     logger.info('mfa-service', {
@@ -1506,6 +1658,9 @@ export async function enableTelegramMFA(
       return { success: false, error: 'Debes vincular Telegram primero' };
     }
 
+    // Check if MFA was not previously enabled (first-time activation)
+    const isFirstTimeActivation = !agent.security?.mfa?.enabled;
+
     await Agent.updateOne(
       { _id: agentId },
       {
@@ -1517,6 +1672,19 @@ export async function enableTelegramMFA(
         }
       }
     );
+
+    // SECURITY: Invalidate all existing sessions when MFA is first activated
+    // This ensures no sessions exist that bypassed MFA
+    if (isFirstTimeActivation) {
+      const invalidatedCount = await invalidateAllAgentSessions(agentId);
+      if (invalidatedCount > 0) {
+        logger.info('mfa-service', {
+          action: 'sessions_invalidated_on_mfa_activation',
+          agentId,
+          invalidatedCount,
+        });
+      }
+    }
 
     // Log audit
     await logAudit({
@@ -1530,7 +1698,7 @@ export async function enableTelegramMFA(
       severity: 'medium',
       ip: options.ip || 'system',
       userAgent: options.userAgent,
-      metadata: { method: 'telegram' },
+      metadata: { method: 'telegram', sessionsInvalidated: isFirstTimeActivation },
     });
 
     return { success: true };
