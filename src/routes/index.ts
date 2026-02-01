@@ -30,6 +30,7 @@ import { broadcastRoutes } from './broadcast.routes.js';
 import { registerPermissionRoutes } from './permissions.routes.js';
 import { registerPermissionRequestRoutes } from './permissionRequest.routes.js';
 import { registerPasswordResetRoutes } from './password-reset.routes.js';
+import { registerMFARoutes } from './mfa.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -37,6 +38,11 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   
   // Auth routes first (public routes without authentication)
   await registerAuthRoutes(fastify);
+  
+  // MFA routes (public + protected)
+  await fastify.register(async (mfaRoutes) => {
+    await registerMFARoutes(mfaRoutes);
+  });
   
   // Password Reset routes (public + admin protected)
   await fastify.register(async (passwordResetRoutes) => {

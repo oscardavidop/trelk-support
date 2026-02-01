@@ -145,6 +145,14 @@ export interface IAgent extends Document {
   passwordResetAttempts?: number;        // Number of reset attempts in current window
   passwordResetAttemptsResetAt?: Date;   // When to reset the attempt counter
   
+  // MFA (Multi-Factor Authentication)
+  mfaEnabled: boolean;                   // Whether MFA is enabled for this agent
+  mfaVerifiedAt?: Date;                  // When MFA was first verified/enabled
+  mfaDisabledAt?: Date;                  // When MFA was disabled
+  mfaDisabledBy?: Types.ObjectId;        // Admin who disabled MFA (if admin action)
+  mfaBypassUntil?: Date;                 // Temporary bypass (for admin recovery)
+  mfaEnforcedByAdmin?: boolean;          // If MFA was forced by admin (cannot disable)
+  
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -269,6 +277,33 @@ const AgentSchema = new Schema<IAgent>(
     passwordResetAttemptsResetAt: {
       type: Date,
       default: null,
+    },
+    // MFA (Multi-Factor Authentication)
+    mfaEnabled: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    mfaVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+    mfaDisabledAt: {
+      type: Date,
+      default: null,
+    },
+    mfaDisabledBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agent',
+      default: null,
+    },
+    mfaBypassUntil: {
+      type: Date,
+      default: null,
+    },
+    mfaEnforcedByAdmin: {
+      type: Boolean,
+      default: false,
     },
     // Survey metrics
     metrics: {

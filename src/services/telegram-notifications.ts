@@ -332,6 +332,150 @@ _— Equipo de Trelk Support_`;
   return result.ok;
 }
 
+// ============= MFA NOTIFICATIONS =============
+
+/**
+ * Send MFA verification code via Telegram
+ */
+export async function sendMFACodeTelegram(
+  telegramId: number,
+  code: string,
+  agentName?: string,
+  isActivation: boolean = false
+): Promise<boolean> {
+  const greeting = agentName ? `Hola *${escapeMarkdown(agentName)}*,` : 'Hola,';
+  const actionText = isActivation 
+    ? 'Estás activando la autenticación de dos factores (2FA).'
+    : 'Se ha detectado un intento de inicio de sesión en tu cuenta.';
+
+  const message = `🔐 *Código de Verificación*
+
+${greeting}
+
+${actionText}
+
+Tu código de verificación es:
+
+\`${code}\`
+
+⏱️ *Este código expira en 2 minutos.*
+
+⚠️ *No compartas este código con nadie.* Si no solicitaste este código, ignora este mensaje y tu cuenta permanecerá segura.
+
+_— Equipo de Trelk Support_`;
+
+  const result = await sendTelegramRequest('sendMessage', {
+    chat_id: telegramId,
+    text: message,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+  });
+
+  if (result.ok) {
+    logger.info('telegram-notifications', {
+      action: 'mfa_code_sent',
+      telegramId,
+      isActivation,
+    });
+  }
+
+  return result.ok;
+}
+
+/**
+ * Send MFA status alert via Telegram
+ */
+export async function sendMFAAlertTelegram(
+  telegramId: number,
+  alertType: 'enabled' | 'disabled' | 'enforced' | 'admin_disabled' | 'bypass_granted',
+  agentName?: string,
+  additionalInfo?: string
+): Promise<boolean> {
+  const greeting = agentName ? `Hola *${escapeMarkdown(agentName)}*,` : 'Hola,';
+  const now = new Date().toLocaleString('es-ES', { 
+    timeZone: 'America/Bogota',
+    dateStyle: 'long',
+    timeStyle: 'short'
+  });
+
+  let emoji = '🔐';
+  let title = '';
+  let body = '';
+
+  switch (alertType) {
+    case 'enabled':
+      emoji = '✅';
+      title = 'Autenticación 2FA Activada';
+      body = `Has activado exitosamente la autenticación de dos factores en tu cuenta.
+
+A partir de ahora, necesitarás verificar tu identidad con un código cada vez que inicies sesión desde un nuevo dispositivo.`;
+      break;
+
+    case 'disabled':
+      emoji = '⚠️';
+      title = '2FA Desactivada';
+      body = `Has desactivado la autenticación de dos factores en tu cuenta.
+
+Tu cuenta es ahora más vulnerable. Te recomendamos mantener el 2FA activo para mayor seguridad.`;
+      break;
+
+    case 'enforced':
+      emoji = '🛡️';
+      title = '2FA Forzada por Administrador';
+      body = `Un administrador ha activado la autenticación de dos factores obligatoria en tu cuenta.
+
+A partir de ahora, necesitarás verificar tu identidad con un código cada vez que inicies sesión.
+
+Esta configuración no puede ser desactivada por ti.`;
+      break;
+
+    case 'admin_disabled':
+      emoji = '🔓';
+      title = '2FA Desactivada por Administrador';
+      body = `Un administrador ha desactivado la autenticación de dos factores en tu cuenta.${additionalInfo ? `\n\n📋 *Motivo:* ${escapeMarkdown(additionalInfo)}` : ''}
+
+Contacta a tu administrador si tienes preguntas.`;
+      break;
+
+    case 'bypass_granted':
+      emoji = '⏰';
+      title = 'Bypass Temporal de 2FA';
+      body = `Un administrador te ha concedido un bypass temporal de la autenticación de dos factores.
+
+⏱️ *Duración:* ${additionalInfo || '30 minutos'}
+
+Durante este tiempo podrás iniciar sesión sin necesidad de verificación 2FA.`;
+      break;
+  }
+
+  const message = `${emoji} *${title}*
+
+${greeting}
+
+${body}
+
+📅 *Fecha:* ${now}
+
+_— Equipo de Trelk Support_`;
+
+  const result = await sendTelegramRequest('sendMessage', {
+    chat_id: telegramId,
+    text: message,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+  });
+
+  if (result.ok) {
+    logger.info('telegram-notifications', {
+      action: 'mfa_alert_sent',
+      telegramId,
+      alertType,
+    });
+  }
+
+  return result.ok;
+}
+
 // ============= HELPERS =============
 
 /**

@@ -1,11 +1,27 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Lock, Mail, AlertCircle, Loader2, ArrowRight, ArrowLeft, KeyRound, CheckCircle2, Send } from 'lucide-react';
+import { usePermissionStore } from '../stores/permissionStore';
+import { Lock, Mail, AlertCircle, Loader2, ArrowRight, ArrowLeft, KeyRound, CheckCircle2, Send, Shield } from 'lucide-react';
+
+// Helper to generate device fingerprint
+const getDeviceFingerprint = async (): Promise<string> => {
+  const data = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  ].join('|');
+  
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,11 +41,57 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        navigate('/dashboard');
+      const deviceFingerprint = await getDeviceFingerprint();
+      
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, deviceFingerprint }),
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        // Check if MFA is required
+        if (data.mfaRequired) {
+          // Redirect to MFA verification page with state
+          navigate('/mfa-verify', {
+            state: {
+              loginToken: data.mfaLoginToken,
+              expiresIn: data.mfaExpiresIn || 120,
+              email: email,
+            },
+            replace: true,
+          });
+          return;
+        }
+        
+        // Normal login - update auth store
+        useAuthStore.setState({
+          agent: data.agent,
+          token: data.token,
+          isAuthenticated: true,
+          isLoading: false,
+          forcePasswordChange: data.forcePasswordChange || false,
+        });
+        
+        // Store permissions from login response
+        if (data.permissions) {
+          usePermissionStore.getState().setPermissions(
+            data.permissions,
+            data.agent?.permissionVersion || 1
+          );
+        }
+        
+        // Redirect based on password change requirement
+        if (data.forcePasswordChange) {
+          navigate('/force-change-password', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       } else {
-        setError('Credenciales inválidas');
+        setError(data.error || 'Credenciales inválidas');
       }
     } catch {
       setError('Error de conexión. Inténtalo de nuevo.');

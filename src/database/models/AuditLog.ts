@@ -14,7 +14,8 @@ export type AuditCategory =
   | 'export' 
   | 'security'
   | 'user'
-  | 'auth';
+  | 'auth'
+  | 'authentication';
 
 export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -34,7 +35,7 @@ export interface IAuditLog extends Document {
   actorUserAgent?: string;
   
   // What was affected
-  targetType: 'message' | 'session' | 'user' | 'agent' | 'rule' | 'setting' | 'export';
+  targetType: 'message' | 'session' | 'user' | 'agent' | 'rule' | 'setting' | 'export' | 'system' | 'device';
   targetId: string;
   targetDescription?: string;
   

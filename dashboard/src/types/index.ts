@@ -34,6 +34,22 @@ export interface Agent {
   maxConcurrentChats?: number;
   avgResponseTime?: string;
   rating?: number;
+  // MFA fields
+  mfaEnabled?: boolean;
+  mfaVerifiedAt?: string;
+  mfaEnforcedByAdmin?: boolean;
+  mfaBypassUntil?: string;
+  mfaDisabledAt?: string;
+  mfaDisabledBy?: string;
+  // Telegram integration
+  telegramUserId?: number;
+  telegramId?: number;
+  metrics: {
+    totalChats?: number;
+    resolvedChats?: number;
+    averageRating?: number;
+    averageResponseTime?: number;
+  };
 }
 
 export interface User {

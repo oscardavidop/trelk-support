@@ -72,8 +72,8 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
   /**
    * Agent login
    */
-  fastify.post<{ Body: LoginBody }>('/api/auth/login', async (request, reply) => {
-    const { email, password, deviceInfo: bodyDeviceInfo } = request.body;
+  fastify.post<{ Body: LoginBody & { deviceFingerprint?: string } }>('/api/auth/login', async (request, reply) => {
+    const { email, password, deviceInfo: bodyDeviceInfo, deviceFingerprint } = request.body;
 
     if (!email || !password) {
       return reply.code(400).send({ ok: false, error: 'Email and password required' });
@@ -82,10 +82,30 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
     // Extract device info from request
     const deviceInfo = extractDeviceInfo(request, bodyDeviceInfo);
     
-    const result = await loginAgent(email, password, deviceInfo);
+    const result = await loginAgent(email, password, deviceInfo, { deviceFingerprint });
 
-    if (!result.success) {
+    if (!result.success && !result.mfaRequired) {
       return reply.code(401).send({ ok: false, error: result.error });
+    }
+
+    // Check if MFA is required
+    if (result.mfaRequired) {
+      // MFA required - return pending state without setting session
+      if (result.mfaError) {
+        return reply.code(400).send({
+          ok: false,
+          error: result.mfaError,
+          mfaRequired: true,
+        });
+      }
+      
+      return {
+        ok: true,
+        mfaRequired: true,
+        mfaLoginToken: result.mfaLoginToken,
+        mfaExpiresIn: result.mfaExpiresIn,
+        message: 'Se ha enviado un código de verificación a tu Telegram',
+      };
     }
 
     // Set HTTP-only cookie for token
@@ -106,6 +126,68 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       forcePasswordChange: result.forcePasswordChange,
     };
   });
+
+  /**
+   * Complete login after MFA verification
+   * POST /api/auth/mfa/complete-login
+   */
+  fastify.post<{ Body: { loginToken: string; deviceFingerprint?: string } }>(
+    '/api/auth/mfa/complete-login',
+    async (request, reply) => {
+      const { loginToken, deviceFingerprint } = request.body;
+
+      if (!loginToken) {
+        return reply.code(400).send({ ok: false, error: 'Login token required' });
+      }
+
+      // Verify the MFA session was completed
+      const { verifyMFA } = await import('../services/mfa.service.js');
+      const { getMFASessionByToken } = await import('../database/index.js');
+      
+      const session = await getMFASessionByToken(loginToken);
+      
+      // Check if session exists and is verified
+      // Note: The actual verification happens in /api/auth/mfa/verify
+      // This endpoint creates the actual session after MFA is confirmed
+      if (!session || session.status !== 'verified') {
+        return reply.code(401).send({ 
+          ok: false, 
+          error: 'Sesión MFA no verificada o expirada' 
+        });
+      }
+
+      const agentId = session.agentId.toString();
+
+      // Extract device info
+      const deviceInfo = extractDeviceInfo(request);
+
+      // Complete the login
+      const { completeLoginAfterMFA } = await import('../services/auth.service.js');
+      const result = await completeLoginAfterMFA(agentId, deviceInfo);
+
+      if (!result.success) {
+        return reply.code(401).send({ ok: false, error: result.error });
+      }
+
+      // Set HTTP-only cookie
+      reply.setCookie('token', result.token!, {
+        httpOnly: true,
+        secure: ENV.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60,
+      });
+
+      return {
+        ok: true,
+        agent: result.agent,
+        token: result.token,
+        permissions: result.permissions,
+        sessionsInvalidated: result.sessionsInvalidated,
+        forcePasswordChange: result.forcePasswordChange,
+      };
+    }
+  );
 
   /**
    * Agent logout

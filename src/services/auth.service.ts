@@ -29,6 +29,11 @@ export interface AuthResult {
   error?: string;
   sessionsInvalidated?: number;
   forcePasswordChange?: boolean;
+  // MFA fields
+  mfaRequired?: boolean;
+  mfaLoginToken?: string;
+  mfaError?: string;
+  mfaExpiresIn?: number;
 }
 
 /**
@@ -50,6 +55,10 @@ export async function loginAgent(
     os?: string;
     ip: string;
     location?: string;
+  },
+  options?: {
+    skipMFA?: boolean;        // For internal calls after MFA verification
+    deviceFingerprint?: string;
   }
 ): Promise<AuthResult> {
   try {
@@ -70,6 +79,27 @@ export async function loginAgent(
     
     if (!isValidPassword) {
       return { success: false, error: 'Invalid credentials' };
+    }
+    
+    // Check if MFA is required (unless explicitly skipped after verification)
+    if (!options?.skipMFA) {
+      const { initiateMFA } = await import('./mfa.service.js');
+      const mfaResult = await initiateMFA(agent, {
+        ip: deviceInfo?.ip,
+        userAgent: deviceInfo?.browser,
+        deviceFingerprint: options?.deviceFingerprint,
+      });
+      
+      if (mfaResult.required) {
+        // MFA is required - return pending state
+        return {
+          success: true,
+          mfaRequired: true,
+          mfaLoginToken: mfaResult.loginToken,
+          mfaError: mfaResult.error,
+          mfaExpiresIn: mfaResult.expiresIn,
+        };
+      }
     }
     
     // Get security settings for session limit
@@ -172,6 +202,85 @@ export async function getAgentFromToken(token: string): Promise<IAgent | null> {
   if (!payload) return null;
   
   return findAgentById(payload.agentId);
+}
+
+/**
+ * Complete login after MFA verification
+ * Called internally after successful MFA code verification
+ */
+export async function completeLoginAfterMFA(
+  agentId: string,
+  deviceInfo?: {
+    deviceType?: string;
+    browser?: string;
+    os?: string;
+    ip: string;
+    location?: string;
+  }
+): Promise<AuthResult> {
+  try {
+    const agent = await findAgentById(agentId);
+    
+    if (!agent) {
+      return { success: false, error: 'Agent not found' };
+    }
+    
+    if (agent.isActive === false) {
+      return { success: false, error: 'Account is deactivated' };
+    }
+    
+    // Get security settings for session limit
+    const securitySettings = await getSecuritySettings();
+    const maxSessions = securitySettings.maxSessionsPerAgent ?? 3;
+    
+    // Enforce session limit
+    let sessionsInvalidated = 0;
+    if (maxSessions > 0) {
+      sessionsInvalidated = await enforceSessionLimit(agentId, maxSessions);
+    }
+    
+    // Generate JWT token
+    const token = generateToken(agent);
+    const tokenHash = hashToken(token);
+    
+    // Create session record
+    if (deviceInfo) {
+      await createSession(agentId, tokenHash, deviceInfo);
+    } else {
+      await createSession(agentId, tokenHash, { ip: 'unknown' });
+    }
+    
+    // Update last login and set online
+    await updateLastLogin(agentId);
+    await updateAgentStatus(agentId, 'online');
+    
+    // Get effective permissions
+    const permissions = await getEffectivePermissions(agentId);
+    
+    // Check if password change is required
+    const forcePasswordChange = agent.forcePasswordChange === true;
+    
+    logger.info('auth', {
+      action: 'mfa_login_completed',
+      agentId,
+    });
+    
+    return {
+      success: true,
+      agent,
+      token,
+      permissions,
+      sessionsInvalidated,
+      forcePasswordChange,
+    };
+  } catch (error) {
+    logger.error('auth', {
+      action: 'mfa_login_complete_error',
+      agentId,
+      error: String(error),
+    });
+    return { success: false, error: 'Login failed' };
+  }
 }
 
 /**

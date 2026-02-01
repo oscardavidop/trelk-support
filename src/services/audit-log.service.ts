@@ -14,7 +14,7 @@ interface AuditParams {
   actorType: 'agent' | 'admin' | 'system';
   actorName: string;
   actorEmail?: string;
-  targetType: 'message' | 'session' | 'user' | 'agent' | 'rule' | 'setting' | 'export';
+  targetType: 'message' | 'session' | 'user' | 'agent' | 'rule' | 'setting' | 'export' | 'system' | 'device';
   targetId: string;
   targetDescription?: string;
   previousValue?: Record<string, unknown>;
@@ -23,6 +23,7 @@ interface AuditParams {
   severity: AuditSeverity;
   isAnomaly?: boolean;
   anomalyReason?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface AuditFromRequest extends Omit<AuditParams, 'actorId' | 'actorType' | 'actorName' | 'actorEmail'> {

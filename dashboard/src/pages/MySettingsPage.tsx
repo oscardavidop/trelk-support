@@ -9,6 +9,7 @@ import {
 import type { AgentPreferences, AgentSession, AgentActivity } from '../types';
 import * as settingsService from '../services/settings.service';
 import { useTheme, type Theme } from '../hooks/useTheme';
+import MFASettingsSection from '../components/MFASettingsSection';
 
 type TabType = 'account' | 'preferences' | 'notifications' | 'security' | 'activity';
 
@@ -457,6 +458,9 @@ function SecurityContent() {
 
   return (
     <div className="space-y-6">
+       {/* MFA Section */}
+       <MFASettingsSection />
+
        <SectionCard title="Cambiar Contraseña" description="Actualiza tu clave de acceso periódicamente.">
           <div className="space-y-4 max-w-lg">
              <InputGroup label="Contraseña Actual" type="password" value={pwd.current} onChange={v => setPwd({...pwd, current: v})} />

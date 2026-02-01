@@ -46,4 +46,32 @@ export {
   getPendingTokensCount,
   cleanupExpiredTokens,
 } from './models/PasswordResetToken.js';
+export {
+  MFASession,
+  type IMFASession,
+  type MFASessionStatus,
+  MFA_CONFIG,
+  generateMFACode,
+  hashMFACode,
+  generateLoginToken,
+  createMFASession,
+  verifyMFACode,
+  getMFASessionByToken,
+  canResendMFACode,
+  isAgentMFABlocked,
+  cancelAllMFASessions,
+  cleanupExpiredMFASessions,
+} from './models/MFASession.js';
+export {
+  TrustedDevice,
+  type ITrustedDevice,
+  TRUSTED_DEVICE_CONFIG,
+  generateDeviceFingerprint,
+  parseUserAgent,
+  trustDevice,
+  isDeviceTrusted,
+  getTrustedDevices,
+  revokeDevice,
+  revokeAllDevices,
+} from './models/TrustedDevice.js';
 export { connectDatabase, disconnectDatabase } from './connection.js';

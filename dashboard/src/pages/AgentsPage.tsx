@@ -30,9 +30,11 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronDown,
-  CheckCircle2
+  CheckCircle2,
+  ShieldOff
 } from 'lucide-react';
 import type { Agent, OnlineStatus } from '../types';
+import AdminMFAModal from '../components/AdminMFAModal';
 
 interface AgentFormData {
   name: string;
@@ -96,6 +98,7 @@ export default function AgentsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showDesactivateModal, setShowDesactivateModal] = useState(false);
+  const [showMFAModal, setShowMFAModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [formData, setFormData] = useState<AgentFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
@@ -230,6 +233,15 @@ export default function AgentsPage() {
       }
     } catch (error) {
       console.error('Failed to toggle agent status:', error);
+    }
+  };
+
+  // Handle MFA updates from modal
+  const handleMFAUpdate = (updatedFields: Partial<Agent>) => {
+    if (editingAgent) {
+      setAgents(agents.map((a) => 
+        a._id === editingAgent._id ? { ...a, ...updatedFields } : a
+      ));
     }
   };
 
@@ -422,6 +434,7 @@ export default function AgentsPage() {
                       onDelete={() => { setEditingAgent(agent); setShowDeleteModal(true); }}
                       onResetPassword={() => { setEditingAgent(agent); setShowResetPasswordModal(true); }}
                       onToggleActive={() => { setEditingAgent(agent); setShowDesactivateModal(true); }}
+                      onMFA={() => { setEditingAgent(agent); setShowMFAModal(true); }}
                     />
                   ))}
                 </div>
@@ -474,13 +487,22 @@ export default function AgentsPage() {
           onClose={() => { setShowDesactivateModal(false); setEditingAgent(null); }}
         />
       )}
+      
+      {showMFAModal && editingAgent && (
+        <AdminMFAModal
+          agent={editingAgent}
+          token={token}
+          onClose={() => { setShowMFAModal(false); setEditingAgent(null); }}
+          onUpdate={handleMFAUpdate}
+        />
+      )}
     </div>
   );
 }
 
 // Sub-components
 
-function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive }: any) {
+function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive, onMFA }: any) {
   const status: OnlineStatus = (agent.onlineStatus as OnlineStatus) || 'offline';
   const isActive = agent.isActive !== false;
 
@@ -503,6 +525,7 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
           <div className="flex items-center gap-2">
             <span className="font-medium text-zinc-200 truncate">{agent.name}</span>
             {isCurrentUser && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-px rounded border border-emerald-500/30 font-medium">TÚ</span>}
+            {agent.mfaEnabled && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-px rounded border border-indigo-500/30 font-medium flex items-center gap-0.5"><Shield className="w-2.5 h-2.5"/>MFA</span>}
           </div>
           <span className="text-xs text-zinc-500 truncate">{agent.email}</span>
         </div>
@@ -579,6 +602,11 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
           <div className="absolute right-8 top-0 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
             <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
             <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
+            <DropdownItem
+              icon={agent.mfaEnabled ? ShieldCheck : Shield}
+              label={agent.mfaEnabled ? 'Gestionar MFA' : 'Configurar MFA'}
+              onClick={onMFA}
+            />
             <DropdownItem
               icon={isActive ? UserX : UserCheck}
               label={isActive ? 'Desactivar' : 'Activar'}

@@ -61,6 +61,11 @@ export interface ISecuritySettings {
   passwordRequireSpecial: boolean;
   // Audit
   auditLogRetentionDays: number;
+  // MFA Settings
+  mfaRequiredForAll?: boolean;
+  mfaRequiredRoles?: string[];
+  mfaBypassIPs?: string[];
+  mfaTrustDevicesEnabled?: boolean;
 }
 
 export interface INotificationSettings {

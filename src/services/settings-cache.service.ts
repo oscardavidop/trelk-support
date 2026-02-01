@@ -330,10 +330,10 @@ export async function updateSettings(
     for (const [key, value] of Object.entries(data.security)) {
       if (value !== undefined) {
         // Handle nested passwordPolicy
-        if (key === 'passwordPolicy' && typeof value === 'object') {
+        if (key === 'passwordPolicy' && typeof value === 'object' && !Array.isArray(value)) {
           const policy = value as Record<string, unknown>;
           if (policy.minLength !== undefined) updateData['security.passwordMinLength'] = policy.minLength;
-          if (policy.require!== undefined) updateData['security.passwordRequireUppercase'] = policy.requireUppercase;
+          if (policy.requireUppercase !== undefined) updateData['security.passwordRequireUppercase'] = policy.requireUppercase;
           if (policy.requireNumbers !== undefined) updateData['security.passwordRequireNumbers'] = policy.requireNumbers;
           if (policy.requireSpecial !== undefined) updateData['security.passwordRequireSpecial'] = policy.requireSpecial;
         } else {
