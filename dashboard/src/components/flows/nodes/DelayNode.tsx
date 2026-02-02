@@ -100,7 +100,7 @@ function DelayNode({ data, selected, id }: NodeProps<DelayNodeData>) {
 
           {/* Titles */}
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
+            <div className="text-[10px] font-bold uppercase r text-zinc-500 mb-0.5">
               {typeLabel}
             </div>
             <div className="font-bold text-zinc-200 text-xs leading-tight truncate">

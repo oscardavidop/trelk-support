@@ -101,7 +101,7 @@ export function LiveContactTimer({
           <div className={`text-4xl font-mono font-bold tracking-tighter tabular-nums ${config.color} drop-shadow-sm`}>
             {displayDuration}
           </div>
-          <p className="text-[10px] text-zinc-500 tracking-widest font-bold mt-1">
+          <p className="text-[10px] text-zinc-500 st font-bold mt-1">
             Tiempo de Sesión
           </p>
         </div>

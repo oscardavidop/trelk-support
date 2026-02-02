@@ -227,7 +227,7 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
             <Icon className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
+            <div className="text-[10px] font-bold uppercase r text-zinc-500 mb-0.5">
               {actionLabel}
             </div>
             <div className="font-bold text-zinc-200 text-xs leading-tight truncate">

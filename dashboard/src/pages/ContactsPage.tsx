@@ -274,7 +274,7 @@ export default function ContactsPage() {
 
           {/* User Segments */}
           <div>
-            <div className="px-3 text-[10px] font-bold text-zinc-500 tracking-widest mb-2 flex justify-between items-center">
+            <div className="px-3 text-[10px] font-bold text-zinc-500 st mb-2 flex justify-between items-center">
               <span>Personalizados</span>
               <button onClick={() => setShowSegmentsManager(true)} className="hover:text-blue-400"><Plus className="w-3 h-3" /></button>
             </div>
@@ -288,7 +288,7 @@ export default function ContactsPage() {
           {/* Saved Views (Restaurado) */}
           {savedViews.length > 0 && (
             <div>
-              <div className="px-3 text-[10px] font-bold text-zinc-500 tracking-widest mb-2">Vistas Guardadas</div>
+              <div className="px-3 text-[10px] font-bold text-zinc-500 st mb-2">Vistas Guardadas</div>
               <div className="space-y-1">
                 {savedViews.map(view => (
                   <button key={view._id} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-all">

@@ -64,7 +64,7 @@ function ConditionNode({ data, selected, id }: NodeProps<ConditionNodeData>) {
 
           {/* Titles */}
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
+            <div className="text-[10px] font-bold uppercase r text-zinc-500 mb-0.5">
               Condición Lógica
             </div>
             <div className="font-bold text-zinc-200 text-xs leading-tight truncate">
@@ -109,7 +109,7 @@ function ConditionNode({ data, selected, id }: NodeProps<ConditionNodeData>) {
           {/* YES Branch */}
           <div className="flex-1 flex items-center justify-center gap-1.5 border-r border-zinc-800 relative group bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors rounded-bl-xl">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">Sí</span>
+            <span className="text-[10px] font-bold text-emerald-400 uppercase ">Sí</span>
             
             <Handle
               type="source"
@@ -122,7 +122,7 @@ function ConditionNode({ data, selected, id }: NodeProps<ConditionNodeData>) {
           {/* NO Branch */}
           <div className="flex-1 flex items-center justify-center gap-1.5 relative group bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-br-xl">
             <XCircle className="w-3.5 h-3.5 text-red-500" />
-            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">No</span>
+            <span className="text-[10px] font-bold text-red-400 uppercase ">No</span>
             
             <Handle
               type="source"

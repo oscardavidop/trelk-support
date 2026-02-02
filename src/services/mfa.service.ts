@@ -109,7 +109,7 @@ export async function getGlobalMFASettings(): Promise<GlobalMFASettings> {
   const settings = await Settings.findOne();
   
   return {
-    mfaRequiredForAll: settings?.security?.twoFactorEnabled || false,
+    mfaRequiredForAll: settings?.security?.mfaRequiredForAll || false,
     mfaRequiredRoles: settings?.security?.mfaRequiredRoles || ['admin', 'supervisor'],
     mfaBypassIPs: settings?.security?.mfaBypassIPs || [],
     mfaTrustDevicesEnabled: settings?.security?.mfaTrustDevicesEnabled !== false,

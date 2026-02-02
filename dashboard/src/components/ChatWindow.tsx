@@ -646,7 +646,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-zinc-400 tracking-wide">Solo Lectura</span>
+              <span className="font-semibold text-zinc-400 ">Solo Lectura</span>
 
               <span className="w-1 h-1 rounded-full bg-zinc-800" />
 

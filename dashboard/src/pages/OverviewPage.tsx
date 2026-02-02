@@ -152,7 +152,7 @@ export default function OverviewPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </div>
-              <span className="text-[10px] font-medium text-zinc-500 tracking-widest">En Vivo</span>
+              <span className="text-[10px] font-medium text-zinc-500 st">En Vivo</span>
             </div>
           </div>
         </div>

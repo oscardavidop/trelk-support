@@ -478,7 +478,7 @@ export default function BroadcastPage() {
           <div className="h-full flex flex-col bg-zinc-900/40 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
 
             {/* Table Header */}
-            <div className="grid grid-cols-[2.5fr_1fr_1.5fr_2fr_1fr_80px] gap-4 px-6 py-4 bg-zinc-900/80 border-b border-zinc-800 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <div className="grid grid-cols-[2.5fr_1fr_1.5fr_2fr_1fr_80px] gap-4 px-6 py-4 bg-zinc-900/80 border-b border-zinc-800 text-xs font-semibold text-zinc-400 uppercase r">
               <div>Campaña / Mensaje</div>
               <div>Estado</div>
               <div>Objetivo</div>
@@ -904,7 +904,7 @@ function BroadcastDetailModal({ broadcast, recipients, recipientsTotal, recipien
             {/* Info Column */}
             <div className="space-y-6">
               <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
-                <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-3 flex items-center gap-2">
+                <h3 className="text-xs font-bold text-zinc-500 st mb-3 flex items-center gap-2">
                   <MessageSquare className="w-3 h-3" /> Mensaje
                 </h3>
                 <p className="text-zinc-300 text-sm font-mono whitespace-pre-wrap leading-relaxed opacity-90">
@@ -914,7 +914,7 @@ function BroadcastDetailModal({ broadcast, recipients, recipientsTotal, recipien
 
               {errors.length > 0 && (
                 <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-5">
-                  <h3 className="text-xs font-bold text-red-400 tracking-widest mb-3 flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-red-400 st mb-3 flex items-center gap-2">
                     <AlertTriangle className="w-3 h-3" /> Errores
                   </h3>
                   <div className="space-y-2">

@@ -214,7 +214,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
       
       {/* Header & Search */}
       <div className="p-4 border-b border-zinc-800">
-        <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider opacity-80">
+        <h3 className="text-sm font-bold text-white mb-3 uppercase r opacity-80">
           Nodos de Flujo
         </h3>
         <div className="relative">
@@ -282,7 +282,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
                       <div key={sub.id} className="mb-2">
                         <div className="px-4 py-1.5 flex items-center gap-2">
                            <div className="w-1 h-1 rounded-full bg-zinc-700" />
-                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">
+                           <span className="text-[10px] font-bold text-zinc-500 uppercase ">
                              {sub.label}
                            </span>
                         </div>

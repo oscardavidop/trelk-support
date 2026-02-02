@@ -43,7 +43,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-                    flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border
+                    flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase r rounded-lg transition-all border
                     ${isOpen 
                         ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]' 
                         : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-zinc-200 hover:border-zinc-600'
@@ -68,7 +68,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                         <button
                             type="button"
                             onClick={() => setActiveTab('variables')}
-                            className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all border-b-2 ${
+                            className={`flex-1 py-2.5 text-[10px] font-bold uppercase r flex items-center justify-center gap-2 transition-all border-b-2 ${
                                 activeTab === 'variables' 
                                     ? 'text-indigo-400 bg-zinc-900 border-indigo-500' 
                                     : 'text-zinc-500 hover:text-zinc-300 border-transparent hover:bg-zinc-900/50'
@@ -79,7 +79,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                         <button
                             type="button"
                             onClick={() => setActiveTab('texts')}
-                            className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all border-b-2 ${
+                            className={`flex-1 py-2.5 text-[10px] font-bold uppercase r flex items-center justify-center gap-2 transition-all border-b-2 ${
                                 activeTab === 'texts' 
                                     ? 'text-purple-400 bg-zinc-900 border-purple-500' 
                                     : 'text-zinc-500 hover:text-zinc-300 border-transparent hover:bg-zinc-900/50'
@@ -122,7 +122,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                             <div className="space-y-3 pb-1">
                                 {/* Custom Key Input */}
                                 <div className="p-1">
-                                    <label className="text-[9px] font-bold text-zinc-600 uppercase mb-1.5 block tracking-wide px-1">Clave Personalizada</label>
+                                    <label className="text-[9px] font-bold text-zinc-600 uppercase mb-1.5 block  px-1">Clave Personalizada</label>
                                     <div className="flex gap-1.5">
                                         <div className="relative flex-1">
                                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
@@ -156,7 +156,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
 
                                 {/* Common Keys List */}
                                 <div>
-                                    <label className="px-2 text-[9px] font-bold text-zinc-600 uppercase mb-1 block tracking-wide">Claves Comunes</label>
+                                    <label className="px-2 text-[9px] font-bold text-zinc-600 uppercase mb-1 block ">Claves Comunes</label>
                                     {COMMON_TEXT_KEYS.map((t) => (
                                         <button
                                             key={t.key}

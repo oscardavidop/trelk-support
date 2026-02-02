@@ -183,7 +183,7 @@ export default function MessageContextMenu({
           <div className={`p-1 rounded-md ${message.sender === 'user' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
             <Quote className="w-3 h-3" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 tracking-widest">
+          <span className="text-[10px] font-bold text-zinc-500 st">
             {message.sender === 'user' ? 'Usuario' : 'Agente'}
           </span>
         </div>

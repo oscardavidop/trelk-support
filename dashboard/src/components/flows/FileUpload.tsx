@@ -267,7 +267,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         {mode === 'gallery' && (
           <div className="animate-in fade-in slide-in-from-bottom-1 duration-200">
             <div className="flex justify-between items-center mb-3 px-1">
-               <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Archivos Recientes</span>
+               <span className="text-xs font-bold text-zinc-500 uppercase r">Archivos Recientes</span>
                <button onClick={loadGallery} disabled={galleryLoading} className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800">
                   <RefreshCw className={`w-3.5 h-3.5 ${galleryLoading ? 'animate-spin' : ''}`} />
                </button>

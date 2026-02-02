@@ -941,7 +941,7 @@ export default function PermissionsPage() {
 
                                                 {/* Permission Categories Grid */}
                                                 <div className="space-y-4">
-                                                    <h3 className="text-sm font-medium text-zinc-400 tracking-widest pl-1">Configuración de Permisos</h3>
+                                                    <h3 className="text-sm font-medium text-zinc-400 st pl-1">Configuración de Permisos</h3>
                                                     {Object.entries(categories).map(([categoryKey, category]) => {
                                                         const style = CATEGORY_STYLES[categoryKey] || { color: 'text-zinc-400', bgColor: 'bg-zinc-800' };
                                                         const isExpanded = expandedCategories.has(categoryKey);

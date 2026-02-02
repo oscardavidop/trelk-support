@@ -67,7 +67,7 @@ export const DelayBlockEditor: React.FC<BlockEditorProps<DelayBlock>> = ({
                                 style={{ width: `${percentage}%` }}
                             />
                         </div>
-                        <div className="flex justify-between items-center text-[9px] text-zinc-600 uppercase tracking-wider font-medium mt-3">
+                        <div className="flex justify-between items-center text-[9px] text-zinc-600 uppercase r font-medium mt-3">
                             <span>Breve</span>
                             <span>Largo (60s)</span>
                         </div>

@@ -81,7 +81,7 @@ function TriggerNode({ data, selected, id }: NodeProps<TriggerNodeData>) {
 
           {/* Titles */}
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
+            <div className="text-[10px] font-bold uppercase r text-zinc-500 mb-0.5">
               Evento Inicial
             </div>
             <div className="font-bold text-zinc-200 text-xs leading-tight truncate">
@@ -97,7 +97,7 @@ function TriggerNode({ data, selected, id }: NodeProps<TriggerNodeData>) {
           {triggerType === 'keyword_detected' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                 <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wide">Palabras Clave</span>
+                 <span className="text-[9px] font-bold text-zinc-500 uppercase ">Palabras Clave</span>
                  <span className="text-[9px] bg-zinc-900 text-zinc-400 px-1.5 rounded">{data.config?.keywords?.length || 0}</span>
               </div>
               

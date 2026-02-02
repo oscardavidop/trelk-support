@@ -33,7 +33,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
       
       {/* Trigger Type Selector */}
       <div className="space-y-3">
-        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+        <label className="text-xs font-bold text-zinc-500 uppercase r flex items-center gap-2">
           <Zap className="w-3.5 h-3.5" /> Condición de Activación
         </label>
         
@@ -80,7 +80,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
           <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
           
           <div className="space-y-2">
-            <label className="text-xs font-bold text-cyan-500 uppercase tracking-wider">Comando</label>
+            <label className="text-xs font-bold text-cyan-500 uppercase r">Comando</label>
             <div className="relative">
               <span className="absolute left-3 top-2.5 text-zinc-500 font-mono">/</span>
               <input
@@ -94,7 +94,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Parámetros</label>
+            <label className="text-xs font-bold text-zinc-500 uppercase r">Parámetros</label>
             <div className="grid grid-cols-2 gap-2">
                {['any', 'exact', 'contains', 'regex'].map(opt => (
                  <button
@@ -126,7 +126,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
       {triggerConfig.triggerType === 'keyword_detected' && (
         <div className="p-4 bg-zinc-950 border border-purple-500/20 rounded-xl space-y-4">
            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-purple-500 uppercase tracking-wider">Palabras Clave</label>
+              <label className="text-xs font-bold text-purple-500 uppercase r">Palabras Clave</label>
               <div className="flex gap-1 bg-zinc-900 rounded p-0.5 border border-zinc-800">
                  {['contains', 'exact', 'regex'].map(opt => (
                     <button 
@@ -166,7 +166,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
          <div className="p-4 bg-zinc-950 border border-orange-500/20 rounded-xl flex items-center gap-3">
             <Clock className="w-5 h-5 text-orange-500" />
             <div className="flex-1">
-               <label className="text-xs font-bold text-orange-500 uppercase tracking-wider block mb-1">Tiempo de Inactividad</label>
+               <label className="text-xs font-bold text-orange-500 uppercase r block mb-1">Tiempo de Inactividad</label>
                <div className="flex items-center gap-2">
                   <input 
                     type="number" 

@@ -473,7 +473,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
         <div className="p-6 space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Título</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 ">Título</label>
               <input
                 type="text"
                 value={formData.title}
@@ -484,7 +484,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">
+              <label className="block text-xs font-medium text-zinc-400 mb-2 ">
                 Contenido
                 <span className="normal-case text-zinc-500 ml-2 font-normal tracking-normal">(Soporta variables)</span>
               </label>
@@ -499,7 +499,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
 
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Categoría</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-2 ">Categoría</label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
@@ -517,7 +517,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Atajo (Shortcut)</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-2 ">Atajo (Shortcut)</label>
                 <div className="relative group">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono text-lg group-focus-within:text-blue-500">/</span>
                   <input

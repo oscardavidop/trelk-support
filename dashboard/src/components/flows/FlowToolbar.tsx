@@ -63,7 +63,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
     };
     const style = styles[flowStatus] || styles.draft;
     return (
-      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-transparent ${style.bg} ${style.text}`}>
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase r border border-transparent ${style.bg} ${style.text}`}>
         {style.label}
       </span>
     );

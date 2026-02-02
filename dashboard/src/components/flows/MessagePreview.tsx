@@ -271,7 +271,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
           <div className="p-1.5 bg-sky-500/10 rounded text-sky-400">
             {isExpanded ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </div>
-          <span className="text-xs font-bold text-zinc-300 uppercase tracking-wide">Vista Previa (Telegram)</span>
+          <span className="text-xs font-bold text-zinc-300 uppercase ">Vista Previa (Telegram)</span>
         </div>
         <span className="text-[10px] text-zinc-500 font-medium">
           {isExpanded ? 'Ocultar' : 'Mostrar'}

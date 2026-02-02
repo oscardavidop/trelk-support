@@ -182,7 +182,7 @@
 //             {/* Query Params */}
 //             <div className="space-y-2">
 //               <div className="flex justify-between items-center px-1">
-//                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Query Params</label>
+//                 <label className="text-[10px] font-bold text-zinc-400 uppercase ">Query Params</label>
 //                 <button onClick={() => addItem('queryParams')} className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Plus className="w-3 h-3"/> Añadir</button>
 //               </div>
 //               {cfg.queryParams.length === 0 && <p className="text-xs text-zinc-600 italic px-1">Sin parámetros</p>}
@@ -201,7 +201,7 @@
 //             {/* Headers */}
 //             <div className="space-y-2">
 //               <div className="flex justify-between items-center px-1">
-//                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Headers</label>
+//                 <label className="text-[10px] font-bold text-zinc-400 uppercase ">Headers</label>
 //                 <button onClick={() => addItem('headers')} className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Plus className="w-3 h-3"/> Añadir</button>
 //               </div>
 //               {cfg.headers.length === 0 && <p className="text-xs text-zinc-600 italic px-1">Sin headers</p>}
@@ -792,7 +792,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Query Params</label>
+                <label className="text-[10px] font-bold text-zinc-400 uppercase ">Query Params</label>
                 <button onClick={() => addItem('queryParams')} className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Plus className="w-3 h-3"/> Añadir</button>
               </div>
               {cfg.queryParams.map(p => (
@@ -807,7 +807,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
             <div className="h-px bg-zinc-800" />
             <div className="space-y-2">
               <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Headers</label>
+                <label className="text-[10px] font-bold text-zinc-400 uppercase ">Headers</label>
                 <button onClick={() => addItem('headers')} className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Plus className="w-3 h-3"/> Añadir</button>
               </div>
               {cfg.headers.map(h => (

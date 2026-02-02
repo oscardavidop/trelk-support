@@ -57,7 +57,7 @@ function EndNode({ data, selected, id }: NodeProps<EndNodeData>) {
 
           {/* Titles */}
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 mb-0.5">
+            <div className="text-[10px] font-bold uppercase r text-zinc-600 mb-0.5">
               Estado Final
             </div>
             <div className="font-bold text-zinc-200 text-xs leading-tight truncate">

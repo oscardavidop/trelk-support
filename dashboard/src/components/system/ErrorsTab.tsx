@@ -274,7 +274,7 @@ function ErrorCard({ error, expanded, onToggle }: { error: ErrorLogEntry; expand
           {/* Stack Trace / Error Details */}
           <div className="relative group/code">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-zinc-500 tracking-widest flex items-center gap-1">
+              <span className="text-[10px] font-bold text-zinc-500 st flex items-center gap-1">
                 <Terminal className="w-3 h-3" /> Stack Trace
               </span>
               <button

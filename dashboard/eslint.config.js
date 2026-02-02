@@ -10,7 +10,8 @@ export default defineConfig([
   {
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
-      "no-empty": "off",
+      "@typescript-eslint/no-explicit-any": "error",
+      "no-empty": "off"
     },
     files: ["**/*.{ts,tsx}"],
     extends: [

@@ -111,7 +111,7 @@ const RenderConditionConfig = (config: ConditionConfig, updateConfig: (key: stri
               <div className="p-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 text-indigo-400">
                 <GitFork className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-bold text-zinc-300 uppercase tracking-wide">
+              <span className="text-xs font-bold text-zinc-300 uppercase ">
                 Grupo #{groupIndex + 1}
               </span>
             </div>

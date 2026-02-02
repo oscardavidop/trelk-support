@@ -135,7 +135,7 @@ export function CopilotSection({ sessionId }: CopilotSectionProps) {
               <div 
                 key={i} 
                 className={`
-                  flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold tracking-wide
+                  flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold 
                   ${i === 0 
                     ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' 
                     : 'bg-zinc-800 border-zinc-700 text-zinc-400'}
@@ -170,7 +170,7 @@ export function CopilotSection({ sessionId }: CopilotSectionProps) {
                 : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
             }`}>
               {latestCloseReady.closeReady?.ready ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-              <span className="text-xs font-bold tracking-wide">
+              <span className="text-xs font-bold ">
                 {latestCloseReady.closeReady?.ready ? 'Listo para cerrar' : 'Acciones pendientes'}
               </span>
             </div>

@@ -241,7 +241,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
 
       {/* 1. Services Status */}
       <div>
-        <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-zinc-500 st mb-4 flex items-center gap-2">
           <Server className="w-4 h-4" /> Servicios Principales
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -270,7 +270,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
 
       {/* 2. Key Metrics */}
       <div>
-        <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-zinc-500 st mb-4 flex items-center gap-2">
           <TrendingUp className="w-4 h-4" /> Métricas Clave
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -308,7 +308,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
 
       {/* 3. Quick Actions */}
       <div>
-        <h3 className="text-xs font-bold text-zinc-500 tracking-widest mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-zinc-500 st mb-4 flex items-center gap-2">
           <Zap className="w-4 h-4" /> Mantenimiento Rápido
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

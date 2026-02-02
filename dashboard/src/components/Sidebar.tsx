@@ -169,7 +169,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
           ) : (
             <div className="flex items-center gap-2 text-white font-semibold">
               <img src="/assets/img/logo-dark.png" alt="Logo" className="rounded-sm object-contain h-8 w-auto" />
-              <span className="font-bold text-zinc-100 text-sm tracking-wide">Support</span>
+              <span className="font-bold text-zinc-100 text-sm ">Support</span>
             </div>
           )}
         </div>

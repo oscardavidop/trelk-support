@@ -113,7 +113,7 @@ export function SidebarUserIdentity({ user }: UserIdentityProps) {
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20">
                     <div className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></div>
-                    <span className="text-[10px] font-bold text-sky-400 tracking-wide">Telegram</span>
+                    <span className="text-[10px] font-bold text-sky-400 ">Telegram</span>
                 </div>
             </div>
 

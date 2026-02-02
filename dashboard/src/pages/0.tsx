@@ -104,7 +104,7 @@
 //           <React.Fragment key={msg._id}>
 //             {showDate && (
 //               <div className="flex justify-center py-6">
-//                 <span className="px-3 py-1 bg-zinc-900/50 border border-zinc-800 rounded-full text-[10px] font-medium text-zinc-500 tracking-widest shadow-sm">
+//                 <span className="px-3 py-1 bg-zinc-900/50 border border-zinc-800 rounded-full text-[10px] font-medium text-zinc-500 st shadow-sm">
 //                   {new Date(msg.createdAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
 //                 </span>
 //               </div>

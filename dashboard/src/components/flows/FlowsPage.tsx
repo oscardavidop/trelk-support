@@ -672,17 +672,17 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
       <div className="grid grid-cols-2 gap-2 mb-4 bg-zinc-950/50 p-2 rounded-xl border border-zinc-800/50">
         <div className="text-center p-1">
           <div className="text-sm font-bold text-white">{flow.executionCount || 0}</div>
-          <div className="text-[10px] text-zinc-500 tracking-wide">Runs</div>
+          <div className="text-[10px] text-zinc-500 ">Runs</div>
         </div>
         <div className="text-center p-1 border-l border-zinc-800">
           <div className={`text-sm font-bold ${flow.errorCount > 0 ? 'text-red-400' : 'text-zinc-400'}`}>{flow.errorCount || 0}</div>
-          <div className="text-[10px] text-zinc-500 tracking-wide">Errors</div>
+          <div className="text-[10px] text-zinc-500 ">Errors</div>
         </div>
       </div>
 
       {/* Triggers */}
       <div className="mb-4 flex-1">
-        <div className="text-[10px] font-bold text-zinc-500 tracking-widest mb-2">Triggers</div>
+        <div className="text-[10px] font-bold text-zinc-500 st mb-2">Triggers</div>
         <div className="flex flex-wrap gap-1.5">
           {flow.triggers?.length > 0 ? flow.triggers.slice(0, 2).map((t: string) => (
             <span key={t} className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded-md text-[10px] font-medium flex items-center gap-1">

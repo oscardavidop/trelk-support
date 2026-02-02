@@ -136,7 +136,7 @@ const NodeWrapper: React.FC<NodeWrapperProps> = ({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Acciones</div>
+      <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase r">Acciones</div>
       
       <button
         onMouseDown={handleDuplicate}

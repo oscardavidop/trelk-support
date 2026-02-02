@@ -261,7 +261,7 @@ export default function SystemControlPage() {
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-zinc-500 tracking-widest mb-6">Acciones Globales</h3>
+            <h3 className="text-sm font-bold text-zinc-500 st mb-6">Acciones Globales</h3>
             <div className="flex flex-wrap gap-4">
               <ActionButton label="Cerrar Todos" icon={Power} severity="critical" onClick={() => executeAction('/api/admin-control/chats/close-all', { reason: 'Force close' }, { title: 'Cerrar TODO', message: 'Se cerrarán todos los chats activos.', severity: 'critical', requirePassword: true })} />
               <ActionButton label="Purgar Huérfanos" icon={Trash2} severity="warning" onClick={() => executeAction('/api/admin-control/chats/delete-orphans', {}, { title: 'Eliminar Huérfanos', message: `Se eliminarán ${chatStats.orphan} chats rotos.`, severity: 'warning' })} />
@@ -271,7 +271,7 @@ export default function SystemControlPage() {
 
           {chatStats.byAgent.length > 0 && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-              <h3 className="text-sm font-bold text-zinc-500 tracking-widest mb-4">Chats por Agente</h3>
+              <h3 className="text-sm font-bold text-zinc-500 st mb-4">Chats por Agente</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {chatStats.byAgent.map((a) => (
                   <div key={a.agentId} className="flex items-center justify-between bg-zinc-950/50 border border-zinc-800/50 px-5 py-3 rounded-xl">
@@ -309,7 +309,7 @@ export default function SystemControlPage() {
                     <StatCard label="Inactivos" value={flowStats.inactive} icon={PauseCircle} color="text-zinc-500"/>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-                    <h3 className="text-sm font-bold text-zinc-500 tracking-widest mb-6">Mantenimiento</h3>
+                    <h3 className="text-sm font-bold text-zinc-500 st mb-6">Mantenimiento</h3>
                     <div className="flex gap-4">
                         <ActionButton label="Desactivar Todos" icon={Power} severity="critical" onClick={() => executeAction('/api/admin-control/flows/disable-all', {}, { title: 'Apagar Flows', message: 'Se detendrá toda automatización.', severity: 'critical', requirePassword: true })} />
                         <ActionButton label="Recargar Cache" icon={RefreshCw} severity="info" onClick={() => executeAction('/api/admin-control/flows/reload', {}, { title: 'Recargar', message: 'Refrescar cache de flows.', severity: 'info' })} />
@@ -404,7 +404,7 @@ export default function SystemControlPage() {
                     {Object.entries(sessionStats.byRole).map(([r, c]) => <StatCard key={r} label={r} value={c} icon={Users} color="text-zinc-300" />)}
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-                    <h3 className="text-sm font-bold text-zinc-500 tracking-widest mb-4">Acciones Masivas</h3>
+                    <h3 className="text-sm font-bold text-zinc-500 st mb-4">Acciones Masivas</h3>
                     <div className="flex gap-4">
                         <ActionButton label="Logout Global" icon={LogOut} severity="critical" onClick={() => executeAction('/api/admin-control/sessions/logout-all', { confirmPhrase: 'LOGOUT ALL' }, { title: 'Cerrar Sesión Global', message: 'Desconectar a TODOS los usuarios.', severity: 'critical', confirmPhrase: 'LOGOUT ALL', requirePassword: true })} />
                         <ActionButton label="Logout Agentes" icon={LogOut} severity="warning" onClick={() => executeAction('/api/admin-control/sessions/logout-by-role', { role: 'support' }, { title: 'Logout Agentes', message: 'Desconectar rol support.', severity: 'warning' })} />
@@ -536,7 +536,7 @@ export default function SystemControlPage() {
                     </div>
                     {cacheStats && (
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-                            <h3 className="text-sm font-bold text-zinc-500 tracking-widest mb-4">Redis Status</h3>
+                            <h3 className="text-sm font-bold text-zinc-500 st mb-4">Redis Status</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                 <StatCard label="Keys" value={cacheStats.keys} icon={Database} color="text-orange-400"/>
                                 <StatCard label="Memoria" value={cacheStats.usedMemory} icon={HardDrive} color="text-purple-400"/>

@@ -104,7 +104,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
       {/* 2. Question Input */}
       <div className="space-y-2 relative">
         <div className="flex items-center justify-between">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Pregunta al Usuario</label>
+          <label className="text-[10px] font-bold text-zinc-500 uppercase r">Pregunta al Usuario</label>
           <button
             type="button"
             onClick={() => setShowVariables(!showVariables)}
@@ -151,7 +151,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 3. Variable Name */}
       <div className="space-y-2">
-        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Guardar respuesta en</label>
+        <label className="text-[10px] font-bold text-zinc-500 uppercase r">Guardar respuesta en</label>
         <div className="flex items-center group focus-within:ring-1 focus-within:ring-violet-500/50 rounded-lg transition-all">
           <div className="bg-zinc-950 border border-r-0 border-zinc-800 rounded-l-lg px-3 py-2.5 text-xs text-zinc-500 font-mono select-none">
             {'{{variables.'}
@@ -172,7 +172,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 4. Validation Type Grid */}
       <div className="space-y-2">
-        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Dato Esperado</label>
+        <label className="text-[10px] font-bold text-zinc-500 uppercase r">Tipo de Dato Esperado</label>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {VALIDATION_TYPES.map((type) => {
             const isSelected = dataCollection.validationType === type.value;
@@ -202,7 +202,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
       {dataCollection.validationType === 'choice' && (
         <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Opciones de Respuesta</label>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase r">Opciones de Respuesta</label>
             <span className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">
               {(dataCollection.choices || []).length}
             </span>
@@ -252,7 +252,7 @@ const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
 
       {/* 6. Error Message */}
       <div className="space-y-1">
-        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje de Error</label>
+        <label className="text-[10px] font-bold text-zinc-500 uppercase r">Mensaje de Error</label>
         <input
           type="text"
           value={dataCollection.errorMessage || ''}

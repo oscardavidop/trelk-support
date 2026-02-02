@@ -96,7 +96,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
     return (
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+          <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
             <PlayCircle className="w-3.5 h-3.5" /> Tipo de Acción
           </label>
 
@@ -150,14 +150,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <CalendarClock className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Programar Mensaje</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Programar Mensaje</h4>
                 <p className="text-[10px] text-zinc-500">Envío diferido o condicional</p>
               </div>
             </div>
 
             {/* Schedule Type Selector */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Programación</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Tipo de Programación</label>
               <div className="grid grid-cols-1 gap-2">
                 {[
                   { value: 'after_inactivity', label: 'Por Inactividad', icon: Timer },
@@ -203,7 +203,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {/* 1. After Inactivity */}
               {(actionConfig.scheduleMessageConfig?.type || actionConfig.scheduleType || 'after_inactivity') === 'after_inactivity' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tiempo de Espera</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase r">Tiempo de Espera</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="number"
@@ -231,7 +231,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {/* 2. Fixed Time */}
               {(actionConfig.scheduleMessageConfig?.type) === 'fixed_time' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Fecha y Hora</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase r">Fecha y Hora</label>
                   <input
                     type="datetime-local"
                     value={(() => {
@@ -261,7 +261,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {/* 3. On Event */}
               {(actionConfig.scheduleMessageConfig?.type) === 'on_event' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Evento Disparador</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase r">Evento Disparador</label>
                   <select
                     value={actionConfig.scheduleMessageConfig?.triggerEvent || ''}
                     onChange={(e) => {
@@ -287,7 +287,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
               {/* Message Content */}
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                   <MessageSquare className="w-3 h-3" /> Contenido del Mensaje
                 </label>
                 <textarea
@@ -310,7 +310,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
               {/* Cancel Conditions */}
               <div className="space-y-3 pt-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Condiciones de Cancelación</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Condiciones de Cancelación</label>
 
                 <label className="flex items-center gap-3 p-2 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 cursor-pointer transition-colors">
                   <input
@@ -350,7 +350,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <div className="flex items-center gap-3 p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
                 <Clock className="w-4 h-4 text-red-400" />
                 <div className="flex-1">
-                  <label className="text-[10px] font-bold text-red-400 uppercase tracking-wide block mb-1">Expiración</label>
+                  <label className="text-[10px] font-bold text-red-400 uppercase  block mb-1">Expiración</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -387,7 +387,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Tag className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">
                   {actionConfig.actionType === 'add_tag' ? 'Añadir Etiqueta' : 'Quitar Etiqueta'}
                 </h4>
                 <p className="text-[10px] text-zinc-500">
@@ -398,7 +398,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* Tag Name Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre del Tag</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Nombre del Tag</label>
               <div className="relative group">
                 {actionConfig.actionType === 'add_tag' ? (
                   <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
@@ -419,7 +419,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             {/* Color Picker (Only for Add) */}
             {actionConfig.actionType === 'add_tag' && (
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                   <Palette className="w-3 h-3" /> Color de Etiqueta
                 </label>
                 <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-lg p-2">
@@ -467,14 +467,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Webhook className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Webhook Simple</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Webhook Simple</h4>
                 <p className="text-[10px] text-zinc-500">Notificación HTTP básica</p>
               </div>
             </div>
 
             {/* Combined Method & URL Input (Omnibar) */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                 <Globe className="w-3.5 h-3.5" /> Endpoint Destino
               </label>
 
@@ -551,14 +551,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <StickyNote className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Nota Interna</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Nota Interna</h4>
                 <p className="text-[10px] text-zinc-500">Solo visible para agentes y admins</p>
               </div>
             </div>
 
             {/* Note Content Textarea */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                 <AlignLeft className="w-3.5 h-3.5" /> Contenido
               </label>
               <textarea
@@ -607,14 +607,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <UserCog className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Enrutamiento</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Enrutamiento</h4>
                 <p className="text-[10px] text-zinc-500">Asigna la conversación a un humano</p>
               </div>
             </div>
 
             {/* Agent ID Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">ID del Agente (Opcional)</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">ID del Agente (Opcional)</label>
               <div className="relative group">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
                 <input
@@ -666,14 +666,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <FolderInput className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Clasificación</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Clasificación</h4>
                 <p className="text-[10px] text-zinc-500">Organiza el chat en una bandeja específica</p>
               </div>
             </div>
 
             {/* Category Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                 <Layers className="w-3.5 h-3.5" /> Nueva Categoría
               </label>
 
@@ -712,14 +712,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Ban className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Bloquear Usuario</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Bloquear Usuario</h4>
                 <p className="text-[10px] text-zinc-500">Restringe el acceso al bot temporalmente</p>
               </div>
             </div>
 
             {/* Duration Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Duración del bloqueo</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Duración del bloqueo</label>
               <div className="relative group">
                 <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
                 <input
@@ -736,7 +736,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* Reason Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Motivo (Interno)</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Motivo (Interno)</label>
               <div className="relative group">
                 <FileWarning className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
                 <input
@@ -765,7 +765,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     <XCircle className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Cerrar Chat</h4>
+                    <h4 className="text-xs font-bold text-zinc-200 uppercase ">Cerrar Chat</h4>
                     <p className="text-[10px] text-zinc-500">Finalizar sesión actual</p>
                   </div>
                 </>
@@ -775,7 +775,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     <RotateCcw className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Reabrir Chat</h4>
+                    <h4 className="text-xs font-bold text-zinc-200 uppercase ">Reabrir Chat</h4>
                     <p className="text-[10px] text-zinc-500">Reactivar sesión archivada</p>
                   </div>
                 </>
@@ -806,14 +806,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <ClipboardList className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Encuesta de Satisfacción</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Encuesta de Satisfacción</h4>
                 <p className="text-[10px] text-zinc-500">Recopila feedback del usuario</p>
               </div>
             </div>
 
             {/* Survey Type Selector */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Metodología</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Metodología</label>
               <div className="relative">
                 <select
                   value={actionConfig.surveyType || 'csat'}
@@ -881,14 +881,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Database className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Variable Personalizada</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Variable Personalizada</h4>
                 <p className="text-[10px] text-zinc-500">Almacena datos específicos del usuario</p>
               </div>
             </div>
 
             {/* Field Key Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                 <Variable className="w-3 h-3" /> Clave del Campo (Key)
               </label>
               <input
@@ -906,7 +906,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* Field Value Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Valor a Guardar</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Valor a Guardar</label>
               <input
                 type="text"
                 value={actionConfig.customFieldValue || ''}
@@ -949,14 +949,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <PenLine className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Editar Mensaje</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Editar Mensaje</h4>
                 <p className="text-[10px] text-zinc-500">Modifica contenido enviado previamente</p>
               </div>
             </div>
 
             {/* Target Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje a Editar</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Mensaje a Editar</label>
               <div className="relative group">
                 <select
                   value={(actionConfig as any).editMessageConfig?.targetType || 'last_bot_message'}
@@ -978,7 +978,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             {/* Conditional Input: Variable */}
             {(actionConfig as any).editMessageConfig?.targetType === 'variable' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre de Variable</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Nombre de Variable</label>
                 <div className="relative group">
                   <Variable className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
                   <input
@@ -996,7 +996,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             {/* Conditional Input: Specific ID */}
             {(actionConfig as any).editMessageConfig?.targetType === 'specific_id' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">ID del Mensaje</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">ID del Mensaje</label>
                 <div className="relative group">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
                   <input
@@ -1013,7 +1013,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* New Text Content */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
                 <MessageSquare className="w-3 h-3" /> Nuevo Contenido
               </label>
               <textarea
@@ -1039,14 +1039,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Eraser className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Eliminar Mensaje</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Eliminar Mensaje</h4>
                 <p className="text-[10px] text-zinc-500">Gestión del historial de chat</p>
               </div>
             </div>
 
             {/* Target Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje a eliminar</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Mensaje a eliminar</label>
               <div className="relative group">
                 <select
                   value={(actionConfig).deleteMessageConfig?.targetType || 'last_bot_message'}
@@ -1070,7 +1070,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             {/* Conditional Inputs */}
             {(actionConfig as any).deleteMessageConfig?.targetType === 'variable' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre de la Variable</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Nombre de la Variable</label>
                 <div className="relative group">
                   <Variable className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
                   <input
@@ -1087,7 +1087,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {(actionConfig as any).deleteMessageConfig?.targetType === 'specific_id' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">ID del Mensaje</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">ID del Mensaje</label>
                 <div className="relative group">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-500 transition-colors" />
                   <input
@@ -1114,14 +1114,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Activity className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Estado del Chat</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Estado del Chat</h4>
                 <p className="text-[10px] text-zinc-500">Simula actividad humana (escribiendo, grabando...)</p>
               </div>
             </div>
 
             {/* Action Type Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Acción</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Tipo de Acción</label>
               <div className="relative">
                 <select
                   value={(actionConfig as any).chatActionConfig?.action || 'typing'}
@@ -1146,7 +1146,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* Duration Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Duración de Simulación</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Duración de Simulación</label>
               <div className="flex items-center gap-3">
                 <div className="relative w-24">
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
@@ -1184,14 +1184,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Timer className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Pausa (Delay)</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Pausa (Delay)</h4>
                 <p className="text-[10px] text-zinc-500">Controla el ritmo de la conversación</p>
               </div>
             </div>
 
             {/* Time Input & Visualizer */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Duración de la pausa</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Duración de la pausa</label>
               <div className="flex items-center gap-4">
 
                 {/* Number Input */}
@@ -1216,7 +1216,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                       style={{ width: `${Math.min((((actionConfig as any).delayActionConfig?.delaySeconds || 2) / 60) * 100, 100)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] text-zinc-600 font-medium uppercase tracking-wider">
+                  <div className="flex justify-between text-[9px] text-zinc-600 font-medium uppercase r">
                     <span>1s</span>
                     <span>60s+</span>
                   </div>
@@ -1268,14 +1268,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Pin className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Fijar Mensaje</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Fijar Mensaje</h4>
                 <p className="text-[10px] text-zinc-500">Ancla un mensaje en la parte superior del chat</p>
               </div>
             </div>
 
             {/* Target Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mensaje a fijar</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Mensaje a fijar</label>
               <div className="relative group">
                 <select
                   value={(actionConfig as any).pinMessageConfig?.targetType || 'last_bot_message'}
@@ -1349,14 +1349,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Save className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Guardar ID</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Guardar ID</h4>
                 <p className="text-[10px] text-zinc-500">Captura el identificador único de un mensaje</p>
               </div>
             </div>
 
             {/* Variable Name Input (Styled as code syntax) */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-1.5">
                 <Variable className="w-3 h-3" /> Nombre de la Variable
               </label>
               <div className="flex items-center group focus-within:ring-1 focus-within:ring-emerald-500/50 rounded-lg transition-all">
@@ -1379,7 +1379,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* Message Source Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-1.5">
                 <MessageSquare className="w-3 h-3" /> Origen del Mensaje
               </label>
               <div className="relative group">
@@ -1418,7 +1418,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <MapPin className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Ubicación Geográfica</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Ubicación Geográfica</h4>
                 <p className="text-[10px] text-zinc-500">Coordenadas del mapa</p>
               </div>
             </div>
@@ -1426,7 +1426,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             {/* Coordinates Grid */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Latitud</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Latitud</label>
                 <input
                   type="text"
                   value={(actionConfig as any).locationConfig?.latitude || ''}
@@ -1437,7 +1437,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Longitud</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Longitud</label>
                 <input
                   type="text"
                   value={(actionConfig as any).locationConfig?.longitude || ''}
@@ -1472,14 +1472,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Contact className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Tarjeta de Contacto</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Tarjeta de Contacto</h4>
                 <p className="text-[10px] text-zinc-500">Configura la VCard que se enviará</p>
               </div>
             </div>
 
             {/* Phone Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Teléfono</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Teléfono</label>
               <div className="relative group">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
                 <input
@@ -1496,7 +1496,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             {/* Name Grid */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Nombre</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Nombre</label>
                 <input
                   type="text"
                   value={(actionConfig as any).contactConfig?.firstName || ''}
@@ -1507,7 +1507,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Apellido</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase r">Apellido</label>
                 <input
                   type="text"
                   value={(actionConfig as any).contactConfig?.lastName || ''}
@@ -1532,14 +1532,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Workflow className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Ejecutar Sub-Flujo</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Ejecutar Sub-Flujo</h4>
                 <p className="text-[10px] text-zinc-500">Conecta y reutiliza otros flujos</p>
               </div>
             </div>
 
             {/* Flow Selector */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Flujo Destino</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Flujo Destino</label>
               <div className="relative group">
                 <select
                   value={(actionConfig as any).subflowConfig?.flowId || ''}
@@ -1564,7 +1564,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
             {/* Options Cards */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Configuración de Ejecución</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Configuración de Ejecución</label>
 
               {/* Pass Variables Option */}
               <label className="flex items-start gap-3 p-3 rounded-lg border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 hover:border-zinc-700 cursor-pointer transition-all group">
@@ -1643,14 +1643,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <LayoutList className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Editar Teclado</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Editar Teclado</h4>
                 <p className="text-[10px] text-zinc-500">Modificar botones existentes</p>
               </div>
             </div>
 
             {/* Operation Select */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tipo de Operación</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r">Tipo de Operación</label>
               <div className="relative group">
                 <select
                   value={(actionConfig as any).editKeyboardConfig?.operation || 'replace'}
@@ -1690,14 +1690,14 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Sticker className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">Enviar Sticker</h4>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase ">Enviar Sticker</h4>
                 <p className="text-[10px] text-zinc-500">Envía una pegatina usando su identificador único</p>
               </div>
             </div>
 
             {/* Sticker ID Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-1.5">
                 <FileKey className="w-3 h-3" /> File ID del Sticker
               </label>
               <div className="relative group">
@@ -1797,7 +1797,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
         {/* Label */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">
+          <label className="block text-xs font-bold text-zinc-500 uppercase r mb-1">
             Nombre del nodo
           </label>
           <input

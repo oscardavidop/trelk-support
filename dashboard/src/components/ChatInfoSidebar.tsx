@@ -74,7 +74,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md shrink-0 h-[56px]">
-        <h3 className="font-bold text-zinc-100 flex items-center gap-2 text-sm tracking-wide">
+        <h3 className="font-bold text-zinc-100 flex items-center gap-2 text-sm ">
           <User className="w-4 h-4 text-indigo-500" />
           Detalles del Contacto
         </h3>
@@ -217,7 +217,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 
               {/* Meta Data Divider */}
               <div className="pt-6 pb-2 px-2">
-                <p className="text-[10px] font-bold text-zinc-600 tracking-widest">Información Técnica</p>
+                <p className="text-[10px] font-bold text-zinc-600 st">Información Técnica</p>
               </div>
 
               <SidebarSection

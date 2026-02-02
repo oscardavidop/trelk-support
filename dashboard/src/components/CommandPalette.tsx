@@ -130,7 +130,7 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
             placeholder="¿Qué quieres hacer?"
             className="flex-1 bg-transparent text-white placeholder-zinc-500 outline-none text-lg font-medium"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded-md text-[10px] text-zinc-400 font-mono font-bold tracking-wider">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded-md text-[10px] text-zinc-400 font-mono font-bold r">
             ESC
           </kbd>
         </div>
@@ -219,7 +219,7 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
           </div>
           <div className="flex items-center gap-1.5 opacity-50">
             <CommandIcon className="w-3 h-3" />
-            <span className="font-medium tracking-wide">COMMAND PALETTE</span>
+            <span className="font-medium ">COMMAND PALETTE</span>
           </div>
         </div>
       </div>

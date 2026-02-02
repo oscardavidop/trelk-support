@@ -90,7 +90,7 @@ export const TextBlockEditor: React.FC<BlockEditorProps<TextBlock>> = ({
                             value={block.parseMode || ''}
                             onChange={(e) => onChange({ parseMode: (e.target.value || undefined) as ParseMode })}
                             disabled={readOnly}
-                            className="bg-transparent text-[10px] font-bold text-zinc-500 hover:text-zinc-300 focus:text-indigo-400 outline-none cursor-pointer transition-colors appearance-none uppercase tracking-wide"
+                            className="bg-transparent text-[10px] font-bold text-zinc-500 hover:text-zinc-300 focus:text-indigo-400 outline-none cursor-pointer transition-colors appearance-none uppercase "
                             title="Formato de texto"
                         >
                             <option value="">Texto Plano</option>

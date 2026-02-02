@@ -2,9 +2,9 @@
  * AgentsPage - Modern UI for managing support agents
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { useAuthStore } from '../stores/authStore';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { useAuthStore } from "../stores/authStore";
 import {
   Users,
   Plus,
@@ -35,55 +35,55 @@ import {
   ShieldOff,
   Send,
   Link2,
-  Unlink
-} from 'lucide-react';
-import type { Agent, OnlineStatus } from '../types';
-import AdminMFAModal from '../components/AdminMFAModal';
+  Unlink,
+} from "lucide-react";
+import type { Agent, OnlineStatus } from "../types";
+import AdminMFAModal from "../components/AdminMFAModal";
 
 interface AgentFormData {
   name: string;
   email: string;
-  role: 'support' | 'supervisor' | 'admin' | 'junior';
+  role: "support" | "supervisor" | "admin" | "junior";
   maxConcurrentChats: number;
   skills: string[];
   department: string;
 }
 
 const initialFormData: AgentFormData = {
-  name: '',
-  email: '',
-  role: 'support',
+  name: "",
+  email: "",
+  role: "support",
   maxConcurrentChats: 5,
   skills: [],
-  department: '',
+  department: "",
 };
 
 const roleLabels: Record<string, string> = {
-  support: 'Agente',
-  junior: 'Junior',
-  supervisor: 'Supervisor',
-  admin: 'Administrador',
+  support: "Agente",
+  junior: "Junior",
+  supervisor: "Supervisor",
+  admin: "Administrador",
 };
 
 const roleColors: Record<string, string> = {
-  support: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  junior: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  supervisor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  admin: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  support: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  junior: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  supervisor: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  admin: "bg-amber-500/20 text-amber-400 border-amber-500/30",
 };
 
 const statusColors: Record<string, string> = {
-  available: 'bg-green-500',
-  busy: 'bg-yellow-500',
-  away: 'bg-orange-500',
-  offline: 'bg-gray-500',
+  available: "bg-green-500",
+  busy: "bg-yellow-500",
+  away: "bg-orange-500",
+  offline: "bg-gray-500",
 };
 
 const statusLabels: Record<string, string> = {
-  available: 'Disponible',
-  busy: 'Ocupado',
-  away: 'Ausente',
-  offline: 'Desconectado',
+  available: "Disponible",
+  busy: "Ocupado",
+  away: "Ausente",
+  offline: "Desconectado",
 };
 
 export default function AgentsPage() {
@@ -92,9 +92,9 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
 
   // Modal states
@@ -106,7 +106,7 @@ export default function AgentsPage() {
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [formData, setFormData] = useState<AgentFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
-  const [skillInput, setSkillInput] = useState('');
+  const [skillInput, setSkillInput] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => {
@@ -116,13 +116,13 @@ export default function AgentsPage() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = () => setActiveDropdown(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   const loadAgents = async () => {
     try {
-      const res = await fetch('/api/admin/agents', {
+      const res = await fetch("/api/admin/agents", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -130,7 +130,7 @@ export default function AgentsPage() {
         setAgents(data.agents);
       }
     } catch (error) {
-      console.error('Failed to load agents:', error);
+      console.error("Failed to load agents:", error);
     } finally {
       setIsLoading(false);
     }
@@ -149,12 +149,12 @@ export default function AgentsPage() {
     try {
       const url = editingAgent
         ? `/api/admin/agents/${editingAgent._id}`
-        : '/api/admin/agents';
+        : "/api/admin/agents";
 
       const res = await fetch(url, {
-        method: editingAgent ? 'PATCH' : 'POST',
+        method: editingAgent ? "PATCH" : "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
@@ -163,14 +163,16 @@ export default function AgentsPage() {
 
       if (data.ok) {
         if (editingAgent) {
-          setAgents(agents.map((a) => (a._id === editingAgent._id ? data.agent : a)));
+          setAgents(
+            agents.map((a) => (a._id === editingAgent._id ? data.agent : a)),
+          );
         } else {
           setAgents([...agents, data.agent]);
         }
         closeFormModal();
       }
     } catch (error) {
-      console.error('Failed to save agent:', error);
+      console.error("Failed to save agent:", error);
     } finally {
       setIsSaving(false);
     }
@@ -182,7 +184,7 @@ export default function AgentsPage() {
     setIsSaving(true);
     try {
       const res = await fetch(`/api/admin/agents/${editingAgent._id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -192,7 +194,7 @@ export default function AgentsPage() {
         setEditingAgent(null);
       }
     } catch (error) {
-      console.error('Failed to delete agent:', error);
+      console.error("Failed to delete agent:", error);
     } finally {
       setIsSaving(false);
     }
@@ -203,10 +205,13 @@ export default function AgentsPage() {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/admin/agents/${editingAgent._id}/reset-password`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `/api/admin/agents/${editingAgent._id}/reset-password`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const data = await res.json();
       if (data.ok) {
         setShowResetPasswordModal(false);
@@ -214,7 +219,7 @@ export default function AgentsPage() {
         // TODO: Show temporary password
       }
     } catch (error) {
-      console.error('Failed to reset password:', error);
+      console.error("Failed to reset password:", error);
     } finally {
       setIsSaving(false);
     }
@@ -223,9 +228,9 @@ export default function AgentsPage() {
   const handleToggleActive = async (agent: Agent) => {
     try {
       const res = await fetch(`/api/admin/agents/${agent._id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ isActive: !agent.isActive }),
@@ -236,16 +241,18 @@ export default function AgentsPage() {
         setShowDesactivateModal(false);
       }
     } catch (error) {
-      console.error('Failed to toggle agent status:', error);
+      console.error("Failed to toggle agent status:", error);
     }
   };
 
   // Handle MFA updates from modal
   const handleMFAUpdate = (updatedFields: Partial<Agent>) => {
     if (editingAgent) {
-      setAgents(agents.map((a) => 
-        a._id === editingAgent._id ? { ...a, ...updatedFields } : a
-      ));
+      setAgents(
+        agents.map((a) =>
+          a._id === editingAgent._id ? { ...a, ...updatedFields } : a,
+        ),
+      );
     }
   };
 
@@ -258,7 +265,7 @@ export default function AgentsPage() {
         role: agent.role,
         maxConcurrentChats: agent.maxConcurrentChats || 5,
         skills: agent.skills || [],
-        department: agent.department || '',
+        department: agent.department || "",
       });
     } else {
       setEditingAgent(null);
@@ -271,18 +278,24 @@ export default function AgentsPage() {
     setShowFormModal(false);
     setEditingAgent(null);
     setFormData(initialFormData);
-    setSkillInput('');
+    setSkillInput("");
   };
 
   const addSkill = () => {
     if (skillInput.trim() && !formData.skills.includes(skillInput.trim())) {
-      setFormData({ ...formData, skills: [...formData.skills, skillInput.trim()] });
-      setSkillInput('');
+      setFormData({
+        ...formData,
+        skills: [...formData.skills, skillInput.trim()],
+      });
+      setSkillInput("");
     }
   };
 
   const removeSkill = (skill: string) => {
-    setFormData({ ...formData, skills: formData.skills.filter((s) => s !== skill) });
+    setFormData({
+      ...formData,
+      skills: formData.skills.filter((s) => s !== skill),
+    });
   };
 
   // Filter agents
@@ -290,36 +303,44 @@ export default function AgentsPage() {
     const matchesSearch =
       agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === 'all' || agent.role === selectedRole;
-    const matchesStatus = selectedStatus === 'all' || agent.status === selectedStatus;
+    const matchesRole = selectedRole === "all" || agent.role === selectedRole;
+    const matchesStatus =
+      selectedStatus === "all" || agent.status === selectedStatus;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
   // Stats
   const stats = {
     total: agents.length,
-    online: agents.filter((a) => a.status !== 'offline' && a.isActive).length,
-    admins: agents.filter((a) => a.role === 'admin').length,
-    supervisors: agents.filter((a) => a.role === 'supervisor').length,
+    online: agents.filter((a) => a.status !== "offline" && a.isActive).length,
+    admins: agents.filter((a) => a.role === "admin").length,
+    supervisors: agents.filter((a) => a.role === "supervisor").length,
   };
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center h-full bg-gray-950">
-        <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-zinc-950 gap-4">
+        <div className="relative flex items-center justify-center">
+          {/* Glow effect background */}
+          <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full animate-pulse" />
+
+          {/* Spinner */}
+          <Loader2 className="relative w-8 h-8 text-indigo-500 animate-spin" />
+        </div>
+
+        <p className="text-xs font-medium text-zinc-500 animate-pulse">
+          Cargando...
+        </p>
       </div>
     );
   }
 
-
   return (
     <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-emerald-500/30">
-
       {/* Green Ambient Glow */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-
         {/* Header Section */}
         <div className="px-8 py-6 pb-2">
           <div className="flex items-center justify-between mb-6">
@@ -328,8 +349,12 @@ export default function AgentsPage() {
                 <Users className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Equipo de Soporte</h1>
-                <p className="text-sm text-zinc-400">Gestión de agentes y rendimiento</p>
+                <h1 className="text-2xl font-bold text-white tracking-tight">
+                  Equipo de Soporte
+                </h1>
+                <p className="text-sm text-zinc-400">
+                  Gestión de agentes y rendimiento
+                </p>
               </div>
             </div>
 
@@ -339,7 +364,9 @@ export default function AgentsPage() {
                 disabled={refreshing}
                 className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
               >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+                <RefreshCw
+                  className={`w-5 h-5 ${refreshing ? "animate-spin" : "group-hover:rotate-180 transition-transform"}`}
+                />
               </button>
 
               <button
@@ -354,13 +381,37 @@ export default function AgentsPage() {
 
           {/* Stats Bar (Glassy) */}
           <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6">
-            <StatBadge icon={Users} count={stats.total} label="Total" color="text-zinc-200" bg="bg-zinc-800" />
+            <StatBadge
+              icon={Users}
+              count={stats.total}
+              label="Total"
+              color="text-zinc-200"
+              bg="bg-zinc-800"
+            />
             <div className="h-4 w-px bg-white/10" />
-            <StatBadge icon={UserCheck} count={stats.online} label="En Línea" color="text-emerald-400" bg="bg-emerald-500/10" />
+            <StatBadge
+              icon={UserCheck}
+              count={stats.online}
+              label="En Línea"
+              color="text-emerald-400"
+              bg="bg-emerald-500/10"
+            />
             <div className="h-4 w-px bg-white/10" />
-            <StatBadge icon={Shield} count={stats.supervisors} label="Supervisores" color="text-purple-400" bg="bg-purple-500/10" />
+            <StatBadge
+              icon={Shield}
+              count={stats.supervisors}
+              label="Supervisores"
+              color="text-purple-400"
+              bg="bg-purple-500/10"
+            />
             <div className="h-4 w-px bg-white/10" />
-            <StatBadge icon={ShieldCheck} count={stats.admins} label="Admins" color="text-amber-400" bg="bg-amber-500/10" />
+            <StatBadge
+              icon={ShieldCheck}
+              count={stats.admins}
+              label="Admins"
+              color="text-amber-400"
+              bg="bg-amber-500/10"
+            />
           </div>
 
           {/* Toolbar (Search & Filters) */}
@@ -407,9 +458,8 @@ export default function AgentsPage() {
         {/* Content Grid */}
         <div className="flex-1 overflow-hidden px-8 pb-8 pt-2">
           <div className="flex flex-col bg-zinc-900/40 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
-
             {/* Table Header */}
-            <div className="grid grid-cols-[2fr_1.5fr_1fr_1.5fr_1fr_50px] gap-4 px-6 py-4 bg-zinc-900/80 border-b border-zinc-800 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <div className="grid grid-cols-[2fr_1.5fr_1fr_1.5fr_1fr_50px] gap-4 px-6 py-4 bg-zinc-900/80 border-b border-zinc-800 text-xs font-semibold text-zinc-400 uppercase r">
               <div className="flex items-center gap-2">Agente</div>
               <div>Rol / Dpto</div>
               <div>Estado</div>
@@ -423,7 +473,9 @@ export default function AgentsPage() {
               {filteredAgents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
                   <Users className="w-16 h-16 mb-4 stroke-1" />
-                  <p className="text-lg font-medium">No se encontraron agentes</p>
+                  <p className="text-lg font-medium">
+                    No se encontraron agentes
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-800/50">
@@ -435,10 +487,22 @@ export default function AgentsPage() {
                       activeDropdown={activeDropdown}
                       setActiveDropdown={setActiveDropdown}
                       onEdit={() => openFormModal(agent)}
-                      onDelete={() => { setEditingAgent(agent); setShowDeleteModal(true); }}
-                      onResetPassword={() => { setEditingAgent(agent); setShowResetPasswordModal(true); }}
-                      onToggleActive={() => { setEditingAgent(agent); setShowDesactivateModal(true); }}
-                      onMFA={() => { setEditingAgent(agent); setShowMFAModal(true); }}
+                      onDelete={() => {
+                        setEditingAgent(agent);
+                        setShowDeleteModal(true);
+                      }}
+                      onResetPassword={() => {
+                        setEditingAgent(agent);
+                        setShowResetPasswordModal(true);
+                      }}
+                      onToggleActive={() => {
+                        setEditingAgent(agent);
+                        setShowDesactivateModal(true);
+                      }}
+                      onMFA={() => {
+                        setEditingAgent(agent);
+                        setShowMFAModal(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -447,7 +511,6 @@ export default function AgentsPage() {
           </div>
         </div>
       </div>
-
 
       {/* Modals */}
       {showFormModal && (
@@ -473,7 +536,10 @@ export default function AgentsPage() {
           agent={editingAgent}
           isSaving={isSaving}
           onDelete={handleDelete}
-          onClose={() => { setShowDeleteModal(false); setEditingAgent(null); }}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setEditingAgent(null);
+          }}
         />
       )}
 
@@ -482,7 +548,10 @@ export default function AgentsPage() {
           agent={editingAgent}
           isSaving={isSaving}
           onReset={handleResetPassword}
-          onClose={() => { setShowResetPasswordModal(false); setEditingAgent(null); }}
+          onClose={() => {
+            setShowResetPasswordModal(false);
+            setEditingAgent(null);
+          }}
         />
       )}
       {showDesactivateModal && editingAgent && (
@@ -490,15 +559,21 @@ export default function AgentsPage() {
           agent={editingAgent}
           isSaving={isSaving}
           onConfirm={handleToggleActive}
-          onClose={() => { setShowDesactivateModal(false); setEditingAgent(null); }}
+          onClose={() => {
+            setShowDesactivateModal(false);
+            setEditingAgent(null);
+          }}
         />
       )}
-      
+
       {showMFAModal && editingAgent && (
         <AdminMFAModal
           agent={editingAgent}
           token={token}
-          onClose={() => { setShowMFAModal(false); setEditingAgent(null); }}
+          onClose={() => {
+            setShowMFAModal(false);
+            setEditingAgent(null);
+          }}
           onUpdate={handleMFAUpdate}
         />
       )}
@@ -508,30 +583,59 @@ export default function AgentsPage() {
 
 // Sub-components
 
-function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive, onMFA }: any) {
-  const status: OnlineStatus = (agent.onlineStatus as OnlineStatus) || 'offline';
+function AgentRow({
+  agent,
+  isCurrentUser,
+  activeDropdown,
+  setActiveDropdown,
+  onEdit,
+  onDelete,
+  onResetPassword,
+  onToggleActive,
+  onMFA,
+}: any) {
+  const status: OnlineStatus =
+    (agent.onlineStatus as OnlineStatus) || "offline";
   const isActive = agent.isActive !== false;
 
   return (
-    <div className={`group grid grid-cols-[2fr_1.5fr_1fr_1.5fr_1fr_50px] gap-4 px-6 py-4 items-center hover:bg-zinc-800/30 transition-colors duration-200 ${!isActive && 'opacity-50 grayscale-[0.5]'}`}>
-
+    <div
+      className={`group grid grid-cols-[2fr_1.5fr_1fr_1.5fr_1fr_50px] gap-4 px-6 py-4 items-center hover:bg-zinc-800/30 transition-colors duration-200 ${!isActive && "opacity-50 grayscale-[0.5]"}`}
+    >
       {/* 1. Agente (Avatar + Nombre) */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative shrink-0">
           {agent.avatar ? (
-            <img src={agent.avatar} alt={agent.name} className="w-10 h-10 rounded-full bg-zinc-800 object-cover" />
+            <img
+              src={agent.avatar}
+              alt={agent.name}
+              className="w-10 h-10 rounded-full bg-zinc-800 object-cover"
+            />
           ) : (
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 flex items-center justify-center text-sm font-bold text-white shadow-inner">
               {agent.name.charAt(0).toUpperCase()}
             </div>
           )}
-          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-zinc-900 ${statusColors[status]}`} />
+          <div
+            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-zinc-900 ${statusColors[status]}`}
+          />
         </div>
         <div className="min-w-0 flex flex-col">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-zinc-200 truncate">{agent.name}</span>
-            {isCurrentUser && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-px rounded border border-emerald-500/30 font-medium">TÚ</span>}
-            {agent.security?.mfa?.enabled && <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-px rounded border border-indigo-500/30 font-medium flex items-center gap-0.5"><Shield className="w-2.5 h-2.5"/>MFA</span>}
+            <span className="font-medium text-zinc-200 truncate">
+              {agent.name}
+            </span>
+            {isCurrentUser && (
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-px rounded border border-emerald-500/30 font-medium">
+                TÚ
+              </span>
+            )}
+            {agent.security?.mfa?.enabled && (
+              <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-px rounded border border-indigo-500/30 font-medium flex items-center gap-0.5">
+                <Shield className="w-2.5 h-2.5" />
+                MFA
+              </span>
+            )}
           </div>
           <span className="text-xs text-zinc-500 truncate">{agent.email}</span>
         </div>
@@ -539,7 +643,9 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
 
       {/* 2. Rol y Departamento */}
       <div className="flex flex-col items-start gap-1.5">
-        <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium uppercase ${roleColors[agent.role]}`}>
+        <span
+          className={`text-[10px] px-2 py-0.5 rounded-md border font-medium uppercase ${roleColors[agent.role]}`}
+        >
           {roleLabels[agent.role] || agent.role}
         </span>
         {agent.department && (
@@ -553,11 +659,15 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
       {/* 3. Estado */}
       <div>
         <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${statusColors[status]}`}></div>
-          <span className="text-sm text-zinc-300 capitalize">{statusLabels[status]}</span>
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${statusColors[status]}`}
+          ></div>
+          <span className="text-sm text-zinc-300 capitalize">
+            {statusLabels[status]}
+          </span>
         </div>
         <span className="text-[10px] text-zinc-500">
-          {isActive ? 'Cuenta activa' : 'Desactivado'}
+          {isActive ? "Cuenta activa" : "Desactivado"}
         </span>
       </div>
 
@@ -574,7 +684,7 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5 text-amber-400 font-medium">
             <Star className="w-3.5 h-3.5 fill-amber-400/20" />
-            {agent.metrics.averageRating?.toFixed(1) || '-'}
+            {agent.metrics.averageRating?.toFixed(1) || "-"}
           </div>
           <span className="text-[10px] text-zinc-600">Rating</span>
         </div>
@@ -583,7 +693,10 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
       {/* 5. Skills (Píldoras pequeñas) */}
       <div className="flex flex-wrap gap-1">
         {agent.skills?.slice(0, 2).map((skill: string) => (
-          <span key={skill} className="px-1.5 py-0.5 bg-zinc-800/80 border border-zinc-700 text-zinc-400 rounded text-[10px]">
+          <span
+            key={skill}
+            className="px-1.5 py-0.5 bg-zinc-800/80 border border-zinc-700 text-zinc-400 rounded text-[10px]"
+          >
             {skill}
           </span>
         ))}
@@ -592,7 +705,9 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
             +{agent.skills.length - 2}
           </span>
         )}
-        {!agent.skills?.length && <span className="text-zinc-700 text-xs">-</span>}
+        {!agent.skills?.length && (
+          <span className="text-zinc-700 text-xs">-</span>
+        )}
       </div>
 
       {/* 6. Acciones (Dropdown con Portal) */}
@@ -612,41 +727,64 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
   );
 }
 
-function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive }: any) {
-  const status: OnlineStatus = (agent.onlineStatus as OnlineStatus) || 'offline';
+function AgentCard({
+  agent,
+  isCurrentUser,
+  activeDropdown,
+  setActiveDropdown,
+  onEdit,
+  onDelete,
+  onResetPassword,
+  onToggleActive,
+}: any) {
+  const status: OnlineStatus =
+    (agent.onlineStatus as OnlineStatus) || "offline";
   const isActive = agent.isActive !== false;
 
   return (
-    <div className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-visible ${isActive ? 'border-zinc-800 hover:border-emerald-500/30' : 'border-zinc-800/50 opacity-60'}`}>
-
+    <div
+      className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-visible ${isActive ? "border-zinc-800 hover:border-emerald-500/30" : "border-zinc-800/50 opacity-60"}`}
+    >
       {/* Card Header */}
       <div className="p-5 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex gap-4">
             {/* Avatar */}
             <div className="relative">
-              {
-                agent.avatar ? (
-                  <img src={agent.avatar} alt={agent.name} className="w-12 h-12 rounded-4xl" />
-                ) : (
-                  <div className="w-12 h-12 rounded-4xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-white shadow-inner">
-                    {agent.name.charAt(0).toUpperCase()}
-                  </div>
-                )
-              }
-              <div className={`absolute bottom-6 -right-1 w-4 h-4 rounded-full border-[3px] border-zinc-900 ${statusColors[status]}`} />
+              {agent.avatar ? (
+                <img
+                  src={agent.avatar}
+                  alt={agent.name}
+                  className="w-12 h-12 rounded-4xl"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-4xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-white shadow-inner">
+                  {agent.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div
+                className={`absolute bottom-6 -right-1 w-4 h-4 rounded-full border-[3px] border-zinc-900 ${statusColors[status]}`}
+              />
             </div>
 
             {/* Info */}
             <div className="min-w-0">
               <h3 className="font-semibold text-zinc-100 truncate flex items-center gap-2">
                 {agent.name}
-                {isCurrentUser && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">TÚ</span>}
+                {isCurrentUser && (
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                    TÚ
+                  </span>
+                )}
               </h3>
-              <p className="text-xs text-zinc-500 truncate mt-0.5">{agent.email}</p>
+              <p className="text-xs text-zinc-500 truncate mt-0.5">
+                {agent.email}
+              </p>
 
               <div className="flex items-center gap-2 mt-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded border font-medium uppercase${roleColors[agent.role]}`}>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded border font-medium uppercase${roleColors[agent.role]}`}
+                >
                   {agent.role}
                 </span>
                 {agent.department && (
@@ -661,8 +799,13 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
           {/* Context Menu */}
           <div className="relative">
             <button
-              onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === agent._id ? null : agent._id); }}
-              className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors ${activeDropdown === agent._id ? 'bg-white/10 text-white' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveDropdown(
+                  activeDropdown === agent._id ? null : agent._id,
+                );
+              }}
+              className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors ${activeDropdown === agent._id ? "bg-white/10 text-white" : ""}`}
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -670,16 +813,25 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
             {activeDropdown === agent._id && (
               <div className="absolute right-0 top-8 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
-                <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
+                <DropdownItem
+                  icon={Key}
+                  label="Contraseña"
+                  onClick={onResetPassword}
+                />
                 <DropdownItem
                   icon={isActive ? UserX : UserCheck}
-                  label={isActive ? 'Desactivar' : 'Activar'}
+                  label={isActive ? "Desactivar" : "Activar"}
                   onClick={onToggleActive}
                 />
                 {!isCurrentUser && (
                   <>
                     <div className="h-px bg-zinc-800 my-1" />
-                    <DropdownItem icon={Trash2} label="Eliminar" onClick={onDelete} danger />
+                    <DropdownItem
+                      icon={Trash2}
+                      label="Eliminar"
+                      onClick={onDelete}
+                      danger
+                    />
                   </>
                 )}
               </div>
@@ -690,16 +842,32 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
 
       {/* Metrics Strip */}
       <div className="grid grid-cols-3 border-t border-zinc-800/50 bg-zinc-900/30">
-        <MetricItem icon={MessageSquare} value={agent.activeChats || 0} label="Chats" />
-        <MetricItem icon={Clock} value={agent.avgResponseTime || '-'} label="Tiempo" />
-        <MetricItem icon={Star} value={agent.metrics.averageRating?.toFixed(1) || '-'} label="Rating" color="text-amber-400" />
+        <MetricItem
+          icon={MessageSquare}
+          value={agent.activeChats || 0}
+          label="Chats"
+        />
+        <MetricItem
+          icon={Clock}
+          value={agent.avgResponseTime || "-"}
+          label="Tiempo"
+        />
+        <MetricItem
+          icon={Star}
+          value={agent.metrics.averageRating?.toFixed(1) || "-"}
+          label="Rating"
+          color="text-amber-400"
+        />
       </div>
 
       {/* Skills Footer */}
       {agent.skills && agent.skills.length > 0 && (
         <div className="px-5 py-3 border-t border-zinc-800/50 flex flex-wrap gap-1.5">
           {agent.skills.slice(0, 3).map((skill: string) => (
-            <span key={skill} className="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 text-zinc-400 rounded text-[10px]">
+            <span
+              key={skill}
+              className="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 text-zinc-400 rounded text-[10px]"
+            >
               {skill}
             </span>
           ))}
@@ -714,8 +882,12 @@ function AgentCard({ agent, isCurrentUser, activeDropdown, setActiveDropdown, on
   );
 }
 
-
-const MetricItem = ({ icon: Icon, value, label, color = "text-white" }: any) => (
+const MetricItem = ({
+  icon: Icon,
+  value,
+  label,
+  color = "text-white",
+}: any) => (
   <div className="py-3 flex flex-col items-center justify-center hover:bg-white/[0.02] transition-colors">
     <span className={`text-sm font-semibold ${color}`}>{value}</span>
     <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
@@ -728,8 +900,11 @@ const MetricItem = ({ icon: Icon, value, label, color = "text-white" }: any) => 
 const DropdownItem = ({ icon: Icon, label, onClick, danger }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${danger ? 'text-red-400 hover:bg-red-500/10' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-      }`}
+    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+      danger
+        ? "text-red-400 hover:bg-red-500/10"
+        : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
+    }`}
   >
     <Icon className="w-4 h-4" />
     {label}
@@ -737,7 +912,18 @@ const DropdownItem = ({ icon: Icon, label, onClick, danger }: any) => (
 );
 
 // Dropdown con portal para evitar problemas de scroll
-function DropdownMenu({ agent, isCurrentUser, isActive, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive, onMFA }: any) {
+function DropdownMenu({
+  agent,
+  isCurrentUser,
+  isActive,
+  activeDropdown,
+  setActiveDropdown,
+  onEdit,
+  onDelete,
+  onResetPassword,
+  onToggleActive,
+  onMFA,
+}: any) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0, openUp: false });
 
@@ -747,22 +933,22 @@ function DropdownMenu({ agent, isCurrentUser, isActive, activeDropdown, setActiv
       const dropdownHeight = 220; // Approximate height
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUp = spaceBelow < dropdownHeight;
-      
+
       setPosition({
         top: openUp ? rect.top - dropdownHeight + 10 : rect.top,
         left: rect.left - 200, // 192px width + 8px margin
-        openUp
+        openUp,
       });
     }
   }, [activeDropdown, agent._id]);
 
   useEffect(() => {
     calculatePosition();
-    window.addEventListener('scroll', () => setActiveDropdown(null), true);
-    window.addEventListener('resize', () => setActiveDropdown(null));
+    window.addEventListener("scroll", () => setActiveDropdown(null), true);
+    window.addEventListener("resize", () => setActiveDropdown(null));
     return () => {
-      window.removeEventListener('scroll', () => setActiveDropdown(null), true);
-      window.removeEventListener('resize', () => setActiveDropdown(null));
+      window.removeEventListener("scroll", () => setActiveDropdown(null), true);
+      window.removeEventListener("resize", () => setActiveDropdown(null));
     };
   }, [calculatePosition, setActiveDropdown]);
 
@@ -770,53 +956,105 @@ function DropdownMenu({ agent, isCurrentUser, isActive, activeDropdown, setActiv
     <div className="relative flex justify-end">
       <button
         ref={buttonRef}
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          setActiveDropdown(activeDropdown === agent._id ? null : agent._id); 
+        onClick={(e) => {
+          e.stopPropagation();
+          setActiveDropdown(activeDropdown === agent._id ? null : agent._id);
         }}
-        className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? 'bg-zinc-700 text-white' : ''}`}
+        className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? "bg-zinc-700 text-white" : ""}`}
       >
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {activeDropdown === agent._id && createPortal(
-        <div 
-          className="fixed w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[9999] py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-          style={{ top: position.top, left: position.left }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DropdownItem icon={Edit3} label="Editar" onClick={() => { onEdit(); setActiveDropdown(null); }} />
-          <DropdownItem icon={Key} label="Contraseña" onClick={() => { onResetPassword(); setActiveDropdown(null); }} />
-          <DropdownItem
-            icon={agent.security?.mfa?.enabled ? ShieldCheck : Shield}
-            label={agent.security?.mfa?.enabled ? 'Gestionar MFA' : 'Configurar MFA'}
-            onClick={() => { onMFA(); setActiveDropdown(null); }}
-          />
-          <DropdownItem
-            icon={isActive ? UserX : UserCheck}
-            label={isActive ? 'Desactivar' : 'Activar'}
-            onClick={() => { onToggleActive(); setActiveDropdown(null); }}
-          />
-          {!isCurrentUser && (
-            <>
-              <div className="h-px bg-zinc-800 my-1" />
-              <DropdownItem icon={Trash2} label="Eliminar" onClick={() => { onDelete(); setActiveDropdown(null); }} danger />
-            </>
-          )}
-        </div>,
-        document.body
-      )}
+      {activeDropdown === agent._id &&
+        createPortal(
+          <div
+            className="fixed w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[9999] py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+            style={{ top: position.top, left: position.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DropdownItem
+              icon={Edit3}
+              label="Editar"
+              onClick={() => {
+                onEdit();
+                setActiveDropdown(null);
+              }}
+            />
+            <DropdownItem
+              icon={Key}
+              label="Contraseña"
+              onClick={() => {
+                onResetPassword();
+                setActiveDropdown(null);
+              }}
+            />
+            <DropdownItem
+              icon={agent.security?.mfa?.enabled ? ShieldCheck : Shield}
+              label={
+                agent.security?.mfa?.enabled
+                  ? "Gestionar MFA"
+                  : "Configurar MFA"
+              }
+              onClick={() => {
+                onMFA();
+                setActiveDropdown(null);
+              }}
+            />
+            <DropdownItem
+              icon={isActive ? UserX : UserCheck}
+              label={isActive ? "Desactivar" : "Activar"}
+              onClick={() => {
+                onToggleActive();
+                setActiveDropdown(null);
+              }}
+            />
+            {!isCurrentUser && (
+              <>
+                <div className="h-px bg-zinc-800 my-1" />
+                <DropdownItem
+                  icon={Trash2}
+                  label="Eliminar"
+                  onClick={() => {
+                    onDelete();
+                    setActiveDropdown(null);
+                  }}
+                  danger
+                />
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
 
-function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSkillInput, onAddSkill, onRemoveSkill, isSaving, onSubmit, onClose, onAgentUpdated }: any) {
+function FormModal({
+  isEditing,
+  agent,
+  formData,
+  setFormData,
+  skillInput,
+  setSkillInput,
+  onAddSkill,
+  onRemoveSkill,
+  isSaving,
+  onSubmit,
+  onClose,
+  onAgentUpdated,
+}: any) {
   const token = useAuthStore.getState().token;
-  const [telegramInput, setTelegramInput] = useState('');
-  const [telegramStatus, setTelegramStatus] = useState<'idle' | 'linking' | 'unlinking' | 'success' | 'error'>('idle');
+  const [telegramInput, setTelegramInput] = useState("");
+  const [telegramStatus, setTelegramStatus] = useState<
+    "idle" | "linking" | "unlinking" | "success" | "error"
+  >("idle");
   const [telegramError, setTelegramError] = useState<string | null>(null);
-  const [currentTelegramId, setCurrentTelegramId] = useState<string | null>(agent?.telegramId || null);
-  const [currentTelegramUsername, setCurrentTelegramUsername] = useState<string | null>(agent?.telegramUsername || null);
+  const [currentTelegramId, setCurrentTelegramId] = useState<string | null>(
+    agent?.telegramId || null,
+  );
+  const [currentTelegramUsername, setCurrentTelegramUsername] = useState<
+    string | null
+  >(agent?.telegramUsername || null);
 
   // Sync telegram state when agent changes
   useEffect(() => {
@@ -826,68 +1064,70 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
 
   const handleLinkTelegram = async () => {
     if (!telegramInput.trim()) return;
-    
+
     // Validate that it's a valid number
     const telegramIdNum = parseInt(telegramInput.trim(), 10);
     if (isNaN(telegramIdNum) || telegramIdNum <= 0) {
-      setTelegramError('El ID de Telegram debe ser un número válido');
+      setTelegramError("El ID de Telegram debe ser un número válido");
       return;
     }
-    
-    setTelegramStatus('linking');
+
+    setTelegramStatus("linking");
     setTelegramError(null);
-    
+
     try {
       const res = await fetch(`/api/admin/agents/${agent._id}/telegram`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ telegramId: parseInt(telegramInput.trim(), 10) }),
+        body: JSON.stringify({
+          telegramId: parseInt(telegramInput.trim(), 10),
+        }),
       });
       const data = await res.json();
-      
+
       if (data.ok) {
-        setTelegramStatus('success');
+        setTelegramStatus("success");
         setCurrentTelegramId(telegramInput.trim());
-        setTelegramInput('');
+        setTelegramInput("");
         onAgentUpdated?.();
-        setTimeout(() => setTelegramStatus('idle'), 2000);
+        setTimeout(() => setTelegramStatus("idle"), 2000);
       } else {
-        setTelegramStatus('error');
-        setTelegramError(data.error || 'Error al vincular Telegram');
+        setTelegramStatus("error");
+        setTelegramError(data.error || "Error al vincular Telegram");
       }
     } catch {
-      setTelegramStatus('error');
-      setTelegramError('Error de conexión');
+      setTelegramStatus("error");
+      setTelegramError("Error de conexión");
     }
   };
 
   const handleUnlinkTelegram = async () => {
-    setTelegramStatus('unlinking');
+    setTelegramStatus("unlinking");
     setTelegramError(null);
-    
+
     try {
       const res = await fetch(`/api/admin/agents/${agent._id}/telegram`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      
+
       if (data.ok) {
-        setTelegramStatus('success');
+        setTelegramStatus("success");
         setCurrentTelegramId(null);
         setCurrentTelegramUsername(null);
         onAgentUpdated?.();
-        setTimeout(() => setTelegramStatus('idle'), 2000);
+        setTimeout(() => setTelegramStatus("idle"), 2000);
       } else {
-        setTelegramStatus('error');
-        setTelegramError(data.error || 'Error al desvincular Telegram');
+        setTelegramStatus("error");
+        setTelegramError(data.error || "Error al desvincular Telegram");
       }
     } catch {
-      setTelegramStatus('error');
-      setTelegramError('Error de conexión');
+      setTelegramStatus("error");
+      setTelegramError("Error de conexión");
     }
   };
 
@@ -898,29 +1138,59 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-              {isEditing ? <Edit3 className="w-5 h-5 text-emerald-500" /> : <Plus className="w-5 h-5 text-emerald-500" />}
+              {isEditing ? (
+                <Edit3 className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <Plus className="w-5 h-5 text-emerald-500" />
+              )}
             </div>
-            <h2 className="text-lg font-bold text-white">{isEditing ? 'Editar Agente' : 'Nuevo Agente'}</h2>
+            <h2 className="text-lg font-bold text-white">
+              {isEditing ? "Editar Agente" : "Nuevo Agente"}
+            </h2>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-6 space-y-6 overflow-y-auto">
           <div className="grid grid-cols-2 gap-5">
-            <InputGroup label="Nombre" icon={UserCog} value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre completo" />
-            <InputGroup label="Email" icon={Mail} value={formData.email} onChange={(e: any) => setFormData({ ...formData, email: e.target.value })} placeholder="correo@ejemplo.com" type="email" />
+            <InputGroup
+              label="Nombre"
+              icon={UserCog}
+              value={formData.name}
+              onChange={(e: any) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              placeholder="Nombre completo"
+            />
+            <InputGroup
+              label="Email"
+              icon={Mail}
+              value={formData.email}
+              onChange={(e: any) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              placeholder="correo@ejemplo.com"
+              type="email"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Rol</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 ">
+                Rol
+              </label>
               <div className="relative">
                 <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
                   className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 >
                   <option value="support">Agente</option>
@@ -931,34 +1201,68 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
               </div>
             </div>
-            <InputGroup label="Departamento" icon={Users} value={formData.department} onChange={(e: any) => setFormData({ ...formData, department: e.target.value })} placeholder="Ej: Ventas" />
+            <InputGroup
+              label="Departamento"
+              icon={Users}
+              value={formData.department}
+              onChange={(e: any) =>
+                setFormData({ ...formData, department: e.target.value })
+              }
+              placeholder="Ej: Ventas"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-5">
-            <InputGroup label="Chats Máximos" icon={MessageSquare} value={formData.maxConcurrentChats} onChange={(e: any) => setFormData({ ...formData, maxConcurrentChats: parseInt(e.target.value) })} type="number" />
+            <InputGroup
+              label="Chats Máximos"
+              icon={MessageSquare}
+              value={formData.maxConcurrentChats}
+              onChange={(e: any) =>
+                setFormData({
+                  ...formData,
+                  maxConcurrentChats: parseInt(e.target.value),
+                })
+              }
+              type="number"
+            />
 
             {/* Skills Input */}
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">Habilidades</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-2 ">
+                Habilidades
+              </label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), onAddSkill())}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), onAddSkill())
+                  }
                   placeholder="Agregar skill..."
                   className="flex-1 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
-                <button onClick={onAddSkill} className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                <button
+                  onClick={onAddSkill}
+                  className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-white transition-colors"
+                >
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
               {/* Skills Chips */}
               <div className="flex flex-wrap gap-2 mt-3 min-h-[30px]">
                 {formData.skills.map((skill: string) => (
-                  <span key={skill} className="flex items-center gap-1 pl-3 pr-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-sm">
+                  <span
+                    key={skill}
+                    className="flex items-center gap-1 pl-3 pr-2 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-sm"
+                  >
                     {skill}
-                    <button onClick={() => onRemoveSkill(skill)} className="hover:text-white"><X className="w-3 h-3" /></button>
+                    <button
+                      onClick={() => onRemoveSkill(skill)}
+                      className="hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </span>
                 ))}
               </div>
@@ -970,9 +1274,11 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
             <div className="pt-4 border-t border-zinc-800">
               <div className="flex items-center gap-2 mb-4">
                 <Send className="w-4 h-4 text-sky-400" />
-                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Vinculación de Telegram</label>
+                <label className="text-xs font-medium text-zinc-400 uppercase ">
+                  Vinculación de Telegram
+                </label>
               </div>
-              
+
               {currentTelegramId ? (
                 /* Telegram vinculado */
                 <div className="flex items-center justify-between p-4 bg-sky-500/10 border border-sky-500/20 rounded-xl">
@@ -982,23 +1288,30 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white">Telegram Vinculado</span>
+                        <span className="text-sm font-medium text-white">
+                          Telegram Vinculado
+                        </span>
                         <CheckCircle2 className="w-4 h-4 text-sky-400" />
                       </div>
                       <div className="text-xs text-zinc-400 mt-0.5">
-                        ID: <span className="font-mono text-sky-400">{currentTelegramId}</span>
+                        ID:{" "}
+                        <span className="font-mono text-sky-400">
+                          {currentTelegramId}
+                        </span>
                         {currentTelegramUsername && (
-                          <span className="ml-2">@{currentTelegramUsername}</span>
+                          <span className="ml-2">
+                            @{currentTelegramUsername}
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
                   <button
                     onClick={handleUnlinkTelegram}
-                    disabled={telegramStatus === 'unlinking'}
+                    disabled={telegramStatus === "unlinking"}
                     className="flex items-center gap-2 px-3 py-2 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    {telegramStatus === 'unlinking' ? (
+                    {telegramStatus === "unlinking" ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Unlink className="w-4 h-4" />
@@ -1012,13 +1325,16 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
                   <div className="flex items-start gap-3 mb-4">
                     <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-zinc-300">Este agente no tiene Telegram vinculado</p>
+                      <p className="text-sm text-zinc-300">
+                        Este agente no tiene Telegram vinculado
+                      </p>
                       <p className="text-xs text-zinc-500 mt-1">
-                        Ingresa el ID de Telegram del agente para vincular su cuenta manualmente.
+                        Ingresa el ID de Telegram del agente para vincular su
+                        cuenta manualmente.
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Send className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -1032,10 +1348,12 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
                     </div>
                     <button
                       onClick={handleLinkTelegram}
-                      disabled={telegramStatus === 'linking' || !telegramInput.trim()}
+                      disabled={
+                        telegramStatus === "linking" || !telegramInput.trim()
+                      }
                       className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {telegramStatus === 'linking' ? (
+                      {telegramStatus === "linking" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Link2 className="w-4 h-4" />
@@ -1045,9 +1363,9 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
                   </div>
                 </div>
               )}
-              
+
               {/* Mensajes de estado */}
-              {telegramStatus === 'success' && (
+              {telegramStatus === "success" && (
                 <div className="mt-3 flex items-center gap-2 text-sm text-emerald-400">
                   <CheckCircle className="w-4 h-4" />
                   Operación completada exitosamente
@@ -1065,14 +1383,23 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800 shrink-0">
-          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium"
+          >
+            Cancelar
+          </button>
           <button
             onClick={onSubmit}
             disabled={isSaving || !formData.name || !formData.email}
             className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-            <span>{isEditing ? 'Guardar Cambios' : 'Crear Agente'}</span>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle className="w-4 h-4" />
+            )}
+            <span>{isEditing ? "Guardar Cambios" : "Crear Agente"}</span>
           </button>
         </div>
       </div>
@@ -1080,10 +1407,19 @@ function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSki
   );
 }
 
-function InputGroup({ label, icon: Icon, value, onChange, placeholder, type = "text" }: any) {
+function InputGroup({
+  label,
+  icon: Icon,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: any) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-400 mb-2 tracking-wide">{label}</label>
+      <label className="block text-xs font-medium text-zinc-400 mb-2 ">
+        {label}
+      </label>
       <div className="relative group">
         <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
         <input
@@ -1107,17 +1443,27 @@ function DeleteModal({ agent, isSaving, onDelete, onClose }: any) {
         </div>
         <h2 className="text-xl font-bold text-white mb-2">Eliminar Agente</h2>
         <p className="text-zinc-400 mb-6">
-          ¿Estás seguro de que deseas eliminar a <span className="text-white font-medium">{agent.name}</span>? <br />
+          ¿Estás seguro de que deseas eliminar a{" "}
+          <span className="text-white font-medium">{agent.name}</span>? <br />
           Esta acción es irreversible.
         </p>
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium"
+          >
+            Cancelar
+          </button>
           <button
             onClick={onDelete}
             disabled={isSaving}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
             <span>Eliminar</span>
           </button>
         </div>
@@ -1127,27 +1473,39 @@ function DeleteModal({ agent, isSaving, onDelete, onClose }: any) {
 }
 
 function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
-  const [mode, setMode] = useState<'link' | 'generate'>('link');
+  const [mode, setMode] = useState<"link" | "generate">("link");
   const token = useAuthStore.getState().token;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const handleSendLink = async () => {
     setIsSubmitting(true);
     setResult(null);
     try {
-      const res = await fetch(`/api/admin/agents/${agent._id}/send-password-reset`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `/api/admin/agents/${agent._id}/send-password-reset`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const data = await res.json();
       if (data.ok) {
-        setResult({ success: true, message: data.message || 'Enlace enviado por Telegram' });
+        setResult({
+          success: true,
+          message: data.message || "Enlace enviado por Telegram",
+        });
       } else {
-        setResult({ success: false, message: data.error || 'Error al enviar enlace' });
+        setResult({
+          success: false,
+          message: data.error || "Error al enviar enlace",
+        });
       }
     } catch {
-      setResult({ success: false, message: 'Error de conexión' });
+      setResult({ success: false, message: "Error de conexión" });
     } finally {
       setIsSubmitting(false);
     }
@@ -1158,17 +1516,23 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
     setResult(null);
     try {
       const res = await fetch(`/api/admin/agents/${agent._id}/reset-password`, {
-        method: 'POST',
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.ok) {
-        setResult({ success: true, message: 'Contraseña temporal generada y enviada por Telegram' });
+        setResult({
+          success: true,
+          message: "Contraseña temporal generada y enviada por Telegram",
+        });
       } else {
-        setResult({ success: false, message: data.error || 'Error al generar contraseña' });
+        setResult({
+          success: false,
+          message: data.error || "Error al generar contraseña",
+        });
       }
     } catch {
-      setResult({ success: false, message: 'Error de conexión' });
+      setResult({ success: false, message: "Error de conexión" });
     } finally {
       setIsSubmitting(false);
     }
@@ -1183,13 +1547,19 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
           <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
             <Key className="w-8 h-8 text-indigo-500" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Restablecer Contraseña</h2>
+          <h2 className="text-xl font-bold text-white mb-2">
+            Restablecer Contraseña
+          </h2>
           <p className="text-zinc-400 text-sm">
             <span className="text-white font-medium">{agent.name}</span>
             {hasTelegram ? (
-              <span className="ml-2 text-emerald-400 text-xs">✓ Telegram vinculado</span>
+              <span className="ml-2 text-emerald-400 text-xs">
+                ✓ Telegram vinculado
+              </span>
             ) : (
-              <span className="ml-2 text-amber-400 text-xs">⚠ Sin Telegram</span>
+              <span className="ml-2 text-amber-400 text-xs">
+                ⚠ Sin Telegram
+              </span>
             )}
           </p>
         </div>
@@ -1199,15 +1569,20 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
             {/* Mode Selection */}
             <div className="grid grid-cols-2 gap-3 mb-6">
               <button
-                onClick={() => setMode('link')}
+                onClick={() => setMode("link")}
                 disabled={!hasTelegram}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'link'
-                    ? 'border-indigo-500 bg-indigo-500/10'
-                    : 'border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800'
-                  } ${!hasTelegram && 'opacity-50 cursor-not-allowed'}`}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  mode === "link"
+                    ? "border-indigo-500 bg-indigo-500/10"
+                    : "border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800"
+                } ${!hasTelegram && "opacity-50 cursor-not-allowed"}`}
               >
-                <MessageSquare className={`w-5 h-5 mb-2 ${mode === 'link' ? 'text-indigo-400' : 'text-zinc-500'}`} />
-                <p className={`font-medium ${mode === 'link' ? 'text-white' : 'text-zinc-300'}`}>
+                <MessageSquare
+                  className={`w-5 h-5 mb-2 ${mode === "link" ? "text-indigo-400" : "text-zinc-500"}`}
+                />
+                <p
+                  className={`font-medium ${mode === "link" ? "text-white" : "text-zinc-300"}`}
+                >
                   Enviar enlace
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
@@ -1215,14 +1590,19 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
                 </p>
               </button>
               <button
-                onClick={() => setMode('generate')}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${mode === 'generate'
-                    ? 'border-amber-500 bg-amber-500/10'
-                    : 'border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800'
-                  }`}
+                onClick={() => setMode("generate")}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  mode === "generate"
+                    ? "border-amber-500 bg-amber-500/10"
+                    : "border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800"
+                }`}
               >
-                <Key className={`w-5 h-5 mb-2 ${mode === 'generate' ? 'text-amber-400' : 'text-zinc-500'}`} />
-                <p className={`font-medium ${mode === 'generate' ? 'text-white' : 'text-zinc-300'}`}>
+                <Key
+                  className={`w-5 h-5 mb-2 ${mode === "generate" ? "text-amber-400" : "text-zinc-500"}`}
+                />
+                <p
+                  className={`font-medium ${mode === "generate" ? "text-white" : "text-zinc-300"}`}
+                >
                   Generar temporal
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
@@ -1233,10 +1613,16 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
 
             {/* Info box */}
             <div className="bg-zinc-800/50 rounded-lg p-3 mb-6 text-sm text-zinc-400">
-              {mode === 'link' ? (
-                <p>Se enviará un enlace seguro por Telegram. El enlace expira en 15 minutos.</p>
+              {mode === "link" ? (
+                <p>
+                  Se enviará un enlace seguro por Telegram. El enlace expira en
+                  15 minutos.
+                </p>
               ) : (
-                <p>Se generará una contraseña temporal y se enviará por Telegram. El agente deberá cambiarla.</p>
+                <p>
+                  Se generará una contraseña temporal y se enviará por Telegram.
+                  El agente deberá cambiarla.
+                </p>
               )}
             </div>
 
@@ -1249,36 +1635,39 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
                 Cancelar
               </button>
               <button
-                onClick={mode === 'link' ? handleSendLink : handleGenerate}
-                disabled={isSubmitting || (mode === 'link' && !hasTelegram)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all font-medium shadow-lg ${mode === 'link'
-                    ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'
-                    : 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20'
-                  } text-white disabled:opacity-50`}
+                onClick={mode === "link" ? handleSendLink : handleGenerate}
+                disabled={isSubmitting || (mode === "link" && !hasTelegram)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all font-medium shadow-lg ${
+                  mode === "link"
+                    ? "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20"
+                    : "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20"
+                } text-white disabled:opacity-50`}
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
-                ) : mode === 'link' ? (
+                ) : mode === "link" ? (
                   <MessageSquare className="w-4 h-4" />
                 ) : (
                   <Key className="w-4 h-4" />
                 )}
-                <span>{mode === 'link' ? 'Enviar Enlace' : 'Generar'}</span>
+                <span>{mode === "link" ? "Enviar Enlace" : "Generar"}</span>
               </button>
             </div>
           </>
         ) : (
           /* Result */
           <div className="flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-200">
-
             {/* 1. Icon Container with Glow Effect */}
-            <div className={`
+            <div
+              className={`
     relative w-16 h-16 rounded-full flex items-center justify-center mb-5
-    ${result.success
-                ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
-                : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)]'
-              }
-  `}>
+    ${
+      result.success
+        ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]"
+        : "bg-red-500/10 text-red-400 ring-1 ring-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)]"
+    }
+  `}
+            >
               {result.success ? (
                 <CheckCircle2 className="w-8 h-8 animate-in zoom-in duration-300" />
               ) : (
@@ -1288,22 +1677,23 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
 
             {/* 2. Status Title */}
             <h3 className="text-lg font-bold text-white mb-2 tracking-tight">
-              {result.success ? '¡Operación Exitosa!' : 'Algo salió mal'}
+              {result.success ? "¡Operación Exitosa!" : "Algo salió mal"}
             </h3>
 
             {/* 3. Detailed Message */}
-            <p className={`text-sm mb-8 max-w-[260px] leading-relaxed ${result.success ? 'text-zinc-400' : 'text-red-300/80'}`}>
+            <p
+              className={`text-sm mb-8 max-w-[260px] leading-relaxed ${result.success ? "text-zinc-400" : "text-red-300/80"}`}
+            >
               {result.message}
             </p>
 
             {/* 4. Action Button */}
             <button
               onClick={onClose}
-              className="w-full px-6 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl transition-all font-medium text-xs uppercase tracking-wider shadow-sm"
+              className="w-full px-6 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl transition-all font-medium text-xs uppercase r shadow-sm"
             >
               Cerrar
             </button>
-
           </div>
         )}
       </div>
@@ -1318,25 +1708,35 @@ function DesactivateModal({ agent, isSaving, onConfirm, onClose }: any) {
         <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
           <UserX className="w-8 h-8 text-yellow-500" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">{agent.isActive ? 'Desactivar Agente' : 'Activar Agente'}
+        <h2 className="text-xl font-bold text-white mb-2">
+          {agent.isActive ? "Desactivar Agente" : "Activar Agente"}
         </h2>
         <p className="text-zinc-400 mb-6">
-          ¿Estás seguro de que deseas {agent.isActive ? 'desactivar' : 'activar'} a <span className="text-white font-medium">{agent.name}</span>? <br />
-          {
-            agent.isActive
-              ? 'El agente no podrá iniciar sesión ni atender chats hasta que sea reactivado.'
-              : 'El agente podrá iniciar sesión y atender chats nuevamente.'
-          }
+          ¿Estás seguro de que deseas{" "}
+          {agent.isActive ? "desactivar" : "activar"} a{" "}
+          <span className="text-white font-medium">{agent.name}</span>? <br />
+          {agent.isActive
+            ? "El agente no podrá iniciar sesión ni atender chats hasta que sea reactivado."
+            : "El agente podrá iniciar sesión y atender chats nuevamente."}
         </p>
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium"
+          >
+            Cancelar
+          </button>
           <button
             onClick={() => onConfirm(agent)}
             disabled={isSaving}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-yellow-900/20"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-            <span>{agent.isActive ? 'Desactivar' : 'Activar'}</span>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <UserX className="w-4 h-4" />
+            )}
+            <span>{agent.isActive ? "Desactivar" : "Activar"}</span>
           </button>
         </div>
       </div>

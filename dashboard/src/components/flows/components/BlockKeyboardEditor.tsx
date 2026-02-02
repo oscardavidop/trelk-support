@@ -120,7 +120,7 @@ export const ButtonCard: React.FC<ButtonCardProps> = ({
           {/* 1. Callback ID (Solo Inline) */}
           {keyboardType === 'inline' && (
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide flex justify-between">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase  flex justify-between">
                 <span>Callback ID (Auto-generado)</span>
                 <span className="font-mono text-zinc-600">{button.id}</span>
               </label>
@@ -140,7 +140,7 @@ export const ButtonCard: React.FC<ButtonCardProps> = ({
           {/* 2. Message Mode (Solo Inline - Send New vs Edit) */}
           {keyboardType === 'inline' && (
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">Modo de Mensaje</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase ">Modo de Mensaje</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {/* Opción: Enviar Nuevo */}
                 <label className={`
@@ -191,7 +191,7 @@ export const ButtonCard: React.FC<ButtonCardProps> = ({
 
           {/* 3. Actions List (Radio Cards Verticales) */}
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">Al hacer click</label>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase ">Al hacer click</label>
             <div className="flex flex-col gap-2">
               
               {/* Action: Continue */}
@@ -363,7 +363,7 @@ export const BlockKeyboardEditor: React.FC<BlockKeyboardEditorProps> = ({ keyboa
             
             {/* Cabecera de Fila */}
             <div className="flex justify-between items-center px-1">
-              <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Fila {rIdx + 1}</span>
+              <span className="text-[9px] font-bold text-zinc-600 uppercase st">Fila {rIdx + 1}</span>
               {!readOnly && (
                 <button 
                   onClick={() => {

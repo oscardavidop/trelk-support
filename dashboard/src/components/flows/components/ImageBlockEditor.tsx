@@ -74,7 +74,7 @@ export const ImageBlockEditor: React.FC<BlockEditorProps<ImageBlock>> = ({
                 {/* Caption Input */}
                 <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-1.5">
                             <Captions className="w-3 h-3" /> Pie de foto (Caption)
                         </label>
                         

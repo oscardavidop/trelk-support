@@ -1,62 +1,51 @@
 /**
- * Toast Container Component
- * Renders stacked toast notifications with animations
+ * ToastContainer - Premium Zinc Refactor
+ * Stacked notification system with refined visuals
  */
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToastStore, type Toast, type ToastType } from '../stores/toastStore';
 import { 
   X, 
   Bell, 
-  CheckCircle, 
+  CheckCircle2, 
   AlertTriangle, 
   XCircle,
   MessageSquare,
   UserPlus,
   RefreshCw,
   Wifi,
-  WifiOff
+  WifiOff,
+  ExternalLink
 } from 'lucide-react';
 
-// Icon mapping
-const TOAST_ICONS: Record<ToastType, React.ComponentType<{ className?: string }>> = {
+// --- Configuration ---
+
+const TOAST_ICONS: Record<ToastType, React.ElementType> = {
   info: Bell,
-  success: CheckCircle,
+  success: CheckCircle2,
   warning: AlertTriangle,
   error: XCircle,
 };
 
-// Color mapping
-const TOAST_COLORS: Record<ToastType, { bg: string; border: string; icon: string; text: string }> = {
-  info: {
-    bg: 'bg-gray-800',
-    border: 'border-blue-500',
-    icon: 'text-blue-400',
-    text: 'text-gray-100',
-  },
-  success: {
-    bg: 'bg-gray-800',
-    border: 'border-green-500',
-    icon: 'text-green-400',
-    text: 'text-gray-100',
-  },
-  warning: {
-    bg: 'bg-gray-800',
-    border: 'border-yellow-500',
-    icon: 'text-yellow-400',
-    text: 'text-gray-100',
-  },
-  error: {
-    bg: 'bg-gray-800',
-    border: 'border-red-500',
-    icon: 'text-red-400',
-    text: 'text-gray-100',
-  },
+const TOAST_STYLES: Record<ToastType, string> = {
+  info: 'bg-zinc-900/90 border-zinc-800 text-zinc-100',
+  success: 'bg-zinc-900/90 border-emerald-500/30 text-emerald-50',
+  warning: 'bg-zinc-900/90 border-amber-500/30 text-amber-50',
+  error: 'bg-zinc-900/90 border-red-500/30 text-red-50',
 };
 
-// Special icons for specific toast types
-function getSpecialIcon(toast: Toast): React.ComponentType<{ className?: string }> | null {
+const ICON_STYLES: Record<ToastType, string> = {
+  info: 'text-indigo-400 bg-indigo-500/10',
+  success: 'text-emerald-400 bg-emerald-500/10',
+  warning: 'text-amber-400 bg-amber-500/10',
+  error: 'text-red-400 bg-red-500/10',
+};
+
+// --- Helpers ---
+
+function getSpecialIcon(toast: Toast) {
   if (toast.groupKey?.includes('session:new')) return MessageSquare;
   if (toast.groupKey?.includes('session:assigned')) return UserPlus;
   if (toast.groupKey?.includes('reconnect')) return RefreshCw;
@@ -65,6 +54,8 @@ function getSpecialIcon(toast: Toast): React.ComponentType<{ className?: string 
   return null;
 }
 
+// --- Components ---
+
 interface ToastItemProps {
   toast: Toast;
   onClose: () => void;
@@ -72,39 +63,45 @@ interface ToastItemProps {
 }
 
 function ToastItem({ toast, onClose, onClick }: ToastItemProps) {
-  const colors = TOAST_COLORS[toast.type];
-  const SpecialIcon = getSpecialIcon(toast);
-  const DefaultIcon = TOAST_ICONS[toast.type];
-  const Icon = SpecialIcon || DefaultIcon;
-  
+  const Icon = getSpecialIcon(toast) || TOAST_ICONS[toast.type];
+  const containerStyle = TOAST_STYLES[toast.type];
+  const iconStyle = ICON_STYLES[toast.type];
+  const isClickable = !!onClick || !!toast.action;
+
   return (
     <div
       onClick={onClick}
       className={`
-        relative flex items-start gap-3 p-4 rounded-lg shadow-xl border-l-4
-        ${colors.bg} ${colors.border}
-        animate-slide-in-right
-        ${onClick ? 'cursor-pointer hover:bg-gray-700 transition-colors' : ''}
-        min-w-[320px] max-w-[420px]
+        group relative flex items-start gap-3 p-4 rounded-xl shadow-2xl backdrop-blur-md border
+        animate-in slide-in-from-right-full fade-in duration-300 border-l-6
+        min-w-[320px] max-w-[400px] cursor-default
+        ${containerStyle}
+        ${isClickable ? 'cursor-pointer hover:scale-[1.02] transition-transform' : ''}
       `}
       role="alert"
-      aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
     >
       {/* Icon */}
-      <div className={`flex-shrink-0 ${colors.icon}`}>
+      <div className={`flex-shrink-0 p-2 rounded-lg ${iconStyle}`}>
         <Icon className="w-5 h-5" />
       </div>
       
       {/* Content */}
-      <div className="flex-1 min-w-0">
-        <p className={`font-medium ${colors.text}`}>
-          {toast.title}
-        </p>
+      <div className="flex-1 min-w-0 py-0.5">
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-sm leading-tight">
+            {toast.title}
+          </p>
+          {isClickable && !toast.action && (
+            <ExternalLink className="w-3 h-3 opacity-50" />
+          )}
+        </div>
+        
         {toast.message && (
-          <p className="mt-1 text-sm text-gray-400 line-clamp-2">
+          <p className="mt-1 text-xs opacity-80 leading-relaxed line-clamp-2">
             {toast.message}
           </p>
         )}
+
         {toast.action && (
           <button
             onClick={(e) => {
@@ -112,33 +109,34 @@ function ToastItem({ toast, onClose, onClick }: ToastItemProps) {
               toast.action?.onClick();
               onClose();
             }}
-            className="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            className="mt-3 text-xs font-bold uppercase  px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
           >
             {toast.action.label}
           </button>
         )}
       </div>
       
-      {/* Close button */}
+      {/* Close Button */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           onClose();
         }}
-        className="flex-shrink-0 p-1 rounded-full hover:bg-gray-600 transition-colors"
-        aria-label="Cerrar notificación"
+        className="flex-shrink-0 -mr-1 -mt-1 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all text-current"
       >
-        <X className="w-4 h-4 text-gray-400" />
+        <X className="w-4 h-4" />
       </button>
       
-      {/* Progress bar for auto-dismiss */}
+      {/* Progress Bar */}
       {(toast.duration ?? 0) > 0 && (
-        <div 
-          className="absolute bottom-0 left-0 h-0.5 bg-white/20 rounded-b-lg"
-          style={{
-            animation: `shrink-width ${toast.duration}ms linear forwards`,
-          }}
-        />
+        <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white/10 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-current opacity-50 origin-left"
+            style={{
+              animation: `shrink-width ${toast.duration}ms linear forwards`,
+            }}
+          />
+        </div>
       )}
     </div>
   );
@@ -148,7 +146,6 @@ export function ToastContainer() {
   const navigate = useNavigate();
   const { toasts, maxVisible, removeToast } = useToastStore();
   
-  // Visible toasts (limited by maxVisible)
   const visibleToasts = toasts.slice(0, maxVisible);
   const hiddenCount = Math.max(0, toasts.length - maxVisible);
   
@@ -164,36 +161,27 @@ export function ToastContainer() {
   
   return (
     <div 
-      className="fixed bottom-4 right-4 z-50 flex flex-col-reverse gap-2"
-      aria-label="Notificaciones"
+      className="fixed bottom-6 right-6 z-[100] flex flex-col-reverse gap-3 pointer-events-none"
+      aria-live="polite"
     >
-      {/* Hidden count indicator */}
+      {/* Hidden Count Badge */}
       {hiddenCount > 0 && (
-        <div className="text-center text-sm text-gray-400 bg-gray-800 rounded-lg px-3 py-1.5">
-          +{hiddenCount} más
+        <div className="mx-auto bg-zinc-800/90 text-zinc-400 text-xs font-medium px-3 py-1 rounded-full shadow-lg border border-zinc-700 backdrop-blur pointer-events-auto animate-in fade-in zoom-in">
+          +{hiddenCount} notificaciones
         </div>
       )}
       
-      {/* Toast stack */}
-      {visibleToasts.map((toast) => (
-        <ToastItem
-          key={toast.id}
-          toast={toast}
-          onClose={() => removeToast(toast.id)}
-          onClick={toast.link || toast.sessionId ? () => handleToastClick(toast) : undefined}
-        />
-      ))}
+      {/* Toasts Stack */}
+      <div className="flex flex-col-reverse gap-3 pointer-events-auto">
+        {visibleToasts.map((toast) => (
+          <ToastItem
+            key={toast.id}
+            toast={toast}
+            onClose={() => removeToast(toast.id)}
+            onClick={toast.link || toast.sessionId ? () => handleToastClick(toast) : undefined}
+          />
+        ))}
+      </div>
     </div>
   );
 }
-
-// CSS for animations (add to your global CSS or Tailwind config)
-// @keyframes slide-in-right {
-//   from { transform: translateX(100%); opacity: 0; }
-//   to { transform: translateX(0); opacity: 1; }
-// }
-// @keyframes shrink-width {
-//   from { width: 100%; }
-//   to { width: 0%; }
-// }
-// .animate-slide-in-right { animation: slide-in-right 0.3s ease-out; }

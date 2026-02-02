@@ -751,7 +751,7 @@ export default function MFAVerifyPage() {
 
           {/* Backup Code Toggle (only for TOTP users) */}
           {availableMethods.includes("totp") && (
-            <div className="mt-6 pt-6 border-t border-zinc-800">
+            <div className="mt-6 pt-6">
               <button
                 onClick={() => {
                   setIsBackupCode(!isBackupCode);
@@ -772,7 +772,7 @@ export default function MFAVerifyPage() {
 
         {/* Back to login */}
         <div
-          className={`mt-6 ${!availableMethods.includes("totp") ? "pt-6 border-t border-zinc-800" : ""}`}
+          className={`mt-6 ${!availableMethods.includes("totp") ? "pt-6" : ""}`}
         >
           <button
             onClick={() => navigate("/login")}

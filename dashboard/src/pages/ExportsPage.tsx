@@ -1312,7 +1312,7 @@ function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void
         <div className="px-4 pb-4 pt-0 border-t border-zinc-800/50 bg-zinc-950/30">
           <div className="grid grid-cols-2 gap-8 py-4">
             <div>
-              <h4 className="text-xs font-bold text-zinc-500 tracking-widest mb-2">Filtros Aplicados</h4>
+              <h4 className="text-xs font-bold text-zinc-500 st mb-2">Filtros Aplicados</h4>
               <div className="flex flex-wrap gap-2">
                 {job.filters.dateFrom && <FilterBadge label="Desde" value={new Date(job.filters.dateFrom).toLocaleDateString()} />}
                 {job.filters.dateTo && <FilterBadge label="Hasta" value={new Date(job.filters.dateTo).toLocaleDateString()} />}
@@ -1322,7 +1322,7 @@ function ExportJobCard({ job, onDelete }: { job: ExportJob; onDelete: () => void
               </div>
             </div>
             <div>
-              <h4 className="text-xs font-bold text-zinc-500 tracking-widest mb-2">Contenido</h4>
+              <h4 className="text-xs font-bold text-zinc-500 st mb-2">Contenido</h4>
               <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
                 {job.options.includeMessages && <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-emerald-500" /> Mensajes</span>}
                 {job.options.includeNotes && <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-emerald-500" /> Notas</span>}
@@ -1373,7 +1373,7 @@ function ExportFormModal({
 
           {/* 1. Format Selection */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-zinc-500 tracking-widest">Formato de Archivo</label>
+            <label className="text-xs font-bold text-zinc-500 st">Formato de Archivo</label>
             <div className="grid grid-cols-3 gap-4">
               <FormatButton
                 active={format === 'pdf'} onClick={() => setFormat('pdf')}
@@ -1392,7 +1392,7 @@ function ExportFormModal({
 
           {/* 2. Filters */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-zinc-500 tracking-widest">Filtros de Tiempo</label>
+            <label className="text-xs font-bold text-zinc-500 st">Filtros de Tiempo</label>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Desde</label>
@@ -1407,7 +1407,7 @@ function ExportFormModal({
 
           {/* 3. Agents */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-zinc-500 tracking-widest">Filtrar por Agente</label>
+            <label className="text-xs font-bold text-zinc-500 st">Filtrar por Agente</label>
             <select
               multiple
               value={selectedAgents}
@@ -1421,7 +1421,7 @@ function ExportFormModal({
 
           {/* 4. Content Toggles */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-zinc-500 tracking-widest">Incluir Datos</label>
+            <label className="text-xs font-bold text-zinc-500 st">Incluir Datos</label>
             <div className="space-y-2 bg-zinc-950/50 p-4 rounded-xl border border-zinc-800">
               <Toggle label="Mensajes de chat" checked={includeMessages} onChange={setIncludeMessages} />
               <Toggle label="Notas internas" checked={includeNotes} onChange={setIncludeNotes} />

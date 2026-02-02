@@ -296,7 +296,7 @@ const MessageEditor: React.FC<MessageEditorProps> = ({ config, onChange, readOnl
       {/* 4. Add Block Toolbox */}
       {!readOnly && (
         <div className="space-y-2 pt-2">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+          <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
             <Plus className="w-3 h-3" /> Añadir Contenido
           </label>
 

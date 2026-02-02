@@ -49,7 +49,7 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
           <Globe className="w-4 h-4" />
         </div>
         <div>
-          <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wide">
+          <h4 className="text-xs font-bold text-zinc-200 uppercase ">
             Configuración i18n
           </h4>
           <p className="text-[10px] text-zinc-500">
@@ -65,7 +65,7 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-2.5">
             <div className="flex items-center gap-2 mb-2">
               <Languages className="w-3 h-3 text-indigo-400" />
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Variables Detectadas</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase r">Variables Detectadas</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {detectedTextKeys.map((key, i) => (
@@ -82,7 +82,7 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
 
         {/* 3. Source Selection Grid */}
         <div className="space-y-3">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Fuente del Idioma</label>
+          <label className="text-[10px] font-bold text-zinc-500 uppercase r block">Fuente del Idioma</label>
           
           <div className="grid grid-cols-1 gap-2">
             

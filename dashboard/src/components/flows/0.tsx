@@ -62,7 +62,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('variables')}
-                                className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+                                className={`flex-1 py-2.5 text-[10px] font-bold uppercase r flex items-center justify-center gap-2 transition-colors ${
                                     activeTab === 'variables' 
                                         ? 'text-indigo-400 bg-zinc-900 border-b-2 border-indigo-500' 
                                         : 'text-zinc-500 hover:text-zinc-300'
@@ -73,7 +73,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('texts')}
-                                className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+                                className={`flex-1 py-2.5 text-[10px] font-bold uppercase r flex items-center justify-center gap-2 transition-colors ${
                                     activeTab === 'texts' 
                                         ? 'text-purple-400 bg-zinc-900 border-b-2 border-purple-500' 
                                         : 'text-zinc-500 hover:text-zinc-300'

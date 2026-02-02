@@ -342,7 +342,7 @@ const TabButton = ({ isActive, onClick, icon: Icon, label, count, activeColor }:
         </span>
       )}
     </div>
-    <span className="text-[10px] font-medium tracking-wide opacity-90">{label}</span>
+    <span className="text-[10px] font-medium  opacity-90">{label}</span>
   </button>
 );
 

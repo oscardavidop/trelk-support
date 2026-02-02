@@ -149,7 +149,7 @@ export function ActivityTimeline({ sessionId }: Props) {
             
             {/* Date Header Sticky */}
             <div className="sticky top-0 z-10 py-2 mb-4 bg-zinc-950/90 backdrop-blur-sm">
-               <span className="relative z-20 text-[10px] font-bold text-zinc-500 tracking-widest bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full shadow-sm">
+               <span className="relative z-20 text-[10px] font-bold text-zinc-500 st bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full shadow-sm">
                  {date}
                </span>
             </div>
