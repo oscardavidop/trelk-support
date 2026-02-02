@@ -29,7 +29,8 @@ import {
   Sparkles,
   FileText,
   UserCog,
-  Volume2
+  Volume2,
+  Smartphone
 } from 'lucide-react';
 
 type SettingsTab = 'bot' | 'chat' | 'agents' | 'security' | 'notifications';
@@ -80,6 +81,12 @@ interface SecuritySettings {
     requireNumbers: boolean;
     requireSpecial: boolean;
   };
+  // MFA Settings
+  mfaRequiredForAll: boolean;
+  mfaRequiredRoles: string[];
+  mfaBypassIPs: string[];
+  mfaTrustDevicesEnabled: boolean;
+  mfaAllowedMethods: ('telegram' | 'totp')[];
 }
 
 interface NotificationSettings {
@@ -145,6 +152,12 @@ const defaultSecuritySettings: SecuritySettings = {
     requireNumbers: true,
     requireSpecial: false,
   },
+  // MFA Settings
+  mfaRequiredForAll: false,
+  mfaRequiredRoles: ['admin', 'supervisor'],
+  mfaBypassIPs: [],
+  mfaTrustDevicesEnabled: true,
+  mfaAllowedMethods: ['telegram', 'totp'],
 };
 
 const defaultNotificationSettings: NotificationSettings = {
@@ -528,6 +541,26 @@ function SecuritySettingsForm({ settings, setSettings }: {
   settings: SecuritySettings;
   setSettings: (settings: SecuritySettings) => void;
 }) {
+  // Toggle role in mfaRequiredRoles array
+  const toggleRole = (role: string) => {
+    const currentRoles = settings.mfaRequiredRoles || [];
+    const newRoles = currentRoles.includes(role)
+      ? currentRoles.filter(r => r !== role)
+      : [...currentRoles, role];
+    setSettings({ ...settings, mfaRequiredRoles: newRoles });
+  };
+
+  // Toggle MFA method
+  const toggleMethod = (method: 'telegram' | 'totp') => {
+    const currentMethods = settings.mfaAllowedMethods || ['telegram', 'totp'];
+    const newMethods = currentMethods.includes(method)
+      ? currentMethods.filter(m => m !== method)
+      : [...currentMethods, method] as ('telegram' | 'totp')[];
+    // Ensure at least one method is always selected
+    if (newMethods.length === 0) return;
+    setSettings({ ...settings, mfaAllowedMethods: newMethods });
+  };
+
   return (
     <div className="space-y-8">
       <FormSection title="Sesiones y Acceso" description="Control de seguridad de cuentas" icon={<Shield className="w-5 h-5 text-red-400" />}>
@@ -535,10 +568,88 @@ function SecuritySettingsForm({ settings, setSettings }: {
           <InputField label="Timeout de Sesión (min)" value={settings.sessionTimeout} onChange={(v: any) => setSettings({ ...settings, sessionTimeout: parseInt(v) || 480 })} type="number" />
           <InputField label="Max Intentos Login" value={settings.maxLoginAttempts} onChange={(v: any) => setSettings({ ...settings, maxLoginAttempts: parseInt(v) || 5 })} type="number" />
         </div>
-        <div className="mt-4">
-          <ToggleField label="Autenticación 2FA" description="Requerir segundo factor para todos" checked={settings.twoFactorEnabled} onChange={(v: any) => setSettings({ ...settings, twoFactorEnabled: v })} />
+        <div className="mt-4 grid grid-cols-2 gap-6">
+          <InputField label="Max Sesiones por Agente" value={settings.maxSessionsPerAgent} onChange={(v: any) => setSettings({ ...settings, maxSessionsPerAgent: parseInt(v) || 3 })} type="number" />
+          <InputField label="Retención Auditoría (días)" value={settings.auditLogRetention} onChange={(v: any) => setSettings({ ...settings, auditLogRetention: parseInt(v) || 90 })} type="number" />
         </div>
       </FormSection>
+
+      <FormSection title="Autenticación Multifactor (MFA)" description="Configuración de segundo factor de autenticación" icon={<Lock className="w-5 h-5 text-red-400" />}>
+        <div className="space-y-4">
+          <ToggleField 
+            label="Requerir MFA para todos" 
+            description="Todos los usuarios deben configurar MFA" 
+            checked={settings.mfaRequiredForAll} 
+            onChange={(v: any) => setSettings({ ...settings, mfaRequiredForAll: v })} 
+          />
+          
+          {!settings.mfaRequiredForAll && (
+            <div className="mt-4">
+              <label className="text-sm font-medium text-zinc-300 mb-3 block">
+                Roles que requieren MFA
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['admin', 'supervisor', 'support'].map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleRole(role)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      settings.mfaRequiredRoles?.includes(role)
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {role === 'admin' ? 'Administradores' : role === 'supervisor' ? 'Supervisores' : 'Soporte'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-6 pt-4 border-t border-zinc-800">
+            <label className="text-sm font-medium text-zinc-300 mb-3 block">
+              Métodos de MFA permitidos
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => toggleMethod('telegram')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  settings.mfaAllowedMethods?.includes('telegram')
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Telegram
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleMethod('totp')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  settings.mfaAllowedMethods?.includes('totp')
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+                App Autenticador (TOTP)
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-zinc-800">
+            <ToggleField 
+              label="Confiar en dispositivos" 
+              description="Permite recordar dispositivos verificados por 30 días" 
+              checked={settings.mfaTrustDevicesEnabled} 
+              onChange={(v: any) => setSettings({ ...settings, mfaTrustDevicesEnabled: v })} 
+            />
+          </div>
+        </div>
+      </FormSection>
+
       <FormSection title="Contraseñas" description="Política de complejidad" icon={<Key className="w-5 h-5 text-red-400" />}>
         <InputField label="Longitud Mínima" value={settings.passwordPolicy.minLength} onChange={(v: any) => setSettings({ ...settings, passwordPolicy: { ...settings.passwordPolicy, minLength: parseInt(v) || 8 } })} type="number" suffix="chars" />
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">

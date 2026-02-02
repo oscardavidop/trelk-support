@@ -12,7 +12,7 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['trelk.site'],
+    allowedHosts: ['trelk.site', 's.trelk.site'],
     port: 5173,
     proxy: {
       '/api': {

@@ -29,6 +29,8 @@ export interface AuthResult {
   error?: string;
   sessionsInvalidated?: number;
   forcePasswordChange?: boolean;
+  telegramLinkRequired?: boolean;
+  mfaSetupRequired?: boolean;
   // MFA fields
   mfaRequired?: boolean;
   mfaLoginToken?: string;
@@ -46,6 +48,88 @@ export interface AuthResult {
  */
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Check if agent requires Telegram linking
+ * MANDATORY for all agents except system accounts
+ * 
+ * Exclusions:
+ * - System users (email contains 'system' or 'bot')
+ * - Users with role 'system'
+ */
+function requiresTelegramLink(agent: IAgent): boolean {
+  // Already has Telegram linked
+  if (agent.telegramId) {
+    return false;
+  }
+  
+  // System accounts exclusion
+  const isSystemAccount = 
+    agent.email.toLowerCase().includes('system') ||
+    agent.email.toLowerCase().includes('bot') ||
+    agent.email.toLowerCase().includes('noreply') ||
+    (agent.role as string) === 'system';
+  
+  if (isSystemAccount) {
+    return false;
+  }
+  
+  // All other agents MUST have Telegram linked
+  return true;
+}
+
+/**
+ * Check if MFA setup is required
+ * Returns true if MFA policy requires it but agent has no methods configured
+ */
+async function requiresMFASetup(agent: IAgent): Promise<boolean> {
+  // Get security settings
+  const securitySettings = await getSecuritySettings();
+  
+  // Check if MFA is globally required
+  const globalMFARequired = securitySettings.mfaRequiredForAll ?? false;
+  
+  // Check if MFA is required for this agent's role
+  const roleRequiresMFA = securitySettings.mfaRequiredRoles?.includes(agent.role) ?? false;
+  
+  console.log('[requiresMFASetup] Agent:', agent.email, 'Role:', agent.role);
+  console.log('[requiresMFASetup] mfaRequiredForAll:', globalMFARequired, 'mfaRequiredRoles:', securitySettings.mfaRequiredRoles);
+  console.log('[requiresMFASetup] roleRequiresMFA:', roleRequiresMFA);
+  
+  // MFA not required by policy
+  if (!globalMFARequired && !roleRequiresMFA) {
+    console.log('[requiresMFASetup] MFA not required by policy');
+    return false;
+  }
+  
+  // System accounts exclusion
+  const isSystemAccount = 
+    agent.email.toLowerCase().includes('system') ||
+    agent.email.toLowerCase().includes('bot') ||
+    agent.email.toLowerCase().includes('noreply') ||
+    (agent.role as string) === 'system';
+  
+  if (isSystemAccount) {
+    console.log('[requiresMFASetup] System account excluded');
+    return false;
+  }
+  
+  // Check if MFA is already enabled with at least one method
+  const mfaEnabled = agent.security?.mfa?.enabled === true;
+  const hasTelegramMethod = agent.security?.mfa?.methods?.telegram === true;
+  const hasTotpMethod = agent.security?.mfa?.methods?.totp === true;
+  
+  console.log('[requiresMFASetup] mfaEnabled:', mfaEnabled, 'telegram:', hasTelegramMethod, 'totp:', hasTotpMethod);
+  
+  // MFA is required but not enabled or no methods active
+  if (!mfaEnabled || (!hasTelegramMethod && !hasTotpMethod)) {
+    console.log('[requiresMFASetup] MFA setup required!');
+    return true;
+  }
+  
+  console.log('[requiresMFASetup] MFA already configured');
+  return false;
 }
 
 /**
@@ -156,6 +240,12 @@ export async function loginAgent(
     // Check if password change is required
     const forcePasswordChange = agent.security.password.forceChange === true;
     
+    // Check if Telegram linking is required (mandatory for all non-system users)
+    const telegramLinkRequired = requiresTelegramLink(agentData!);
+    
+    // Check if MFA setup is required by policy but not configured
+    const mfaSetupRequired = await requiresMFASetup(agentData!);
+    
     return {
       success: true,
       agent: agentData!,
@@ -163,6 +253,8 @@ export async function loginAgent(
       permissions,
       sessionsInvalidated,
       forcePasswordChange,
+      telegramLinkRequired,
+      mfaSetupRequired,
     };
   } catch (error) {
     console.error('Login error:', error);
@@ -271,6 +363,12 @@ export async function completeLoginAfterMFA(
     // Check if password change is required
     const forcePasswordChange = agent.security.password.forceChange === true;
     
+    // Check if Telegram linking is required
+    const telegramLinkRequired = requiresTelegramLink(agent);
+    
+    // Check if MFA setup is required by policy but not configured
+    const mfaSetupRequired = await requiresMFASetup(agent);
+    
     logger.info('auth', {
       action: 'mfa_login_completed',
       agentId,
@@ -283,6 +381,8 @@ export async function completeLoginAfterMFA(
       permissions,
       sessionsInvalidated,
       forcePasswordChange,
+      telegramLinkRequired,
+      mfaSetupRequired,
     };
   } catch (error) {
     logger.error('auth', {
@@ -310,12 +410,20 @@ export async function refreshToken(token: string): Promise<AuthResult> {
   // Check if password change is required
   const forcePasswordChange = agent.security.password.forceChange === true;
   
+  // Check if Telegram linking is required
+  const telegramLinkRequired = requiresTelegramLink(agent);
+  
+  // Check if MFA setup is required by policy but not configured
+  const mfaSetupRequired = await requiresMFASetup(agent);
+  
   return {
     success: true,
     agent,
     token: newToken,
     permissions,
     forcePasswordChange,
+    telegramLinkRequired,
+    mfaSetupRequired,
   };
 }
 

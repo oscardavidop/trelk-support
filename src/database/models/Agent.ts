@@ -141,6 +141,9 @@ export interface IAgent extends Document {
   isActive: boolean;
   avatar?: string;
   telegramId?: number;
+  telegramUsername?: string;
+  telegramLinkedAt?: Date;
+  telegramVerified?: boolean;
   lastLogin?: Date;
   lastActivity?: Date;
   lastDisconnect?: Date;
@@ -224,6 +227,13 @@ const AgentSchema = new Schema<IAgent>(
     telegramId: {
       type: Number,
       sparse: true,
+      unique: true,
+    },
+    telegramUsername: String,
+    telegramLinkedAt: Date,
+    telegramVerified: {
+      type: Boolean,
+      default: false,
     },
     lastLogin: Date,
     lastActivity: Date,

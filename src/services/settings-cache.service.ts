@@ -323,8 +323,15 @@ export async function updateSettings(
     const securityMapping: Record<string, string> = {
       sessionTimeout: 'sessionTimeoutMinutes',
       maxLoginAttempts: 'maxLoginAttempts',
+      maxSessionsPerAgent: 'maxSessionsPerAgent',
       twoFactorEnabled: 'twoFactorEnabled',
       auditLogRetention: 'auditLogRetentionDays',
+      // MFA Settings - direct mapping
+      mfaRequiredForAll: 'mfaRequiredForAll',
+      mfaRequiredRoles: 'mfaRequiredRoles',
+      mfaBypassIPs: 'mfaBypassIPs',
+      mfaTrustDevicesEnabled: 'mfaTrustDevicesEnabled',
+      mfaAllowedMethods: 'mfaAllowedMethods',
     };
     
     for (const [key, value] of Object.entries(data.security)) {
@@ -524,6 +531,7 @@ function formatSettingsForClient(settings: ISettings): Record<string, unknown> {
     security: {
       sessionTimeout: settings.security.sessionTimeoutMinutes,
       maxLoginAttempts: settings.security.maxLoginAttempts,
+      maxSessionsPerAgent: settings.security.maxSessionsPerAgent,
       twoFactorEnabled: settings.security.twoFactorEnabled,
       auditLogRetention: settings.security.auditLogRetentionDays,
       passwordPolicy: {
@@ -532,6 +540,12 @@ function formatSettingsForClient(settings: ISettings): Record<string, unknown> {
         requireNumbers: settings.security.passwordRequireNumbers,
         requireSpecial: settings.security.passwordRequireSpecial,
       },
+      // MFA Settings
+      mfaRequiredForAll: settings.security.mfaRequiredForAll ?? false,
+      mfaRequiredRoles: settings.security.mfaRequiredRoles ?? ['admin', 'supervisor'],
+      mfaBypassIPs: settings.security.mfaBypassIPs ?? [],
+      mfaTrustDevicesEnabled: settings.security.mfaTrustDevicesEnabled ?? true,
+      mfaAllowedMethods: settings.security.mfaAllowedMethods ?? ['telegram', 'totp'],
     },
     notifications: {
       emailNotifications: settings.notifications.emailNotificationsEnabled,

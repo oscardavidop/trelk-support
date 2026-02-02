@@ -157,6 +157,8 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       permissions: result.permissions,
       sessionsInvalidated: result.sessionsInvalidated,
       forcePasswordChange: result.forcePasswordChange,
+      telegramLinkRequired: result.telegramLinkRequired,
+      mfaSetupRequired: result.mfaSetupRequired,
     };
   });
 
@@ -195,8 +197,9 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
         await logAudit({
           action: 'mfa_complete_login_failed',
           category: 'authentication',
-          actorType: 'unknown',
-          actorId: 'unknown',
+          actorType: 'system',
+          actorId: 'unknown' as any,
+          actorName: 'Unknown',
           targetType: 'system',
           targetId: 'mfa_session',
           severity: 'medium',
@@ -230,7 +233,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
         category: 'authentication',
         actorType: 'agent',
         actorId: agentId,
-        actorName: result.agent?.name,
+        actorName: result.agent?.name ?? 'Unknown',
         targetType: 'agent',
         targetId: agentId,
         severity: 'low',
@@ -255,6 +258,8 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
         permissions: result.permissions,
         sessionsInvalidated: result.sessionsInvalidated,
         forcePasswordChange: result.forcePasswordChange,
+        telegramLinkRequired: result.telegramLinkRequired,
+        mfaSetupRequired: result.mfaSetupRequired,
       };
     }
   );
@@ -303,6 +308,8 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       token: result.token,
       permissions: result.permissions,
       forcePasswordChange: result.forcePasswordChange,
+      telegramLinkRequired: result.telegramLinkRequired,
+      mfaSetupRequired: result.mfaSetupRequired,
     };
   });
 

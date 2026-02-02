@@ -845,6 +845,7 @@ export async function startMFAActivation(
     });
 
     // Send code
+    console.log('Sending MFA activation code to Telegram:', code, 'for agent:', agent.telegramId);
     const sent = await sendMFACodeTelegram(agent.telegramId, code, agent.name, true);
     if (!sent) {
       return { success: false, error: 'Error al enviar código por Telegram' };
@@ -1098,6 +1099,7 @@ export async function adminDisableMFA(
       return { success: false, error: 'Agente no encontrado' };
     }
 
+    // Completely reset MFA state including methods
     await Agent.updateOne(
       { _id: targetAgentId },
       {
@@ -1106,9 +1108,18 @@ export async function adminDisableMFA(
           'security.mfa.enforcedByAdmin': false,
           'security.mfa.disabledAt': new Date(),
           'security.mfa.disabledBy': adminId,
+          // Reset all methods
+          'security.mfa.methods.telegram': false,
+          'security.mfa.methods.totp': false,
+          'security.mfa.preferredMethod': 'telegram',
+          'security.mfa.verifiedAt': null,
         }
       }
     );
+
+    // Delete TOTP secret if exists
+    const { TOTPSecret } = await import('../database/index.js');
+    await TOTPSecret.deleteMany({ agentId: targetAgentId });
 
     // Cancel pending sessions
     await cancelAllMFASessions(targetAgentId);
@@ -1308,6 +1319,14 @@ export async function getMFAStatus(agentId: string): Promise<{
   hasBypass: boolean;
   bypassUntil?: Date;
   trustedDevicesCount: number;
+  trustedDevices: Array<{
+    _id: string;
+    deviceName: string;
+    browser: string;
+    os: string;
+    lastUsedAt: Date;
+    expiresAt: Date;
+  }>;
   globalRequired: boolean;
   roleRequired: boolean;
   totpConfigured: boolean;
@@ -1343,6 +1362,14 @@ export async function getMFAStatus(agentId: string): Promise<{
     hasBypass: !!(mfaSecurity?.bypassUntil && mfaSecurity.bypassUntil > new Date()),
     bypassUntil: mfaSecurity?.bypassUntil,
     trustedDevicesCount: trustedDevices.length,
+    trustedDevices: trustedDevices.map(d => ({
+      _id: d._id.toString(),
+      deviceName: d.name || 'Dispositivo',
+      browser: d.browser || 'Desconocido',
+      os: d.os || 'Desconocido',
+      lastUsedAt: d.lastUsedAt,
+      expiresAt: d.expiresAt,
+    })),
     globalRequired: globalSettings.mfaRequiredForAll,
     roleRequired: globalSettings.mfaRequiredRoles.includes(agent.role),
     totpConfigured,

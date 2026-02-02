@@ -31,6 +31,7 @@ import { registerPermissionRoutes } from './permissions.routes.js';
 import { registerPermissionRequestRoutes } from './permissionRequest.routes.js';
 import { registerPasswordResetRoutes } from './password-reset.routes.js';
 import { registerMFARoutes } from './mfa.routes.js';
+import { registerTelegramLinkRoutes } from './telegram-link.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -42,6 +43,11 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   // MFA routes (public + protected)
   await fastify.register(async (mfaRoutes) => {
     await registerMFARoutes(mfaRoutes);
+  });
+  
+  // Telegram Link routes (public config + protected)
+  await fastify.register(async (telegramRoutes) => {
+    await registerTelegramLinkRoutes(telegramRoutes);
   });
   
   // Password Reset routes (public + admin protected)

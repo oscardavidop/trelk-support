@@ -167,6 +167,12 @@ const SettingsSchema = new Schema<ISettings>(
       passwordRequireNumbers: { type: Boolean, default: true },
       passwordRequireSpecial: { type: Boolean, default: false },
       auditLogRetentionDays: { type: Number, default: 90 },
+      // MFA Settings
+      mfaRequiredForAll: { type: Boolean, default: false },
+      mfaRequiredRoles: { type: [String], default: ['admin', 'supervisor'] },
+      mfaBypassIPs: { type: [String], default: [] },
+      mfaTrustDevicesEnabled: { type: Boolean, default: true },
+      mfaAllowedMethods: { type: [String], enum: ['telegram', 'totp'], default: ['telegram', 'totp'] },
     },
     notifications: {
       emailNotificationsEnabled: { type: Boolean, default: true },

@@ -5,18 +5,35 @@ import type { Agent } from '../types';
 import { usePermissionStore } from './permissionStore';
 import { clearBrowserSessionId } from '../services/sessionGuard.service';
 
+// Authentication states for the auth flow
+export type AuthFlowState = 
+  | 'loading'
+  | 'unauthenticated'
+  | 'password_ok'
+  | 'mfa_pending'
+  | 'mfa_setup_required'
+  | 'telegram_link_required'
+  | 'force_password_change'
+  | 'authenticated';
+
 interface AuthState {
   agent: Agent | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   forcePasswordChange: boolean;
+  telegramLinkRequired: boolean;
+  mfaSetupRequired: boolean;
+  authFlowState: AuthFlowState;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setAgent: (agent: Agent | null) => void;
   updateAgentFields: (fields: Partial<Agent>) => void;
   setToken: (token: string | null) => void;
   setForcePasswordChange: (value: boolean) => void;
+  setTelegramLinkRequired: (value: boolean) => void;
+  setMfaSetupRequired: (value: boolean) => void;
+  setAuthFlowState: (state: AuthFlowState) => void;
   checkAuth: () => Promise<void>;
 }
 
@@ -30,6 +47,9 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
       forcePasswordChange: false,
+      telegramLinkRequired: false,
+      mfaSetupRequired: false,
+      authFlowState: 'loading',
 
       login: async (email: string, password: string) => {
         try {
@@ -43,12 +63,30 @@ export const useAuthStore = create<AuthState>()(
           const data = await res.json();
 
           if (data.ok) {
+            // Determine auth flow state based on response
+            let authFlowState: AuthFlowState = 'authenticated';
+            let telegramLinkRequired = false;
+            let mfaSetupRequired = false;
+            
+            if (data.forcePasswordChange) {
+              authFlowState = 'force_password_change';
+            } else if (data.mfaSetupRequired) {
+              authFlowState = 'mfa_setup_required';
+              mfaSetupRequired = true;
+            } else if (data.telegramLinkRequired) {
+              authFlowState = 'telegram_link_required';
+              telegramLinkRequired = true;
+            }
+            
             set({
               agent: data.agent,
               token: data.token,
               isAuthenticated: true,
               isLoading: false,
               forcePasswordChange: data.forcePasswordChange || false,
+              telegramLinkRequired,
+              mfaSetupRequired,
+              authFlowState,
             });
             
             // Store permissions from login response
@@ -95,6 +133,9 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
             forcePasswordChange: false,
+            telegramLinkRequired: false,
+            mfaSetupRequired: false,
+            authFlowState: 'unauthenticated',
           });
         }
       },
@@ -105,12 +146,21 @@ export const useAuthStore = create<AuthState>()(
       })),
       setToken: (token) => set({ token }),
       setForcePasswordChange: (value) => set({ forcePasswordChange: value }),
+      setTelegramLinkRequired: (value) => set({ 
+        telegramLinkRequired: value,
+        authFlowState: value ? 'telegram_link_required' : 'authenticated',
+      }),
+      setMfaSetupRequired: (value) => set({ 
+        mfaSetupRequired: value,
+        authFlowState: value ? 'mfa_setup_required' : 'authenticated',
+      }),
+      setAuthFlowState: (authFlowState) => set({ authFlowState }),
 
       checkAuth: async () => {
         const { token } = get();
         
         if (!token) {
-          set({ isLoading: false, isAuthenticated: false });
+          set({ isLoading: false, isAuthenticated: false, authFlowState: 'unauthenticated' });
           return;
         }
 
@@ -130,12 +180,30 @@ export const useAuthStore = create<AuthState>()(
           const data = await res.json();
 
           if (data.ok) {
+            // Determine auth flow state
+            let authFlowState: AuthFlowState = 'authenticated';
+            let telegramLinkRequired = false;
+            let mfaSetupRequired = false;
+            
+            if (data.forcePasswordChange) {
+              authFlowState = 'force_password_change';
+            } else if (data.mfaSetupRequired) {
+              authFlowState = 'mfa_setup_required';
+              mfaSetupRequired = true;
+            } else if (data.telegramLinkRequired) {
+              authFlowState = 'telegram_link_required';
+              telegramLinkRequired = true;
+            }
+            
             set({
               agent: data.agent,
               token: data.token,
               isAuthenticated: true,
               isLoading: false,
               forcePasswordChange: data.forcePasswordChange || false,
+              telegramLinkRequired,
+              mfaSetupRequired,
+              authFlowState,
             });
             
             // Refresh permissions on auth check
@@ -157,6 +225,7 @@ export const useAuthStore = create<AuthState>()(
               token: null,
               isAuthenticated: false,
               isLoading: false,
+              authFlowState: 'unauthenticated',
             });
           }
         } catch {
@@ -167,6 +236,7 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
             isLoading: false,
+            authFlowState: 'unauthenticated',
           });
         }
       },

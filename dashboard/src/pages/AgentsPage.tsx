@@ -2,7 +2,8 @@
  * AgentsPage - Modern UI for managing support agents
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../stores/authStore';
 import {
   Users,
@@ -31,7 +32,10 @@ import {
   AlertCircle,
   ChevronDown,
   CheckCircle2,
-  ShieldOff
+  ShieldOff,
+  Send,
+  Link2,
+  Unlink
 } from 'lucide-react';
 import type { Agent, OnlineStatus } from '../types';
 import AdminMFAModal from '../components/AdminMFAModal';
@@ -449,6 +453,7 @@ export default function AgentsPage() {
       {showFormModal && (
         <FormModal
           isEditing={!!editingAgent}
+          agent={editingAgent}
           formData={formData}
           setFormData={setFormData}
           skillInput={skillInput}
@@ -458,6 +463,7 @@ export default function AgentsPage() {
           isSaving={isSaving}
           onSubmit={handleSubmit}
           onClose={closeFormModal}
+          onAgentUpdated={loadAgents}
         />
       )}
 
@@ -589,38 +595,19 @@ function AgentRow({ agent, isCurrentUser, activeDropdown, setActiveDropdown, onE
         {!agent.skills?.length && <span className="text-zinc-700 text-xs">-</span>}
       </div>
 
-      {/* 6. Acciones (Dropdown) */}
-      <div className="relative flex justify-end">
-        <button
-          onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === agent._id ? null : agent._id); }}
-          className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? 'bg-zinc-700 text-white' : ''}`}
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
-
-        {activeDropdown === agent._id && (
-          <div className="absolute right-8 top-0 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-            <DropdownItem icon={Edit3} label="Editar" onClick={onEdit} />
-            <DropdownItem icon={Key} label="Contraseña" onClick={onResetPassword} />
-            <DropdownItem
-              icon={agent.security?.mfa?.enabled ? ShieldCheck : Shield}
-              label={agent.security?.mfa?.enabled ? 'Gestionar MFA' : 'Configurar MFA'}
-              onClick={onMFA}
-            />
-            <DropdownItem
-              icon={isActive ? UserX : UserCheck}
-              label={isActive ? 'Desactivar' : 'Activar'}
-              onClick={onToggleActive}
-            />
-            {!isCurrentUser && (
-              <>
-                <div className="h-px bg-zinc-800 my-1" />
-                <DropdownItem icon={Trash2} label="Eliminar" onClick={onDelete} danger />
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      {/* 6. Acciones (Dropdown con Portal) */}
+      <DropdownMenu
+        agent={agent}
+        isCurrentUser={isCurrentUser}
+        isActive={isActive}
+        activeDropdown={activeDropdown}
+        setActiveDropdown={setActiveDropdown}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onResetPassword={onResetPassword}
+        onToggleActive={onToggleActive}
+        onMFA={onMFA}
+      />
     </div>
   );
 }
@@ -749,12 +736,166 @@ const DropdownItem = ({ icon: Icon, label, onClick, danger }: any) => (
   </button>
 );
 
-function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput, onAddSkill, onRemoveSkill, isSaving, onSubmit, onClose }: any) {
+// Dropdown con portal para evitar problemas de scroll
+function DropdownMenu({ agent, isCurrentUser, isActive, activeDropdown, setActiveDropdown, onEdit, onDelete, onResetPassword, onToggleActive, onMFA }: any) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0, openUp: false });
+
+  const calculatePosition = useCallback(() => {
+    if (buttonRef.current && activeDropdown === agent._id) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = 220; // Approximate height
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < dropdownHeight;
+      
+      setPosition({
+        top: openUp ? rect.top - dropdownHeight + 10 : rect.top,
+        left: rect.left - 200, // 192px width + 8px margin
+        openUp
+      });
+    }
+  }, [activeDropdown, agent._id]);
+
+  useEffect(() => {
+    calculatePosition();
+    window.addEventListener('scroll', () => setActiveDropdown(null), true);
+    window.addEventListener('resize', () => setActiveDropdown(null));
+    return () => {
+      window.removeEventListener('scroll', () => setActiveDropdown(null), true);
+      window.removeEventListener('resize', () => setActiveDropdown(null));
+    };
+  }, [calculatePosition, setActiveDropdown]);
+
+  return (
+    <div className="relative flex justify-end">
+      <button
+        ref={buttonRef}
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          setActiveDropdown(activeDropdown === agent._id ? null : agent._id); 
+        }}
+        className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? 'bg-zinc-700 text-white' : ''}`}
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+
+      {activeDropdown === agent._id && createPortal(
+        <div 
+          className="fixed w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[9999] py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+          style={{ top: position.top, left: position.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DropdownItem icon={Edit3} label="Editar" onClick={() => { onEdit(); setActiveDropdown(null); }} />
+          <DropdownItem icon={Key} label="Contraseña" onClick={() => { onResetPassword(); setActiveDropdown(null); }} />
+          <DropdownItem
+            icon={agent.security?.mfa?.enabled ? ShieldCheck : Shield}
+            label={agent.security?.mfa?.enabled ? 'Gestionar MFA' : 'Configurar MFA'}
+            onClick={() => { onMFA(); setActiveDropdown(null); }}
+          />
+          <DropdownItem
+            icon={isActive ? UserX : UserCheck}
+            label={isActive ? 'Desactivar' : 'Activar'}
+            onClick={() => { onToggleActive(); setActiveDropdown(null); }}
+          />
+          {!isCurrentUser && (
+            <>
+              <div className="h-px bg-zinc-800 my-1" />
+              <DropdownItem icon={Trash2} label="Eliminar" onClick={() => { onDelete(); setActiveDropdown(null); }} danger />
+            </>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function FormModal({ isEditing, agent, formData, setFormData, skillInput, setSkillInput, onAddSkill, onRemoveSkill, isSaving, onSubmit, onClose, onAgentUpdated }: any) {
+  const token = useAuthStore.getState().token;
+  const [telegramInput, setTelegramInput] = useState('');
+  const [telegramStatus, setTelegramStatus] = useState<'idle' | 'linking' | 'unlinking' | 'success' | 'error'>('idle');
+  const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [currentTelegramId, setCurrentTelegramId] = useState<string | null>(agent?.telegramId || null);
+  const [currentTelegramUsername, setCurrentTelegramUsername] = useState<string | null>(agent?.telegramUsername || null);
+
+  // Sync telegram state when agent changes
+  useEffect(() => {
+    setCurrentTelegramId(agent?.telegramId || null);
+    setCurrentTelegramUsername(agent?.telegramUsername || null);
+  }, [agent]);
+
+  const handleLinkTelegram = async () => {
+    if (!telegramInput.trim()) return;
+    
+    // Validate that it's a valid number
+    const telegramIdNum = parseInt(telegramInput.trim(), 10);
+    if (isNaN(telegramIdNum) || telegramIdNum <= 0) {
+      setTelegramError('El ID de Telegram debe ser un número válido');
+      return;
+    }
+    
+    setTelegramStatus('linking');
+    setTelegramError(null);
+    
+    try {
+      const res = await fetch(`/api/admin/agents/${agent._id}/telegram`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ telegramId: parseInt(telegramInput.trim(), 10) }),
+      });
+      const data = await res.json();
+      
+      if (data.ok) {
+        setTelegramStatus('success');
+        setCurrentTelegramId(telegramInput.trim());
+        setTelegramInput('');
+        onAgentUpdated?.();
+        setTimeout(() => setTelegramStatus('idle'), 2000);
+      } else {
+        setTelegramStatus('error');
+        setTelegramError(data.error || 'Error al vincular Telegram');
+      }
+    } catch {
+      setTelegramStatus('error');
+      setTelegramError('Error de conexión');
+    }
+  };
+
+  const handleUnlinkTelegram = async () => {
+    setTelegramStatus('unlinking');
+    setTelegramError(null);
+    
+    try {
+      const res = await fetch(`/api/admin/agents/${agent._id}/telegram`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      
+      if (data.ok) {
+        setTelegramStatus('success');
+        setCurrentTelegramId(null);
+        setCurrentTelegramUsername(null);
+        onAgentUpdated?.();
+        setTimeout(() => setTelegramStatus('idle'), 2000);
+      } else {
+        setTelegramStatus('error');
+        setTelegramError(data.error || 'Error al desvincular Telegram');
+      }
+    } catch {
+      setTelegramStatus('error');
+      setTelegramError('Error de conexión');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
               {isEditing ? <Edit3 className="w-5 h-5 text-emerald-500" /> : <Plus className="w-5 h-5 text-emerald-500" />}
@@ -766,7 +907,7 @@ function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto">
           <div className="grid grid-cols-2 gap-5">
             <InputGroup label="Nombre" icon={UserCog} value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre completo" />
             <InputGroup label="Email" icon={Mail} value={formData.email} onChange={(e: any) => setFormData({ ...formData, email: e.target.value })} placeholder="correo@ejemplo.com" type="email" />
@@ -823,10 +964,107 @@ function FormModal({ isEditing, formData, setFormData, skillInput, setSkillInput
               </div>
             </div>
           </div>
+
+          {/* Telegram Section - Solo visible en modo edición */}
+          {isEditing && agent && (
+            <div className="pt-4 border-t border-zinc-800">
+              <div className="flex items-center gap-2 mb-4">
+                <Send className="w-4 h-4 text-sky-400" />
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Vinculación de Telegram</label>
+              </div>
+              
+              {currentTelegramId ? (
+                /* Telegram vinculado */
+                <div className="flex items-center justify-between p-4 bg-sky-500/10 border border-sky-500/20 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-sky-500/20 rounded-lg">
+                      <Send className="w-5 h-5 text-sky-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">Telegram Vinculado</span>
+                        <CheckCircle2 className="w-4 h-4 text-sky-400" />
+                      </div>
+                      <div className="text-xs text-zinc-400 mt-0.5">
+                        ID: <span className="font-mono text-sky-400">{currentTelegramId}</span>
+                        {currentTelegramUsername && (
+                          <span className="ml-2">@{currentTelegramUsername}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleUnlinkTelegram}
+                    disabled={telegramStatus === 'unlinking'}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {telegramStatus === 'unlinking' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Unlink className="w-4 h-4" />
+                    )}
+                    Desvincular
+                  </button>
+                </div>
+              ) : (
+                /* Sin Telegram vinculado */
+                <div className="p-4 bg-zinc-800/50 border border-zinc-700 rounded-xl">
+                  <div className="flex items-start gap-3 mb-4">
+                    <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-zinc-300">Este agente no tiene Telegram vinculado</p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Ingresa el ID de Telegram del agente para vincular su cuenta manualmente.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Send className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <input
+                        type="text"
+                        value={telegramInput}
+                        onChange={(e) => setTelegramInput(e.target.value)}
+                        placeholder="ID de Telegram (ej: 123456789)"
+                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={handleLinkTelegram}
+                      disabled={telegramStatus === 'linking' || !telegramInput.trim()}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {telegramStatus === 'linking' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Link2 className="w-4 h-4" />
+                      )}
+                      Vincular
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Mensajes de estado */}
+              {telegramStatus === 'success' && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-emerald-400">
+                  <CheckCircle className="w-4 h-4" />
+                  Operación completada exitosamente
+                </div>
+              )}
+              {telegramError && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  {telegramError}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800">
+        <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={onSubmit}

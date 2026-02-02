@@ -13,11 +13,13 @@ import { CommandPalette } from '../components/CommandPalette';
 import { KeyboardShortcutsModal } from '../components/KeyboardShortcutsModal';
 import { FocusModeIndicator, useFocusModeStore } from '../hooks/useFocusMode';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { TelegramLinkRequired } from '../components/TelegramLinkRequired';
+import { MFASetupRequired } from '../components/MFASetupRequired';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, agent, checkAuth, forcePasswordChange } = useAuthStore();
+  const { isAuthenticated, isLoading, agent, checkAuth, forcePasswordChange, telegramLinkRequired, mfaSetupRequired, setTelegramLinkRequired, setMfaSetupRequired } = useAuthStore();
   const stats = useChatStore((state) => state.stats);
   const { showSupervisorPanel, toggleSupervisorPanel } = useSupervisorStore();
   const { isEnabled: isFocusMode, toggleFocusMode, disableFocusMode } = useFocusModeStore();
@@ -147,6 +149,16 @@ export default function DashboardLayout() {
     };
   }, []);
 
+  // Handle Telegram link completion
+  const handleTelegramLinkComplete = useCallback(() => {
+    setTelegramLinkRequired(false);
+  }, [setTelegramLinkRequired]);
+
+  // Handle MFA setup completion
+  const handleMfaSetupComplete = useCallback(() => {
+    setMfaSetupRequired(false);
+  }, [setMfaSetupRequired]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -160,6 +172,16 @@ export default function DashboardLayout() {
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  // Show MFA setup required screen (blocking) - takes priority over Telegram link
+  if (mfaSetupRequired) {
+    return <MFASetupRequired onSetupComplete={handleMfaSetupComplete} />;
+  }
+
+  // Show Telegram link required screen (blocking)
+  if (telegramLinkRequired) {
+    return <TelegramLinkRequired onLinkComplete={handleTelegramLinkComplete} reason="policy" />;
   }
 
   return (
