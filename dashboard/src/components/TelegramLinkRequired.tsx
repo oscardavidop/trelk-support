@@ -56,7 +56,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
       icon: ShieldCheck,
     },
     policy: {
-      title: 'Política de Organización',
+      title: 'Vinculación de Telegram Requerida',
       description: 'Tu organización requiere que todos los agentes vinculen su cuenta de Telegram para recibir notificaciones críticas.',
       icon: Lock,
     },
@@ -235,7 +235,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
             {state.step === 'widget' && (
               <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-2">
                 <div className="text-center mb-6">
-                  <p className="text-sm font-medium text-white mb-1">Autorizar Vinculación</p>
+                  <p className="text-sm font-medium text-white mb-1 text-teal-400 text-[17px]">Autorizar Vinculación</p>
                   <p className="text-xs text-zinc-500">Pulsa el botón de abajo para autorizar</p>
                 </div>
                 
@@ -245,7 +245,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
                   className="min-h-[50px] flex items-center justify-center"
                 />
 
-                <div className="mt-6 flex items-center gap-2 text-[10px] text-zinc-500 bg-zinc-950 px-3 py-1.5 rounded-full border border-zinc-800">
+                <div className="mt-6 flex items-center gap-2 text-[11px] text-zinc-500 bg-zinc-950 px-3 py-1.5 rounded-full border border-zinc-800">
                   <ExternalLink className="w-3 h-3" />
                   Se abrirá una ventana de Telegram
                 </div>
@@ -302,15 +302,6 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
             )}
 
           </div>
-
-          {/* Footer Security Note */}
-          <div className="bg-zinc-950/50 p-4 border-t border-zinc-800 text-center">
-            <p className="text-[10px] text-zinc-600 flex items-center justify-center gap-1.5">
-              <Lock className="w-3 h-3" />
-              Tus datos están cifrados de extremo a extremo
-            </p>
-          </div>
-
         </div>
       </div>
     </div>

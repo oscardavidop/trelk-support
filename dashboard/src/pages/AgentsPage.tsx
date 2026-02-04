@@ -21,6 +21,7 @@ import {
   Mail,
   Phone,
   Lock,
+  Unlock,
   UserX,
   UserCheck,
   MoreVertical,
@@ -108,6 +109,9 @@ export default function AgentsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [skillInput, setSkillInput] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  
+  // Lock states (map of agentId -> isLocked)
+  const [agentLockStates, setAgentLockStates] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadAgents();
@@ -177,6 +181,68 @@ export default function AgentsPage() {
       setIsSaving(false);
     }
   };
+
+  // Lock agent session remotely
+  const handleLockAgent = async (agentId: string) => {
+    try {
+      const res = await fetch(`/api/agents/${agentId}/lock`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setAgentLockStates(prev => ({ ...prev, [agentId]: true }));
+      } else {
+        console.error("Failed to lock agent:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to lock agent:", error);
+    }
+  };
+
+  // Unlock agent session remotely
+  const handleUnlockAgent = async (agentId: string) => {
+    try {
+      const res = await fetch(`/api/agents/${agentId}/unlock`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setAgentLockStates(prev => ({ ...prev, [agentId]: false }));
+      } else {
+        console.error("Failed to unlock agent:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to unlock agent:", error);
+    }
+  };
+
+  // Fetch lock states for all agents
+  const fetchAgentLockStates = useCallback(async () => {
+    const lockStates: Record<string, boolean> = {};
+    for (const agent of agents) {
+      try {
+        const res = await fetch(`/api/agents/${agent._id}/lock`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.ok) {
+          lockStates[agent._id] = data.lockState?.isLocked || false;
+        }
+      } catch (error) {
+        // Ignore errors for individual agents
+      }
+    }
+    setAgentLockStates(lockStates);
+  }, [agents, token]);
+
+  // Fetch lock states when agents change
+  useEffect(() => {
+    if (agents.length > 0) {
+      fetchAgentLockStates();
+    }
+  }, [agents, fetchAgentLockStates]);
 
   const handleDelete = async () => {
     if (!editingAgent) return;
@@ -503,6 +569,9 @@ export default function AgentsPage() {
                         setEditingAgent(agent);
                         setShowMFAModal(true);
                       }}
+                      onLock={() => handleLockAgent(agent._id)}
+                      onUnlock={() => handleUnlockAgent(agent._id)}
+                      isLocked={agentLockStates[agent._id] || false}
                     />
                   ))}
                 </div>
@@ -593,6 +662,9 @@ function AgentRow({
   onResetPassword,
   onToggleActive,
   onMFA,
+  onLock,
+  onUnlock,
+  isLocked,
 }: any) {
   const status: OnlineStatus =
     (agent.onlineStatus as OnlineStatus) || "offline";
@@ -722,6 +794,9 @@ function AgentRow({
         onResetPassword={onResetPassword}
         onToggleActive={onToggleActive}
         onMFA={onMFA}
+        onLock={onLock}
+        onUnlock={onUnlock}
+        isLocked={isLocked}
       />
     </div>
   );
@@ -923,6 +998,9 @@ function DropdownMenu({
   onResetPassword,
   onToggleActive,
   onMFA,
+  onLock,
+  onUnlock,
+  isLocked,
 }: any) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0, openUp: false });
@@ -1010,6 +1088,18 @@ function DropdownMenu({
             />
             {!isCurrentUser && (
               <>
+                <DropdownItem
+                  icon={isLocked ? Unlock : Lock}
+                  label={isLocked ? "Desbloquear sesión" : "Bloquear sesión"}
+                  onClick={() => {
+                    if (isLocked) {
+                      onUnlock?.();
+                    } else {
+                      onLock?.();
+                    }
+                    setActiveDropdown(null);
+                  }}
+                />
                 <div className="h-px bg-zinc-800 my-1" />
                 <DropdownItem
                   icon={Trash2}

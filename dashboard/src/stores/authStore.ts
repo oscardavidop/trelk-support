@@ -180,6 +180,7 @@ export const useAuthStore = create<AuthState>()(
           const data = await res.json();
 
           if (data.ok) {
+            console.log("Auth check successful, agent data:", data);
             // Determine auth flow state
             let authFlowState: AuthFlowState = 'authenticated';
             let telegramLinkRequired = false;
@@ -187,13 +188,13 @@ export const useAuthStore = create<AuthState>()(
             
             if (data.forcePasswordChange) {
               authFlowState = 'force_password_change';
-            } else if (data.mfaSetupRequired) {
-              authFlowState = 'mfa_setup_required';
-              mfaSetupRequired = true;
             } else if (data.telegramLinkRequired) {
               authFlowState = 'telegram_link_required';
               telegramLinkRequired = true;
-            }
+            } else if (data.mfaSetupRequired) {
+              authFlowState = 'mfa_setup_required';
+              mfaSetupRequired = true;
+            } 
             
             set({
               agent: data.agent,

@@ -30,7 +30,11 @@ import {
   FileText,
   UserCog,
   Volume2,
-  Smartphone
+  Smartphone,
+  Timer,
+  Eye,
+  EyeOff,
+  UserX
 } from 'lucide-react';
 
 type SettingsTab = 'bot' | 'chat' | 'agents' | 'security' | 'notifications';
@@ -87,6 +91,19 @@ interface SecuritySettings {
   mfaBypassIPs: string[];
   mfaTrustDevicesEnabled: boolean;
   mfaAllowedMethods: ('telegram' | 'totp')[];
+  // Auto-Lock Settings
+  autoLockEnabled: boolean;
+  autoLockTimeoutMinutes: number;
+  autoLockRequirePassword: boolean;
+  autoLockRequireMFA: boolean;
+  autoLockShowLastActivity: boolean;
+  autoLockGracePeriodSeconds: number;
+  autoLockRoleTimeouts: {
+    admin: number;
+    supervisor: number;
+    agent: number;
+  };
+  autoLockExemptRoles: string[];
 }
 
 interface NotificationSettings {
@@ -158,6 +175,19 @@ const defaultSecuritySettings: SecuritySettings = {
   mfaBypassIPs: [],
   mfaTrustDevicesEnabled: true,
   mfaAllowedMethods: ['telegram', 'totp'],
+  // Auto-Lock Settings
+  autoLockEnabled: false,
+  autoLockTimeoutMinutes: 15,
+  autoLockRequirePassword: true,
+  autoLockRequireMFA: false,
+  autoLockShowLastActivity: true,
+  autoLockGracePeriodSeconds: 30,
+  autoLockRoleTimeouts: {
+    admin: 5,
+    supervisor: 10,
+    agent: 15,
+  },
+  autoLockExemptRoles: [],
 };
 
 const defaultNotificationSettings: NotificationSettings = {
@@ -647,6 +677,159 @@ function SecuritySettingsForm({ settings, setSettings }: {
               onChange={(v: any) => setSettings({ ...settings, mfaTrustDevicesEnabled: v })} 
             />
           </div>
+        </div>
+      </FormSection>
+
+      {/* Auto-Lock Section */}
+      <FormSection title="Bloqueo Automático por Inactividad" description="Protección cuando el usuario está ausente" icon={<Timer className="w-5 h-5 text-red-400" />}>
+        <div className="space-y-4">
+          <ToggleField 
+            label="Habilitar bloqueo automático" 
+            description="Bloquea la sesión después de un período de inactividad" 
+            checked={settings.autoLockEnabled} 
+            onChange={(v: any) => setSettings({ ...settings, autoLockEnabled: v })} 
+          />
+          
+          {settings.autoLockEnabled && (
+            <>
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <label className="text-sm font-medium text-zinc-300 mb-3 block">
+                  Timeout por rol (minutos)
+                </label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Admin</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={settings.autoLockRoleTimeouts?.admin ?? 5}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        autoLockRoleTimeouts: {
+                          ...settings.autoLockRoleTimeouts,
+                          admin: parseInt(e.target.value) || 5,
+                        }
+                      })}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Supervisor</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={settings.autoLockRoleTimeouts?.supervisor ?? 10}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        autoLockRoleTimeouts: {
+                          ...settings.autoLockRoleTimeouts,
+                          supervisor: parseInt(e.target.value) || 10,
+                        }
+                      })}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Agente</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={settings.autoLockRoleTimeouts?.agent ?? 15}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        autoLockRoleTimeouts: {
+                          ...settings.autoLockRoleTimeouts,
+                          agent: parseInt(e.target.value) || 15,
+                        }
+                      })}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <label className="text-sm font-medium text-zinc-300 mb-3 block">
+                  Período de gracia antes de bloquear
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    min={0}
+                    max={120}
+                    value={settings.autoLockGracePeriodSeconds ?? 30}
+                    onChange={(e) => setSettings({ ...settings, autoLockGracePeriodSeconds: parseInt(e.target.value) || 30 })}
+                    className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                  />
+                  <span className="text-zinc-400 text-sm">segundos (0 = sin aviso)</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <label className="text-sm font-medium text-zinc-300 mb-3 block">
+                  Requisitos para desbloquear
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ToggleField 
+                    label="Requerir contraseña" 
+                    description="El usuario debe ingresar su contraseña" 
+                    checked={settings.autoLockRequirePassword} 
+                    onChange={(v: any) => setSettings({ ...settings, autoLockRequirePassword: v })} 
+                  />
+                  <ToggleField 
+                    label="Requerir MFA" 
+                    description="Verificación adicional de segundo factor" 
+                    checked={settings.autoLockRequireMFA} 
+                    onChange={(v: any) => setSettings({ ...settings, autoLockRequireMFA: v })} 
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <ToggleField 
+                  label="Mostrar última actividad" 
+                  description="Muestra cuándo fue la última acción del usuario en la pantalla de bloqueo" 
+                  checked={settings.autoLockShowLastActivity} 
+                  onChange={(v: any) => setSettings({ ...settings, autoLockShowLastActivity: v })} 
+                />
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <label className="text-sm font-medium text-zinc-300 mb-3 block">
+                  Roles exentos de bloqueo automático
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['admin', 'supervisor', 'support'].map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        const currentExempt = settings.autoLockExemptRoles || [];
+                        const newExempt = currentExempt.includes(role)
+                          ? currentExempt.filter(r => r !== role)
+                          : [...currentExempt, role];
+                        setSettings({ ...settings, autoLockExemptRoles: newExempt });
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                        settings.autoLockExemptRoles?.includes(role)
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                      }`}
+                    >
+                      <UserX className="w-4 h-4" />
+                      {role === 'admin' ? 'Administradores' : role === 'supervisor' ? 'Supervisores' : 'Soporte'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-500 mt-2">
+                  Los roles seleccionados no serán bloqueados automáticamente
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </FormSection>
 

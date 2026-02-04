@@ -15,6 +15,7 @@ import { FocusModeIndicator, useFocusModeStore } from '../hooks/useFocusMode';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { TelegramLinkRequired } from '../components/TelegramLinkRequired';
 import { MFASetupRequired } from '../components/MFASetupRequired';
+import AutoLockProvider from '../components/AutoLockProvider';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -174,61 +175,66 @@ export default function DashboardLayout() {
     return null;
   }
 
+  
+  // Show Telegram link required screen (blocking)
+  console.log("telegramLinkRequired", telegramLinkRequired);
+  if (telegramLinkRequired) {
+    return <TelegramLinkRequired onLinkComplete={handleTelegramLinkComplete} reason="policy" />;
+  }
+
   // Show MFA setup required screen (blocking) - takes priority over Telegram link
   if (mfaSetupRequired) {
     return <MFASetupRequired onSetupComplete={handleMfaSetupComplete} />;
   }
 
-  // Show Telegram link required screen (blocking)
-  if (telegramLinkRequired) {
-    return <TelegramLinkRequired onLinkComplete={handleTelegramLinkComplete} reason="policy" />;
-  }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Connection status banner (shows when disconnected/reconnecting) */}
-      <ConnectionBanner />
-      
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - hidden in focus mode if configured */}
-        {!isFocusMode && (
-          <Sidebar agent={agent} stats={stats} />
+    <AutoLockProvider>
+      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        {/* Connection status banner (shows when disconnected/reconnecting) */}
+        <ConnectionBanner />
+        
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar - hidden in focus mode if configured */}
+          {!isFocusMode && (
+            <Sidebar agent={agent} stats={stats} />
+          )}
+          
+          <main className="flex-1 overflow-hidden">
+            <Outlet />
+          </main>
+        </div>
+        
+        {/* Toast notifications */}
+        <ToastContainer />
+        
+        {/* Whisper notifications (for agents receiving whispers from supervisors) */}
+        <WhisperNotifications />
+        
+        {/* Supervisor Panel */}
+        {canSupervise && (
+          <SupervisorPanel 
+            isOpen={showSupervisorPanel} 
+            onClose={toggleSupervisorPanel} 
+          />
         )}
         
-        <main className="flex-1 overflow-hidden">
-          <Outlet />
-        </main>
-      </div>
-      
-      {/* Toast notifications */}
-      <ToastContainer />
-      
-      {/* Whisper notifications (for agents receiving whispers from supervisors) */}
-      <WhisperNotifications />
-      
-      {/* Supervisor Panel */}
-      {canSupervise && (
-        <SupervisorPanel 
-          isOpen={showSupervisorPanel} 
-          onClose={toggleSupervisorPanel} 
+        {/* Command Palette (Ctrl+K) */}
+        <CommandPalette 
+          isOpen={showCommandPalette} 
+          onClose={() => setShowCommandPalette(false)}
+          onShowShortcuts={() => setShowShortcutsHelp(true)}
         />
-      )}
-      
-      {/* Command Palette (Ctrl+K) */}
-      <CommandPalette 
-        isOpen={showCommandPalette} 
-        onClose={() => setShowCommandPalette(false)}
-        onShowShortcuts={() => setShowShortcutsHelp(true)}
-      />
-      
-      {/* Keyboard shortcuts help modal */}
-      <KeyboardShortcutsModal 
-        isOpen={showShortcutsHelp} 
-        onClose={() => setShowShortcutsHelp(false)} 
-      />
-      
-      {/* Focus mode indicator */}
-      <FocusModeIndicator />
-    </div>
+        
+        {/* Keyboard shortcuts help modal */}
+        <KeyboardShortcutsModal 
+          isOpen={showShortcutsHelp} 
+          onClose={() => setShowShortcutsHelp(false)} 
+        />
+        
+        {/* Focus mode indicator */}
+        <FocusModeIndicator />
+      </div>
+    </AutoLockProvider>
   );
 }

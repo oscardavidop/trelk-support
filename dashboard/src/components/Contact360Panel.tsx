@@ -2,8 +2,8 @@
  * Contact360Panel - Complete Contact Profile Sidebar
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuthStore } from '../stores/authStore';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useAuthStore } from "../stores/authStore";
 import {
   X,
   User,
@@ -43,8 +43,9 @@ import {
   Mail,
   Archive,
   RotateCcw,
-  Search
-} from 'lucide-react';
+  Search,
+  MoreHorizontal,
+} from "lucide-react";
 import {
   getCustomFields,
   createCustomField,
@@ -57,8 +58,8 @@ import {
   type CustomField,
   type CustomFieldType,
   type CreateCustomFieldInput,
-} from '../services/customFieldsApi';
-import { toast } from './ui';
+} from "../services/customFieldsApi";
+import { toast } from "./ui";
 
 // ==================== TYPES ====================
 
@@ -76,7 +77,13 @@ interface IContact360 {
   updatedAt?: string;
   lastActivity?: string;
   metadata?: Record<string, any>;
-  tags: Array<{ _id: string; name: string; color: string; addedAt: string; addedBy?: string }>;
+  tags: Array<{
+    _id: string;
+    name: string;
+    color: string;
+    addedAt: string;
+    addedBy?: string;
+  }>;
   customFields: Array<{
     fieldId: string;
     key: string;
@@ -136,26 +143,44 @@ interface Props {
 }
 
 // ==================== FIELD TYPE HELPERS ====================
-const FIELD_TYPES: { type: CustomFieldType; label: string; description: string }[] = [
-  { type: 'text', label: 'Texto', description: 'Campo de texto libre' },
-  { type: 'number', label: 'Número', description: 'Valores numéricos' },
-  { type: 'email', label: 'Email', description: 'Correo electrónico' },
-  { type: 'url', label: 'URL', description: 'Enlaces web' },
-  { type: 'date', label: 'Fecha', description: 'Selector de fecha' },
-  { type: 'boolean', label: 'Sí/No', description: 'Valor booleano' },
-  { type: 'select', label: 'Lista', description: 'Opciones predefinidas' },
+const FIELD_TYPES: {
+  type: CustomFieldType;
+  label: string;
+  description: string;
+}[] = [
+  { type: "text", label: "Texto", description: "Campo de texto libre" },
+  { type: "number", label: "Número", description: "Valores numéricos" },
+  { type: "email", label: "Email", description: "Correo electrónico" },
+  { type: "url", label: "URL", description: "Enlaces web" },
+  { type: "date", label: "Fecha", description: "Selector de fecha" },
+  { type: "boolean", label: "Sí/No", description: "Valor booleano" },
+  { type: "select", label: "Lista", description: "Opciones predefinidas" },
 ];
 
-const FieldTypeIcon = ({ type, className = "w-4 h-4" }: { type: CustomFieldType; className?: string }) => {
+const FieldTypeIcon = ({
+  type,
+  className = "w-4 h-4",
+}: {
+  type: CustomFieldType;
+  className?: string;
+}) => {
   switch (type) {
-    case 'text': return <Type className={className} />;
-    case 'number': return <Hash className={className} />;
-    case 'date': return <Calendar className={className} />;
-    case 'boolean': return <ToggleLeft className={className} />;
-    case 'select': return <List className={className} />;
-    case 'url': return <Link className={className} />;
-    case 'email': return <Mail className={className} />;
-    default: return <Type className={className} />;
+    case "text":
+      return <Type className={className} />;
+    case "number":
+      return <Hash className={className} />;
+    case "date":
+      return <Calendar className={className} />;
+    case "boolean":
+      return <ToggleLeft className={className} />;
+    case "select":
+      return <List className={className} />;
+    case "url":
+      return <Link className={className} />;
+    case "email":
+      return <Mail className={className} />;
+    default:
+      return <Type className={className} />;
   }
 };
 
@@ -166,25 +191,29 @@ interface FieldsManagerModalProps {
   onFieldsChanged: () => void;
 }
 
-function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerModalProps) {
+function FieldsManagerModal({
+  isOpen,
+  onClose,
+  onFieldsChanged,
+}: FieldsManagerModalProps) {
   const [fields, setFields] = useState<CustomField[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showInactive, setShowInactive] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingField, setEditingField] = useState<CustomField | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    key: '',
-    type: 'text' as CustomFieldType,
-    description: '',
+    name: "",
+    key: "",
+    type: "text" as CustomFieldType,
+    description: "",
     required: false,
     options: [] as string[],
-    defaultValue: '',
+    defaultValue: "",
   });
-  const [newOption, setNewOption] = useState('');
+  const [newOption, setNewOption] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [keyTouched, setKeyTouched] = useState(false);
@@ -203,10 +232,13 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
   }, [isOpen, loadFields]);
 
   const filteredFields = useMemo(() => {
-    return fields.filter(field => {
+    return fields.filter((field) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        if (!field.name.toLowerCase().includes(query) && !field.key.toLowerCase().includes(query)) {
+        if (
+          !field.name.toLowerCase().includes(query) &&
+          !field.key.toLowerCase().includes(query)
+        ) {
           return false;
         }
       }
@@ -214,20 +246,20 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
     });
   }, [fields, searchQuery]);
 
-  const activeFields = filteredFields.filter(f => f.isActive);
-  const archivedFields = filteredFields.filter(f => !f.isActive);
+  const activeFields = filteredFields.filter((f) => f.isActive);
+  const archivedFields = filteredFields.filter((f) => !f.isActive);
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      key: '',
-      type: 'text',
-      description: '',
+      name: "",
+      key: "",
+      type: "text",
+      description: "",
       required: false,
       options: [],
-      defaultValue: '',
+      defaultValue: "",
     });
-    setNewOption('');
+    setNewOption("");
     setErrors({});
     setKeyTouched(false);
     setEditingField(null);
@@ -235,30 +267,36 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
   };
 
   const handleNameChange = (value: string) => {
-    setFormData(prev => ({ ...prev, name: value }));
+    setFormData((prev) => ({ ...prev, name: value }));
     if (!keyTouched && !editingField) {
-      setFormData(prev => ({ ...prev, key: generateFieldKey(value) }));
+      setFormData((prev) => ({ ...prev, key: generateFieldKey(value) }));
     }
   };
 
   const handleKeyChange = (value: string) => {
     setKeyTouched(true);
-    setFormData(prev => ({ 
-      ...prev, 
-      key: value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') 
+    setFormData((prev) => ({
+      ...prev,
+      key: value
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, ""),
     }));
   };
 
   const addOption = () => {
     const trimmed = newOption.trim();
     if (trimmed && !formData.options.includes(trimmed)) {
-      setFormData(prev => ({ ...prev, options: [...prev.options, trimmed] }));
-      setNewOption('');
+      setFormData((prev) => ({ ...prev, options: [...prev.options, trimmed] }));
+      setNewOption("");
     }
   };
 
   const removeOption = (index: number) => {
-    setFormData(prev => ({ ...prev, options: prev.options.filter((_, i) => i !== index) }));
+    setFormData((prev) => ({
+      ...prev,
+      options: prev.options.filter((_, i) => i !== index),
+    }));
   };
 
   const openEditForm = (field: CustomField) => {
@@ -267,10 +305,10 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
       name: field.name,
       key: field.key,
       type: field.type,
-      description: field.description || '',
+      description: field.description || "",
       required: field.required,
       options: field.options || [],
-      defaultValue: field.defaultValue?.toString() || '',
+      defaultValue: field.defaultValue?.toString() || "",
     });
     setKeyTouched(true);
     setShowNewForm(true);
@@ -278,25 +316,29 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
-    if (!formData.name.trim()) newErrors.name = 'El nombre es requerido';
-    if (!formData.key.trim()) newErrors.key = 'La clave es requerida';
-    else if (!isValidFieldKey(formData.key)) newErrors.key = 'Solo letras minúsculas, números y _';
-    if (formData.type === 'select' && formData.options.length === 0) newErrors.options = 'Agrega al menos una opción';
-    
+
+    if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
+    if (!formData.key.trim()) newErrors.key = "La clave es requerida";
+    else if (!isValidFieldKey(formData.key))
+      newErrors.key = "Solo letras minúsculas, números y _";
+    if (formData.type === "select" && formData.options.length === 0)
+      newErrors.options = "Agrega al menos una opción";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
     if (!validate()) return;
-    
+
     setIsSaving(true);
     try {
       let parsedDefault: string | number | boolean | undefined = undefined;
       if (formData.defaultValue) {
-        if (formData.type === 'number') parsedDefault = parseFloat(formData.defaultValue);
-        else if (formData.type === 'boolean') parsedDefault = formData.defaultValue === 'true';
+        if (formData.type === "number")
+          parsedDefault = parseFloat(formData.defaultValue);
+        else if (formData.type === "boolean")
+          parsedDefault = formData.defaultValue === "true";
         else parsedDefault = formData.defaultValue;
       }
 
@@ -305,17 +347,19 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           required: formData.required,
-          options: formData.type === 'select' ? formData.options : undefined,
+          options: formData.type === "select" ? formData.options : undefined,
           defaultValue: parsedDefault,
         });
-        
+
         if (result.ok && result.field) {
-          toast.success('Campo actualizado');
-          setFields(prev => prev.map(f => f.id === result.field!.id ? result.field! : f));
+          toast.success("Campo actualizado");
+          setFields((prev) =>
+            prev.map((f) => (f.id === result.field!.id ? result.field! : f)),
+          );
           resetForm();
           onFieldsChanged();
         } else {
-          toast.error(result.error || 'Error al actualizar');
+          toast.error(result.error || "Error al actualizar");
         }
       } else {
         const input: CreateCustomFieldInput = {
@@ -324,27 +368,27 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
           type: formData.type,
           description: formData.description.trim() || undefined,
           required: formData.required,
-          options: formData.type === 'select' ? formData.options : undefined,
+          options: formData.type === "select" ? formData.options : undefined,
           defaultValue: parsedDefault,
         };
-        
+
         const result = await createCustomField(input);
-        
+
         if (result.ok && result.field) {
-          toast.success('Campo creado');
-          setFields(prev => [...prev, result.field!]);
+          toast.success("Campo creado");
+          setFields((prev) => [...prev, result.field!]);
           resetForm();
           onFieldsChanged();
         } else {
-          if (result.error?.includes('already exists')) {
-            setErrors({ key: 'Esta clave ya existe' });
+          if (result.error?.includes("already exists")) {
+            setErrors({ key: "Esta clave ya existe" });
           } else {
-            toast.error(result.error || 'Error al crear');
+            toast.error(result.error || "Error al crear");
           }
         }
       }
     } catch (error) {
-      toast.error('Error al guardar el campo');
+      toast.error("Error al guardar el campo");
     } finally {
       setIsSaving(false);
     }
@@ -353,299 +397,243 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
   const handleArchive = async (field: CustomField) => {
     const result = await deleteCustomField(field.id);
     if (result.ok) {
-      toast.success('Campo archivado');
-      setFields(prev => prev.map(f => f.id === field.id ? { ...f, isActive: false } : f));
+      toast.success("Campo archivado");
+      setFields((prev) =>
+        prev.map((f) => (f.id === field.id ? { ...f, isActive: false } : f)),
+      );
       onFieldsChanged();
     } else {
-      toast.error(result.error || 'Error al archivar');
+      toast.error(result.error || "Error al archivar");
     }
   };
 
   const handleRestore = async (field: CustomField) => {
     const result = await restoreCustomField(field.id);
     if (result.ok) {
-      toast.success('Campo restaurado');
-      setFields(prev => prev.map(f => f.id === field.id ? { ...f, isActive: true } : f));
+      toast.success("Campo restaurado");
+      setFields((prev) =>
+        prev.map((f) => (f.id === field.id ? { ...f, isActive: true } : f)),
+      );
       onFieldsChanged();
     } else {
-      toast.error(result.error || 'Error al restaurar');
+      toast.error(result.error || "Error al restaurar");
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm animate-in fade-in">
+      <div className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl">
-              <Settings className="w-5 h-5 text-purple-400" />
+            <div className="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+              <Settings className="w-5 h-5 text-indigo-400" />
             </div>
-            <h2 className="text-lg font-semibold text-white">Gestionar Campos Personalizados</h2>
+            <div>
+              <h2 className="text-lg font-bold text-zinc-100">
+                Campos Personalizados
+              </h2>
+              <p className="text-xs text-zinc-500">
+                Define los datos que recolectas de tus usuarios
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
+          <button
+            onClick={onClose}
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           {showNewForm ? (
-            // Form View
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-medium">{editingField ? 'Editar Campo' : 'Nuevo Campo'}</h3>
-                <button onClick={resetForm} className="text-sm text-gray-400 hover:text-white">
-                  ← Volver a la lista
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-wider">
+                  {editingField ? "Editar Campo" : "Nuevo Campo"}
+                </h3>
+                <button
+                  onClick={resetForm}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                >
+                  Cancelar y volver
                 </button>
               </div>
 
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Nombre *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="Ej: Número de cliente"
-                  className={`w-full px-4 py-2.5 bg-gray-800 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.name ? 'border-red-500' : 'border-gray-700'}`}
-                />
-                {errors.name && <p className="mt-1 text-sm text-red-400">{errors.name}</p>}
-              </div>
-
-              {/* Key (only new) */}
-              {!editingField && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Clave interna *</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono">$</span>
-                    <input
-                      type="text"
-                      value={formData.key}
-                      onChange={(e) => handleKeyChange(e.target.value)}
-                      placeholder="numero_cliente"
-                      className={`w-full pl-8 pr-4 py-2.5 bg-gray-800 border rounded-xl text-white placeholder-gray-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.key ? 'border-red-500' : 'border-gray-700'}`}
-                    />
-                  </div>
-                  {errors.key ? (
-                    <p className="mt-1 text-sm text-red-400">{errors.key}</p>
-                  ) : (
-                    <p className="mt-1 text-xs text-gray-500">Usa en flujos: <code className="text-purple-400">{`{{custom.${formData.key || 'campo'}}}`}</code></p>
-                  )}
+              {/* Form Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-zinc-400">
+                    Nombre Visible
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    } // Simplificado
+                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                    placeholder="Ej. ID Cliente"
+                  />
                 </div>
-              )}
-
-              {/* Type (only new) */}
-              {!editingField && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Tipo *</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {FIELD_TYPES.map(({ type: t, label }) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, type: t }))}
-                        className={`flex items-center gap-2 p-2.5 rounded-lg border text-sm transition-all ${
-                          formData.type === t 
-                            ? 'border-purple-500 bg-purple-500/10 text-purple-300' 
-                            : 'border-gray-700 hover:border-gray-600 bg-gray-800/50 text-gray-300'
-                        }`}
-                      >
-                        <FieldTypeIcon type={t} className="w-4 h-4" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Type badge (edit) */}
-              {editingField && (
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 rounded-xl border border-gray-700">
-                  <FieldTypeIcon type={formData.type} className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-400">Tipo: <span className="text-white">{FIELD_TYPE_LABELS[formData.type]}</span></span>
-                </div>
-              )}
-
-              {/* Options for select */}
-              {formData.type === 'select' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Opciones *</label>
+                {!editingField && (
                   <div className="space-y-2">
-                    {formData.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="flex-1 px-3 py-2 bg-gray-800 rounded-lg text-sm text-gray-300 border border-gray-700">{option}</div>
-                        <button onClick={() => removeOption(index)} className="p-2 text-gray-400 hover:text-red-400 rounded-lg">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                    <div className="flex gap-2">
+                    <label className="text-xs font-medium text-zinc-400">
+                      Clave Interna (Variable)
+                    </label>
+                    <div className="relative group">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 font-mono group-focus-within:text-indigo-500 transition-colors">
+                        $
+                      </span>
                       <input
                         type="text"
-                        value={newOption}
-                        onChange={(e) => setNewOption(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }}
-                        placeholder="Nueva opción"
-                        className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        value={formData.key}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            key: e.target.value,
+                          }))
+                        } // Simplificado
+                        className="w-full pl-6 pr-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-indigo-300 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                        placeholder="id_cliente"
                       />
-                      <button onClick={addOption} disabled={!newOption.trim()} className={`px-3 py-2 rounded-lg ${newOption.trim() ? 'bg-purple-600 text-white hover:bg-purple-500' : 'bg-gray-700 text-gray-500'}`}>
-                        <Plus className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
-                  {errors.options && <p className="mt-1 text-sm text-red-400">{errors.options}</p>}
+                )}
+
+                <div className="col-span-1 md:col-span-2 space-y-2">
+                  <label className="text-xs font-medium text-zinc-400">
+                    Tipo de Dato
+                  </label>
+                  {!editingField ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {FIELD_TYPES.map(({ type, label }) => (
+                        <button
+                          key={type}
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, type }))
+                          }
+                          className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                            formData.type === type
+                              ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.15)]"
+                              : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:bg-zinc-800"
+                          }`}
+                        >
+                          <FieldTypeIcon type={type} className="w-3.5 h-3.5" />{" "}
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900/50 border border-zinc-800 rounded-lg text-sm text-zinc-400">
+                      <FieldTypeIcon type={formData.type} />
+                      {FIELD_TYPE_LABELS[formData.type]}
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Descripción</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción opcional"
-                  rows={2}
-                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                />
               </div>
 
-              {/* Required */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-300">Campo requerido</span>
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-zinc-800 flex justify-end gap-3">
                 <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, required: !prev.required }))}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${formData.required ? 'bg-purple-600' : 'bg-gray-700'}`}
+                  onClick={resetForm}
+                  className="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${formData.required ? 'translate-x-5' : ''}`} />
-                </button>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-                <button onClick={resetForm} className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg">
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/10 transition-all flex items-center gap-2"
                 >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {editingField ? 'Guardar' : 'Crear Campo'}
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {editingField ? "Guardar Cambios" : "Crear Campo"}
                 </button>
               </div>
             </div>
           ) : (
-            // List View
-            <div className="space-y-4">
-              {/* Search & Actions */}
-              <div className="flex items-center gap-3">
+            <div className="space-y-6">
+              {/* Toolbar */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar campos..."
-                    className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
                 <button
                   onClick={() => setShowNewForm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 text-sm"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/10 transition-all"
                 >
-                  <Plus className="w-4 h-4" />
-                  Nuevo
+                  <Plus className="w-4 h-4" /> Nuevo
                 </button>
               </div>
 
-              {/* Toggle archived */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowInactive(!showInactive)}
-                  className={`text-xs px-2 py-1 rounded ${showInactive ? 'bg-amber-500/20 text-amber-400' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
-                >
-                  {showInactive ? 'Ocultar archivados' : 'Mostrar archivados'}
-                </button>
+              {/* Lists */}
+              <div className="space-y-4">
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                  </div>
+                ) : activeFields.length === 0 && !searchQuery ? (
+                  <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-xl">
+                    <Hash className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+                    <p className="text-zinc-500 text-sm">
+                      No has creado campos personalizados aún.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {activeFields.map((field) => (
+                      <div
+                        key={field.id}
+                        className="group flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-500 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-colors">
+                            <FieldTypeIcon type={field.type} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-zinc-200">
+                              {field.name}
+                            </p>
+                            <p className="text-xs text-zinc-600 font-mono flex items-center gap-1">
+                              <span className="text-zinc-700">$</span>
+                              {field.key}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openEditForm(field)}
+                            className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleArchive(field)}
+                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {/* Loading */}
-              {isLoading && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-                </div>
-              )}
-
-              {/* Active Fields */}
-              {!isLoading && activeFields.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-medium text-gray-500 ">Campos Activos ({activeFields.length})</h4>
-                  {activeFields.map((field) => (
-                    <div key={field.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 group">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gray-700 rounded-lg">
-                          <FieldTypeIcon type={field.type} className="w-4 h-4 text-gray-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{field.name}</p>
-                          <p className="text-xs text-gray-500 font-mono">${field.key}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEditForm(field)} className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleArchive(field)} className="p-1.5 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 rounded">
-                          <Archive className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Archived Fields */}
-              {!isLoading && showInactive && archivedFields.length > 0 && (
-                <div className="space-y-2 mt-4">
-                  <h4 className="text-xs font-medium text-amber-500/70 ">Archivados ({archivedFields.length})</h4>
-                  {archivedFields.map((field) => (
-                    <div key={field.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-800 group opacity-60">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gray-800 rounded-lg">
-                          <FieldTypeIcon type={field.type} className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-400">{field.name}</p>
-                          <p className="text-xs text-gray-600 font-mono">${field.key}</p>
-                        </div>
-                      </div>
-                      <button onClick={() => handleRestore(field)} className="flex items-center gap-1 px-2 py-1 text-xs text-amber-400 hover:bg-amber-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        <RotateCcw className="w-3 h-3" />
-                        Restaurar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Empty State */}
-              {!isLoading && activeFields.length === 0 && !searchQuery && (
-                <div className="text-center py-8">
-                  <Hash className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-400">No hay campos personalizados</p>
-                  <button
-                    onClick={() => setShowNewForm(true)}
-                    className="mt-3 text-sm text-purple-400 hover:text-purple-300"
-                  >
-                    Crear primer campo →
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -656,7 +644,11 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: FieldsManagerM
 
 // ==================== COMPONENT ====================
 
-export default function Contact360Panel({ contactId, onClose, onUpdate }: Props) {
+export default function Contact360Panel({
+  contactId,
+  onClose,
+  onUpdate,
+}: Props) {
   const token = useAuthStore((state) => state.token);
   const currentAgent = useAuthStore((state) => state.agent);
 
@@ -667,13 +659,26 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   const [error, setError] = useState<string | null>(null);
 
   // UI state
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'flows' | 'notes'>('overview');
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['info', 'tags', 'fields', 'stats']));
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "activity" | "flows" | "notes"
+  >("overview");
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
+    info: true,
+    tags: true,
+    fields: true,
+    stats: true,
+  });
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<{ firstName?: string; lastName?: string; language?: string }>({});
+  const [editData, setEditData] = useState<{
+    firstName?: string;
+    lastName?: string;
+    language?: string;
+  }>({});
   const [isSaving, setIsSaving] = useState(false);
 
   // Tags state
@@ -681,7 +686,7 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   const [tagLoading, setTagLoading] = useState(false);
 
   // Notes state
-  const [newNoteContent, setNewNoteContent] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState("");
   const [noteLoading, setNoteLoading] = useState(false);
 
   // Custom Fields state
@@ -699,7 +704,7 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) throw new Error('Failed to fetch contact');
+      if (!response.ok) throw new Error("Failed to fetch contact");
 
       const data = await response.json();
       setContact(data.contact);
@@ -717,7 +722,7 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   const fetchTags = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch('/api/tags', {
+      const response = await fetch("/api/tags", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -725,18 +730,29 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
         setAllTags(data.tags || []);
       }
     } catch (err) {
-      console.error('Error fetching tags:', err);
+      console.error("Error fetching tags:", err);
     }
   }, [token]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      await Promise.all([fetchContact(), fetchTags()]);
+  const loadData = useCallback(async () => {
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/contacts/${contactId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      setContact(data.contact);
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsLoading(false);
-    };
+    }
+  }, [token, contactId]);
+
+  useEffect(() => {
     loadData();
-  }, [fetchContact, fetchTags]);
+  }, [loadData]);
 
   // ==================== ACTIONS ====================
 
@@ -746,15 +762,15 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     setIsSaving(true);
     try {
       const response = await fetch(`/api/contacts/${contactId}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(editData),
       });
 
-      if (!response.ok) throw new Error('Failed to update contact');
+      if (!response.ok) throw new Error("Failed to update contact");
 
       await fetchContact();
       setIsEditing(false);
@@ -772,15 +788,15 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     setTagLoading(true);
     try {
       const response = await fetch(`/api/users/${contactId}/tags`, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ tagId }),
       });
 
-      if (!response.ok) throw new Error('Failed to add tag');
+      if (!response.ok) throw new Error("Failed to add tag");
 
       await fetchContact();
       setShowTagPicker(false);
@@ -798,11 +814,11 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     setTagLoading(true);
     try {
       const response = await fetch(`/api/users/${contactId}/tags/${tagId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) throw new Error('Failed to remove tag');
+      if (!response.ok) throw new Error("Failed to remove tag");
 
       await fetchContact();
       onUpdate?.();
@@ -819,18 +835,18 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     setNoteLoading(true);
     try {
       const response = await fetch(`/api/contacts/${contactId}/notes`, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ content: newNoteContent }),
       });
 
-      if (!response.ok) throw new Error('Failed to add note');
+      if (!response.ok) throw new Error("Failed to add note");
 
       await fetchContact();
-      setNewNoteContent('');
+      setNewNoteContent("");
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     } finally {
@@ -839,15 +855,18 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    if (!token || !confirm('¿Eliminar esta nota?')) return;
+    if (!token || !confirm("¿Eliminar esta nota?")) return;
 
     try {
-      const response = await fetch(`/api/contacts/${contactId}/notes/${noteId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        `/api/contacts/${contactId}/notes/${noteId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
-      if (!response.ok) throw new Error('Failed to delete note');
+      if (!response.ok) throw new Error("Failed to delete note");
 
       await fetchContact();
     } catch (err: any) {
@@ -858,17 +877,19 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   const handleBlockToggle = async () => {
     if (!token || !contact) return;
 
-    const action = contact.isBlocked ? 'unblock' : 'block';
-    const reason = contact.isBlocked ? undefined : prompt('Motivo del bloqueo:');
+    const action = contact.isBlocked ? "unblock" : "block";
+    const reason = contact.isBlocked
+      ? undefined
+      : prompt("Motivo del bloqueo:");
 
     if (!contact.isBlocked && reason === null) return; // Cancelled
 
     try {
       const response = await fetch(`/api/contacts/${contactId}/${action}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ reason }),
       });
@@ -886,16 +907,19 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/users/${contactId}/custom-fields/${fieldId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/users/${contactId}/custom-fields/${fieldId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: editingFieldValue }),
         },
-        body: JSON.stringify({ value: editingFieldValue }),
-      });
+      );
 
-      if (!response.ok) throw new Error('Failed to update field');
+      if (!response.ok) throw new Error("Failed to update field");
 
       await fetchContact();
       setEditingField(null);
@@ -913,29 +937,22 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
 
   // ==================== HELPERS ====================
 
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
+  const toggleSection = (key: string) =>
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const formatDate = (date: string | undefined) => {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('es', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString("es", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const formatRelativeTime = (date: string | undefined) => {
-    if (!date) return '—';
+    if (!date) return "—";
     const d = new Date(date);
     const now = new Date();
     const diff = now.getTime() - d.getTime();
@@ -943,29 +960,29 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return 'Hace un momento';
+    if (minutes < 1) return "Hace un momento";
     if (minutes < 60) return `Hace ${minutes} min`;
     if (hours < 24) return `Hace ${hours} horas`;
     if (days < 7) return `Hace ${days} días`;
-    return d.toLocaleDateString('es', { day: '2-digit', month: 'short' });
+    return d.toLocaleDateString("es", { day: "2-digit", month: "short" });
   };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'message_sent':
-      case 'message_received':
+      case "message_sent":
+      case "message_received":
         return <MessageSquare className="w-4 h-4" />;
-      case 'session_created':
-      case 'session_closed':
+      case "session_created":
+      case "session_closed":
         return <Activity className="w-4 h-4" />;
-      case 'tag_added':
-      case 'tag_removed':
+      case "tag_added":
+      case "tag_removed":
         return <Tag className="w-4 h-4" />;
-      case 'flow_triggered':
-      case 'flow_completed':
+      case "flow_triggered":
+      case "flow_completed":
         return <Workflow className="w-4 h-4" />;
-      case 'contact_blocked':
-      case 'contact_unblocked':
+      case "contact_blocked":
+      case "contact_unblocked":
         return <Ban className="w-4 h-4" />;
       default:
         return <Activity className="w-4 h-4" />;
@@ -973,8 +990,14 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   };
 
   const availableTagsToAdd = allTags.filter(
-    (tag) => !contact?.tags.some((t) => t._id === tag._id)
+    (tag) => !contact?.tags.some((t) => t._id === tag._id),
   );
+
+  // const toggleSection = (key: string) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiado");
+  };
 
   // ==================== RENDER ====================
 
@@ -990,8 +1013,11 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
     return (
       <div className="fixed inset-y-0 right-0 w-[480px] bg-gray-950 border-l border-gray-800 z-50 flex flex-col items-center justify-center">
         <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-        <p className="text-gray-400">{error || 'Contact not found'}</p>
-        <button onClick={onClose} className="mt-4 text-blue-400 hover:text-blue-300">
+        <p className="text-gray-400">{error || "Contact not found"}</p>
+        <button
+          onClick={onClose}
+          className="mt-4 text-blue-400 hover:text-blue-300"
+        >
           Cerrar
         </button>
       </div>
@@ -999,139 +1025,97 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[480px] bg-gray-950 border-l border-gray-800 z-50 flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-800">
-        <div className="flex items-start justify-between">
+    <div className="fixed inset-y-0 right-0 w-[480px] bg-zinc-950 border-l border-zinc-800 z-50 flex flex-col shadow-2xl shadow-black/50">
+      {/* --- HEADER --- */}
+      <div className="flex-shrink-0 p-6 border-b border-zinc-800 bg-zinc-950 z-10">
+        <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-              {contact.firstName?.[0] || contact.username?.[0] || '?'}
+            {/* Avatar with Status Indicator */}
+            <div className="relative group cursor-pointer">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center shadow-lg group-hover:border-zinc-600 transition-colors">
+                <span className="text-2xl font-bold text-zinc-300">
+                  {contact.firstName?.[0] || contact.username?.[0] || "?"}
+                </span>
+              </div>
+              {/* Online/Blocked Status Badge */}
+              <div
+                className={`absolute -bottom-1 -right-1 p-1 rounded-lg border-4 border-zinc-950 ${contact.isBlocked ? "bg-red-500" : "bg-emerald-500"}`}
+              >
+                {contact.isBlocked ? (
+                  <Ban className="w-3 h-3 text-white" />
+                ) : (
+                  <UserCheck className="w-3 h-3 text-white" />
+                )}
+              </div>
             </div>
 
-            {/* Name & Status */}
             <div>
-              {isEditing ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={editData.firstName || ''}
-                    onChange={(e) => setEditData({ ...editData, firstName: e.target.value })}
-                    placeholder="Nombre"
-                    className="w-24 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={editData.lastName || ''}
-                    onChange={(e) => setEditData({ ...editData, lastName: e.target.value })}
-                    placeholder="Apellido"
-                    className="w-24 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                  />
-                </div>
-              ) : (
-                <h2 className="text-xl font-bold text-white">{contact.fullName}</h2>
-              )}
-              {contact.username && (
-                <p className="text-gray-400">@{contact.username}</p>
-              )}
-              <div className="flex items-center gap-2 mt-1">
-                {contact.isBlocked ? (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
-                    <Ban className="w-3 h-3" />
-                    Bloqueado
-                  </span>
-                ) : contact.stats.activeSession ? (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
-                    <MessageSquare className="w-3 h-3" />
-                    En chat
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">
-                    <UserCheck className="w-3 h-3" />
-                    Activo
+              <h2 className="text-xl font-bold text-white tracking-tight leading-none mb-1">
+                {contact.fullName}
+              </h2>
+              <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                <span>@{contact.username || "sin_usuario"}</span>
+                {contact.language && (
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] uppercase font-bold text-zinc-400">
+                    {contact.language}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={handleSaveEdit}
-                  disabled={isSaving}
-                  className="p-2 text-green-400 hover:bg-gray-700/50 rounded-lg"
-                >
-                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                </button>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg"
-                  title="Editar"
-                >
-                  <Edit3 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={handleBlockToggle}
-                  className={`p-2 rounded-lg ${contact.isBlocked ? 'text-green-400 hover:bg-green-500/20' : 'text-red-400 hover:bg-red-500/20'}`}
-                  title={contact.isBlocked ? 'Desbloquear' : 'Bloquear'}
-                >
-                  {contact.isBlocked ? <UserCheck className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </>
-            )}
+          <div className="flex gap-2">
+            <button className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors border border-transparent hover:border-zinc-800">
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors border border-transparent hover:border-zinc-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* Segments */}
-        {contact.segments.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
-            {contact.segments.map((segment) => (
-              <span
-                key={segment._id}
-                className="px-2 py-0.5 text-xs rounded-full flex items-center gap-1"
-                style={{ backgroundColor: `${segment.color}20`, color: segment.color }}
-              >
-                <Bookmark className="w-3 h-3" />
-                {segment.name}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Quick Stats/Segments */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+          {contact.isBlocked && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+              Bloqueado
+            </span>
+          )}
+          {contact.stats.activeSession && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
+              <MessageSquare className="w-3 h-3" /> En Chat
+            </span>
+          )}
+          {contact.segments.map((seg) => (
+            <span
+              key={seg._id}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-900 text-zinc-400 border border-zinc-800"
+            >
+              <Bookmark className="w-3 h-3" style={{ color: seg.color }} />{" "}
+              {seg.name}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex-shrink-0 flex border-b border-gray-800">
+      {/* --- TABS --- */}
+      <div className="flex border-b border-zinc-800 bg-zinc-900/50">
         {[
-          { id: 'overview', label: 'General', icon: User },
-          { id: 'activity', label: 'Actividad', icon: Activity },
-          { id: 'flows', label: 'Flows', icon: Workflow },
-          { id: 'notes', label: 'Notas', icon: FileText },
+          { id: "overview", label: "Perfil", icon: User },
+          { id: "activity", label: "Actividad", icon: Activity },
+          { id: "flows", label: "Flows", icon: Workflow },
+          { id: "notes", label: "Notas", icon: FileText },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-all ${
               activeTab === tab.id
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-400 hover:text-white'
+                ? "text-indigo-400 border-indigo-500 bg-indigo-500/5"
+                : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-zinc-900"
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -1140,426 +1124,334 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
         ))}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        {activeTab === 'overview' && (
-          <div className="p-4 space-y-4">
-            {/* Basic Info Section */}
-            <div className="bg-gray-900/50 rounded-lg overflow-hidden">
+      {/* --- CONTENT AREA --- */}
+      <div className="flex-1 overflow-y-auto bg-zinc-950 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent p-4">
+        {/* VIEW: OVERVIEW */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            {/* Section: Basic Info */}
+            <section className="space-y-3">
               <button
-                onClick={() => toggleSection('info')}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-900/50"
+                onClick={() => toggleSection("info")}
+                className="w-full flex items-center justify-between text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
               >
-                <span className="font-medium text-white">Información</span>
-                {expandedSections.has('info') ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                <span>Información Básica</span>
+                {expandedSections.info ? (
+                  <ChevronDown className="w-4 h-4" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronRight className="w-4 h-4" />
                 )}
               </button>
 
-              {expandedSections.has('info') && (
-                <div className="px-4 pb-4 space-y-3">
-                  {/* Telegram ID */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">Telegram ID</span>
+              {expandedSections.info && (
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800/50">
+                  <div className="flex justify-between items-center p-3 hover:bg-zinc-900 transition-colors group">
+                    <span className="text-sm text-zinc-400">Telegram ID</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-white">{contact.telegramId}</span>
-                      <button
-                        onClick={() => copyToClipboard(String(contact.telegramId), 'telegramId')}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        {copiedField === 'telegramId' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Username */}
-                  {contact.username && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 text-sm">Username</span>
-                      <span className="text-white">@{contact.username}</span>
-                    </div>
-                  )}
-
-                  {/* Language */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">Idioma</span>
-                    {isEditing ? (
-                      <select
-                        value={editData.language || ''}
-                        onChange={(e) => setEditData({ ...editData, language: e.target.value })}
-                        className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                      >
-                        <option value="">—</option>
-                        <option value="es">🇪🇸 Español</option>
-                        <option value="en">🇺🇸 English</option>
-                        <option value="pt">🇧🇷 Português</option>
-                        <option value="fr">🇫🇷 Français</option>
-                        <option value="de">🇩🇪 Deutsch</option>
-                      </select>
-                    ) : (
-                      <span className="text-white">{contact.language?.toUpperCase() || '—'}</span>
-                    )}
-                  </div>
-
-                  {/* Created */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">Contacto desde</span>
-                    <span className="text-white">{formatDate(contact.createdAt)}</span>
-                  </div>
-
-                  {/* Last Activity */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">Última actividad</span>
-                    <span className="text-white">{formatRelativeTime(contact.lastActivity)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Tags Section */}
-            <div className="bg-gray-900/50 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleSection('tags')}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-900/50"
-              >
-                <span className="font-medium text-white flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-blue-400" />
-                  Etiquetas ({contact.tags.length})
-                </span>
-                {expandedSections.has('tags') ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-
-              {expandedSections.has('tags') && (
-                <div className="px-4 pb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {contact.tags.map((tag) => (
-                      <span
-                        key={tag._id}
-                        className="flex items-center gap-1 px-2 py-1 rounded-full text-sm"
-                        style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
-                      >
-                        {tag.name}
-                        <button
-                          onClick={() => handleRemoveTag(tag._id)}
-                          className="hover:opacity-70"
-                          disabled={tagLoading}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+                      <span className="text-sm font-mono text-zinc-200">
+                        {contact.telegramId}
                       </span>
-                    ))}
-
-                    {/* Add Tag Button */}
-                    <div className="relative">
                       <button
-                        onClick={() => setShowTagPicker(!showTagPicker)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-gray-800/50 text-gray-300 hover:bg-gray-700"
-                        disabled={tagLoading}
+                        onClick={() => handleCopy(String(contact.telegramId))}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-all"
                       >
-                        <Plus className="w-3 h-3" />
-                        Añadir
+                        <Copy className="w-3 h-3" />
                       </button>
-
-                      {showTagPicker && (
-                        <div className="absolute top-full left-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 max-h-48 overflow-auto">
-                          {availableTagsToAdd.length === 0 ? (
-                            <p className="p-3 text-gray-400 text-sm">No hay más etiquetas</p>
-                          ) : (
-                            availableTagsToAdd.map((tag) => (
-                              <button
-                                key={tag._id}
-                                onClick={() => handleAddTag(tag._id)}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-800/50"
-                              >
-                                <div
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: tag.color }}
-                                />
-                                <span className="text-white">{tag.name}</span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
                     </div>
+                  </div>
+                  <div className="flex justify-between items-center p-3 hover:bg-zinc-900 transition-colors">
+                    <span className="text-sm text-zinc-400">Miembro desde</span>
+                    <span className="text-sm text-zinc-200">
+                      {new Date(contact.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 hover:bg-zinc-900 transition-colors">
+                    <span className="text-sm text-zinc-400">
+                      Última conexión
+                    </span>
+                    <span className="text-sm text-zinc-200 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-zinc-500" />
+                      Hace 2 horas
+                    </span>
                   </div>
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* Custom Fields Section */}
-            <div className="bg-gray-900/50 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleSection('fields')}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-900/50"
-              >
-                <span className="font-medium text-white flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-purple-400" />
+            {/* Section: Tags */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => toggleSection("tags")}
+                  className="text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                >
+                  Etiquetas
+                </button>
+                <button
+                  onClick={() => setShowTagPicker(!showTagPicker)}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Añadir
+                </button>
+              </div>
+
+              {expandedSections.tags && (
+                <div className="flex flex-wrap gap-2">
+                  {contact.tags.map((tag) => (
+                    <span
+                      key={tag._id}
+                      className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-all hover:pr-1.5"
+                      style={{
+                        backgroundColor: `${tag.color}10`,
+                        color: tag.color,
+                        borderColor: `${tag.color}20`,
+                      }}
+                    >
+                      {tag.name}
+                      <button className="w-0 group-hover:w-4 overflow-hidden transition-all text-current opacity-50 hover:opacity-100">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {contact.tags.length === 0 && (
+                    <p className="text-xs text-zinc-600 italic">
+                      Sin etiquetas asignadas
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Section: Custom Fields */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => toggleSection("fields")}
+                  className="text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                >
                   Campos Personalizados
-                </span>
-                {expandedSections.has('fields') ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
+                </button>
+                <button
+                  onClick={() => setShowFieldsManager(true)}
+                  className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900 rounded transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              </div>
 
-              {expandedSections.has('fields') && (
-                <div className="px-4 pb-4 space-y-3">
+              {expandedSections.fields && (
+                <div className="space-y-2">
                   {contact.customFields.map((field) => (
-                    <div key={field.fieldId} className="flex items-center justify-between">
-                      <span className="text-gray-400 text-sm">{field.label}</span>
-                      {editingField === field.fieldId ? (
-                        <div className="flex items-center gap-2">
-                          {field.type === 'boolean' ? (
-                            <select
-                              value={String(editingFieldValue)}
-                              onChange={(e) => setEditingFieldValue(e.target.value === 'true')}
-                              className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            >
-                              <option value="true">Sí</option>
-                              <option value="false">No</option>
-                            </select>
-                          ) : field.type === 'number' ? (
-                            <input
-                              type="number"
-                              value={editingFieldValue || ''}
-                              onChange={(e) => setEditingFieldValue(Number(e.target.value))}
-                              className="w-24 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              value={editingFieldValue || ''}
-                              onChange={(e) => setEditingFieldValue(e.target.value)}
-                              className="w-32 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            />
-                          )}
-                          <button onClick={() => handleSaveCustomField(field.fieldId)} className="text-green-400">
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setEditingField(null)} className="text-gray-400">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-white">
-                            {field.type === 'boolean'
-                              ? field.value
-                                ? 'Sí'
-                                : 'No'
-                              : field.value ?? '—'}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setEditingField(field.fieldId);
-                              setEditingFieldValue(field.value);
-                            }}
-                            className="text-gray-400 hover:text-white"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
+                    <div
+                      key={field.fieldId}
+                      className="group relative bg-zinc-900/30 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900 rounded-xl p-3 transition-all"
+                    >
+                      <p className="text-xs text-zinc-500 mb-1 flex items-center gap-1">
+                        {field.label}
+                      </p>
+                      <p className="text-sm text-zinc-200 font-medium truncate">
+                        {field.value || (
+                          <span className="text-zinc-700 italic">Vacío</span>
+                        )}
+                      </p>
+                      <button className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all">
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   ))}
-
                   {contact.customFields.length === 0 && (
-                    <p className="text-gray-400 text-sm text-center py-2">No hay campos personalizados</p>
-                  )}
-
-                  {/* Manage Fields Button */}
-                  <button
-                    onClick={() => setShowFieldsManager(true)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-2 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg border border-dashed border-gray-700 hover:border-purple-500/50 transition-all"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Gestionar campos
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Stats Section */}
-            <div className="bg-gray-900/50 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleSection('stats')}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-900/50"
-              >
-                <span className="font-medium text-white flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-green-400" />
-                  Estadísticas
-                </span>
-                {expandedSections.has('stats') ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-
-              {expandedSections.has('stats') && (
-                <div className="px-4 pb-4 grid grid-cols-2 gap-4">
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{contact.stats.totalSessions}</div>
-                    <div className="text-xs text-gray-400">Sesiones</div>
-                  </div>
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{contact.stats.totalMessages}</div>
-                    <div className="text-xs text-gray-400">Mensajes</div>
-                  </div>
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{contact.stats.avgSessionDuration || 0}m</div>
-                    <div className="text-xs text-gray-400">Duración media</div>
-                  </div>
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{contact.stats.avgResponseTime || 0}s</div>
-                    <div className="text-xs text-gray-400">Tiempo respuesta</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'activity' && (
-          <div className="p-4">
-            <div className="space-y-3">
-              {contact.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-gray-900/50 rounded-lg">
-                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-gray-300">
-                    {getActivityIcon(activity.type)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm">{activity.description}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-400">{formatRelativeTime(activity.timestamp)}</span>
-                      {activity.actor?.name && (
-                        <>
-                          <span className="text-gray-600">•</span>
-                          <span className="text-xs text-gray-400">{activity.actor.name}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {contact.recentActivity.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
-                  <Activity className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No hay actividad reciente</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'flows' && (
-          <div className="p-4">
-            <div className="space-y-3">
-              {contact.flowHistory.map((flow, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      flow.status === 'completed'
-                        ? 'bg-green-500/20 text-green-400'
-                        : flow.status === 'running'
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-red-500/20 text-red-400'
-                    }`}
-                  >
-                    <Workflow className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm font-medium">{flow.flowName}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          flow.status === 'completed'
-                            ? 'bg-green-500/20 text-green-400'
-                            : flow.status === 'running'
-                            ? 'bg-blue-500/20 text-blue-400'
-                            : 'bg-red-500/20 text-red-400'
-                        }`}
+                    <div className="text-center p-6 border-2 border-dashed border-zinc-800 rounded-xl">
+                      <p className="text-xs text-zinc-500">
+                        No hay datos personalizados
+                      </p>
+                      <button
+                        onClick={() => setShowFieldsManager(true)}
+                        className="mt-2 text-xs text-indigo-400 hover:underline"
                       >
-                        {flow.status === 'completed' ? 'Completado' : flow.status === 'running' ? 'En ejecución' : flow.status}
-                      </span>
-                      <span className="text-xs text-gray-400">{formatRelativeTime(flow.executedAt)}</span>
+                        Configurar campos
+                      </button>
                     </div>
-                  </div>
-                </div>
-              ))}
-
-              {contact.flowHistory.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
-                  <Workflow className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No ha ejecutado ningún flow</p>
+                  )}
                 </div>
               )}
-            </div>
+            </section>
+
+            {/* Section: Stats Grid */}
+            {expandedSections.stats && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {contact.stats.totalSessions}
+                  </div>
+                  <div className="text-xs text-zinc-500 uppercase font-medium">
+                    Sesiones
+                  </div>
+                </div>
+                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {contact.stats.avgResponseTime}s
+                  </div>
+                  <div className="text-xs text-zinc-500 uppercase font-medium">
+                    Tiempo Resp.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {activeTab === 'notes' && (
-          <div className="p-4">
-            {/* Add Note */}
-            <div className="mb-4">
-              <textarea
-                value={newNoteContent}
-                onChange={(e) => setNewNoteContent(e.target.value)}
-                placeholder="Añadir una nota interna..."
-                className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                rows={3}
-              />
-              <button
-                onClick={handleAddNote}
-                disabled={!newNoteContent.trim() || noteLoading}
-                className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50"
-              >
-                {noteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                Añadir Nota
-              </button>
+        {/* VIEW: ACTIVITY */}
+        {activeTab === "activity" && (
+          <div className="relative space-y-6 pl-2">
+            {/* Timeline Line */}
+            <div className="absolute top-0 bottom-0 left-[19px] w-px bg-zinc-800" />
+
+            {contact.recentActivity.map((act, idx) => (
+              <div key={idx} className="relative flex gap-4 group">
+                <div className="relative z-10 w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-colors shrink-0">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <div className="pb-6 border-b border-zinc-800/50 w-full">
+                  <p className="text-sm text-zinc-300">{act.description}</p>
+                  <span className="text-xs text-zinc-500 mt-1 block">
+                    {new Date(act.timestamp).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* VIEW: FLOWS */}
+        {activeTab === "flows" && (
+          <div className="text-center py-20 text-zinc-500">
+            {/* <FlowPanel contactId={contactId} /> */}
+          </div>
+        )}
+
+        {/* VIEW: NOTES */}
+        {activeTab === "notes" && (
+          <div className="p-4 space-y-6 animate-in fade-in duration-300">
+            {/* Input Area */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
+                Nueva Nota
+              </label>
+              <div className="relative group">
+                <textarea
+                  value={newNoteContent}
+                  onChange={(e) => setNewNoteContent(e.target.value)}
+                  placeholder="Escribe una observación interna sobre este contacto..."
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all min-h-[100px] scrollbar-thin scrollbar-thumb-zinc-700 border-2"
+                />
+                <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                  <span className="text-[10px] text-zinc-600 font-mono">
+                    {newNoteContent.length}/500
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleAddNote}
+                  disabled={!newNoteContent.trim() || noteLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-xs rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/5 active:scale-95"
+                >
+                  {noteLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5" />
+                  )}
+                  Guardar Nota
+                </button>
+              </div>
             </div>
+
+            {/* Divider */}
+            <div className="h-px bg-zinc-800 w-full" />
 
             {/* Notes List */}
             <div className="space-y-3">
-              {contact.notes.map((note) => (
-                <div
-                  key={note._id}
-                  className={`p-3 rounded-lg ${note.isPinned ? 'bg-yellow-500/10 border border-yellow-500/30' : 'bg-gray-900/50'}`}
-                >
-                  {note.isPinned && (
-                    <div className="flex items-center gap-1 text-xs text-yellow-500 mb-2">
-                      <PinIcon className="w-3 h-3" />
-                      Fijada
-                    </div>
-                  )}
-                  <p className="text-white text-sm whitespace-pre-wrap">{note.content}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="text-xs text-gray-400">
-                      {note.createdBy.name} • {formatRelativeTime(note.createdAt)}
-                    </div>
-                    <button
-                      onClick={() => handleDeleteNote(note._id)}
-                      className="text-gray-400 hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <div className="flex items-center justify-between px-1">
+                <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                  Historial ({contact.notes.length})
+                </h4>
+              </div>
 
-              {contact.notes.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No hay notas</p>
+              {contact.notes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/30">
+                  <div className="p-3 bg-zinc-900 rounded-full mb-3 border border-zinc-800">
+                    <FileText className="w-6 h-6 text-zinc-600" />
+                  </div>
+                  <p className="text-sm font-medium text-zinc-400">
+                    No hay notas registradas
+                  </p>
+                  <p className="text-xs text-zinc-600 mt-1">
+                    Las notas son privadas para el equipo.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {contact.notes.map((note) => (
+                    <div
+                      key={note._id}
+                      className={`group relative p-4 rounded-xl border transition-all duration-200 ${
+                        note.isPinned
+                          ? "bg-amber-500/5 border-amber-500/20 hover:border-amber-500/30"
+                          : "bg-zinc-900 border-zinc-800 hover:border-zinc-700"
+                      }`}
+                    >
+                      {/* Note Header */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold uppercase border ${
+                              note.isPinned
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                            }`}
+                          >
+                            {note.createdBy.name[0]}
+                          </div>
+                          <div>
+                            <span className="text-xs font-medium text-zinc-300 block leading-none">
+                              {note.createdBy.name}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-mono">
+                              {formatRelativeTime(note.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Pinned Icon Indicator */}
+                        {note.isPinned && (
+                          <div className="p-1 bg-amber-500/10 rounded text-amber-500">
+                            <PinIcon className="w-3 h-3" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <p
+                        className={`text-sm leading-relaxed whitespace-pre-wrap ${
+                          note.isPinned ? "text-amber-100/90" : "text-zinc-300"
+                        }`}
+                      >
+                        {note.content}
+                      </p>
+
+                      {/* Hover Actions */}
+                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-zinc-900/80 backdrop-blur-sm rounded-lg p-0.5 border border-zinc-700/50 shadow-sm">
+                        <button
+                          onClick={() => handleDeleteNote(note._id)}
+                          className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                          title="Eliminar nota"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1567,11 +1459,11 @@ export default function Contact360Panel({ contactId, onClose, onUpdate }: Props)
         )}
       </div>
 
-      {/* Custom Fields Manager Modal */}
+      {/* --- MODALS --- */}
       <FieldsManagerModal
         isOpen={showFieldsManager}
         onClose={() => setShowFieldsManager(false)}
-        onFieldsChanged={fetchContact}
+        onFieldsChanged={loadData}
       />
     </div>
   );
