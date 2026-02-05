@@ -1,6 +1,7 @@
 /**
  * Trelk Support Platform - Main Server
  * Webhook-based Telegram bot with real-time agent dashboard
+ * Supports both webhook and polling modes via POLLING_ENABLED config
  */
 
 import Fastify from "fastify";
@@ -8,11 +9,12 @@ import fastifyCors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
 import { ENV, WEBHOOK_CONFIG, validateConfig } from "./config/index.js";
 import { connectDatabase, disconnectDatabase } from "./database/index.js";
-import { handleMessage, handleCallbackQuery } from "./services/bot.handlers.js";
+import { restorePendingPolls } from "./services/survey.service.js";
 import {
-  handlePollAnswer,
-  restorePendingPolls,
-} from "./services/survey.service.js";
+  processSupportBotUpdate,
+  processNotificationBotUpdate,
+  type NotificationBotUpdate,
+} from "./services/update-handlers.service.js";
 // Legacy cron worker removed - now using BullMQ workers
 // import { startScheduledMessagesWorker, stopScheduledMessagesWorker } from './services/scheduledMessage.worker.js';
 import { flowEngine } from "./services/flowEngine.service.js";
@@ -52,6 +54,13 @@ import {
   initializeTextRegistry,
   seedDefaultTexts,
 } from "./services/text-registry.service.js";
+// Polling service
+import {
+  startPolling,
+  stopPolling,
+  getPollingStatus,
+  isPollingEnabled,
+} from "./services/telegram-polling.service.js";
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -104,27 +113,34 @@ fastify.post(WEBHOOK_CONFIG.path, async (request, reply) => {
 
   const update = request.body as TelegramUpdate;
 
-  // Process update asynchronously
+  // Process update asynchronously using centralized handler
   setImmediate(async () => {
     try {
-      if (update.message) {
-        await handleMessage(update.message);
-      } else if (update.callback_query) {
-        await handleCallbackQuery(update.callback_query);
-      } else if (update.poll_answer) {
-        // Handle survey poll answers
-        await handlePollAnswer(
-          update.poll_answer.poll_id,
-          update.poll_answer.option_ids,
-          update.poll_answer.user.id,
-        );
-      }
+      await processSupportBotUpdate(update);
     } catch (error) {
-      logger.error("api", { error: String(error), updateId: update.update_id });
+      // Error already logged in handler
     }
   });
 
   // Return immediately to Telegram
+  return reply.code(200).send({ ok: true });
+});
+
+// ============= NOTIFICATION BOT WEBHOOK (TrelkAlertsBot) =============
+// Handles QR Login callbacks and commands
+
+fastify.post("/webhook/notifications", async (request, reply) => {
+  const update = request.body as NotificationBotUpdate;
+
+  // Process update asynchronously using centralized handler
+  setImmediate(async () => {
+    try {
+      await processNotificationBotUpdate(update);
+    } catch (error) {
+      // Error already logged in handler
+    }
+  });
+
   return reply.code(200).send({ ok: true });
 });
 
@@ -133,12 +149,14 @@ fastify.post(WEBHOOK_CONFIG.path, async (request, reply) => {
 fastify.get("/health", async () => {
   const redisHealth = getRedisHealth();
   const queuesInitialized = areWorkersInitialized();
+  const pollingStatus = getPollingStatus();
 
   return {
     status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     version: "2.0.0",
+    mode: pollingStatus.enabled ? "polling" : "webhook",
     redis: {
       connected: isRedisConnected(),
       hitRate: redisHealth.hitRate,
@@ -147,6 +165,12 @@ fastify.get("/health", async () => {
     queues: {
       initialized: queuesInitialized,
     },
+    polling: pollingStatus.enabled
+      ? {
+          supportBot: pollingStatus.supportBot,
+          notificationBot: pollingStatus.notificationBot,
+        }
+      : undefined,
   };
 });
 
@@ -155,12 +179,13 @@ fastify.get("/", async () => {
     name: "Trelk Support Platform",
     version: "2.0.0",
     status: "running",
+    mode: isPollingEnabled() ? "polling" : "webhook",
   };
 });
 
 // ============= WEBHOOK MANAGEMENT ENDPOINTS =============
 
-fastify.post("/webhook/setup", async (request, reply) => {
+fastify.post("/api/webhook/setup", async (request, reply) => {
   const authHeader = request.headers.authorization;
   if (authHeader !== `Bearer ${ENV.WEBHOOK_SECRET}`) {
     return reply.code(401).send({ ok: false });
@@ -201,6 +226,93 @@ fastify.get("/webhook/info", async (request, reply) => {
 
   const info = await getWebhookInfo();
   return { ok: true, webhook: info };
+});
+
+// ============= NOTIFICATION BOT WEBHOOK SETUP =============
+
+fastify.post("/webhook/notifications/setup", async (request, reply) => {
+  const authHeader = request.headers.authorization;
+  if (authHeader !== `Bearer ${ENV.WEBHOOK_SECRET}`) {
+    return reply.code(401).send({ ok: false });
+  }
+
+  const NOTIFICATION_BOT_TOKEN =
+    process.env.NOTIFICATION_BOT_TOKEN ||
+    "7588166869:AAGroOeWsYbM_QmovwQmf6RvYFZ_maalwI0";
+  const TELEGRAM_API_BASE =
+    process.env.TELEGRAM_API_BASE_URL || "https://api.telegram.org";
+  const webhookUrl = `${ENV.WEBHOOK_URL}/webhook/notifications`;
+
+  try {
+    const response = await fetch(
+      `${TELEGRAM_API_BASE}/bot${NOTIFICATION_BOT_TOKEN}/setWebhook`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: webhookUrl,
+          allowed_updates: ["message", "callback_query"],
+        }),
+      },
+    );
+
+    const data = (await response.json()) as {
+      ok: boolean;
+      description?: string;
+    };
+
+    if (data.ok) {
+      logger.info("api", {
+        action: "notification_webhook_set",
+        url: webhookUrl,
+      });
+      return {
+        ok: true,
+        message: "Notification bot webhook configured",
+        url: webhookUrl,
+      };
+    }
+
+    return reply
+      .code(500)
+      .send({ ok: false, error: data.description || "Failed to set webhook" });
+  } catch (error) {
+    return reply.code(500).send({ ok: false, error: String(error) });
+  }
+});
+
+fastify.get("/webhook/notifications/info", async (request, reply) => {
+  const authHeader = request.headers.authorization;
+  if (authHeader !== `Bearer ${ENV.WEBHOOK_SECRET}`) {
+    return reply.code(401).send({ ok: false });
+  }
+
+  const NOTIFICATION_BOT_TOKEN =
+    process.env.NOTIFICATION_BOT_TOKEN ||
+    "7588166869:AAGroOeWsYbM_QmovwQmf6RvYFZ_maalwI0";
+  const TELEGRAM_API_BASE =
+    process.env.TELEGRAM_API_BASE_URL || "https://api.telegram.org";
+
+  try {
+    const response = await fetch(
+      `${TELEGRAM_API_BASE}/bot${NOTIFICATION_BOT_TOKEN}/getWebhookInfo`,
+    );
+    const data = await response.json();
+    return { ok: true, webhook: data };
+  } catch (error) {
+    return reply.code(500).send({ ok: false, error: String(error) });
+  }
+});
+
+// ============= POLLING STATUS ENDPOINT =============
+
+fastify.get("/polling/status", async (request, reply) => {
+  const authHeader = request.headers.authorization;
+  if (authHeader !== `Bearer ${ENV.WEBHOOK_SECRET}`) {
+    return reply.code(401).send({ ok: false });
+  }
+
+  return { ok: true, ...getPollingStatus() };
 });
 
 // ============= QUEUE STATS ENDPOINT =============
@@ -264,7 +376,6 @@ async function start(): Promise<void> {
       //   request.headers["x-real-ip"] ||
       //   request.headers["cf-connecting-ip"] ||
       //   request.headers["x-forwarded-for"];
-
       // if (customIp) {
       //   request.ip = Array.isArray(customIp)
       //     ? customIp[0]
@@ -323,6 +434,9 @@ async function start(): Promise<void> {
     // Start Flow Engine (processes waiting/paused flow executions)
     flowEngine.start(5000); // Check every 5 seconds
 
+    // Determine update mode (polling vs webhook)
+    const updateMode = isPollingEnabled() ? "POLLING" : "WEBHOOK";
+
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
@@ -330,7 +444,7 @@ async function start(): Promise<void> {
 ║                                                              ║
 ║   Bot: @${(botInfo.username || "TrelkSupportBot").padEnd(44)}║
 ║   API: http://${ENV.HOST}:${String(ENV.PORT).padEnd(38)}║
-║   Webhook: ${WEBHOOK_CONFIG.path.padEnd(40)}║
+║   Mode: ${updateMode.padEnd(44)}║
 ║   Environment: ${ENV.NODE_ENV.padEnd(36)}║
 ║                                                              ║
 ║   ✅ MongoDB Connected                                       ║
@@ -344,14 +458,14 @@ async function start(): Promise<void> {
 ╚══════════════════════════════════════════════════════════════╝
     `);
 
-    // Auto-setup webhook
-    if (ENV.WEBHOOK_URL) {
+    // Start polling or configure webhook based on config
+    if (isPollingEnabled()) {
+      await startPolling();
+      console.log("   📡 Polling mode active for both bots\n");
+    } else if (ENV.WEBHOOK_URL) {
       const webhookUrl = `${ENV.WEBHOOK_URL}${WEBHOOK_CONFIG.path}`;
-      // const result = await setWebhook(webhookUrl, ENV.WEBHOOK_SECRET);
-      // if (result) {
-      //   logger.info('api', { action: 'webhook_auto_configured', url: webhookUrl });
-      //   console.log(`   📡 Webhook configured: ${webhookUrl}\n`);
-      // }
+      // Webhooks can be configured manually via /webhook/setup endpoint
+      console.log(`   📡 Webhook mode - configure at: ${webhookUrl}\n`);
     }
   } catch (error) {
     console.error("Failed to start server:", error);
@@ -364,6 +478,12 @@ async function shutdown(): Promise<void> {
   console.log("\n🛑 Shutting down gracefully...");
 
   try {
+    // Stop polling if enabled
+    if (isPollingEnabled()) {
+      await stopPolling();
+      console.log("   ✅ Polling stopped");
+    }
+
     // Stop Flow Engine
     flowEngine.stop();
 

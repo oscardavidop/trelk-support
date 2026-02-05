@@ -161,6 +161,25 @@ export interface ServerToClientEvents {
   'session:force_logout': (data: {
     reason: string;
   }) => void;
+  
+  // Auto-lock events
+  'session:locked': (data: {
+    reason: 'inactivity' | 'remote' | 'manual' | 'security';
+    lockedBy?: string;
+    lockedAt: string;
+  }) => void;
+  'session:unlocked': (data: {
+    unlockedBy?: string;
+    reason: 'admin_force' | 'password' | 'mfa';
+  }) => void;
+  'account:deactivated': (data: {
+    deactivatedAt: string;
+  }) => void;
+  'account:status_changed': (data: {
+    isActive: boolean;
+    changedBy?: string;
+    changedAt: string;
+  }) => void;
 
   // User block events
   'user:blocked': (data: { telegramId: number; reason: string; blockType: string }) => void;
@@ -438,6 +457,35 @@ export interface ServerToClientEvents {
     pausedAt?: Date;
     cancelledAt?: Date;
   }) => void;
+
+  // Internal Notification events (supervisor/admin → agent)
+  'agent.notification': (data: {
+    id: string;
+    type: string;
+    title?: string;
+    message: string;
+    priority: 'normal' | 'urgent';
+    from: { _id: string; name: string; avatar?: string; role: string };
+    actionUrl?: string;
+    actionLabel?: string;
+    relatedChatId?: string;
+    createdAt: Date;
+  }) => void;
+  'notification.count': (data: { unreadCount: number }) => void;
+
+  // Internal Broadcast events (admin announcements)
+  'broadcast.new': (data: {
+    id: string;
+    title: string;
+    message: string;
+    level: 'info' | 'warning' | 'critical';
+    requireAck: boolean;
+    isPinned: boolean;
+    createdBy: { _id: string; name: string; avatar?: string };
+    createdAt: Date;
+    expiresAt?: Date;
+  }) => void;
+  'broadcast.cancelled': (data: { id: string }) => void;
 
   // Errors
   'error': (error: { message: string }) => void;

@@ -24,6 +24,13 @@ export const ENV = {
   WEBHOOK_SECRET: process.env.WEBHOOK_SECRET || 'trelk-support-secret',
   WEBHOOK_URL: process.env.WEBHOOK_URL || '',
   
+  // Polling mode (use when webhook URL is not available)
+  POLLING_ENABLED: process.env.POLLING_ENABLED === 'true',
+  POLLING_TIMEOUT: parseInt(process.env.POLLING_TIMEOUT || '30', 10), // Long polling timeout in seconds
+  
+  // Notification Bot
+  NOTIFICATION_BOT_TOKEN: process.env.NOTIFICATION_BOT_TOKEN || '7588166869:AAGroOeWsYbM_QmovwQmf6RvYFZ_maalwI0',
+  
   // Server
   PORT: parseInt(process.env.PORT || '8443', 10),
   HOST: process.env.HOST || '0.0.0.0',
@@ -46,7 +53,7 @@ export const ENV = {
 // ============= WEBHOOK CONFIGURATION =============
 
 export const WEBHOOK_CONFIG = {
-  path: '/webhook/support',
+  path: '/api/webhook/support',
   secretHeader: 'x-telegram-bot-api-secret-token',
 } as const;
 

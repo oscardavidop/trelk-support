@@ -83,3 +83,23 @@ export {
   type IPermissionItem, 
   type RequestStatus 
 } from './PermissionRequest.js';
+
+// Internal Communications (Staff → Staff)
+export {
+  InternalNotification,
+  type IInternalNotification,
+  type NotificationPriority,
+  type NotificationType,
+} from './InternalNotification.js';
+
+export {
+  InternalBroadcast,
+  type IInternalBroadcast,
+  type BroadcastLevel,
+  type BroadcastTarget,
+} from './InternalBroadcast.js';
+
+export {
+  BroadcastReceipt as InternalBroadcastReceipt,
+  type IBroadcastReceipt as IInternalBroadcastReceipt,
+} from './BroadcastReceipt.js';

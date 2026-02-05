@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /**
  * AdminMFAModal - Premium Zinc Refactor
  * Administrative panel for managing user MFA settings
@@ -9,7 +10,7 @@ import {
   CheckCircle2, Clock, Smartphone, RefreshCw, Send, QrCode, Star,
   History, Lock, Unlock, Calendar
 } from 'lucide-react';
-import type { Agent } from '../types';
+import type { Agent } from '../../types';
 
 // --- Types ---
 

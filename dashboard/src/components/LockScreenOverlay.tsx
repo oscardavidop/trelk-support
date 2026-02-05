@@ -44,12 +44,15 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
   }, [state.isLocked, step]);
 
   useEffect(() => {
-    if (!state.isLocked) {
-      setPassword('');
-      setMfaCode('');
-      setError(null);
-      setRemainingAttempts(null);
-      setStep('password');
+    if (state.isLocked) {
+      // Reset form state when lock is activated
+      return () => {
+        setPassword('');
+        setMfaCode('');
+        setError(null);
+        setRemainingAttempts(null);
+        setStep('password');
+      };
     }
   }, [state.isLocked]);
 
@@ -83,7 +86,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
       default: // manual
         return {
           title: 'Terminal Bloqueada',
-          desc: 'Has bloqueado manualmente esta sesión.',
+          desc: 'Se ha bloqueado la pantalla por inactividad para proteger tus datos.',
           icon: Lock,
           color: 'text-zinc-400',
           bg: 'bg-zinc-800/50 border-zinc-700'

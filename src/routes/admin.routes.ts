@@ -18,6 +18,12 @@ import {
   sendNewPasswordTelegramMessage,
 } from '../services/agent.service.js';
 import {
+  notifyAgentDeactivated,
+  isAgentOnline,
+  forceLogoutAgent,
+} from '../services/auto-lock.service.js';
+import { agentSockets } from '../services/socket.js';
+import {
   getCachedSettings,
   updateSettings as updateAllCachedSettings,
   resetSettings as resetCachedSettings,
@@ -218,7 +224,15 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
       // Update fields
       if (name) agent.name = name;
       if (role) agent.role = role;
-      if (typeof isActive === 'boolean') agent.isActive = isActive;
+      if (typeof isActive === 'boolean') {
+        const wasActive = agent.isActive;
+        agent.isActive = isActive;
+        
+        // If deactivating and agent is online, force logout via socket
+        if (wasActive && !isActive && isAgentOnline(agentId)) {
+          notifyAgentDeactivated(agentId);
+        }
+      }
 
       await agent.save();
 
@@ -263,8 +277,10 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
       // Marcar que debe cambiar la contraseña al iniciar sesión
       const { Agent } = await import('../database/index.js');
       await Agent.updateOne({ _id: agentId }, {
-        forcePasswordChange: true,
-        lastPasswordChangeAt: new Date()
+        $set: {
+          'security.password.forceChange': true,
+          'security.password.lastChangedAt': new Date(),
+        }
       });
 
       // Revocar todos los tokens de reset pendientes

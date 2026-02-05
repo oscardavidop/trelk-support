@@ -555,3 +555,9 @@ export interface AgentActivity {
 }
 
 
+export const roleLabels: Record<string, string> = {
+  support: "Agente",
+  junior: "Junior",
+  supervisor: "Supervisor",
+  admin: "Administrador",
+};

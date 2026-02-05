@@ -424,6 +424,61 @@ export function useIdleDetector(options: UseIdleDetectorOptions = {}): [IdleDete
       }
     });
     
+    // Listen for socket events (from socket.ts handlers)
+    const handleSocketLock = (event: CustomEvent) => {
+      const data = event.detail;
+      console.log('[IdleDetector] Received socket lock event:', data);
+      
+      // Clear timers
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+      if (warningIntervalRef.current) clearInterval(warningIntervalRef.current);
+      
+      setState(prev => ({
+        ...prev,
+        isIdle: true,
+        isLocked: true,
+        lockReason: data.reason || 'remote',
+        warningActive: false,
+        warningSecondsLeft: 0,
+      }));
+      
+      // Broadcast to other tabs
+      broadcastChannelRef.current?.postMessage({
+        type: 'LOCK',
+        reason: data.reason || 'remote',
+        timestamp: new Date().toISOString(),
+      });
+      
+      onLock?.();
+    };
+    
+    const handleSocketUnlock = (event: CustomEvent) => {
+      console.log('[IdleDetector] Received socket unlock event:', event.detail);
+      
+      setState(prev => ({
+        ...prev,
+        isIdle: false,
+        isLocked: false,
+        lockReason: null,
+        warningActive: false,
+        warningSecondsLeft: 0,
+      }));
+      
+      // Broadcast to other tabs
+      broadcastChannelRef.current?.postMessage({
+        type: 'UNLOCK',
+        timestamp: new Date().toISOString(),
+      });
+      
+      onUnlock?.();
+      resetActivity();
+    };
+    
+    // Add custom event listeners for socket events
+    window.addEventListener('autolock:locked', handleSocketLock as EventListener);
+    window.addEventListener('autolock:unlocked', handleSocketUnlock as EventListener);
+    
     // Cleanup
     return () => {
       ACTIVITY_EVENTS.forEach((event) => {
@@ -433,27 +488,31 @@ export function useIdleDetector(options: UseIdleDetectorOptions = {}): [IdleDete
           window.removeEventListener(event, handleActivity);
         }
       });
+      
+      window.removeEventListener('autolock:locked', handleSocketLock as EventListener);
+      window.removeEventListener('autolock:unlocked', handleSocketUnlock as EventListener);
     };
-  }, [isAuthenticated, agent, handleActivity]);
+  }, [isAuthenticated, agent, handleActivity, onLock, onUnlock, resetActivity]);
 
-  // Fetch initial settings and setup polling
+  // Fetch initial settings and setup polling (reduced frequency since we have sockets)
   useEffect(() => {
     if (!isAuthenticated || !agent) return;
     
     // Initial fetch
     fetchLockStatus();
     
-    // Poll for remote lock and settings changes
+    // Poll less frequently as fallback (sockets handle real-time)
+    // This is mainly for getting settings changes and as a fallback
     pollingIntervalRef.current = setInterval(() => {
       fetchLockStatus();
-    }, 30000); // Every 30 seconds
+    }, 120000); // Every 2 minutes (reduced from 30s)
     
     // Activity heartbeat
     const heartbeatInterval = setInterval(() => {
       if (!state.isLocked) {
         sendActivityHeartbeat();
       }
-    }, 60000); // Every minute
+    }, 120000); // Every 2 minutes (reduced from 1 minute)
     
     return () => {
       if (pollingIntervalRef.current) {

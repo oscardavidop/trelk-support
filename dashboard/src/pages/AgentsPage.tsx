@@ -37,9 +37,20 @@ import {
   Send,
   Link2,
   Unlink,
+  Monitor,
+  Smartphone,
+  Tablet,
+  LogOut,
+  Globe,
+  Eye,
+  Settings,
+  AlertTriangle,
+  Activity,
 } from "lucide-react";
 import type { Agent, OnlineStatus } from "../types";
-import AdminMFAModal from "../components/AdminMFAModal";
+import AdminMFAModal from "../components/modals/AdminMFAModal";
+import { AgentManageModal } from "../components/modals/AgentManageModal";
+import SendNotificationModal from "../components/SendNotificationModal";
 
 interface AgentFormData {
   name: string;
@@ -87,6 +98,18 @@ const statusLabels: Record<string, string> = {
   offline: "Desconectado",
 };
 
+interface AgentSession {
+  _id: string;
+  deviceType: string;
+  browser: string;
+  os: string;
+  ip: string;
+  location?: string;
+  loginAt: string;
+  lastSeenAt: string;
+  isCurrent: boolean;
+}
+
 export default function AgentsPage() {
   const token = useAuthStore((state) => state.token);
   const currentAgent = useAuthStore((state) => state.agent);
@@ -104,27 +127,28 @@ export default function AgentsPage() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showDesactivateModal, setShowDesactivateModal] = useState(false);
   const [showMFAModal, setShowMFAModal] = useState(false);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [showAgentManageModal, setShowAgentManageModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationTargetAgent, setNotificationTargetAgent] = useState<Agent | null>(null);
+  const [manageModalTab, setManageModalTab] = useState<string>("edit");
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [formData, setFormData] = useState<AgentFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [skillInput, setSkillInput] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  
+
   // Lock states (map of agentId -> isLocked)
-  const [agentLockStates, setAgentLockStates] = useState<Record<string, boolean>>({});
+  const [agentLockStates, setAgentLockStates] = useState<
+    Record<string, boolean>
+  >({});
 
-  useEffect(() => {
-    loadAgents();
-  }, []);
+  // Agent sessions for modal
+  const [agentSessions, setAgentSessions] = useState<AgentSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [isAgentOnline, setIsAgentOnline] = useState(false);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => setActiveDropdown(null);
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  const loadAgents = async () => {
+  const loadAgents = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/agents", {
         headers: { Authorization: `Bearer ${token}` },
@@ -138,7 +162,18 @@ export default function AgentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    loadAgents();
+  }, [loadAgents]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveDropdown(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -191,7 +226,7 @@ export default function AgentsPage() {
       });
       const data = await res.json();
       if (data.ok) {
-        setAgentLockStates(prev => ({ ...prev, [agentId]: true }));
+        setAgentLockStates((prev) => ({ ...prev, [agentId]: true }));
       } else {
         console.error("Failed to lock agent:", data.error);
       }
@@ -209,13 +244,127 @@ export default function AgentsPage() {
       });
       const data = await res.json();
       if (data.ok) {
-        setAgentLockStates(prev => ({ ...prev, [agentId]: false }));
+        setAgentLockStates((prev) => ({ ...prev, [agentId]: false }));
       } else {
         console.error("Failed to unlock agent:", data.error);
       }
     } catch (error) {
       console.error("Failed to unlock agent:", error);
     }
+  };
+
+  // Open sessions modal for an agent
+  // Load sessions for an agent (doesn't open standalone modal anymore)
+  const handleViewSessions = async (agent: Agent) => {
+    setSessionsLoading(true);
+
+    try {
+      const res = await fetch(`/api/agents/${agent._id}/sessions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setAgentSessions(data.sessions || []);
+        setIsAgentOnline(data.isOnline || false);
+      } else {
+        setAgentSessions([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sessions:", error);
+      setAgentSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  // Invalidate a specific session
+  const handleInvalidateSession = async (sessionId: string) => {
+    if (!editingAgent) return;
+
+    try {
+      const res = await fetch(
+        `/api/agents/${editingAgent._id}/sessions/${sessionId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await res.json();
+      if (data.ok) {
+        setAgentSessions((prev) => prev.filter((s) => s._id !== sessionId));
+      } else {
+        console.error("Failed to invalidate session:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to invalidate session:", error);
+    }
+  };
+
+  // Invalidate all sessions for an agent
+  const handleInvalidateAllSessions = async () => {
+    if (!editingAgent) return;
+
+    try {
+      const res = await fetch(
+        `/api/agents/${editingAgent._id}/sessions/invalidate-all`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await res.json();
+      if (data.ok) {
+        setAgentSessions([]);
+        setIsAgentOnline(false);
+      } else {
+        console.error("Failed to invalidate sessions:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to invalidate sessions:", error);
+    }
+  };
+
+  // Force logout an agent
+  const handleForceLogout = async () => {
+    if (!editingAgent) return;
+
+    try {
+      const res = await fetch(`/api/agents/${editingAgent._id}/force-logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: "Desconectado por administrador" }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setAgentSessions([]);
+        setIsAgentOnline(false);
+      } else {
+        console.error("Failed to force logout:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to force logout:", error);
+    }
+  };
+
+  // Open agent manage modal
+  const openAgentManageModal = (agent: Agent, tab: string = "edit") => {
+    setEditingAgent(agent);
+    setManageModalTab(tab);
+    setShowAgentManageModal(true);
+    // Pre-load sessions if opening sessions tab
+    if (tab === "sessions") {
+      handleViewSessions(agent);
+    }
+  };
+
+  // Close agent manage modal
+  const closeAgentManageModal = () => {
+    setShowAgentManageModal(false);
+    setEditingAgent(null);
+    setManageModalTab("edit");
   };
 
   // Fetch lock states for all agents
@@ -303,7 +452,9 @@ export default function AgentsPage() {
       });
       const data = await res.json();
       if (data.ok) {
+        console.log("Agent status toggled:", agent);
         setAgents(agents.map((a) => (a._id === agent._id ? data.agent : a)));
+        setEditingAgent(data.agent);
         setShowDesactivateModal(false);
       }
     } catch (error) {
@@ -550,28 +701,10 @@ export default function AgentsPage() {
                       key={agent._id}
                       agent={agent}
                       isCurrentUser={currentAgent?._id === agent._id}
-                      activeDropdown={activeDropdown}
-                      setActiveDropdown={setActiveDropdown}
-                      onEdit={() => openFormModal(agent)}
-                      onDelete={() => {
-                        setEditingAgent(agent);
-                        setShowDeleteModal(true);
-                      }}
-                      onResetPassword={() => {
-                        setEditingAgent(agent);
-                        setShowResetPasswordModal(true);
-                      }}
-                      onToggleActive={() => {
-                        setEditingAgent(agent);
-                        setShowDesactivateModal(true);
-                      }}
-                      onMFA={() => {
-                        setEditingAgent(agent);
-                        setShowMFAModal(true);
-                      }}
-                      onLock={() => handleLockAgent(agent._id)}
-                      onUnlock={() => handleUnlockAgent(agent._id)}
                       isLocked={agentLockStates[agent._id] || false}
+                      onOpenManage={(tab: string) =>
+                        openAgentManageModal(agent, tab)
+                      }
                     />
                   ))}
                 </div>
@@ -646,6 +779,96 @@ export default function AgentsPage() {
           onUpdate={handleMFAUpdate}
         />
       )}
+
+      {/* Note: SessionsModal has been replaced by the sessions tab in AgentManageModal
+      {showSessionsModal && editingAgent && (
+        <SessionsModal
+          agent={editingAgent}
+          sessions={agentSessions}
+          isLoading={sessionsLoading}
+          isOnline={isAgentOnline}
+          onInvalidateSession={handleInvalidateSession}
+          onInvalidateAll={handleInvalidateAllSessions}
+          onForceLogout={handleForceLogout}
+          onClose={() => {
+            setShowSessionsModal(false);
+            setEditingAgent(null);
+            setAgentSessions([]);
+          }}
+        />
+      )}
+      */}
+
+      {showAgentManageModal && editingAgent && (
+        <AgentManageModal
+          agent={editingAgent}
+          currentTab={manageModalTab as any}
+          isCurrentUser={currentAgent?._id === editingAgent._id}
+          isLocked={agentLockStates[editingAgent._id] || false}
+          sessions={agentSessions}
+          sessionsLoading={sessionsLoading}
+          isOnline={isAgentOnline}
+          onTabChange={(tab) => setManageModalTab(tab)}
+          onClose={closeAgentManageModal}
+          onSaveAgent={async (data) => {
+            const res = await fetch(`/api/admin/agents/${editingAgent._id}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(data),
+            });
+            const result = await res.json();
+            if (result.ok) {
+              setAgents(
+                agents.map((a) =>
+                  a._id === editingAgent._id ? result.agent : a,
+                ),
+              );
+              setEditingAgent(result.agent);
+            } else {
+              throw new Error(result.error || "Error al guardar");
+            }
+          }}
+          onResetPassword={async () => {
+            const res = await fetch(
+              `/api/admin/agents/${editingAgent._id}/reset-password`,
+              {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            return res.json();
+          }}
+          onToggleActive={() => handleToggleActive(editingAgent)}
+          onLock={() => handleLockAgent(editingAgent._id)}
+          onUnlock={() => handleUnlockAgent(editingAgent._id)}
+          onDelete={() => {
+            setShowDeleteModal(true);
+          }}
+          onViewSessions={() => handleViewSessions(editingAgent)}
+          onInvalidateSession={handleInvalidateSession}
+          onInvalidateAll={handleInvalidateAllSessions}
+          onForceLogout={handleForceLogout}
+          onAgentUpdated={loadAgents}
+          onSendNotification={() => {
+            setNotificationTargetAgent(editingAgent);
+            setShowNotificationModal(true);
+          }}
+        />
+      )}
+
+      {/* Send Notification Modal */}
+      <SendNotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => {
+          setShowNotificationModal(false);
+          setNotificationTargetAgent(null);
+        }}
+        agents={agents}
+        preselectedAgentId={notificationTargetAgent?._id}
+      />
     </div>
   );
 }
@@ -655,17 +878,14 @@ export default function AgentsPage() {
 function AgentRow({
   agent,
   isCurrentUser,
-  activeDropdown,
-  setActiveDropdown,
-  onEdit,
-  onDelete,
-  onResetPassword,
-  onToggleActive,
-  onMFA,
-  onLock,
-  onUnlock,
   isLocked,
-}: any) {
+  onOpenManage,
+}: {
+  agent: any;
+  isCurrentUser: boolean;
+  isLocked: boolean;
+  onOpenManage: (tab: string) => void;
+}) {
   const status: OnlineStatus =
     (agent.onlineStatus as OnlineStatus) || "offline";
   const isActive = agent.isActive !== false;
@@ -782,22 +1002,24 @@ function AgentRow({
         )}
       </div>
 
-      {/* 6. Acciones (Dropdown con Portal) */}
-      <DropdownMenu
-        agent={agent}
-        isCurrentUser={isCurrentUser}
-        isActive={isActive}
-        activeDropdown={activeDropdown}
-        setActiveDropdown={setActiveDropdown}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onResetPassword={onResetPassword}
-        onToggleActive={onToggleActive}
-        onMFA={onMFA}
-        onLock={onLock}
-        onUnlock={onUnlock}
-        isLocked={isLocked}
-      />
+      {/* 6. Acciones - Botón para abrir modal de gestión */}
+      <div className="relative flex justify-end items-center gap-1">
+        {isLocked && (
+          <div
+            className="w-6 h-6 flex items-center justify-center text-amber-500"
+            title="Sesión bloqueada"
+          >
+            <Lock className="w-4 h-4" />
+          </div>
+        )}
+        <button
+          onClick={() => onOpenManage("overview")}
+          className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/50 transition-all duration-200 group-hover:bg-zinc-800/50"
+          title="Gestionar agente"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -811,6 +1033,7 @@ function AgentCard({
   onDelete,
   onResetPassword,
   onToggleActive,
+  onSendNotification,
 }: any) {
   const status: OnlineStatus =
     (agent.onlineStatus as OnlineStatus) || "offline";
@@ -892,6 +1115,11 @@ function AgentCard({
                   icon={Key}
                   label="Contraseña"
                   onClick={onResetPassword}
+                />
+                <DropdownItem
+                  icon={Send}
+                  label="Notificar"
+                  onClick={onSendNotification}
                 />
                 <DropdownItem
                   icon={isActive ? UserX : UserCheck}
@@ -1001,6 +1229,7 @@ function DropdownMenu({
   onLock,
   onUnlock,
   isLocked,
+  onViewSessions,
 }: any) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0, openUp: false });
@@ -1088,6 +1317,14 @@ function DropdownMenu({
             />
             {!isCurrentUser && (
               <>
+                <DropdownItem
+                  icon={Monitor}
+                  label="Ver sesiones"
+                  onClick={() => {
+                    onViewSessions?.();
+                    setActiveDropdown(null);
+                  }}
+                />
                 <DropdownItem
                   icon={isLocked ? Unlock : Lock}
                   label={isLocked ? "Desbloquear sesión" : "Bloquear sesión"}

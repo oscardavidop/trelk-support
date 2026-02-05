@@ -1050,6 +1050,7 @@ export async function adminEnableMFA(
       {
         $set: {
           'security.mfa.enabled': true,
+          'security.mfa.methods.telegram': true,
           'security.mfa.enforcedByAdmin': true,
           'security.mfa.verifiedAt': new Date(),
           'security.mfa.disabledAt': null,

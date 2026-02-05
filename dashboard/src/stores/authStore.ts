@@ -117,6 +117,7 @@ export const useAuthStore = create<AuthState>()(
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             credentials: 'include',
+            body: JSON.stringify({ ok: true})
           });
         } catch (error) {
           console.error('Logout error:', error);

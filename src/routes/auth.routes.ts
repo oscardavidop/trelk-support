@@ -5,10 +5,23 @@
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { loginAgent, logoutAgent, refreshToken } from '../services/auth.service.js';
+import { clearLockOnLogout } from '../services/auto-lock.service.js';
 import { createAgent } from '../services/agent.service.js';
 import { authMiddleware, requirePermission } from '../middleware/auth.js';
 import { authRateLimit, applyFailurePenalty } from '../middleware/rate-limit.js';
 import { ENV } from '../config/index.js';
+import { startQRLogin, getQRStatus } from '../services/qr-login.service.js';
+import {
+  getAutoLockSettings,
+  getTimeoutForAgent,
+  isAgentLocked,
+  lockAgent,
+  unlockWithPassword,
+  unlockWithMFA,
+  checkRemoteLock,
+  updateLastActivity,
+  getLastActivity,
+} from '../services/auto-lock.service.js';
 
 interface LoginBody {
   email: string;
@@ -269,7 +282,10 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
    */
   fastify.post('/api/auth/logout', { preHandler: authMiddleware }, async (request, reply) => {
     if (request.agent) {
-      await logoutAgent(request.agent._id.toString());
+      const agentId = request.agent._id.toString();
+      await logoutAgent(agentId);
+      // Clear any auto-lock state on logout
+      await clearLockOnLogout(agentId);
     }
 
     reply.clearCookie('token', { path: '/' });
@@ -389,4 +405,271 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       token: loginResult.token,
     };
   });
+
+  // ============= QR LOGIN ROUTES =============
+
+  /**
+   * Start QR Login session
+   * POST /api/auth/qr/start
+   * 
+   * Returns a QR URL for Telegram deep link and a token for polling
+   */
+  fastify.post<{ Body: { deviceInfo?: { deviceType?: string; browser?: string; os?: string } } }>(
+    '/api/auth/qr/start',
+    { preHandler: authRateLimit },
+    async (request, reply) => {
+      const clientIp = getClientIp(request);
+      const userAgent = request.headers['user-agent'] || '';
+      const deviceInfo = extractDeviceInfo(request, request.body?.deviceInfo);
+
+      const result = await startQRLogin(clientIp, userAgent, {
+        deviceType: deviceInfo.deviceType,
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+      });
+
+      if (!result.success) {
+        return reply.code(429).send({ ok: false, error: result.error });
+      }
+
+      return {
+        ok: true,
+        token: result.token,
+        qrUrl: result.qrUrl,
+        expiresIn: result.expiresIn,
+      };
+    }
+  );
+
+  /**
+   * Check QR Login status (polling endpoint)
+   * GET /api/auth/qr/status/:token
+   * 
+   * Returns current status: pending | scanned | approved | rejected | expired
+   * When approved, also returns the session token and agent data
+   */
+  fastify.get<{ Params: { token: string }; Querystring: { deviceFingerprint?: string } }>(
+    '/api/auth/qr/status/:token',
+    async (request, reply) => {
+      const { token } = request.params;
+      const { deviceFingerprint } = request.query;
+      const clientIp = getClientIp(request);
+      const deviceInfo = extractDeviceInfo(request);
+
+      if (!token || token.length < 32) {
+        return reply.code(400).send({ ok: false, error: 'Token inválido' });
+      }
+
+      const result = await getQRStatus(token, clientIp, {
+        ...deviceInfo,
+        deviceFingerprint,
+      });
+
+      if (!result.success) {
+        return reply.code(400).send({ ok: false, error: result.error });
+      }
+
+      // If login completed, set cookie
+      if (result.status === 'approved' && result.loginResult) {
+        reply.setCookie('token', result.loginResult.token, {
+          httpOnly: true,
+          secure: ENV.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 7 * 24 * 60 * 60,
+        });
+
+        return {
+          ok: true,
+          status: 'approved',
+          agent: result.loginResult.agent,
+          token: result.loginResult.token,
+          permissions: result.loginResult.permissions,
+          forcePasswordChange: result.loginResult.forcePasswordChange,
+          telegramLinkRequired: result.loginResult.telegramLinkRequired,
+          mfaSetupRequired: result.loginResult.mfaSetupRequired,
+        };
+      }
+
+      return {
+        ok: true,
+        status: result.status,
+        remainingSeconds: result.remainingSeconds,
+        agentName: result.agentName,
+      };
+    }
+  );
+
+  // ============= AUTO-LOCK ROUTES =============
+
+  /**
+   * Get auto-lock settings and current lock state
+   * GET /api/auth/lock/status
+   */
+  fastify.get(
+    '/api/auth/lock/status',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const agent = (request as any).agent;
+      
+      // Get settings
+      const settings = await getAutoLockSettings();
+      
+      // Get lock state
+      const lockState = await isAgentLocked(agent._id.toString());
+      
+      // Get timeout for this agent
+      const timeoutMinutes = await getTimeoutForAgent(agent);
+      
+      // Check for remote lock trigger
+      const hasRemoteLock = await checkRemoteLock(agent._id.toString());
+      
+      // Get last activity
+      const lastActivity = await getLastActivity(agent._id.toString());
+      
+      return {
+        ok: true,
+        settings: {
+          enabled: settings.enabled,
+          timeoutMinutes,
+          requirePassword: settings.requirePassword,
+          requireMFA: settings.requireMFA,
+          showLastActivity: settings.showLastActivity,
+          gracePeriodSeconds: settings.gracePeriodSeconds,
+        },
+        lockState: lockState || { isLocked: false },
+        hasRemoteLock,
+        lastActivity,
+      };
+    }
+  );
+
+  /**
+   * Lock current session manually
+   * POST /api/auth/lock
+   */
+  fastify.post(
+    '/api/auth/lock',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const agent = (request as any).agent;
+      
+      const success = await lockAgent(
+        agent._id.toString(),
+        'manual',
+        undefined,
+        request
+      );
+      
+      if (!success) {
+        return reply.code(500).send({ ok: false, error: 'Error al bloquear sesión' });
+      }
+      
+      return { ok: true, message: 'Sesión bloqueada' };
+    }
+  );
+
+  /**
+   * Unlock session with password
+   * POST /api/auth/unlock
+   */
+  fastify.post<{ Body: { password: string } }>(
+    '/api/auth/unlock',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const agent = (request as any).agent;
+      const { password } = request.body;
+      
+      if (!password) {
+        return reply.code(400).send({ ok: false, error: 'Contraseña requerida' });
+      }
+      
+      const result = await unlockWithPassword(
+        agent._id.toString(),
+        password,
+        request
+      );
+      
+      if (!result.success) {
+        return reply.code(401).send({
+          ok: false,
+          error: result.error,
+          remainingAttempts: result.remainingAttempts,
+          lockoutUntil: result.lockoutUntil,
+        });
+      }
+      
+      return { ok: true, message: 'Sesión desbloqueada' };
+    }
+  );
+
+  /**
+   * Unlock session with MFA
+   * POST /api/auth/unlock/mfa
+   */
+  fastify.post<{ Body: { code: string; method?: 'telegram' | 'totp' } }>(
+    '/api/auth/unlock/mfa',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const agent = (request as any).agent;
+      const { code, method } = request.body;
+      
+      if (!code) {
+        return reply.code(400).send({ ok: false, error: 'Código MFA requerido' });
+      }
+      
+      // Verify MFA code
+      const { verifyAgentTOTP } = await import('../database/index.js');
+      let mfaVerified = false;
+      
+      if (method === 'totp' || !method) {
+        // Try TOTP verification
+        const totpResult = await verifyAgentTOTP(agent._id.toString(), code);
+        mfaVerified = totpResult.success;
+      }
+      
+      // TODO: Add Telegram MFA verification if needed
+      
+      if (!mfaVerified) {
+        return reply.code(401).send({ ok: false, error: 'Código MFA inválido' });
+      }
+      
+      const result = await unlockWithMFA(
+        agent._id.toString(),
+        true,
+        request
+      );
+      
+      if (!result.success) {
+        return reply.code(500).send({ ok: false, error: result.error });
+      }
+      
+      return { ok: true, message: 'Sesión desbloqueada via MFA' };
+    }
+  );
+
+  /**
+   * Heartbeat / Update activity
+   * POST /api/auth/activity
+   */
+  fastify.post(
+    '/api/auth/activity',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      const agent = (request as any).agent;
+      
+      await updateLastActivity(agent._id.toString());
+      
+      // Also check for remote lock
+      const hasRemoteLock = await checkRemoteLock(agent._id.toString());
+      const lockState = await isAgentLocked(agent._id.toString());
+      
+      return {
+        ok: true,
+        hasRemoteLock,
+        isLocked: lockState?.isLocked ?? false,
+        lockReason: lockState?.reason,
+      };
+    }
+  );
 }

@@ -15,7 +15,8 @@ export type AuditCategory =
   | 'security'
   | 'user'
   | 'auth'
-  | 'authentication';
+  | 'authentication'
+  | 'communication';
 
 export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
 

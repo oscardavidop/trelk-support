@@ -16,6 +16,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { TelegramLinkRequired } from '../components/TelegramLinkRequired';
 import { MFASetupRequired } from '../components/MFASetupRequired';
 import AutoLockProvider from '../components/AutoLockProvider';
+import BroadcastBanner from '../components/BroadcastBanner';
+import { initNotificationSocket, cleanupNotificationSocket } from '../stores/notificationStore';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -119,6 +121,9 @@ export default function DashboardLayout() {
     if (isAuthenticated && agent) {
       const socket = initializeSocket();
       
+      // Initialize notification socket events
+      initNotificationSocket();
+      
       // Set agent online when connected (only on initial connect)
       const handleConnect = () => {
         updateAgentStatus('online');
@@ -128,6 +133,7 @@ export default function DashboardLayout() {
 
       return () => {
         socket.off('connect', handleConnect);
+        cleanupNotificationSocket();
         disconnectSocket();
       };
     }
@@ -200,8 +206,14 @@ export default function DashboardLayout() {
             <Sidebar agent={agent} stats={stats} />
           )}
           
-          <main className="flex-1 overflow-hidden">
-            <Outlet />
+          <main className="flex-1 overflow-hidden flex flex-col">
+            {/* Broadcast Banners (internal announcements) */}
+            <BroadcastBanner />
+            
+            {/* Main content */}
+            <div className="flex-1 overflow-auto">
+              <Outlet />
+            </div>
           </main>
         </div>
         

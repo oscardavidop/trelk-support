@@ -352,6 +352,15 @@ export default function LoginPage() {
     };
   }, []);
 
+  const parseRemainingSeconds = (seconds: number): string => {
+    if (seconds >= 60) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}m ${secs}s`;
+    }
+    return `${seconds}s`;
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden selection:bg-indigo-500/30">
       {/* Background Ambience */}
@@ -681,7 +690,7 @@ export default function LoginPage() {
                       <p className="text-xs text-zinc-400 font-medium">
                         Expira en{" "}
                         <span className="text-zinc-200 font-mono font-bold tab-nums">
-                          {qrRemainingSeconds}s
+                          {parseRemainingSeconds(qrRemainingSeconds)}
                         </span>
                       </p>
                     </div>

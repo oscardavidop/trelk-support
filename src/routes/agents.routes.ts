@@ -16,6 +16,21 @@ import {
   deleteAgent,
   getAgentStats,
 } from '../services/agent.service.js';
+import {
+  remoteLockAgent,
+  forceUnlock,
+  isAgentLocked,
+  remoteLockWithSocket,
+  notifyAgentDeactivated,
+  isAgentOnline,
+  forceLogoutAgent,
+} from '../services/auto-lock.service.js';
+import { agentSockets } from '../services/socket.js';
+import {
+  getActiveSessions,
+  invalidateSession,
+  invalidateAllAgentSessions,
+} from '../database/models/AgentSession.js';
 
 interface AgentParams {
   agentId: string;
@@ -177,4 +192,216 @@ export async function registerAgentRoutes(fastify: FastifyInstance): Promise<voi
       return { ok: true };
     }
   );
-}
+
+  // ============= AUTO-LOCK ADMIN ROUTES =============
+
+  /**
+   * Get agent lock status
+   * Requires: agents.view
+   */
+  fastify.get<{ Params: AgentParams }>(
+    '/api/agents/:agentId/lock',
+    { preHandler: requirePermission('agents.view') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      
+      const agent = await findAgentById(agentId);
+      if (!agent) {
+        return reply.code(404).send({ ok: false, error: 'Agente no encontrado' });
+      }
+      
+      const lockState = await isAgentLocked(agentId);
+      
+      return {
+        ok: true,
+        agentId,
+        agentName: agent.name,
+        lockState: lockState || { isLocked: false },
+      };
+    }
+  );
+
+  /**
+   * Remote lock an agent's session
+   * Requires: agents.manage or admin role
+   */
+  fastify.post<{ Params: AgentParams }>(
+    '/api/agents/:agentId/lock',
+    { preHandler: requirePermission('agents.manage') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      const adminAgent = request.agent!;
+      
+      // Use socket-aware lock function
+      const result = await remoteLockWithSocket(
+        agentId,
+        adminAgent._id.toString(),
+        adminAgent.name,
+        request
+      );
+      
+      if (!result.success) {
+        return reply.code(400).send({ ok: false, error: result.error });
+      }
+      
+      return { ok: true, message: 'Sesión bloqueada remotamente' };
+    }
+  );
+
+  /**
+   * Force unlock an agent's session
+   * Requires: agents.manage or admin role
+   */
+  fastify.post<{ Params: AgentParams }>(
+    '/api/agents/:agentId/unlock',
+    { preHandler: requirePermission('agents.manage') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      const adminAgent = request.agent!;
+      
+      const result = await forceUnlock(
+        agentId,
+        adminAgent._id.toString(),
+        request
+      );
+      
+      if (!result.success) {
+        return reply.code(400).send({ ok: false, error: result.error });
+      }
+      
+      return { ok: true, message: 'Sesión desbloqueada' };
+    }
+  );
+
+  // ============= AGENT SESSIONS (LOGIN SESSIONS) =============
+
+  /**
+   * Get active sessions for an agent
+   * Requires: agents.view
+   */
+  fastify.get<{ Params: AgentParams }>(
+    '/api/agents/:agentId/sessions',
+    { preHandler: requirePermission('agents.view') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      
+      const agent = await findAgentById(agentId);
+      if (!agent) {
+        return reply.code(404).send({ ok: false, error: 'Agente no encontrado' });
+      }
+      
+      const sessions = await getActiveSessions(agentId);
+      const isOnline = isAgentOnline(agentId);
+      
+      return {
+        ok: true,
+        agentId,
+        agentName: agent.name,
+        isOnline,
+        sessions: sessions.map(s => ({
+          _id: s._id,
+          deviceType: s.deviceType,
+          browser: s.browser,
+          os: s.os,
+          ip: s.ip,
+          location: s.location,
+          loginAt: s.loginAt,
+          lastSeenAt: s.lastSeenAt,
+          isCurrent: s.isCurrent,
+        })),
+      };
+    }
+  );
+
+  /**
+   * Invalidate a specific session for an agent
+   * Requires: agents.manage
+   */
+  fastify.delete<{ Params: { agentId: string; sessionId: string } }>(
+    '/api/agents/:agentId/sessions/:sessionId',
+    { preHandler: requirePermission('agents.manage') },
+    async (request, reply) => {
+      const { agentId, sessionId } = request.params;
+      
+      const invalidated = await invalidateSession(sessionId, agentId);
+      
+      if (!invalidated) {
+        return reply.code(404).send({ ok: false, error: 'Sesión no encontrada' });
+      }
+      
+      // Try to force logout via socket if online
+      if (isAgentOnline(agentId)) {
+        forceLogoutAgent(agentId, 'Sesión invalidada por administrador');
+      }
+      
+      return { ok: true, message: 'Sesión invalidada' };
+    }
+  );
+
+  /**
+   * Invalidate ALL sessions for an agent (force logout everywhere)
+   * Requires: agents.manage
+   */
+  fastify.post<{ Params: AgentParams }>(
+    '/api/agents/:agentId/sessions/invalidate-all',
+    { preHandler: requirePermission('agents.manage') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      
+      const agent = await findAgentById(agentId);
+      if (!agent) {
+        return reply.code(404).send({ ok: false, error: 'Agente no encontrado' });
+      }
+      
+      // Can't invalidate your own sessions
+      if (agentId === request.agent!._id.toString()) {
+        return reply.code(400).send({ ok: false, error: 'No puedes invalidar tus propias sesiones' });
+      }
+      
+      const invalidatedCount = await invalidateAllAgentSessions(agentId);
+      
+      // Force logout via socket if online
+      if (isAgentOnline(agentId)) {
+        forceLogoutAgent(agentId, 'Todas las sesiones fueron invalidadas por un administrador');
+      }
+      
+      return { 
+        ok: true, 
+        message: `${invalidatedCount} sesiones invalidadas`,
+        invalidatedCount,
+      };
+    }
+  );
+
+  /**
+   * Force logout an agent (only if online)
+   * Requires: agents.manage
+   */
+  fastify.post<{ Params: AgentParams; Body: { reason?: string } }>(
+    '/api/agents/:agentId/force-logout',
+    { preHandler: requirePermission('agents.manage') },
+    async (request, reply) => {
+      const { agentId } = request.params;
+      const { reason } = request.body || {};
+      
+      const agent = await findAgentById(agentId);
+      if (!agent) {
+        return reply.code(404).send({ ok: false, error: 'Agente no encontrado' });
+      }
+      
+      if (!isAgentOnline(agentId)) {
+        return reply.code(400).send({ 
+          ok: false, 
+          error: 'El agente no está conectado actualmente' 
+        });
+      }
+      
+      // Force logout via socket
+      forceLogoutAgent(agentId, reason || 'Desconectado por administrador');
+      
+      // Also invalidate their sessions
+      await invalidateAllAgentSessions(agentId);
+      
+      return { ok: true, message: 'Agente desconectado exitosamente' };
+    }
+  );}

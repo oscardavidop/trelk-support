@@ -67,6 +67,19 @@ export interface ISecuritySettings {
   mfaBypassIPs?: string[];
   mfaTrustDevicesEnabled?: boolean;
   mfaAllowedMethods?: ('telegram' | 'totp')[];
+  // Auto-Lock Settings
+  autoLockEnabled?: boolean;
+  autoLockTimeoutMinutes?: number;           // Global default timeout
+  autoLockRequirePassword?: boolean;         // Require password to unlock
+  autoLockRequireMFA?: boolean;              // Require MFA to unlock
+  autoLockShowLastActivity?: boolean;        // Show last activity time on lock screen
+  autoLockGracePeriodSeconds?: number;       // Grace period before lock (warning)
+  autoLockRoleTimeouts?: {                   // Per-role timeout configuration
+    admin?: number;
+    supervisor?: number;
+    agent?: number;
+  };
+  autoLockExemptRoles?: string[];            // Roles exempt from auto-lock
 }
 
 export interface INotificationSettings {
@@ -173,6 +186,19 @@ const SettingsSchema = new Schema<ISettings>(
       mfaBypassIPs: { type: [String], default: [] },
       mfaTrustDevicesEnabled: { type: Boolean, default: true },
       mfaAllowedMethods: { type: [String], enum: ['telegram', 'totp'], default: ['telegram', 'totp'] },
+      // Auto-Lock Settings
+      autoLockEnabled: { type: Boolean, default: false },
+      autoLockTimeoutMinutes: { type: Number, default: 15 },
+      autoLockRequirePassword: { type: Boolean, default: true },
+      autoLockRequireMFA: { type: Boolean, default: false },
+      autoLockShowLastActivity: { type: Boolean, default: true },
+      autoLockGracePeriodSeconds: { type: Number, default: 30 },
+      autoLockRoleTimeouts: {
+        admin: { type: Number, default: 5 },
+        supervisor: { type: Number, default: 10 },
+        agent: { type: Number, default: 15 },
+      },
+      autoLockExemptRoles: { type: [String], default: [] },
     },
     notifications: {
       emailNotificationsEnabled: { type: Boolean, default: true },

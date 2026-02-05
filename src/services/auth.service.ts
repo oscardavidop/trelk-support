@@ -4,15 +4,26 @@
  * Includes permission-aware login responses and session management
  */
 
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { ENV } from '../config/index.js';
-import { findAgentByEmail, findAgentById, updateLastLogin, updateAgentStatus } from './agent.service.js';
-import { getEffectivePermissions, getAgentPermissionsSummary } from './permission.service.js';
-import { getSecuritySettings } from './settings-cache.service.js';
-import { createSession, enforceSessionLimit } from '../database/models/AgentSession.js';
-import { logger } from './logger.js';
-import type { IAgent } from '../database/index.js';
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { ENV } from "../config/index.js";
+import {
+  findAgentByEmail,
+  findAgentById,
+  updateLastLogin,
+  updateAgentStatus,
+} from "./agent.service.js";
+import {
+  getEffectivePermissions,
+  getAgentPermissionsSummary,
+} from "./permission.service.js";
+import { getSecuritySettings } from "./settings-cache.service.js";
+import {
+  createSession,
+  enforceSessionLimit,
+} from "../database/models/AgentSession.js";
+import { logger } from "./logger.js";
+import type { IAgent } from "../database/index.js";
 
 export interface TokenPayload {
   agentId: string;
@@ -37,9 +48,9 @@ export interface AuthResult {
   mfaError?: string;
   mfaExpiresIn?: number;
   // Multi-method MFA fields
-  mfaAvailableMethods?: ('telegram' | 'totp')[];
-  mfaPreferredMethod?: 'telegram' | 'totp';
-  mfaSelectedMethod?: 'telegram' | 'totp';
+  mfaAvailableMethods?: ("telegram" | "totp")[];
+  mfaPreferredMethod?: "telegram" | "totp";
+  mfaSelectedMethod?: "telegram" | "totp";
   mfaPendingMethodSelection?: boolean;
 }
 
@@ -47,13 +58,13 @@ export interface AuthResult {
  * Generate a hash from a JWT token for session tracking
  */
 function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 /**
  * Check if agent requires Telegram linking
  * MANDATORY for all agents except system accounts
- * 
+ *
  * Exclusions:
  * - System users (email contains 'system' or 'bot')
  * - Users with role 'system'
@@ -61,20 +72,21 @@ function hashToken(token: string): string {
 function requiresTelegramLink(agent: IAgent): boolean {
   // Already has Telegram linked
   if (agent.telegramId) {
+    console.log("[requiresTelegramLink] Telegram already linked for agent:", agent);
     return false;
   }
-  
+
   // System accounts exclusion
-  const isSystemAccount = 
-    agent.email.toLowerCase().includes('system') ||
-    agent.email.toLowerCase().includes('bot') ||
-    agent.email.toLowerCase().includes('noreply') ||
-    (agent.role as string) === 'system';
-  
-  if (isSystemAccount) {
-    return false;
-  }
-  
+  // const isSystemAccount =
+  //   agent.email.toLowerCase().includes("system") ||
+  //   agent.email.toLowerCase().includes("bot") ||
+  //   agent.email.toLowerCase().includes("noreply") ||
+  //   (agent.role as string) === "system";
+
+  // if (isSystemAccount) {
+  //   return false;
+  // }
+
   // All other agents MUST have Telegram linked
   return true;
 }
@@ -86,49 +98,39 @@ function requiresTelegramLink(agent: IAgent): boolean {
 async function requiresMFASetup(agent: IAgent): Promise<boolean> {
   // Get security settings
   const securitySettings = await getSecuritySettings();
-  
+
   // Check if MFA is globally required
   const globalMFARequired = securitySettings.mfaRequiredForAll ?? false;
-  
+
   // Check if MFA is required for this agent's role
-  const roleRequiresMFA = securitySettings.mfaRequiredRoles?.includes(agent.role) ?? false;
-  
-  console.log('[requiresMFASetup] Agent:', agent.email, 'Role:', agent.role);
-  console.log('[requiresMFASetup] mfaRequiredForAll:', globalMFARequired, 'mfaRequiredRoles:', securitySettings.mfaRequiredRoles);
-  console.log('[requiresMFASetup] roleRequiresMFA:', roleRequiresMFA);
-  
+  const roleRequiresMFA =
+    securitySettings.mfaRequiredRoles?.includes(agent.role) ?? false;
+
   // MFA not required by policy
   if (!globalMFARequired && !roleRequiresMFA) {
-    console.log('[requiresMFASetup] MFA not required by policy');
     return false;
   }
-  
+
   // System accounts exclusion
-  const isSystemAccount = 
-    agent.email.toLowerCase().includes('system') ||
-    agent.email.toLowerCase().includes('bot') ||
-    agent.email.toLowerCase().includes('noreply') ||
-    (agent.role as string) === 'system';
-  
+  const isSystemAccount =
+    agent.email.toLowerCase().includes("system") ||
+    agent.email.toLowerCase().includes("bot") ||
+    agent.email.toLowerCase().includes("noreply") ||
+    (agent.role as string) === "system";
+
   if (isSystemAccount) {
-    console.log('[requiresMFASetup] System account excluded');
     return false;
   }
-  
   // Check if MFA is already enabled with at least one method
-  const mfaEnabled = agent.security?.mfa?.enabled === true;
-  const hasTelegramMethod = agent.security?.mfa?.methods?.telegram === true;
-  const hasTotpMethod = agent.security?.mfa?.methods?.totp === true;
-  
-  console.log('[requiresMFASetup] mfaEnabled:', mfaEnabled, 'telegram:', hasTelegramMethod, 'totp:', hasTotpMethod);
-  
+  const mfaEnabled = agent.security?.mfa?.enabled;
+  const hasTelegramMethod = agent.security?.mfa?.methods?.telegram;
+  const hasTotpMethod = agent.security?.mfa?.methods?.totp;
+
+
   // MFA is required but not enabled or no methods active
   if (!mfaEnabled || (!hasTelegramMethod && !hasTotpMethod)) {
-    console.log('[requiresMFASetup] MFA setup required!');
     return true;
   }
-  
-  console.log('[requiresMFASetup] MFA already configured');
   return false;
 }
 
@@ -136,7 +138,7 @@ async function requiresMFASetup(agent: IAgent): Promise<boolean> {
  * Login agent with email and password
  */
 export async function loginAgent(
-  email: string, 
+  email: string,
   password: string,
   deviceInfo?: {
     deviceType?: string;
@@ -146,41 +148,44 @@ export async function loginAgent(
     location?: string;
   },
   options?: {
-    skipMFA?: boolean;        // For internal calls after MFA verification
+    skipMFA?: boolean; // For internal calls after MFA verification
     deviceFingerprint?: string;
-    preferredMethod?: 'telegram' | 'totp';  // Preferred MFA method
-  }
+    preferredMethod?: "telegram" | "totp"; // Preferred MFA method
+  },
 ): Promise<AuthResult> {
   try {
     // Find agent by email (include password field)
     const agent = await findAgentByEmail(email);
-    
+
     if (!agent) {
-      return { success: false, error: 'Invalid credentials' };
+      return { success: false, error: "Invalid credentials" };
     }
-    
+
     // Check if agent is active
     if (agent.isActive === false) {
-      return { success: false, error: 'Account is deactivated. Contact an administrator.' };
+      return {
+        success: false,
+        error: "Account is deactivated. Contact an administrator.",
+      };
     }
-    
+
     // Verify password
     const isValidPassword = await agent.comparePassword(password);
-    
+
     if (!isValidPassword) {
-      return { success: false, error: 'Invalid credentials' };
+      return { success: false, error: "Invalid credentials" };
     }
-    
+
     // Check if MFA is required (unless explicitly skipped after verification)
     if (!options?.skipMFA) {
-      const { initiateMFA } = await import('./mfa.service.js');
+      const { initiateMFA } = await import("./mfa.service.js");
       const mfaResult = await initiateMFA(agent, {
         ip: deviceInfo?.ip,
         userAgent: deviceInfo?.browser,
         deviceFingerprint: options?.deviceFingerprint,
         preferredMethod: options?.preferredMethod,
       });
-      
+
       if (mfaResult.required) {
         // MFA is required - return pending state with method info
         return {
@@ -196,56 +201,59 @@ export async function loginAgent(
         };
       }
     }
-    
+
     // Get security settings for session limit
     const securitySettings = await getSecuritySettings();
     const maxSessions = securitySettings.maxSessionsPerAgent ?? 3;
-    
+
     // Enforce session limit - invalidate oldest sessions if needed
     let sessionsInvalidated = 0;
     if (maxSessions > 0) {
-      sessionsInvalidated = await enforceSessionLimit(agent._id.toString(), maxSessions);
+      sessionsInvalidated = await enforceSessionLimit(
+        agent._id.toString(),
+        maxSessions,
+      );
       if (sessionsInvalidated > 0) {
-        logger.info('admin', {
-          action: 'sessions_invalidated',
+        logger.info("admin", {
+          action: "sessions_invalidated",
           agentId: agent._id.toString(),
           count: sessionsInvalidated,
-          reason: 'session_limit_exceeded',
+          reason: "session_limit_exceeded",
           maxSessions,
         });
       }
     }
-    
+
     // Generate JWT token
     const token = generateToken(agent);
     const tokenHash = hashToken(token);
-    
+
     // Create session record
     if (deviceInfo) {
       await createSession(agent._id.toString(), tokenHash, deviceInfo);
     } else {
-      await createSession(agent._id.toString(), tokenHash, { ip: 'unknown' });
+      await createSession(agent._id.toString(), tokenHash, { ip: "unknown" });
     }
-    
+
     // Update last login and set online
     await updateLastLogin(agent._id.toString());
-    await updateAgentStatus(agent._id.toString(), 'online');
-    
+    await updateAgentStatus(agent._id.toString(), "online");
+
     // Return agent without password
     const agentData = await findAgentById(agent._id.toString());
-    
+
     // Get effective permissions for the response
     const permissions = await getEffectivePermissions(agent._id.toString());
-    
+
     // Check if password change is required
     const forcePasswordChange = agent.security.password.forceChange === true;
-    
+
     // Check if Telegram linking is required (mandatory for all non-system users)
     const telegramLinkRequired = requiresTelegramLink(agentData!);
-    
+
     // Check if MFA setup is required by policy but not configured
     const mfaSetupRequired = await requiresMFASetup(agentData!);
-    
+
     return {
       success: true,
       agent: agentData!,
@@ -257,8 +265,8 @@ export async function loginAgent(
       mfaSetupRequired,
     };
   } catch (error) {
-    console.error('Login error:', error);
-    return { success: false, error: 'Authentication failed' };
+    console.error("Login error:", error);
+    return { success: false, error: "Authentication failed" };
   }
 }
 
@@ -266,7 +274,7 @@ export async function loginAgent(
  * Logout agent
  */
 export async function logoutAgent(agentId: string): Promise<void> {
-  await updateAgentStatus(agentId, 'offline');
+  await updateAgentStatus(agentId, "offline");
 }
 
 /**
@@ -279,9 +287,9 @@ export function generateToken(agent: IAgent): string {
     role: agent.role,
     permissionVersion: agent.permissionVersion || 1,
   };
-  
+
   return jwt.sign(payload, ENV.JWT_SECRET, {
-    expiresIn: ENV.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    expiresIn: ENV.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
 }
 
@@ -303,7 +311,7 @@ export function verifyToken(token: string): TokenPayload | null {
 export async function getAgentFromToken(token: string): Promise<IAgent | null> {
   const payload = verifyToken(token);
   if (!payload) return null;
-  
+
   return findAgentById(payload.agentId);
 }
 
@@ -319,61 +327,61 @@ export async function completeLoginAfterMFA(
     os?: string;
     ip: string;
     location?: string;
-  }
+  },
 ): Promise<AuthResult> {
   try {
     const agent = await findAgentById(agentId);
-    
+
     if (!agent) {
-      return { success: false, error: 'Agent not found' };
+      return { success: false, error: "Agent not found" };
     }
-    
+
     if (agent.isActive === false) {
-      return { success: false, error: 'Account is deactivated' };
+      return { success: false, error: "Account is deactivated" };
     }
-    
+
     // Get security settings for session limit
     const securitySettings = await getSecuritySettings();
     const maxSessions = securitySettings.maxSessionsPerAgent ?? 3;
-    
+
     // Enforce session limit
     let sessionsInvalidated = 0;
     if (maxSessions > 0) {
       sessionsInvalidated = await enforceSessionLimit(agentId, maxSessions);
     }
-    
+
     // Generate JWT token
     const token = generateToken(agent);
     const tokenHash = hashToken(token);
-    
+
     // Create session record
     if (deviceInfo) {
       await createSession(agentId, tokenHash, deviceInfo);
     } else {
-      await createSession(agentId, tokenHash, { ip: 'unknown' });
+      await createSession(agentId, tokenHash, { ip: "unknown" });
     }
-    
+
     // Update last login and set online
     await updateLastLogin(agentId);
-    await updateAgentStatus(agentId, 'online');
-    
+    await updateAgentStatus(agentId, "online");
+
     // Get effective permissions
     const permissions = await getEffectivePermissions(agentId);
-    
+
     // Check if password change is required
     const forcePasswordChange = agent.security.password.forceChange === true;
-    
+
     // Check if Telegram linking is required
     const telegramLinkRequired = requiresTelegramLink(agent);
-    
+
     // Check if MFA setup is required by policy but not configured
     const mfaSetupRequired = await requiresMFASetup(agent);
-    
-    logger.info('auth', {
-      action: 'mfa_login_completed',
+
+    logger.info("auth", {
+      action: "mfa_login_completed",
       agentId,
     });
-    
+
     return {
       success: true,
       agent,
@@ -385,12 +393,12 @@ export async function completeLoginAfterMFA(
       mfaSetupRequired,
     };
   } catch (error) {
-    logger.error('auth', {
-      action: 'mfa_login_complete_error',
+    logger.error("auth", {
+      action: "mfa_login_complete_error",
       agentId,
       error: String(error),
     });
-    return { success: false, error: 'Login failed' };
+    return { success: false, error: "Login failed" };
   }
 }
 
@@ -399,23 +407,23 @@ export async function completeLoginAfterMFA(
  */
 export async function refreshToken(token: string): Promise<AuthResult> {
   const agent = await getAgentFromToken(token);
-  
+
   if (!agent) {
-    return { success: false, error: 'Invalid token' };
+    return { success: false, error: "Invalid token" };
   }
-  
+
   const newToken = generateToken(agent);
   const permissions = await getEffectivePermissions(agent._id.toString());
-  
+
   // Check if password change is required
   const forcePasswordChange = agent.security.password.forceChange === true;
-  
+
   // Check if Telegram linking is required
   const telegramLinkRequired = requiresTelegramLink(agent);
-  
+
   // Check if MFA setup is required by policy but not configured
   const mfaSetupRequired = await requiresMFASetup(agent);
-  
+
   return {
     success: true,
     agent,
@@ -431,16 +439,18 @@ export async function refreshToken(token: string): Promise<AuthResult> {
  * Check if token's permission version is current
  * Returns false if permissions have changed since token was issued
  */
-export async function isTokenPermissionVersionValid(token: string): Promise<boolean> {
+export async function isTokenPermissionVersionValid(
+  token: string,
+): Promise<boolean> {
   const payload = verifyToken(token);
   if (!payload) return false;
-  
+
   const agent = await findAgentById(payload.agentId);
   if (!agent) return false;
-  
+
   const currentVersion = agent.permissionVersion || 1;
   const tokenVersion = payload.permissionVersion || 1;
-  
+
   return tokenVersion >= currentVersion;
 }
 
@@ -448,6 +458,8 @@ export async function isTokenPermissionVersionValid(token: string): Promise<bool
  * Get current permissions for authenticated agent
  * Use this when frontend needs to refresh permissions without re-login
  */
-export async function getCurrentPermissions(agentId: string): Promise<string[]> {
+export async function getCurrentPermissions(
+  agentId: string,
+): Promise<string[]> {
   return getEffectivePermissions(agentId);
 }

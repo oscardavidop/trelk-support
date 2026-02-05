@@ -32,6 +32,8 @@ import { registerPermissionRequestRoutes } from './permissionRequest.routes.js';
 import { registerPasswordResetRoutes } from './password-reset.routes.js';
 import { registerMFARoutes } from './mfa.routes.js';
 import { registerTelegramLinkRoutes } from './telegram-link.routes.js';
+import internalNotificationsRoutes from './internal-notifications.routes.js';
+import internalBroadcastRoutes from './internal-broadcast.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -151,4 +153,10 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
   await fastify.register(async (permRequestRoutes) => {
     await registerPermissionRequestRoutes(permRequestRoutes);
   }, { prefix: '/api/permission-requests' });
+
+  // Internal Notifications routes (supervisor/admin → agent messaging)
+  await fastify.register(internalNotificationsRoutes, { prefix: '/api/notifications' });
+
+  // Internal Broadcast routes (admin announcements)
+  await fastify.register(internalBroadcastRoutes, { prefix: '/api/internal-broadcasts' });
 }

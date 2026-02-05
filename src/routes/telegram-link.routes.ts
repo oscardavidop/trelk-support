@@ -163,7 +163,7 @@ export async function registerTelegramLinkRoutes(fastify: FastifyInstance): Prom
       const agentId = request.agent!._id.toString();
       const { ip, userAgent } = getClientInfo(request);
       
-      const result = await unlinkTelegramAccount(agentId, { ip, userAgent });
+      const result = await unlinkTelegramAccount(agentId, { ip, userAgent, mark: false });
       
       if (!result.success) {
         return reply.code(400).send({
@@ -259,6 +259,7 @@ export async function registerTelegramLinkRoutes(fastify: FastifyInstance): Prom
         userAgent,
         byAdmin: true,
         adminId: request.agent!._id.toString(),
+        mark: false
       });
       
       if (!result.success) {

@@ -331,6 +331,7 @@ export async function unlinkTelegramAccount(
     userAgent?: string;
     byAdmin?: boolean;
     adminId?: string;
+    mark?: boolean; 
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -378,8 +379,9 @@ export async function unlinkTelegramAccount(
     );
     
     // Mark as recently unlinked (replay protection)
+    if (options.mark) {
     await markAsUnlinked(oldTelegramId);
-    
+    }
     // Audit log
     await logAudit({
       action: options.byAdmin ? 'telegram_unlinked_by_admin' : 'telegram_unlinked',

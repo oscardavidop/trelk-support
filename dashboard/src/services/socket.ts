@@ -169,6 +169,66 @@ export function initializeSocket(): Socket {
     window.location.href = '/login?reason=session_replaced';
   });
   
+  // ============= AUTO-LOCK EVENTS =============
+  
+  socket.on('session:locked', (data: { reason: string; lockedBy?: string; lockedAt: string }) => {
+    console.warn('🔒 Session locked:', data);
+    // Dispatch custom event for AutoLockProvider to handle
+    window.dispatchEvent(new CustomEvent('autolock:locked', { detail: data }));
+    
+    if (data.reason === 'remote' && data.lockedBy) {
+      toast.warning(
+        'Sesión bloqueada',
+        `${data.lockedBy} ha bloqueado tu sesión remotamente`,
+        { groupKey: 'session:locked', priority: 'high', duration: 0 }
+      );
+    }
+  });
+  
+  socket.on('session:unlocked', (data: { unlockedBy?: string; reason: string }) => {
+    console.log('🔓 Session unlocked:', data);
+    // Dispatch custom event for AutoLockProvider to handle
+    window.dispatchEvent(new CustomEvent('autolock:unlocked', { detail: data }));
+    
+    if (data.unlockedBy) {
+      toast.success(
+        'Sesión desbloqueada',
+        `Un administrador ha desbloqueado tu sesión`,
+        { groupKey: 'session:unlocked', duration: 5000 }
+      );
+    }
+  });
+  
+  socket.on('account:deactivated', (data: { deactivatedAt: string }) => {
+    console.warn('🚫 Account deactivated:', data);
+    toast.error(
+      'Cuenta desactivada',
+      'Tu cuenta ha sido desactivada por un administrador',
+      { groupKey: 'account:deactivated', priority: 'critical', duration: 0 }
+    );
+    // Force logout after showing message
+    setTimeout(() => {
+      useAuthStore.getState().logout();
+      window.location.href = '/login?reason=account_deactivated';
+    }, 3000);
+  });
+  
+  socket.on('account:status_changed', (data: { isActive: boolean; changedBy?: string; changedAt: string }) => {
+    console.log('👤 Account status changed:', data);
+    if (!data.isActive) {
+      // Account was deactivated
+      toast.error(
+        'Cuenta desactivada',
+        'Tu cuenta ha sido desactivada',
+        { groupKey: 'account:status', priority: 'critical', duration: 0 }
+      );
+      setTimeout(() => {
+        useAuthStore.getState().logout();
+        window.location.href = '/login?reason=account_deactivated';
+      }, 3000);
+    }
+  });
+  
   // socket.on('tab:duplicate_detected', (data: { activeTabId: string; message: string }) => {
   //   console.warn('🔒 Duplicate tab detected:', data);
   //   // This is handled by the SessionGuard service in ChatPage
@@ -942,7 +1002,7 @@ export function leaveSession(sessionId: string): void {
 }
 
 export function updateAgentStatus(status: 'online' | 'away' | 'offline'): void {
-  socket?.emit('agent:status', status);
+  // socket?.emit('agent:status', status);
 }
 
 export function requestStats(): void {

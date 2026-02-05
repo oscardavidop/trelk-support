@@ -43,6 +43,13 @@ export async function findAgentById(agentId: string): Promise<IAgent | null> {
 }
 
 /**
+ * Find agent by Telegram ID (for QR login)
+ */
+export async function findAgentByTelegramId(telegramId: number): Promise<IAgent | null> {
+  return Agent.findOne({ telegramId });
+}
+
+/**
  * Update agent's online status
  */
 export async function updateAgentStatus(agentId: string, status: OnlineStatus): Promise<void> {

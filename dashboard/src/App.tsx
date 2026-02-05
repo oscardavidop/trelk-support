@@ -20,6 +20,7 @@ import SystemControlPage from './pages/SystemControlPage';
 import TextsPage from './pages/TextsPage';
 import ContactsPage from './pages/ContactsPage';
 import BroadcastPage from './pages/BroadcastPage';
+import InternalBroadcastsPage from './pages/BroadcastsPage';
 import PermissionsPage from './pages/PermissionsPage';
 import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
@@ -153,6 +154,13 @@ export default function App() {
             <Route path="broadcast" element={
               <ProtectedRoute permission="broadcasts.read">
                 <BroadcastPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Internal Broadcasts (Admin announcements) - requiere system.admin */}
+            <Route path="internal-broadcasts" element={
+              <ProtectedRoute permission="system.admin">
+                <InternalBroadcastsPage />
               </ProtectedRoute>
             } />
             

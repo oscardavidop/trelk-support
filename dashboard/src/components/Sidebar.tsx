@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useConnectionStore } from '../stores/connectionStore';
@@ -7,12 +8,13 @@ import {
   ChevronDown, MessageSquare, Wifi, WifiOff, Loader2, Eye, Activity,
   Download, GitBranch, ChevronLeft, ChevronRight, User, Sliders, Bell,
   Shield, History, ListChecks, Server, Languages, Contact, Megaphone,
-  KeyRound
+  KeyRound, Radio
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
 import { updateAgentStatus } from '../services/socket';
 import { useTranslation } from 'react-i18next';
+import NotificationCenter from './NotificationCenter';
 
 interface SidebarProps {
   agent: Agent | null;
@@ -108,6 +110,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       section: t('sidebar.sections.operations'),
       items: [
         { path: '/dashboard/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
+        { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios internos'), permission: 'system.admin' },
         { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
         { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
       ]
@@ -163,7 +166,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
       {/* 1. Header & Logo (RESTAURADO) */}
       <div className="h-[56px] flex items-center px-4 border-b border-zinc-800/50 bg-zinc-950">
-        <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center w-full' : ''}`}>
+        <div className={`flex items-center gap-3 w-full ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {isCollapsed ? (
             <img src="/assets/img/logo-small-dark.png" alt="Logo" className="w-8 h-8 rounded-sm object-contain" />
           ) : (
@@ -172,6 +175,11 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
               <span className="font-bold text-zinc-100 text-sm ">Support</span>
             </div>
           )}
+          
+          {/* Notification Center Bell */}
+          <div className={isCollapsed ? 'hidden' : ''}>
+            <NotificationCenter />
+          </div>
         </div>
       </div>
 
