@@ -1,50 +1,45 @@
 /**
- * BroadcastBanner Component
- * Shows active broadcasts at the top of the dashboard
+ * BroadcastBanner - Premium Zinc Refactor
+ * High-fidelity system announcements displayed at the top of the dashboard.
  */
 
 import React, { useEffect } from 'react';
-import { X, AlertTriangle, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, AlertTriangle, Info, AlertCircle, CheckCircle2, Pin } from 'lucide-react';
 import { useNotificationStore, type InternalBroadcast } from '../stores/notificationStore';
 
-// Level styles using Tailwind
-const levelStyles: Record<InternalBroadcast['level'], {
-  bg: string;
-  border: string;
-  icon: string;
-  text: string;
+// ============= STYLES CONFIG =============
+
+const LEVEL_STYLES: Record<InternalBroadcast['level'], {
+  container: string;
+  iconBg: string;
+  iconColor: string;
+  titleColor: string;
+  buttonAck: string;
 }> = {
   info: {
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800',
-    icon: 'text-blue-500',
-    text: 'text-blue-800 dark:text-blue-200',
+    container: 'bg-zinc-900/95 border-b-zinc-800',
+    iconBg: 'bg-indigo-500/10 border-indigo-500/20',
+    iconColor: 'text-indigo-400',
+    titleColor: 'text-zinc-100',
+    buttonAck: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20',
   },
   warning: {
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    border: 'border-yellow-200 dark:border-yellow-800',
-    icon: 'text-yellow-500',
-    text: 'text-yellow-800 dark:text-yellow-200',
+    container: 'bg-amber-950/10 border-b-amber-500/10',
+    iconBg: 'bg-amber-500/10 border-amber-500/20',
+    iconColor: 'text-amber-400',
+    titleColor: 'text-amber-100',
+    buttonAck: 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-500/20',
   },
   critical: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    border: 'border-red-200 dark:border-red-800',
-    icon: 'text-red-500',
-    text: 'text-red-800 dark:text-red-200',
+    container: 'bg-red-950/20 border-b-red-500/20',
+    iconBg: 'bg-red-500/10 border-red-500/20',
+    iconColor: 'text-red-400',
+    titleColor: 'text-red-100',
+    buttonAck: 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/20',
   },
 };
 
-const LevelIcon: React.FC<{ level: InternalBroadcast['level']; className?: string }> = ({ level, className }) => {
-  const iconClass = `w-5 h-5 ${className || ''}`;
-  switch (level) {
-    case 'critical':
-      return <AlertCircle className={iconClass} />;
-    case 'warning':
-      return <AlertTriangle className={iconClass} />;
-    default:
-      return <Info className={iconClass} />;
-  }
-};
+// ============= COMPONENTS =============
 
 interface SingleBannerProps {
   broadcast: InternalBroadcast;
@@ -53,69 +48,90 @@ interface SingleBannerProps {
 }
 
 const SingleBanner: React.FC<SingleBannerProps> = ({ broadcast, onAcknowledge, onDismiss }) => {
-  const styles = levelStyles[broadcast.level];
+  const styles = LEVEL_STYLES[broadcast.level];
   const { markBroadcastSeen } = useNotificationStore();
 
-  // Mark as seen when first displayed
+  // Mark as seen automatically
   useEffect(() => {
     if (!broadcast.receipt?.seenAt) {
       markBroadcastSeen(broadcast._id);
     }
   }, [broadcast._id, broadcast.receipt?.seenAt, markBroadcastSeen]);
 
+  // Icon Selection
+  const Icon = broadcast.level === 'critical' ? AlertCircle 
+             : broadcast.level === 'warning' ? AlertTriangle 
+             : Info;
+
   return (
     <div
       className={`
-        relative flex items-start gap-3 px-4 py-3 border-b
-        ${styles.bg} ${styles.border}
-        ${broadcast.level === 'critical' ? 'animate-pulse' : ''}
+        relative w-full border-b backdrop-blur-md transition-all duration-300 animate-in slide-in-from-top-2
+        ${styles.container}
+        ${broadcast.level === 'critical' ? 'animate-pulse-subtle' : ''}
       `}
       role="alert"
     >
-      {/* Icon */}
-      <div className={`flex-shrink-0 mt-0.5 ${styles.icon}`}>
-        <LevelIcon level={broadcast.level} />
-      </div>
+      <div className="px-4 py-3 flex items-start gap-4">
+        
+        {/* Icon Badge */}
+        <div className={`flex-shrink-0 p-2 rounded-xl border ${styles.iconBg} ${styles.iconColor}`}>
+          <Icon className="w-5 h-5" />
+        </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <p className={`font-semibold ${styles.text}`}>
-          {broadcast.title}
-        </p>
-        <p className={`mt-1 text-sm ${styles.text} opacity-90`}>
-          {broadcast.message}
-        </p>
-        <p className="mt-1 text-xs opacity-60">
-          De: {broadcast.createdBy.name} • {new Date(broadcast.createdAt).toLocaleString()}
-        </p>
-      </div>
+        {/* Content */}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="flex items-center gap-2 mb-1">
+            <p className={`text-sm font-bold tracking-tight ${styles.titleColor}`}>
+              {broadcast.title}
+            </p>
+            {broadcast.isPinned && (
+              <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                <Pin className="w-3 h-3 fill-current" /> Fijado
+              </span>
+            )}
+          </div>
+          
+          <p className="text-sm text-zinc-400 leading-relaxed max-w-4xl">
+            {broadcast.message}
+          </p>
+          
+          <div className="mt-2 flex items-center gap-3 text-xs text-zinc-500 font-mono">
+            <span>{broadcast.createdBy.name}</span>
+            <span>•</span>
+            <span>{new Date(broadcast.createdAt).toLocaleDateString()} {new Date(broadcast.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          </div>
+        </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {broadcast.requireAck && (
-          <button
-            onClick={() => onAcknowledge(broadcast._id)}
-            className={`
-              inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md
-              bg-white dark:bg-gray-800 border shadow-sm
-              hover:bg-gray-50 dark:hover:bg-gray-700
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-            `}
-          >
-            <CheckCircle className="w-4 h-4" />
-            Confirmar
-          </button>
-        )}
-        {!broadcast.requireAck && !broadcast.isPinned && (
-          <button
-            onClick={() => onDismiss(broadcast._id)}
-            className="p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-            aria-label="Cerrar"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        {/* Actions */}
+        <div className="flex items-center gap-3 flex-shrink-0 self-center">
+          {broadcast.requireAck ? (
+            <button
+              onClick={() => onAcknowledge(broadcast._id)}
+              className={`
+                inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase r rounded-lg shadow-lg transition-all hover:translate-y-[-1px]
+                ${styles.buttonAck}
+              `}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Firmar
+            </button>
+          ) : !broadcast.isPinned && (
+            <button
+              onClick={() => onDismiss(broadcast._id)}
+              className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+              aria-label="Descartar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
+      
+      {/* Critical Indicator Line */}
+      {broadcast.level === 'critical' && (
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+      )}
     </div>
   );
 };
@@ -123,48 +139,34 @@ const SingleBanner: React.FC<SingleBannerProps> = ({ broadcast, onAcknowledge, o
 export const BroadcastBanner: React.FC = () => {
   const { broadcasts, acknowledgeBroadcast, fetchBroadcasts } = useNotificationStore();
 
-  // Fetch broadcasts on mount
   useEffect(() => {
     fetchBroadcasts();
   }, [fetchBroadcasts]);
 
-  // Filter to show only active broadcasts
+  // Logic: Show unacknowledged & non-expired
   const activeBroadcasts = broadcasts.filter(b => {
-    // Don't show if already acknowledged
     if (b.receipt?.acknowledgedAt) return false;
-    // Don't show if expired
     if (b.expiresAt && new Date(b.expiresAt) < new Date()) return false;
     return true;
   });
 
-  // Sort: critical first, then warning, then info. Pinned at top.
+  // Sort: Critical > Warning > Info (Pinned on top of their level)
   const sortedBroadcasts = [...activeBroadcasts].sort((a, b) => {
     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
     const levelOrder = { critical: 0, warning: 1, info: 2 };
     return levelOrder[a.level] - levelOrder[b.level];
   });
 
-  if (sortedBroadcasts.length === 0) {
-    return null;
-  }
-
-  const handleAcknowledge = async (id: string) => {
-    await acknowledgeBroadcast(id);
-  };
-
-  const handleDismiss = async (id: string) => {
-    // For non-required broadcasts, acknowledge to dismiss
-    await acknowledgeBroadcast(id);
-  };
+  if (sortedBroadcasts.length === 0) return null;
 
   return (
-    <div className="relative z-40">
+    <div className="flex flex-col w-full z-40 shadow-xl shadow-black/20">
       {sortedBroadcasts.map(broadcast => (
         <SingleBanner
           key={broadcast._id}
           broadcast={broadcast}
-          onAcknowledge={handleAcknowledge}
-          onDismiss={handleDismiss}
+          onAcknowledge={acknowledgeBroadcast}
+          onDismiss={acknowledgeBroadcast} // Non-required dismiss = ack for UI purposes
         />
       ))}
     </div>

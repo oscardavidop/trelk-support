@@ -187,7 +187,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
           <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border w-full text-left ${lockInfo.bg} border-zinc-800/50`}>
             <StatusIcon className={`w-5 h-5 shrink-0 ${lockInfo.color}`} />
             <div>
-              <p className={`text-xs font-bold uppercase tracking-wider ${lockInfo.color}`}>
+              <p className={`text-xs font-bold uppercase r ${lockInfo.color}`}>
                 {lockInfo.title}
               </p>
               <p className="text-xs text-zinc-400 mt-0.5 leading-snug">

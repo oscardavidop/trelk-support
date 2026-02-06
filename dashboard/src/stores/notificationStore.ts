@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
 import { getSocket } from '../services/socket';
+import { toast } from './toastStore';
 
 // ============= TYPES =============
 
@@ -147,7 +148,7 @@ export const useNotificationStore = create<NotificationState>()(
       // Mark notification as read
       markAsRead: async (notificationId: string) => {
         try {
-          const { data } = await api.post<ApiResponse>(`/api/notifications/${notificationId}/read`);
+          const { data } = await api.post<ApiResponse>(`/api/notifications/${notificationId}/read`, {});
           if (data.ok) {
             set(state => ({
               notifications: state.notifications.map(n =>
@@ -164,7 +165,7 @@ export const useNotificationStore = create<NotificationState>()(
       // Mark all as read
       markAllAsRead: async () => {
         try {
-          const { data } = await api.post<ApiResponse>('/api/notifications/read-all');
+          const { data } = await api.post<ApiResponse>('/api/notifications/read-all', {});
           if (data.ok) {
             set(state => ({
               notifications: state.notifications.map(n => ({ ...n, read: true, readAt: new Date().toISOString() })),
@@ -179,7 +180,7 @@ export const useNotificationStore = create<NotificationState>()(
       // Delete notification
       deleteNotification: async (notificationId: string) => {
         try {
-          const { data } = await api.delete<ApiResponse>(`/api/notifications/${notificationId}`);
+          const { data } = await api.delete<ApiResponse>(`/api/notifications/${notificationId}`, {});
           if (data.ok) {
             const notif = get().notifications.find(n => n._id === notificationId);
             set(state => ({
@@ -210,7 +211,7 @@ export const useNotificationStore = create<NotificationState>()(
       // Acknowledge broadcast
       acknowledgeBroadcast: async (broadcastId: string) => {
         try {
-          const { data } = await api.post<ApiResponse>(`/api/internal-broadcasts/${broadcastId}/acknowledge`);
+          const { data } = await api.post<ApiResponse>(`/api/internal-broadcasts/${broadcastId}/acknowledge`, {});
           if (data.ok) {
             set(state => ({
               broadcasts: state.broadcasts.filter(b => b._id !== broadcastId),
@@ -224,7 +225,7 @@ export const useNotificationStore = create<NotificationState>()(
       // Mark broadcast as seen
       markBroadcastSeen: async (broadcastId: string) => {
         try {
-          await api.post(`/api/internal-broadcasts/${broadcastId}/seen`);
+          await api.post(`/api/internal-broadcasts/${broadcastId}/seen`, {});
         } catch (error) {
           console.error('Failed to mark broadcast as seen:', error);
         }
@@ -233,8 +234,24 @@ export const useNotificationStore = create<NotificationState>()(
       // Socket handler: new notification
       handleNewNotification: (notification: unknown) => {
         const notif = notification as Record<string, unknown>;
+        
+        // Show toast notification
+        const fromName = (notif.from as { name?: string })?.name || 'Sistema';
+        const notifTitle = notif.title as string || 'Nueva notificación';
+        const notifMessage = notif.message as string;
+        const isUrgent = notif.priority === 'urgent';
+        
+        toast[isUrgent ? 'warning' : 'info'](
+          notifTitle,
+          `${fromName}: ${notifMessage.slice(0, 80)}${notifMessage.length > 80 ? '...' : ''}`,
+          { 
+            duration: isUrgent ? 8000 : 5000,
+            priority: isUrgent ? 'high' : 'normal',
+          }
+        );
+        
         // Play sound for urgent
-        if (notif.priority === 'urgent') {
+        if (isUrgent) {
           try {
             const audio = new Audio('/sounds/notification.mp3');
             audio.volume = 0.5;
@@ -273,8 +290,23 @@ export const useNotificationStore = create<NotificationState>()(
       // Socket handler: new broadcast
       handleNewBroadcast: (broadcast: unknown) => {
         const bc = broadcast as Record<string, unknown>;
+        const bcLevel = bc.level as string;
+        const bcTitle = bc.title as string;
+        const bcMessage = bc.message as string;
+        
+        // Show toast for broadcast
+        const toastType = bcLevel === 'critical' ? 'error' : bcLevel === 'warning' ? 'warning' : 'info';
+        toast[toastType](
+          `📢 ${bcTitle}`,
+          bcMessage.slice(0, 100) + (bcMessage.length > 100 ? '...' : ''),
+          { 
+            duration: bcLevel === 'critical' ? 0 : 8000, // Critical is persistent
+            priority: bcLevel === 'critical' ? 'critical' : 'high',
+          }
+        );
+        
         // Play sound for critical
-        if (bc.level === 'critical') {
+        if (bcLevel === 'critical') {
           try {
             const audio = new Audio('/sounds/alert.mp3');
             audio.volume = 0.7;

@@ -745,6 +745,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Store socket reference
   agentSockets.set(agentId, socket);
 
+  // Join agent's personal room for notifications and broadcasts
+  socket.join(`agent:${agentId}`);
+
   // Handle reconnection (checks grace period, recovers sessions if applicable)
   const reconnectionResult = await handleAgentReconnection(agentId, socket.id);
 

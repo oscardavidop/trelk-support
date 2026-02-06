@@ -453,7 +453,7 @@ function FieldsManagerModal({
           {showNewForm ? (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-zinc-200 uppercase r">
                   {editingField ? "Editar Campo" : "Nuevo Campo"}
                 </h3>
                 <button
@@ -1133,7 +1133,7 @@ export default function Contact360Panel({
             <section className="space-y-3">
               <button
                 onClick={() => toggleSection("info")}
-                className="w-full flex items-center justify-between text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                className="w-full flex items-center justify-between text-xs font-bold text-zinc-500 uppercase r hover:text-zinc-300 transition-colors"
               >
                 <span>Información Básica</span>
                 {expandedSections.info ? (
@@ -1183,7 +1183,7 @@ export default function Contact360Panel({
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => toggleSection("tags")}
-                  className="text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                  className="text-xs font-bold text-zinc-500 uppercase r hover:text-zinc-300 transition-colors"
                 >
                   Etiquetas
                 </button>
@@ -1227,7 +1227,7 @@ export default function Contact360Panel({
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => toggleSection("fields")}
-                  className="text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                  className="text-xs font-bold text-zinc-500 uppercase r hover:text-zinc-300 transition-colors"
                 >
                   Campos Personalizados
                 </button>
@@ -1334,7 +1334,7 @@ export default function Contact360Panel({
           <div className="p-4 space-y-6 animate-in fade-in duration-300">
             {/* Input Area */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
+              <label className="text-xs font-bold text-zinc-500 uppercase r ml-1">
                 Nueva Nota
               </label>
               <div className="relative group">
@@ -1373,7 +1373,7 @@ export default function Contact360Panel({
             {/* Notes List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-zinc-500 uppercase r">
                   Historial ({contact.notes.length})
                 </h4>
               </div>

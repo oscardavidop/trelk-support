@@ -337,24 +337,42 @@ class InternalBroadcastService {
   async acknowledge(broadcastId: string, agentId: string) {
     const now = new Date();
     
+    // First, find the receipt to check if seenAt already exists
+    const existingReceipt = await BroadcastReceipt.findOne({
+      broadcastId: new Types.ObjectId(broadcastId),
+      agentId: new Types.ObjectId(agentId),
+      acknowledgedAt: { $exists: false },
+    });
+
+    if (!existingReceipt) {
+      return null;
+    }
+
+    // Build update based on whether seenAt already exists
+    const updateData: any = {
+      acknowledgedAt: now,
+      pendingDelivery: false,
+    };
+    
+    // Only set seenAt if it doesn't exist
+    if (!existingReceipt.seenAt) {
+      updateData.seenAt = now;
+    }
+
     const receipt = await BroadcastReceipt.findOneAndUpdate(
       {
-        broadcastId: new Types.ObjectId(broadcastId),
-        agentId: new Types.ObjectId(agentId),
+        _id: existingReceipt._id,
         acknowledgedAt: { $exists: false },
       },
-      {
-        acknowledgedAt: now,
-        seenAt: { $setOnInsert: now },
-        pendingDelivery: false,
-      },
+      updateData,
       { new: true }
     );
 
     if (receipt) {
-      // Update broadcast stats - increment ack, and seen if not already
+      // Update broadcast stats - increment ack, and seen if we just set seenAt
       const updateOps: any = { $inc: { 'stats.acknowledged': 1 } };
-      if (!receipt.seenAt || receipt.seenAt.getTime() === now.getTime()) {
+      // If seenAt was not set before (we just set it), also increment seen
+      if (!existingReceipt.seenAt) {
         updateOps.$inc['stats.seen'] = 1;
       }
       await InternalBroadcast.updateOne(
@@ -565,6 +583,37 @@ class InternalBroadcastService {
         return acc;
       }, {} as Record<string, number>),
       days,
+    };
+  }
+
+  /**
+   * Get broadcast stats with individual receipts
+   */
+  async getBroadcastStats(broadcastId: string) {
+    const broadcast = await InternalBroadcast.findById(broadcastId)
+      .populate('createdBy', 'name avatar')
+      .lean();
+
+    if (!broadcast) return null;
+
+    // Get all receipts with agent info
+    const receipts = await BroadcastReceipt.find({ broadcastId: new Types.ObjectId(broadcastId) })
+      .populate('agentId', 'name email avatar')
+      .sort({ deliveredAt: -1 })
+      .lean();
+
+    // Calculate stats
+    const stats = {
+      totalTargeted: receipts.length,
+      delivered: receipts.filter(r => r.deliveredAt).length,
+      seen: receipts.filter(r => r.seenAt).length,
+      acknowledged: receipts.filter(r => r.acknowledgedAt).length,
+    };
+
+    return {
+      ...broadcast,
+      stats,
+      receipts,
     };
   }
 }

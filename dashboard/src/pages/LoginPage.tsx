@@ -666,7 +666,7 @@ export default function LoginPage() {
                 {qrStatus === "loading" && (
                   <div className="w-56 h-56 flex flex-col items-center justify-center bg-zinc-900/50 border border-zinc-800 rounded-2xl">
                     <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest animate-pulse">
+                    <span className="text-xs font-bold text-zinc-500 uppercase st animate-pulse">
                       Generando QR...
                     </span>
                   </div>
@@ -775,7 +775,7 @@ export default function LoginPage() {
               {/* Instructions Footer */}
               {(qrStatus === "pending" || qrStatus === "loading") && (
                 <div className="mt-5 pt-4 border-t border-zinc-800/50">
-                  <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-4 text-center">
+                  <p className="text-zinc-500 text-xs font-bold uppercase r mb-4 text-center">
                     Pasos a seguir
                   </p>
                   <div className="space-y-3">
@@ -808,6 +808,11 @@ export default function LoginPage() {
                   </div>
                 </div>
               )}
+
+              {/* o BUTTON con click DIRECT, crear */}
+              
+
+              
             </div>
           </div>
         </div>

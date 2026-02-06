@@ -518,35 +518,6 @@ export default function BroadcastPage() {
             </div>
           </div>
         </div>
-        {/* Content Grid */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-2 custom-scrollbar">
-          {loading && broadcasts.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-            </div>
-          ) : broadcasts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
-              <Megaphone className="w-16 h-16 mb-4 stroke-1" />
-              <p className="text-lg font-medium">No hay broadcasts creados</p>
-              <p className="text-sm">Inicia una nueva campaña para conectar con tus usuarios</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
-              {broadcasts.map((broadcast) => (
-                <BroadcastCard
-                  key={broadcast._id}
-                  broadcast={broadcast}
-                  onView={() => openDetail(broadcast)}
-                  onStart={() => setShowConfirm(broadcast)}
-                  onPause={() => handlePauseBroadcast(broadcast._id)}
-                  onResume={() => handleResumeBroadcast(broadcast._id)}
-                  onCancel={() => handleCancelBroadcast(broadcast._id)}
-                  onDelete={() => handleDeleteBroadcast(broadcast._id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Slide-overs & Modals */}

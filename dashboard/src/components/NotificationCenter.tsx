@@ -1,283 +1,248 @@
 /**
- * NotificationCenter Component
- * Dropdown panel showing agent notifications
+ * NotificationCenter - Premium Zinc Refactor
+ * High-fidelity notification dropdown panel
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Bell,
-  Check,
-  CheckCheck,
-  Trash2,
-  MessageSquare,
-  UserPlus,
-  Clock,
-  AlertTriangle,
-  Star,
-  ArrowUpRight,
-  X,
-  Loader2,
+  Bell, Check, CheckCheck, Trash2, MessageSquare, UserPlus, Clock, 
+  AlertTriangle, Star, ArrowUpRight, X, Loader2, Inbox
 } from 'lucide-react';
 import { useNotificationStore, type InternalNotification } from '../stores/notificationStore';
+import { NotificationHistoryModal } from './modals/NotificationHistoryModal';
 
-// Notification type icons
-const typeIcons: Record<InternalNotification['type'], React.ElementType> = {
-  message: MessageSquare,
-  assignment: UserPlus,
-  reminder: Clock,
-  alert: AlertTriangle,
-  vip: Star,
-  escalation: ArrowUpRight,
+// ============= CONFIG & STYLES =============
+
+const TYPE_CONFIG: Record<InternalNotification['type'], { icon: React.ElementType; colorClass: string }> = {
+  message: { 
+    icon: MessageSquare, 
+    colorClass: 'text-blue-400 bg-blue-500/10 border-blue-500/20' 
+  },
+  assignment: { 
+    icon: UserPlus, 
+    colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+  },
+  reminder: { 
+    icon: Clock, 
+    colorClass: 'text-amber-400 bg-amber-500/10 border-amber-500/20' 
+  },
+  alert: { 
+    icon: AlertTriangle, 
+    colorClass: 'text-red-400 bg-red-500/10 border-red-500/20' 
+  },
+  vip: { 
+    icon: Star, 
+    colorClass: 'text-purple-400 bg-purple-500/10 border-purple-500/20' 
+  },
+  escalation: { 
+    icon: ArrowUpRight, 
+    colorClass: 'text-orange-400 bg-orange-500/10 border-orange-500/20' 
+  },
 };
 
-// Notification type colors
-const typeColors: Record<InternalNotification['type'], string> = {
-  message: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-  assignment: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-  reminder: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
-  alert: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-  vip: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
-  escalation: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-};
-
-// Format relative time
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
+  const diffMins = Math.floor((new Date().getTime() - date.getTime()) / 60000);
   if (diffMins < 1) return 'Ahora';
   if (diffMins < 60) return `${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
 }
 
-interface NotificationItemProps {
+// ============= COMPONENT: NOTIFICATION ITEM =============
+
+const NotificationItem: React.FC<{
   notification: InternalNotification;
   onMarkRead: (id: string) => void;
   onDelete: (id: string) => void;
   onAction?: (url: string) => void;
-}
-
-const NotificationItem: React.FC<NotificationItemProps> = ({
-  notification,
-  onMarkRead,
-  onDelete,
-  onAction,
-}) => {
-  const Icon = typeIcons[notification.type];
-  const colorClass = typeColors[notification.type];
+}> = ({ notification, onMarkRead, onDelete, onAction }) => {
+  const config = TYPE_CONFIG[notification.type];
+  const Icon = config.icon;
 
   return (
-    <div
-      className={`
-        relative p-3 border-b border-gray-100 dark:border-gray-800
-        hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors
-        ${!notification.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
-        ${notification.priority === 'urgent' ? 'border-l-4 border-l-red-500' : ''}
-      `}
-    >
-      <div className="flex gap-3">
-        {/* Icon */}
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${colorClass}`}>
-          <Icon className="w-4 h-4" />
+    <div className={`group relative p-4 border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors ${!notification.read ? 'bg-zinc-900/30' : ''}`}>
+      
+      {/* Unread Dot */}
+      {!notification.read && (
+        <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+      )}
+
+      <div className="flex gap-4">
+        {/* Icon Avatar */}
+        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border ${config.colorClass}`}>
+          <Icon className="w-5 h-5" />
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          {notification.title && (
-            <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-              {notification.title}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="flex justify-between items-start pr-4">
+            <p className={`text-sm font-semibold truncate ${!notification.read ? 'text-zinc-100' : 'text-zinc-400'}`}>
+              {notification.title || 'Notificación'}
             </p>
-          )}
-          <p className={`text-sm text-gray-600 dark:text-gray-400 ${notification.title ? 'mt-0.5' : ''}`}>
+          </div>
+          
+          <p className="text-sm text-zinc-500 mt-0.5 leading-relaxed line-clamp-2">
             {notification.message}
           </p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-gray-400 dark:text-gray-500">
+          
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs font-medium text-zinc-400 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-zinc-800">
               {notification.fromAdminId.name}
             </span>
-            <span className="text-xs text-gray-300 dark:text-gray-600">•</span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] text-zinc-600">•</span>
+            <span className="text-xs text-zinc-500">
               {formatRelativeTime(notification.createdAt)}
             </span>
           </div>
 
-          {/* Action button */}
+          {/* Action Link */}
           {notification.actionUrl && (
             <button
               onClick={() => onAction?.(notification.actionUrl!)}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors group/link"
             >
-              {notification.actionLabel || 'Ver más'}
-              <ArrowUpRight className="w-3 h-3" />
+              {notification.actionLabel || 'Ver detalles'}
+              <ArrowUpRight className="w-3 h-3 transition-transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
             </button>
           )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex-shrink-0 flex flex-col gap-1">
-          {!notification.read && (
-            <button
-              onClick={() => onMarkRead(notification._id)}
-              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              title="Marcar como leído"
-            >
-              <Check className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={() => onDelete(notification._id)}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500"
-            title="Eliminar"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      {/* Unread indicator */}
-      {!notification.read && (
-        <div className="absolute top-3 right-3 w-2 h-2 bg-blue-500 rounded-full" />
-      )}
+      {/* Hover Actions */}
+      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 bg-zinc-950/80 backdrop-blur-sm p-1 rounded-lg border border-zinc-800 shadow-xl">
+        {!notification.read && (
+          <button onClick={() => onMarkRead(notification._id)} className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors" title="Marcar como leído">
+            <Check className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <button onClick={() => onDelete(notification._id)} className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Eliminar">
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 };
 
+// ============= MAIN COMPONENT =============
+
 export const NotificationCenter: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  
-  const {
-    notifications,
-    unreadCount,
-    notificationsLoading,
-    fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-  } = useNotificationStore();
+  const { notifications, unreadCount, notificationsLoading, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
 
-  // Close on click outside
+  // Outside click & Keydown handlers
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // Fetch notifications when opened
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
+    const handleClick = (e: MouseEvent) => !panelRef.current?.contains(e.target as Node) && setIsOpen(false);
+    const handleEsc = (e: KeyboardEvent) => e.key === 'Escape' && setIsOpen(false);
+    if (isOpen) { document.addEventListener('mousedown', handleClick); document.addEventListener('keydown', handleEsc); fetchNotifications(); }
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleEsc); };
   }, [isOpen, fetchNotifications]);
 
-  // Close on Escape
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
-
-  const handleAction = (url: string) => {
-    // Navigate to URL
-    window.location.href = url;
-    setIsOpen(false);
-  };
+  const handleAction = (url: string) => { window.location.href = url; setIsOpen(false); };
 
   return (
     <div className="relative" ref={panelRef}>
+      
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          relative p-2 rounded-lg transition-colors
-          hover:bg-gray-100 dark:hover:bg-gray-800
-          ${isOpen ? 'bg-gray-100 dark:bg-gray-800' : ''}
+          relative p-2.5 rounded-xl transition-all duration-200 border border-transparent
+          ${isOpen ? 'bg-zinc-800 text-white border-zinc-700' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}
         `}
-        aria-label="Notificaciones"
       >
-        <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        
-        {/* Badge */}
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full">
-            {unreadCount > 99 ? '99+' : unreadCount}
+          <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-zinc-950"></span>
           </span>
         )}
       </button>
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 max-h-[70vh] bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+        <div className="absolute mt-3 w-96 origin-top-right bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+          
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-              Notificaciones
-            </h3>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-xl">
             <div className="flex items-center gap-2">
+              <h3 className="font-bold text-zinc-100">Notificaciones</h3>
+              {unreadCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-bold">
+                  {unreadCount} nuevas
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-1">
               {unreadCount > 0 && (
                 <button
                   onClick={() => markAllAsRead()}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                  className="p-1.5 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                  title="Marcar todo como leído"
                 >
-                  <CheckCheck className="w-3 h-3" />
-                  Marcar todo leído
+                  <CheckCheck className="w-4 h-4" />
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
               >
-                <X className="w-4 h-4 text-gray-400" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="overflow-y-auto max-h-[calc(70vh-60px)]">
+          {/* List */}
+          <div className="overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             {notificationsLoading && notifications.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                <Bell className="w-10 h-10 mb-2 opacity-50" />
-                <p className="text-sm">No hay notificaciones</p>
+              <div className="flex flex-col items-center justify-center py-16 text-zinc-500">
+                <div className="p-4 bg-zinc-900 rounded-full mb-3 border border-zinc-800">
+                  <Inbox className="w-8 h-8 opacity-50" />
+                </div>
+                <p className="text-sm font-medium">Estás al día</p>
+                <p className="text-xs opacity-60">No tienes notificaciones pendientes</p>
               </div>
             ) : (
-              notifications.map(notification => (
-                <NotificationItem
-                  key={notification._id}
-                  notification={notification}
-                  onMarkRead={markAsRead}
-                  onDelete={deleteNotification}
-                  onAction={handleAction}
-                />
-              ))
+              <div className="flex flex-col">
+                {notifications.map(notification => (
+                  <NotificationItem
+                    key={notification._id}
+                    notification={notification}
+                    onMarkRead={markAsRead}
+                    onDelete={deleteNotification}
+                    onAction={handleAction}
+                  />
+                ))}
+              </div>
             )}
+          </div>
+          
+          {/* Footer */}
+          <div className="bg-zinc-900/30 border-t border-zinc-800 p-2 text-center">
+             <button 
+               onClick={() => { setShowHistoryModal(true); setIsOpen(false); }}
+               className="text-[10px] uppercase font-bold text-zinc-500 hover:text-zinc-300 transition-colors py-1"
+             >
+               Ver historial completo
+             </button>
           </div>
         </div>
       )}
+
+      {/* History Modal */}
+      <NotificationHistoryModal 
+        isOpen={showHistoryModal} 
+        onClose={() => setShowHistoryModal(false)} 
+      />
     </div>
   );
 };

@@ -1,29 +1,19 @@
 /**
- * Internal Broadcasts Page
- * Admin page for managing broadcast announcements
+ * InternalBroadcastsPage - Enterprise Internal Communications
+ * Diseño consistente con PermissionsPage, SavedRepliesPage, ContactsPage
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Megaphone,
-  Plus,
-  X,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  Send,
-  Loader2,
-  Trash2,
-  Eye,
-  CheckCircle,
-  Clock,
-  Pin,
-  Users,
-  RefreshCw,
+  Megaphone, Plus, AlertCircle, AlertTriangle, Info, Loader2,
+  Trash2, Eye, CheckCircle2, Clock, Users, RefreshCw, BarChart3,
+  Search, Radio, Pin, CheckCircle
 } from 'lucide-react';
 import api from '../services/api';
+import { CreateBroadcastModal } from '../components/modals/CreateBroadcastModal';
+import { BroadcastStatsModal } from '../components/modals/BroadcastStatsModal';
 
-// ============= TYPES =============
+// ==================== TYPES ====================
 
 interface Broadcast {
   _id: string;
@@ -32,718 +22,455 @@ interface Broadcast {
   level: 'info' | 'warning' | 'critical';
   targetAudience: 'all' | 'role' | 'team' | 'individual';
   targetRoles?: string[];
-  targetTeams?: string[];
-  targetAgents?: string[];
   requireAck: boolean;
   isPinned: boolean;
   expiresAt?: string;
-  createdBy: {
-    _id: string;
-    name: string;
-  };
+  createdBy: { _id: string; name: string };
   cancelledAt?: string;
-  cancelledBy?: string;
-  stats?: {
-    totalTargeted: number;
-    delivered: number;
-    seen: number;
-    acknowledged: number;
-  };
+  stats?: { totalTargeted: number; delivered: number; seen: number; acknowledged: number };
   createdAt: string;
 }
 
-interface CreateBroadcastPayload {
-  title: string;
-  message: string;
-  level: 'info' | 'warning' | 'critical';
-  targetAudience: 'all' | 'role' | 'team' | 'individual';
-  targetRoles?: string[];
-  requireAck: boolean;
-  isPinned: boolean;
-  expiresAt?: string;
-}
+// ==================== CONSTANTS ====================
 
-// ============= LEVEL STYLES =============
-
-const levelStyles: Record<Broadcast['level'], {
-  bg: string;
-  border: string;
-  badge: string;
-  icon: React.ElementType;
-}> = {
+const LEVEL_CONFIG = {
   info: {
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800',
-    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
     icon: Info,
+    label: 'Información',
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+    badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   },
   warning: {
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    border: 'border-yellow-200 dark:border-yellow-800',
-    badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
     icon: AlertTriangle,
+    label: 'Advertencia',
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/20',
+    badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   },
   critical: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    border: 'border-red-200 dark:border-red-800',
-    badge: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
     icon: AlertCircle,
+    label: 'Crítico',
+    color: 'text-red-400',
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/20',
+    badge: 'bg-red-500/20 text-red-400 border-red-500/30',
   },
 };
 
-// ============= BROADCAST CARD =============
+// ==================== STAT BADGE ====================
 
-interface BroadcastCardProps {
-  broadcast: Broadcast;
-  onViewStats: (id: string) => void;
-  onCancel: (id: string) => void;
+function StatBadge({ icon: Icon, count, label, color, bg }: { 
+  icon: React.ElementType; 
+  count: number; 
+  label: string; 
+  color: string; 
+  bg: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <div className={`p-1.5 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <div className="flex flex-col leading-none">
+        <span className={`font-bold text-lg ${color}`}>{count.toLocaleString()}</span>
+        <span className="text-[10px] font-bold text-zinc-500 uppercase">{label}</span>
+      </div>
+    </div>
+  );
 }
 
-const BroadcastCard: React.FC<BroadcastCardProps> = ({ broadcast, onViewStats, onCancel }) => {
-  const styles = levelStyles[broadcast.level];
-  const Icon = styles.icon;
+// ==================== BROADCAST CARD ====================
+
+function BroadcastCard({ 
+  broadcast, 
+  onViewStats, 
+  onCancel 
+}: { 
+  broadcast: Broadcast; 
+  onViewStats: (id: string) => void; 
+  onCancel: (id: string) => void;
+}) {
+  const config = LEVEL_CONFIG[broadcast.level];
+  const Icon = config.icon;
   const isCancelled = !!broadcast.cancelledAt;
   const isExpired = broadcast.expiresAt && new Date(broadcast.expiresAt) < new Date();
+  const isInactive = isCancelled || isExpired;
 
   return (
-    <div
-      className={`
-        relative border rounded-lg overflow-hidden transition-all
-        ${isCancelled || isExpired ? 'opacity-60' : ''}
-        ${styles.bg} ${styles.border}
-      `}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-lg ${styles.badge}`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                {broadcast.title}
-              </h3>
-              {broadcast.isPinned && (
-                <Pin className="w-4 h-4 text-blue-500" />
-              )}
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {broadcast.createdBy.name} • {new Date(broadcast.createdAt).toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Status badges */}
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${styles.badge}`}>
-            {broadcast.level.toUpperCase()}
+    <div className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-hidden flex flex-col ${
+      isInactive
+        ? 'border-zinc-800/50 opacity-60'
+        : 'border-zinc-800 hover:border-blue-500/30'
+    }`}>
+      
+      {/* Pinned Indicator */}
+      {broadcast.isPinned && !isInactive && (
+        <div className="absolute top-3 right-3 z-10">
+          <span className="flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
           </span>
-          {isCancelled && (
-            <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              Cancelado
-            </span>
-          )}
-          {isExpired && !isCancelled && (
-            <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              Expirado
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-4">
-        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-          {broadcast.message}
-        </p>
-
-        {/* Meta info */}
-        <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
-            {broadcast.targetAudience === 'all' 
-              ? 'Todos los agentes' 
-              : broadcast.targetAudience === 'role'
-                ? `Roles: ${broadcast.targetRoles?.join(', ')}`
-                : broadcast.targetAudience}
-          </span>
-          
-          {broadcast.requireAck && (
-            <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-              <CheckCircle className="w-4 h-4" />
-              Requiere confirmación
-            </span>
-          )}
-          
-          {broadcast.expiresAt && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              Expira: {new Date(broadcast.expiresAt).toLocaleString()}
-            </span>
-          )}
-        </div>
-
-        {/* Stats */}
-        {broadcast.stats && (
-          <div className="flex items-center gap-6 mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {broadcast.stats.totalTargeted}
-              </p>
-              <p className="text-xs text-gray-500">Destinatarios</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">
-                {broadcast.stats.delivered}
-              </p>
-              <p className="text-xs text-gray-500">Entregados</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {broadcast.stats.seen}
-              </p>
-              <p className="text-xs text-gray-500">Vistos</p>
-            </div>
-            {broadcast.requireAck && (
-              <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">
-                  {broadcast.stats.acknowledged}
-                </p>
-                <p className="text-xs text-gray-500">Confirmados</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      {!isCancelled && !isExpired && (
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-800/50">
-          <button
-            onClick={() => onViewStats(broadcast._id)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <Eye className="w-4 h-4" />
-            Ver detalles
-          </button>
-          <button
-            onClick={() => onCancel(broadcast._id)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Cancelar
-          </button>
         </div>
       )}
-    </div>
-  );
-};
 
-// ============= CREATE MODAL =============
-
-interface CreateBroadcastModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-}
-
-const CreateBroadcastModal: React.FC<CreateBroadcastModalProps> = ({ isOpen, onClose, onCreated }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Form state
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [level, setLevel] = useState<Broadcast['level']>('info');
-  const [targetAudience, setTargetAudience] = useState<'all' | 'role'>('all');
-  const [targetRoles, setTargetRoles] = useState<string[]>([]);
-  const [requireAck, setRequireAck] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
-  const [hasExpiry, setHasExpiry] = useState(false);
-  const [expiresAt, setExpiresAt] = useState('');
-
-  const availableRoles = ['agent', 'supervisor', 'admin'];
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('📤 Submitting broadcast...', { title, message, level });
-
-    if (!title.trim() || !message.trim()) {
-      setError('Título y mensaje son requeridos');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const payload: CreateBroadcastPayload = {
-        title: title.trim(),
-        message: message.trim(),
-        level,
-        targetAudience,
-        requireAck,
-        isPinned,
-      };
-
-      if (targetAudience === 'role' && targetRoles.length > 0) {
-        payload.targetRoles = targetRoles;
-      }
-
-      if (hasExpiry && expiresAt) {
-        payload.expiresAt = new Date(expiresAt).toISOString();
-      }
-
-      console.log('📤 Payload:', payload);
-
-      interface CreateResponse {
-        ok: boolean;
-        error?: string;
-      }
-      
-      const { data } = await api.post<CreateResponse>('/api/internal-broadcasts', payload);
-      console.log('📥 Response:', data);
-
-      if (data.ok) {
-        onCreated();
-        onClose();
-        // Reset form
-        setTitle('');
-        setMessage('');
-        setLevel('info');
-        setTargetAudience('all');
-        setTargetRoles([]);
-        setRequireAck(false);
-        setIsPinned(false);
-        setHasExpiry(false);
-        setExpiresAt('');
-      } else {
-        setError(data.error || 'Error al crear broadcast');
-      }
-    } catch (err: unknown) {
-      console.error('❌ Error creating broadcast:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error de conexión';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleRole = (role: string) => {
-    setTargetRoles(prev =>
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-    );
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
-      <div 
-        className="relative w-full max-w-xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl mx-4 max-h-[90vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Content */}
+      <div className="p-5 flex-1">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Crear Nuevo Broadcast
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`p-2.5 rounded-xl ${config.bg} border ${config.border}`}>
+            <Icon className={`w-5 h-5 ${config.color}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-zinc-100 truncate">{broadcast.title}</h3>
+              {isInactive && (
+                <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-zinc-800 text-zinc-500 border border-zinc-700">
+                  {isCancelled ? 'Cancelado' : 'Expirado'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="text-zinc-400">{broadcast.createdBy.name}</span>
+              <span>•</span>
+              <span>{new Date(broadcast.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Título
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título del anuncio"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-                maxLength={150}
-              />
+        {/* Message Preview */}
+        <div className="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 mb-4">
+          <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2">
+            {broadcast.message}
+          </p>
+        </div>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2">
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase border ${config.badge}`}>
+            <Icon className="w-3 h-3" />
+            {config.label}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+            <Users className="w-3 h-3" />
+            {broadcast.targetAudience === 'all' ? 'Todos' : broadcast.targetRoles?.join(', ') || 'Roles'}
+          </span>
+          {broadcast.requireAck && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <CheckCircle2 className="w-3 h-3" />
+              Firma
+            </span>
+          )}
+          {broadcast.isPinned && !isInactive && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <Pin className="w-3 h-3" />
+              Fijado
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-5 py-3 border-t border-zinc-800/50 bg-zinc-900/30 flex items-center justify-between">
+        {/* Mini Stats */}
+        {broadcast.stats ? (
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="text-zinc-300 font-medium">{broadcast.stats.totalTargeted}</span>
             </div>
-
-            {/* Message */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Mensaje
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Contenido del broadcast..."
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                required
-                maxLength={2000}
-              />
-              <p className="mt-1 text-xs text-gray-400">{message.length}/2000</p>
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-blue-400 font-medium">{broadcast.stats.seen}</span>
             </div>
-
-            {/* Level */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nivel
-              </label>
-              <div className="flex gap-2">
-                {(['info', 'warning', 'critical'] as const).map((l) => {
-                  const Icon = levelStyles[l].icon;
-                  return (
-                    <button
-                      key={l}
-                      type="button"
-                      onClick={() => setLevel(l)}
-                      className={`
-                        flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors
-                        ${level === l
-                          ? levelStyles[l].badge + ' border-current'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                        }
-                      `}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span className="text-sm font-medium capitalize">{l}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Target audience */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Audiencia
-              </label>
-              <div className="flex gap-4 mb-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="audience"
-                    checked={targetAudience === 'all'}
-                    onChange={() => setTargetAudience('all')}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Todos los agentes</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="audience"
-                    checked={targetAudience === 'role'}
-                    onChange={() => setTargetAudience('role')}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Por rol</span>
-                </label>
-              </div>
-              
-              {targetAudience === 'role' && (
-                <div className="flex gap-2 mt-2">
-                  {availableRoles.map(role => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => toggleRole(role)}
-                      className={`
-                        px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors
-                        ${targetRoles.includes(role)
-                          ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700'
-                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-                        }
-                      `}
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Options */}
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={requireAck}
-                  onChange={(e) => setRequireAck(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Requiere confirmación
-                  </span>
-                  <p className="text-xs text-gray-500">Los agentes deben confirmar que leyeron el mensaje</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isPinned}
-                  onChange={(e) => setIsPinned(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Fijar mensaje
-                  </span>
-                  <p className="text-xs text-gray-500">Mantiene el mensaje visible hasta que expire o se cancele</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hasExpiry}
-                  onChange={(e) => setHasExpiry(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Establecer expiración
-                </span>
-              </label>
-
-              {hasExpiry && (
-                <input
-                  type="datetime-local"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              )}
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            {broadcast.requireAck && (
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400 font-medium">{broadcast.stats.acknowledged}</span>
               </div>
             )}
           </div>
+        ) : (
+          <span className="text-xs text-zinc-600">Sin stats</span>
+        )}
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Actions */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onViewStats(broadcast._id)}
+            className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+            title="Ver estadísticas"
+          >
+            <BarChart3 className="w-4 h-4" />
+          </button>
+          {!isInactive && (
             <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              onClick={() => onCancel(broadcast._id)}
+              className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              title="Cancelar"
             >
-              Cancelar
+              <Trash2 className="w-4 h-4" />
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Enviar Broadcast
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+          )}
+        </div>
       </div>
     </div>
   );
-};
+}
 
-// ============= MAIN PAGE =============
+// ==================== MAIN COMPONENT ====================
 
-export const InternalBroadcastsPage: React.FC = () => {
+export default function InternalBroadcastsPage() {
+  // Data state
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'active' | 'cancelled'>('all');
 
-  // Fetch broadcasts
+  // UI state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [selectedBroadcastId, setSelectedBroadcastId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [levelFilter, setLevelFilter] = useState<'all' | 'info' | 'warning' | 'critical'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'cancelled' | 'expired'>('active');
+
+  // ==================== API ====================
+
   const fetchBroadcasts = useCallback(async () => {
     try {
-      setLoading(true);
-      
-      interface BroadcastsResponse {
-        ok: boolean;
-        broadcasts: Broadcast[];
-        error?: string;
-      }
-      
-      const { data } = await api.get<BroadcastsResponse>('/api/internal-broadcasts');
-      
+      const { data } = await api.get<{ ok: boolean; broadcasts: Broadcast[]; error?: string }>('/api/internal-broadcasts');
       if (data.ok) {
         setBroadcasts(data.broadcasts);
         setError(null);
       } else {
-        setError(data.error || 'Error al cargar broadcasts');
+        setError(data.error || 'Error al cargar');
       }
-    } catch (err) {
+    } catch {
       setError('Error de conexión');
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchBroadcasts();
+    const init = async () => {
+      setIsLoading(true);
+      await fetchBroadcasts();
+      setIsLoading(false);
+    };
+    init();
   }, [fetchBroadcasts]);
 
-  // Cancel broadcast
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchBroadcasts();
+    setIsRefreshing(false);
+  };
+
   const handleCancel = async (id: string) => {
-    if (!confirm('¿Estás seguro de cancelar este broadcast?')) return;
-
+    if (!confirm('¿Cancelar este anuncio? Los agentes ya no lo verán.')) return;
     try {
-      interface CancelResponse {
-        ok: boolean;
-        error?: string;
-      }
-      
-      const { data } = await api.post<CancelResponse>(`/api/internal-broadcasts/${id}/cancel`);
-      
-      if (data.ok) {
-        fetchBroadcasts();
-      } else {
-        alert(data.error || 'Error al cancelar');
-      }
-    } catch (err) {
-      alert('Error de conexión');
+      await api.post(`/api/internal-broadcasts/${id}/cancel`, {});
+      fetchBroadcasts();
+    } catch {
+      alert('Error al cancelar');
     }
   };
 
-  // View stats (TODO: implement detail modal)
   const handleViewStats = (id: string) => {
-    console.log('View stats for:', id);
-    // Could open a modal with detailed receipts
+    setSelectedBroadcastId(id);
+    setShowStatsModal(true);
   };
 
-  // Filter broadcasts
-  const filteredBroadcasts = broadcasts.filter(b => {
-    if (filter === 'active') {
-      return !b.cancelledAt && (!b.expiresAt || new Date(b.expiresAt) > new Date());
-    }
-    if (filter === 'cancelled') {
-      return !!b.cancelledAt;
-    }
-    return true;
-  });
+  // ==================== FILTERS ====================
+
+  const filteredBroadcasts = useMemo(() => {
+    return broadcasts.filter(b => {
+      // Search
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!b.title.toLowerCase().includes(q) && !b.message.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+
+      // Level filter
+      if (levelFilter !== 'all' && b.level !== levelFilter) return false;
+
+      // Status filter
+      const isCancelled = !!b.cancelledAt;
+      const isExpired = b.expiresAt && new Date(b.expiresAt) < new Date();
+      
+      if (statusFilter === 'active') return !isCancelled && !isExpired;
+      if (statusFilter === 'cancelled') return isCancelled;
+      if (statusFilter === 'expired') return isExpired && !isCancelled;
+      
+      return true;
+    });
+  }, [broadcasts, searchQuery, levelFilter, statusFilter]);
+
+  // ==================== STATS ====================
+
+  const stats = useMemo(() => {
+    const total = broadcasts.length;
+    const active = broadcasts.filter(b => !b.cancelledAt && (!b.expiresAt || new Date(b.expiresAt) > new Date())).length;
+    const critical = broadcasts.filter(b => b.level === 'critical' && !b.cancelledAt).length;
+    const pending = broadcasts.filter(b => b.requireAck && !b.cancelledAt && (b.stats?.acknowledged || 0) < (b.stats?.totalTargeted || 1)).length;
+    return { total, active, critical, pending };
+  }, [broadcasts]);
+
+  // ==================== RENDER ====================
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-full bg-zinc-950">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-            <Megaphone className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-blue-500/30">
+      
+      {/* Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+        
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-blue-900/10">
+                <Megaphone className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Centro de Anuncios</h1>
+                <p className="text-sm text-zinc-400">Comunicaciones internas para tu equipo</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+              >
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+              </button>
+              
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nuevo Anuncio</span>
+              </button>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Broadcasts Internos
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Gestiona anuncios y comunicados para los agentes
-            </p>
+
+          {/* Stats Bar */}
+          <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6">
+            <StatBadge icon={Megaphone} count={stats.total} label="Total" color="text-zinc-200" bg="bg-zinc-800" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Radio} count={stats.active} label="Activos" color="text-blue-400" bg="bg-blue-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={AlertCircle} count={stats.critical} label="Críticos" color="text-red-400" bg="bg-red-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Clock} count={stats.pending} label="Sin firmar" color="text-amber-400" bg="bg-amber-500/10" />
+          </div>
+
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[280px] max-w-md group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-blue-500 transition-colors" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por título o mensaje..."
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+              />
+            </div>
+
+            {/* Level Filter */}
+            <select
+              value={levelFilter}
+              onChange={(e) => setLevelFilter(e.target.value as typeof levelFilter)}
+              className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
+            >
+              <option value="all">Todos los niveles</option>
+              <option value="info">Info</option>
+              <option value="warning">Advertencia</option>
+              <option value="critical">Crítico</option>
+            </select>
+
+            {/* Status Filter */}
+            <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+              {(['active', 'all', 'cancelled', 'expired'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    statusFilter === status
+                      ? 'bg-blue-500/20 text-blue-400'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {status === 'active' ? 'Activos' : status === 'all' ? 'Todos' : status === 'cancelled' ? 'Cancelados' : 'Expirados'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchBroadcasts}
-            disabled={loading}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title="Refrescar"
-          >
-            <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Broadcast
-          </button>
+        {/* Content Grid */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
+          {error ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+              <p className="text-lg font-medium text-red-400">{error}</p>
+              <button onClick={handleRefresh} className="mt-4 text-sm text-blue-400 hover:underline">
+                Reintentar
+              </button>
+            </div>
+          ) : filteredBroadcasts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 opacity-60">
+              <Megaphone className="w-16 h-16 mb-4 stroke-1" />
+              <p className="text-lg font-medium">No se encontraron anuncios</p>
+              <p className="text-sm mt-1">Crea uno nuevo para comunicarte con tu equipo</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredBroadcasts.map((broadcast) => (
+                <BroadcastCard
+                  key={broadcast._id}
+                  broadcast={broadcast}
+                  onViewStats={handleViewStats}
+                  onCancel={handleCancel}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2 mb-6">
-        {(['all', 'active', 'cancelled'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`
-              px-4 py-2 text-sm font-medium rounded-lg transition-colors
-              ${filter === f
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }
-            `}
-          >
-            {f === 'all' ? 'Todos' : f === 'active' ? 'Activos' : 'Cancelados'}
-          </button>
-        ))}
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
-
-      {/* Content */}
-      {loading && broadcasts.length === 0 ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
-        </div>
-      ) : filteredBroadcasts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <Megaphone className="w-16 h-16 mb-4 opacity-50" />
-          <p className="text-lg font-medium">No hay broadcasts</p>
-          <p className="text-sm mt-1">Crea uno nuevo para comunicarte con los agentes</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {filteredBroadcasts.map(broadcast => (
-            <BroadcastCard
-              key={broadcast._id}
-              broadcast={broadcast}
-              onViewStats={handleViewStats}
-              onCancel={handleCancel}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Create Modal */}
+      {/* Modals */}
       <CreateBroadcastModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreated={fetchBroadcasts}
       />
+
+      <BroadcastStatsModal
+        isOpen={showStatsModal}
+        onClose={() => { setShowStatsModal(false); setSelectedBroadcastId(null); }}
+        broadcastId={selectedBroadcastId}
+      />
     </div>
   );
-};
+}
 
-export default InternalBroadcastsPage;
+export { InternalBroadcastsPage };

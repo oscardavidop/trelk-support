@@ -143,6 +143,31 @@ export default async function internalBroadcastRoutes(fastify: FastifyInstance) 
   });
 
   /**
+   * GET /api/internal-broadcasts/:id/stats
+   * Get a specific broadcast with full stats and receipts
+   */
+  fastify.get('/:id/stats', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    try {
+      const { id } = request.params;
+
+      if (!Types.ObjectId.isValid(id)) {
+        return reply.code(400).send({ ok: false, error: 'ID inválido' });
+      }
+
+      const broadcast = await internalBroadcastService.getBroadcastStats(id);
+      
+      if (!broadcast) {
+        return reply.code(404).send({ ok: false, error: 'Broadcast no encontrado' });
+      }
+
+      return { ok: true, broadcast };
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(500).send({ ok: false, error: 'Error al obtener estadísticas' });
+    }
+  });
+
+  /**
    * GET /api/internal-broadcasts/:id
    * Get a specific broadcast with full stats
    */
