@@ -5,8 +5,8 @@
 
 // Core models
 export { Agent, type IAgent, type AgentRole, MAX_CONCURRENT_CHATS, ROLE_PERMISSIONS, ROLE_HIERARCHY } from './Agent.js';
-export { ChatSession, type IChatSession } from './ChatSession.js';
-export { Message, type IMessage } from './Message.js';
+export { ChatSession, type IChatSession, type ChannelType, type IChannelMetadata, type IWebSurvey } from './ChatSession.js';
+export { Message, type IMessage, type IMediaContent, type ChannelType as MessageChannelType } from './Message.js';
 export { User, type IUser, type UserBlockReason } from './User.js';
 export { Note, type INote } from './Note.js';
 export { Tag, type ITag } from './Tag.js';
@@ -17,6 +17,10 @@ export { Settings, type ISettings } from './Settings.js';
 export { UserBlock, type IUserBlock } from './UserBlock.js';
 export { UserTag, type IUserTag } from './UserTag.js';
 export { CustomFieldDefinition, UserCustomField, type ICustomFieldDefinition, type IUserCustomField } from './CustomField.js';
+
+// Omnichannel models
+export { WebChatProject, type IWebChatProject } from './WebChatProject.js';
+export { WebVisitor, type IWebVisitor } from './WebVisitor.js';
 
 // Enterprise models - Supervisor
 export { Whisper, type IWhisper } from './Whisper.js';

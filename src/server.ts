@@ -7,7 +7,13 @@
 import Fastify from "fastify";
 import fastifyCors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
+import path from "path";
+import { fileURLToPath } from "url";
 import { ENV, WEBHOOK_CONFIG, validateConfig } from "./config/index.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { connectDatabase, disconnectDatabase } from "./database/index.js";
 import { restorePendingPolls } from "./services/survey.service.js";
 import {
@@ -25,6 +31,8 @@ import {
   getWebhookInfo,
 } from "./services/telegram.js";
 import { initializeSocketIO } from "./services/socket.js";
+import { initializeWebChatSocket, setDashboardIO } from "./services/webchat-socket.service.js";
+import { initializeChannelManager } from "./channels/index.js";
 import { performFullReconciliation } from "./services/reconciliation.service.js";
 import { registerAPIRoutes } from "./routes/index.js";
 import { logger } from "./services/logger.js";
@@ -304,6 +312,14 @@ fastify.get("/webhook/notifications/info", async (request, reply) => {
   }
 });
 
+fastify.get("/api/widget/trelk-chat.js", async (request, reply) => {
+  const filePath = path.join(__dirname, "../widget/trelk-chat.js");
+  if (fs.existsSync(filePath)) {
+    return reply.type("application/javascript").send(fs.createReadStream("/workspaces/support/widget/trelk-chat.js"));
+  } else {
+    return reply.code(404).send("Not found");
+  }
+});
 // ============= POLLING STATUS ENDPOINT =============
 
 fastify.get("/polling/status", async (request, reply) => {
@@ -370,18 +386,6 @@ async function start(): Promise<void> {
       console.log("   ⚠️  Redis unavailable - using DB fallback");
     }
 
-    fastify.addHook("onRequest", async (request) => {
-      // console.log('ip address:', request.ip);
-      // const customIp =
-      //   request.headers["x-real-ip"] ||
-      //   request.headers["cf-connecting-ip"] ||
-      //   request.headers["x-forwarded-for"];
-      // if (customIp) {
-      //   request.ip = Array.isArray(customIp)
-      //     ? customIp[0]
-      //     : customIp.split(",")[0].trim();
-      // }
-    });
 
     // Register plugins
     await registerPlugins();
@@ -406,8 +410,17 @@ async function start(): Promise<void> {
     // Start Fastify server first
     await fastify.listen({ port: ENV.PORT, host: ENV.HOST });
 
-    // Initialize Socket.IO with Fastify's server
-    initializeSocketIO(fastify.server);
+    // Initialize Socket.IO with Fastify's server (Dashboard)
+    const dashboardIO = initializeSocketIO(fastify.server);
+
+    // Initialize WebChat Socket.IO (Widget)
+    const webChatIO = initializeWebChatSocket(fastify.server);
+    
+    // Set dashboard IO reference for webchat notifications
+    setDashboardIO(dashboardIO);
+    
+    // Initialize channel manager with socket references
+    initializeChannelManager(webChatIO);
 
     // Perform full reconciliation after crash/restart
     // This marks all agents offline and requeues their chats

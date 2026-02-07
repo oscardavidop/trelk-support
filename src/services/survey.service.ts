@@ -87,6 +87,12 @@ export async function sendPostChatSurvey(sessionId: string): Promise<{ success: 
       return { success: false, error: reason };
     }
 
+    // Only send survey for telegram sessions
+    if (!session.telegramChatId) {
+      console.log(`[Survey] Cannot send for ${sessionId}: not a telegram session`);
+      return { success: false, error: 'Not a telegram session' };
+    }
+
     // Send the poll using Telegram API
     const result = await sendPoll(
       session.telegramChatId,

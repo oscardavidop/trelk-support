@@ -80,11 +80,16 @@ import { resolveText, getTextSync, type SupportedLanguage } from './text-registr
 
 // ============= TYPES =============
 
+import type { ChannelType } from '../types/omnichannel.js';
+
 export interface TriggerEvent {
   type: TriggerType;
   sessionId: string;
-  chatId: number;
-  userId: number;
+  chatId: number; // For telegram, or 0 for web
+  externalChatId?: string; // Universal chat ID (works for all channels)
+  userId: number; // For telegram, or 0 for web
+  externalUserId?: string; // Universal user ID (visitorId for web)
+  channel: ChannelType; // The channel this event originated from
   data: Record<string, any>;
   force?: boolean; // Si es true, ejecuta el flow aunque haya un agente activo
 }
@@ -527,6 +532,11 @@ export class FlowEngine {
    */
   private matchesTriggerConfig(config: TriggerConfig, event: TriggerEvent): boolean {
     if (config.triggerType !== event.type) return false;
+
+    // === OMNICHANNEL: Check channel filter ===
+    if (config.channelFilter && config.channelFilter.length > 0) {
+      if (!config.channelFilter.includes(event.channel)) return false;
+    }
 
     switch (event.type) {
       case 'command_received':

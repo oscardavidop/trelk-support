@@ -8,7 +8,7 @@ import {
   ChevronDown, MessageSquare, Wifi, WifiOff, Loader2, Eye, Activity,
   Download, GitBranch, ChevronLeft, ChevronRight, User, Sliders, Bell,
   Shield, History, ListChecks, Server, Languages, Contact, Megaphone,
-  KeyRound, Radio
+  KeyRound, Radio, Globe
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
@@ -113,6 +113,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
         { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios internos'), permission: 'system.admin' },
         { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
         { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
+        { path: '/dashboard/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
       ]
     },
     {
@@ -293,7 +294,13 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
           >
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300 font-bold border border-zinc-700">
-                {agent?.name.charAt(0).toUpperCase()}
+                {
+                  agent?.avatar
+                    ? <img src={agent.avatar} alt="Avatar" className="w-9 h-9 rounded-full object-cover" />
+                    : agent?.name
+                      ? agent.name.charAt(0).toUpperCase()
+                      : <User className="w-5 h-5" />
+                }
               </div>
               <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-zinc-950 ${currentStatusStyle.bg}`} />
             </div>

@@ -31,6 +31,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/webchat-socket': {
+        target: 'https://localhost:8443',
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

@@ -170,7 +170,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
               )}
               
               {/* Lock Icon Badge */}
-              <div className="absolute bottom-0 right-0 p-2 bg-zinc-950 rounded-full ring-4 ring-black">
+              <div className="absolute bottom-0 right-0 p-1 bg-zinc-950 rounded-full ring-1 ring-zinc-800/50">
                 <div className={`p-1.5 rounded-full ${lockInfo.bg} ${lockInfo.color}`}>
                   <Lock className="w-4 h-4 fill-current" />
                 </div>
@@ -198,7 +198,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
         </div>
 
         {/* 2. Authentication Form */}
-        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-1 shadow-2xl ring-1 ring-white/5">
+        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl ring-1 ring-white/5">
           <form onSubmit={handleUnlock} className="p-5 space-y-4">
             
             {error && (

@@ -15,6 +15,7 @@ import { User, type IUser } from '../database/models/User.js';
 import { logger } from './logger.js';
 import FlowExecution from '../database/models/FlowExecution.js';
 import Flow from '../database/models/Flow.js';
+import type { ChannelType } from '../types/omnichannel.js';
 
 // ============= TRIGGER HELPERS =============
 
@@ -26,13 +27,17 @@ function buildTriggerEventFromUser(
   type: TriggerEvent['type'],
   user: IUser,
   chatId: number,
-  extraData: Record<string, any> = {}
+  extraData: Record<string, any> = {},
+  channel: ChannelType = 'telegram'
 ): TriggerEvent {
   return {
     type,
     sessionId: `nosession-${chatId}`, // Virtual session ID for flows without session
     chatId,
+    externalChatId: String(chatId),
     userId: user.telegramId,
+    externalUserId: String(user.telegramId),
+    channel, // Omnichannel support
     data: {
       session: {
         id: `nosession-${chatId}`,
@@ -47,6 +52,7 @@ function buildTriggerEventFromUser(
         username: user.username,
         language: user.language,
       },
+      channel, // Also include in data for condition evaluation
       ...extraData,
     },
   };
@@ -67,11 +73,17 @@ async function buildTriggerEvent(
       return null;
     }
 
+    // Determine channel from session or default to telegram
+    const channel: ChannelType = session.channel || 'telegram';
+
     return {
       type,
       sessionId: session.sessionId,
-      chatId: session.telegramChatId,
-      userId: user.telegramId,
+      chatId: session.telegramChatId || 0, // 0 for web/non-telegram sessions
+      externalChatId: session.externalChatId || String(session.telegramChatId),
+      userId: user.telegramId || 0,
+      externalUserId: String(user.telegramId || session.webVisitor),
+      channel,
       data: {
         session: {
           id: session.sessionId,
@@ -86,6 +98,7 @@ async function buildTriggerEvent(
           username: user.username,
           language: user.language,
         },
+        channel, // Also include in data for condition evaluation
         ...extraData,
       },
     };
@@ -766,9 +779,13 @@ async function handleFlowButtonWithData(
     type: 'button_clicked',
     sessionId: currentSessionId,
     chatId,
+    externalChatId: String(chatId),
     userId: user.telegramId,
+    externalUserId: String(user.telegramId),
+    channel: 'telegram', // Button clicks only come from Telegram for now
     data: {
       chatId,  // Include chatId for execution lookup fallback
+      channel: 'telegram',
       button: {
         id: btnId,
         flowId,

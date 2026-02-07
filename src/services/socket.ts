@@ -75,9 +75,14 @@ import {
 import { triggerEventMessages } from './scheduledMessage.service.js';
 import { telegramErrorHandler } from './telegram-error-handler.js';
 import { hasPermission } from './permission.service.js';
-import type { ChatCategory } from '../database/models/ChatSession.js';
+import type { ChatCategory, IChatSession } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
+
+// Helper to get telegram chat ID safely (returns 0 for non-telegram channels)
+const getTelegramChatId = (session: IChatSession | { telegramChatId?: number }): number => {
+  return session.telegramChatId ?? 0;
+};
 
 // Socket.IO event types
 export interface ServerToClientEvents {
@@ -595,7 +600,7 @@ interface MessageData {
   sender: string;
   senderAgent?: { name: string };
   content: string;
-  messageType?: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'system';
+  messageType?: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'video' | 'location' | 'contact' | 'poll' | 'system';
   mediaUrl?: string;
   fileName?: string;
   createdAt: Date;
@@ -867,7 +872,10 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
       // Clear queued timer and start regular inactivity timer
       clearQueuedTimer(sessionId);
-      await startInactivityTimer(sessionId, assignedSession.telegramChatId);
+      // Only start timer for telegram sessions (telegramChatId > 0)
+      if (assignedSession.telegramChatId) {
+        await startInactivityTimer(sessionId, assignedSession.telegramChatId);
+      }
 
       // Join session room
       socket.join(`session:${sessionId}`);
@@ -896,30 +904,31 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         messageType: 'system',
       });
 
-      // Notify user via Telegram - Show close keyboard
-      const userMessage =
-        assignedSession.user && 'language' in assignedSession.user
-          ? (assignedSession.user as { language: string }).language === 'es'
-            ? '👋 ¡Hola! Un agente del equipo de soporte ya se unió a la conversación.\n\nPuedes escribirnos con normalidad'
-            : '👋 Hi! A member of our support team has joined the conversation.\n\nYou can chat normally or close the conversation anytime using the button below 😊'
-          : '👋 Hi! A member of our support team has joined the conversation.\n\nYou can chat normally or close the conversation anytime using the button below 😊';
+      // Notify user via Telegram - Show close keyboard (only for telegram sessions)
+      if (assignedSession.telegramChatId) {
+        const userMessage =
+          assignedSession.user && 'language' in assignedSession.user
+            ? (assignedSession.user as { language: string }).language === 'es'
+              ? '👋 ¡Hola! Un agente del equipo de soporte ya se unió a la conversación.\n\nPuedes escribirnos con normalidad'
+              : '👋 Hi! A member of our support team has joined the conversation.\n\nYou can chat normally or close the conversation anytime using the button below 😊'
+            : '👋 Hi! A member of our support team has joined the conversation.\n\nYou can chat normally or close the conversation anytime using the button below 😊';
 
-      // Show ReplyKeyboard with close button - with error handling for blocked users
-      try {
-        await sendTelegramMessage(assignedSession.telegramChatId, userMessage);
-      } catch (telegramError) {
-        // Check if this is a blocking error (user blocked bot, etc.)
-        const { handled, reason } = await telegramErrorHandler.handleError(
-          telegramError as Error,
-          assignedSession.telegramChatId,
-          sessionId
-        );
+        // Show ReplyKeyboard with close button - with error handling for blocked users
+        try {
+          await sendTelegramMessage(assignedSession.telegramChatId, userMessage);
+        } catch (telegramError) {
+          // Check if this is a blocking error (user blocked bot, etc.)
+          const { handled, reason } = await telegramErrorHandler.handleError(
+            telegramError as Error,
+            assignedSession.telegramChatId,
+            sessionId
+          );
 
-        if (handled) {
-          // The telegramErrorHandler already closed the session and notified via socket
-          // Return specific error for blocked user so agent knows what happened
-          const errorMsg = reason === 'bot_blocked'
-            ? 'El usuario bloqueó el bot. El chat ha sido cerrado automáticamente.'
+          if (handled) {
+            // The telegramErrorHandler already closed the session and notified via socket
+            // Return specific error for blocked user so agent knows what happened
+            const errorMsg = reason === 'bot_blocked'
+              ? 'El usuario bloqueó el bot. El chat ha sido cerrado automáticamente.'
             : reason === 'user_deactivated'
               ? 'La cuenta del usuario fue desactivada. El chat ha sido cerrado automáticamente.'
               : 'No se puede contactar al usuario. El chat ha sido cerrado automáticamente.';
@@ -940,6 +949,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
         // Re-throw if not a blocking error
         throw telegramError;
+        }
       }
 
       await broadcastStats();
@@ -1007,7 +1017,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         ? '✅ Hemos cerrado esta conversación. ¡Gracias por escribirnos! Si necesitas algo más, aquí estaremos 😊'
         : '✅ We’ve closed this conversation. Thanks for reaching out! If you need anything else, we’ll be here 😊';
 
-      await sendTelegramMessage(session.telegramChatId, userMessage, {
+      await sendTelegramMessage(session.telegramChatId!, userMessage, {
         replyMarkup: { remove_keyboard: true },
       });
 
@@ -1016,7 +1026,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         ? '📊 ¿Nos cuentas cómo te fue? Tu experiencia nos ayuda a mejorar 💙'
         : '📊 Would you like to tell us how it went? Your experience helps us improve 💙';
 
-      await sendTelegramMessage(session.telegramChatId, surveyMessage, {
+      await sendTelegramMessage(session.telegramChatId!, surveyMessage, {
         replyMarkup: {
           inline_keyboard: [
             [
@@ -1250,14 +1260,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Send to user via Telegram FIRST to get the telegram message ID
       let telegramMessageId: number | null = null;
       try {
-        telegramMessageId = await sendMessageWithId(session.telegramChatId, content, {
+        telegramMessageId = await sendMessageWithId(session.telegramChatId!, content, {
           reply_to_message_id: telegramReplyToMessageId,
         });
       } catch (telegramError) {
         // Check if this is a blocking error (user blocked bot, etc.)
         const { handled, reason } = await telegramErrorHandler.handleError(
           telegramError as Error,
-          session.telegramChatId,
+          session.telegramChatId!,
           sessionId
         );
 
@@ -1289,7 +1299,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       });
 
       // Start/restart inactivity timer - agent sent message, waiting for user response
-      await startInactivityTimer(sessionId, session.telegramChatId);
+      if (session.telegramChatId) {
+        await startInactivityTimer(sessionId, session.telegramChatId);
+      }
 
       // Ensure this socket is in the session room
       const room = `session:${sessionId}`;
@@ -1345,11 +1357,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Send to Telegram with error handling
       let sent = false;
       try {
-        sent = await sendPhoto(session.telegramChatId, imagePath, { caption });
+        sent = await sendPhoto(session.telegramChatId!, imagePath, { caption });
       } catch (telegramError) {
         const { handled, reason } = await telegramErrorHandler.handleError(
           telegramError as Error,
-          session.telegramChatId,
+          session.telegramChatId!,
           sessionId
         );
 
@@ -1374,8 +1386,10 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         mediaUrl: url,
       });
 
-      // Start inactivity timer
-      await startInactivityTimer(sessionId, session.telegramChatId);
+      // Start inactivity timer (only for telegram sessions)
+      if (session.telegramChatId) {
+        await startInactivityTimer(sessionId, session.telegramChatId);
+      }
 
       // Ensure this socket is in the session room
       const room = `session:${sessionId}`;
@@ -1423,11 +1437,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       // Send to Telegram with error handling
       let sent = false;
       try {
-        sent = await sendDocument(session.telegramChatId, filePath, { caption, fileName: filename });
+        sent = await sendDocument(session.telegramChatId!, filePath, { caption, fileName: filename });
       } catch (telegramError) {
         const { handled, reason } = await telegramErrorHandler.handleError(
           telegramError as Error,
-          session.telegramChatId,
+          session.telegramChatId!,
           sessionId
         );
 
@@ -1452,8 +1466,10 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         mediaUrl: url,
       });
 
-      // Start inactivity timer
-      await startInactivityTimer(sessionId, session.telegramChatId);
+      // Start inactivity timer (only for telegram sessions)
+      if (session.telegramChatId) {
+        await startInactivityTimer(sessionId, session.telegramChatId);
+      }
 
       // Ensure socket is in session room before broadcasting
       const room = `session:${sessionId}`;
@@ -1501,7 +1517,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       const audioPath = getAbsolutePath(url);
 
       // Send to Telegram
-      const sent = await sendVoice(session.telegramChatId, audioPath);
+      const sent = await sendVoice(session.telegramChatId!, audioPath);
 
       if (!sent) {
         return callback({ ok: false, error: 'Failed to send voice to Telegram' });
@@ -1514,8 +1530,10 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         mediaUrl: url,
       });
 
-      // Start inactivity timer
-      await startInactivityTimer(sessionId, session.telegramChatId);
+      // Start inactivity timer (only for telegram sessions)
+      if (session.telegramChatId) {
+        await startInactivityTimer(sessionId, session.telegramChatId);
+      }
 
       // Ensure socket is in session room before broadcasting
       const room = `session:${sessionId}`;
@@ -1577,7 +1595,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (message.telegramMessageId && session?.telegramChatId) {
         try {
           await editTelegramMessage(
-            session.telegramChatId,
+            session.telegramChatId!,
             message.telegramMessageId,
             newContent
           );
@@ -1640,7 +1658,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       const session = message.session as any;
       if (message.telegramMessageId && session?.telegramChatId) {
         try {
-          await deleteTelegramMessage(session.telegramChatId, message.telegramMessageId);
+          await deleteTelegramMessage(session.telegramChatId!, message.telegramMessageId);
           logger.info('chat', { action: 'telegram_message_deleted', messageId, telegramMessageId: message.telegramMessageId });
         } catch (telegramError) {
           logger.warn('chat', {
@@ -1726,7 +1744,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (pinForUser && message && message.telegramMessageId) {
         const session = await getSessionById(sessionId);
         if (session?.telegramChatId) {
-          await pinChatMessage(session.telegramChatId, message?.telegramMessageId);
+          await pinChatMessage(session.telegramChatId!, message?.telegramMessageId);
         }
       }
       
@@ -1807,7 +1825,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     // Send typing indicator to Telegram
     const session = await getSessionById(sessionId);
     if (session?.telegramChatId) {
-      await sendChatAction(session.telegramChatId, 'typing');
+      await sendChatAction(session.telegramChatId!, 'typing');
     }
   });
 
@@ -2237,7 +2255,7 @@ function formatSessionData(session: any): SessionData {
   return {
     sessionId: session.sessionId,
     user: {
-      telegramId: session.user?.telegramId || session.telegramChatId,
+      telegramId: session.user?.telegramId || session.telegramChatId!,
       username: session.user?.username,
       firstName: session.user?.firstName || 'Unknown',
       photoFileId: session.user?.photoFileId,

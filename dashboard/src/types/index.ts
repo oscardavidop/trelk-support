@@ -1,5 +1,34 @@
 // Types for the support dashboard
 
+// ============= OMNICHANNEL TYPES =============
+export type ChannelType = 'telegram' | 'web' | 'whatsapp' | 'instagram' | 'email';
+
+export interface ChannelMetadata {
+  // Web specific - visitor info
+  visitorName?: string;
+  visitorEmail?: string;
+  visitorId?: string;
+  // Web specific - page/browser info
+  pageUrl?: string;
+  pageTitle?: string;
+  referrer?: string;
+  userAgent?: string;
+  browserName?: string;
+  os?: string;
+  device?: string;
+  screenResolution?: string;
+  ipAddress?: string;
+  geoLocation?: {
+    country?: string;
+    city?: string;
+  };
+  // Telegram specific (already have telegramChatId)
+  telegramBotId?: string;
+  // WhatsApp specific
+  whatsappPhoneNumber?: string;
+  whatsappWaId?: string;
+}
+
 export type AvailabilityStatus = 'available' | 'busy' | 'offline';
 
 // Agent roles with hierarchy: admin > supervisor > support > junior
@@ -68,6 +97,9 @@ export interface ChatSession {
   sessionId: string;
   user: User;
   telegramChatId: number;
+  externalChatId?: string; // Universal chat ID for omnichannel
+  channel: ChannelType; // Omnichannel support
+  channelMetadata?: ChannelMetadata; // Extra channel info
   status: 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
   assignedAgent?: Agent;
   closedBy?: Agent;
@@ -93,6 +125,7 @@ export interface Message {
     photoFileId?: string;
   };
   content: string;
+  channel?: ChannelType; // Omnichannel
   messageType: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'system';
   mediaUrl?: string;
   mediaType?: 'photo' | 'video' | 'audio' | 'voice' | 'document' | 'sticker' | 'animation';

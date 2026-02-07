@@ -1,9 +1,10 @@
 // Chat/Sessions store
 import { create } from 'zustand';
-import type { ChatSession, Message, DashboardStats } from '../types';
+import type { ChatSession, Message, DashboardStats, ChannelType } from '../types';
 
 type TabType = 'open' | 'all' | 'queue' | 'closed';
 type DateFilter = 'today' | 'week' | 'month' | 'all';
+type ChannelFilter = ChannelType | 'all';
 
 interface SessionCounts {
   open: number;
@@ -31,6 +32,7 @@ interface ChatState {
   activeTab: TabType;
   searchQuery: string;
   dateFilter: DateFilter;
+  channelFilter: ChannelFilter; // Omnichannel filter
   sessionCounts: SessionCounts;
   isLoadingSessions: boolean;
   currentPage: number;
@@ -63,6 +65,7 @@ interface ChatState {
   setActiveTab: (tab: TabType) => void;
   setSearchQuery: (query: string) => void;
   setDateFilter: (filter: DateFilter) => void;
+  setChannelFilter: (filter: ChannelFilter) => void;
   setSessionCounts: (counts: SessionCounts) => void;
   setLoadingSessions: (loading: boolean) => void;
   setPagination: (data: { page: number; totalPages: number; hasMore: boolean }) => void;
@@ -87,6 +90,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeTab: 'open',
   searchQuery: '',
   dateFilter: 'all',
+  channelFilter: 'all',
   sessionCounts: { open: 0, queue: 0, closed: 0, myActive: 0 },
   isLoadingSessions: false,
   currentPage: 1,
@@ -233,6 +237,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query, currentPage: 1 }),
   
   setDateFilter: (filter) => set({ dateFilter: filter, currentPage: 1 }),
+  
+  setChannelFilter: (filter) => set({ channelFilter: filter, currentPage: 1 }),
   
   setSessionCounts: (counts) => set({ sessionCounts: counts }),
   

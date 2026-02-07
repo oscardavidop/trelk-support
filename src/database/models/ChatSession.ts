@@ -1,9 +1,11 @@
 /**
  * ChatSession Model - Support chat sessions between users and bot/agents
+ * Supports Omnichannel: Telegram, Web Chat, WhatsApp, Instagram, Email
  */
 
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import { IUser } from './User.js';
+import type { IWebVisitor } from './WebVisitor.js';
 
 export type SessionStatus = 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
 export type ClosedByType = 'user' | 'agent' | 'system';
@@ -11,6 +13,30 @@ export type CloseReason = 'manual' | 'inactivity' | 'resolved' | 'spam';
 export type SatisfactionLevel = 'positive' | 'neutral' | 'negative';
 
 export type ChatCategory = 'support' | 'billing' | 'bug' | 'feedback' | 'other';
+
+// Omnichannel types
+export type ChannelType = 'telegram' | 'web' | 'whatsapp' | 'instagram' | 'email';
+
+export interface IChannelMetadata {
+  // Telegram specific
+  telegramChatId?: number;
+  telegramUsername?: string;
+  // Web specific
+  visitorId?: string;
+  projectId?: string;
+  currentPageUrl?: string;
+  browser?: string;
+  os?: string;
+  device?: string;
+  country?: string;
+  // WhatsApp specific
+  whatsappNumber?: string;
+  // Instagram specific
+  instagramUsername?: string;
+  // Email specific
+  emailAddress?: string;
+  emailSubject?: string;
+}
 
 export interface IPostChatSurveyAnswer {
   optionIndex: number;
@@ -29,10 +55,26 @@ export interface IPostChatSurvey {
   failReason?: string;
 }
 
+// Web Survey for non-Telegram channels
+export interface IWebSurvey {
+  sent: boolean;
+  sentAt?: Date;
+  answered: boolean;
+  rating?: number; // 1-5 stars
+  comment?: string;
+  answeredAt?: Date;
+}
+
 export interface IChatSession extends Document {
   sessionId: string;
-  user: IUser;
-  telegramChatId: number;
+  // Omnichannel support
+  channel: ChannelType;
+  channelMetadata?: IChannelMetadata;
+  // User can be from any channel
+  user?: IUser; // Telegram user (optional for web)
+  webVisitor?: Types.ObjectId; // Web visitor reference
+  telegramChatId?: number; // Made optional - only for Telegram
+  externalChatId?: string; // Generic external ID for any channel
   status: SessionStatus;
   assignedAgent?: Types.ObjectId;
   category?: ChatCategory;
@@ -45,8 +87,10 @@ export interface IChatSession extends Document {
   closureReason?: string; // Legacy - detailed reason text
   rating?: number;
   feedback?: string;
-  // Post-chat satisfaction survey
+  // Post-chat satisfaction survey (Telegram polls)
   postChatSurvey?: IPostChatSurvey;
+  // Web survey (ratings for web/whatsapp/etc)
+  webSurvey?: IWebSurvey;
   satisfaction?: SatisfactionLevel;
   // Reopen tracking
   reopenedAt?: Date;
@@ -55,6 +99,10 @@ export interface IChatSession extends Document {
   // First response tracking
   firstResponseAt?: Date;
   firstResponseBy?: Types.ObjectId;
+  // Last message preview
+  lastMessage?: string;
+  lastMessageAt?: Date;
+  unreadCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,16 +115,47 @@ const ChatSessionSchema = new Schema<IChatSession>(
       unique: true,
       index: true,
     },
+    // Omnichannel fields
+    channel: {
+      type: String,
+      enum: ['telegram', 'web', 'whatsapp', 'instagram', 'email'],
+      default: 'telegram',
+      index: true,
+    },
+    channelMetadata: {
+      telegramChatId: Number,
+      telegramUsername: String,
+      visitorId: String,
+      projectId: String,
+      currentPageUrl: String,
+      browser: String,
+      os: String,
+      device: String,
+      country: String,
+      whatsappNumber: String,
+      instagramUsername: String,
+      emailAddress: String,
+      emailSubject: String,
+    },
     user: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      index: true,
+    },
+    webVisitor: {
+      type: Schema.Types.ObjectId,
+      ref: 'WebVisitor',
       index: true,
     },
     telegramChatId: {
       type: Number,
-      required: true,
       index: true,
+      sparse: true, // Allow null for non-Telegram channels
+    },
+    externalChatId: {
+      type: String,
+      index: true,
+      sparse: true,
     },
     status: {
       type: String,
@@ -122,7 +201,7 @@ const ChatSessionSchema = new Schema<IChatSession>(
       max: 5,
     },
     feedback: String,
-    // Post-chat satisfaction survey
+    // Post-chat satisfaction survey (Telegram)
     postChatSurvey: {
       sent: { type: Boolean, default: false },
       pollId: String,
@@ -136,6 +215,15 @@ const ChatSessionSchema = new Schema<IChatSession>(
       },
       failed: Boolean,
       failReason: String,
+    },
+    // Web survey (for non-Telegram channels)
+    webSurvey: {
+      sent: { type: Boolean, default: false },
+      sentAt: Date,
+      answered: { type: Boolean, default: false },
+      rating: { type: Number, min: 1, max: 5 },
+      comment: String,
+      answeredAt: Date,
     },
     satisfaction: {
       type: String,
@@ -157,6 +245,13 @@ const ChatSessionSchema = new Schema<IChatSession>(
     firstResponseBy: {
       type: Schema.Types.ObjectId,
       ref: 'Agent',
+    },
+    // Last message preview (for inbox display)
+    lastMessage: String,
+    lastMessageAt: Date,
+    unreadCount: {
+      type: Number,
+      default: 0,
     },
   },
   {

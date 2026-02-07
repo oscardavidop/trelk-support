@@ -4,13 +4,22 @@ import { useAuthStore } from '../stores/authStore';
 import {
   Clock, User, CheckCircle2, MessageSquare, Search, Calendar, Archive,
   MessageCircle, X, ChevronDown, Loader2, Inbox, Users, Sparkles,
-  Bot, AlertCircle, UserX, TimerOff, ShieldAlert
+  Bot, AlertCircle, UserX, TimerOff, ShieldAlert, Globe, Send
 } from 'lucide-react';
-import type { ChatSession } from '../types';
+import type { ChatSession, ChannelType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
+
+// --- CHANNEL BADGE CONFIG ---
+const CHANNEL_CONFIG: Record<ChannelType, { icon: any, label: string, color: string, bg: string }> = {
+  telegram: { icon: Send, label: 'Telegram', color: 'text-sky-400', bg: 'bg-sky-500/10' },
+  web: { icon: Globe, label: 'Web Chat', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  whatsapp: { icon: MessageCircle, label: 'WhatsApp', color: 'text-green-400', bg: 'bg-green-500/10' },
+  instagram: { icon: MessageCircle, label: 'Instagram', color: 'text-pink-400', bg: 'bg-pink-500/10' },
+  email: { icon: MessageSquare, label: 'Email', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+};
 
 // --- CONFIGURACIÓN VISUAL ---
 const STATUS_STYLES: Record<string, { color: string, border: string, icon: any }> = {
@@ -26,12 +35,14 @@ export default function SessionList() {
   const {
     sessions, queueSessions, closedSessions, activeSession, setActiveSession,
     setSessions, setQueueSessions, setClosedSessions, activeTab, setActiveTab,
-    searchQuery, setSearchQuery, dateFilter, setDateFilter, sessionCounts, setSessionCounts,
+    searchQuery, setSearchQuery, dateFilter, setDateFilter, channelFilter, setChannelFilter,
+    sessionCounts, setSessionCounts,
     isLoadingSessions, setLoadingSessions, currentPage, hasMore, setPagination,
     moveToClosedSessions, removeFromQueue, addSession,
   } = useChatStore();
 
   const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [showChannelDropdown, setShowChannelDropdown] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
   const previousSessionIdsRef = useRef<Set<string>>(new Set());
@@ -156,14 +167,20 @@ export default function SessionList() {
   }, [moveToClosedSessions, fetchCounts, removeFromQueue, fetchSessions, setActiveTab, addSession, setClosedSessions, closedSessions]);
 
   const currentSessions = useMemo(() => {
+    let sessions: ChatSession[];
     switch (activeTab) {
-      case 'open': return mySessions;
-      case 'all': return allActiveSessions;
-      case 'queue': return queueSessions;
-      case 'closed': return closedSessions;
-      default: return [];
+      case 'open': sessions = mySessions; break;
+      case 'all': sessions = allActiveSessions; break;
+      case 'queue': sessions = queueSessions; break;
+      case 'closed': sessions = closedSessions; break;
+      default: sessions = [];
     }
-  }, [activeTab, mySessions, allActiveSessions, queueSessions, closedSessions]);
+    // Apply channel filter
+    if (channelFilter !== 'all') {
+      sessions = sessions.filter(s => (s.channel || 'telegram') === channelFilter);
+    }
+    return sessions;
+  }, [activeTab, mySessions, allActiveSessions, queueSessions, closedSessions, channelFilter]);
 
   const sortedSessions = useMemo(() => {
     return [...currentSessions].sort((a, b) => {
@@ -209,6 +226,52 @@ export default function SessionList() {
               <button onClick={() => setLocalSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-white">
                 <X className="w-3.5 h-3.5" />
               </button>
+            )}
+          </div>
+
+          {/* Channel Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowChannelDropdown(!showChannelDropdown)}
+              className={`h-full px-3 flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-medium hover:text-white hover:border-zinc-700 transition-colors ${channelFilter !== 'all' ? 'text-indigo-400 border-indigo-500/50' : 'text-zinc-400'}`}
+              title="Filtrar por canal"
+            >
+              {channelFilter !== 'all' ? (
+                (() => { const cfg = CHANNEL_CONFIG[channelFilter]; const Icon = cfg.icon; return <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />; })()
+              ) : (
+                <Globe className="w-3.5 h-3.5" />
+              )}
+              <ChevronDown className="w-3 h-3 opacity-70" />
+            </button>
+            {showChannelDropdown && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowChannelDropdown(false)} />
+                <div className="absolute right-0 top-full mt-2 w-36 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-20 py-1 overflow-hidden">
+                  <button
+                    onClick={() => { setChannelFilter('all'); setShowChannelDropdown(false); }}
+                    className={`w-full px-3 py-2 text-xs text-left flex items-center gap-2 ${channelFilter === 'all' ? 'bg-indigo-500/10 text-indigo-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>Todos</span>
+                    {channelFilter === 'all' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                  </button>
+                  {(Object.keys(CHANNEL_CONFIG) as ChannelType[]).map((ch) => {
+                    const cfg = CHANNEL_CONFIG[ch];
+                    const ChIcon = cfg.icon;
+                    return (
+                      <button
+                        key={ch}
+                        onClick={() => { setChannelFilter(ch); setShowChannelDropdown(false); }}
+                        className={`w-full px-3 py-2 text-xs text-left flex items-center gap-2 ${channelFilter === ch ? 'bg-indigo-500/10 text-indigo-400' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
+                      >
+                        <ChIcon className={`w-3.5 h-3.5 ${cfg.color}`} />
+                        <span>{cfg.label}</span>
+                        {channelFilter === ch && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 
@@ -390,6 +453,11 @@ const SessionItem = memo(({ session, isActive, isNew, currentAgentId, onClick }:
     return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
   }, [session.updatedAt, session.closedAt, isClosed]);
 
+  // Channel badge config
+  const channel: ChannelType = session.channel || 'telegram';
+  const channelConfig = CHANNEL_CONFIG[channel];
+  const ChannelIcon = channelConfig.icon;
+
   return (
     <div
       onClick={onClick}
@@ -407,6 +475,13 @@ const SessionItem = memo(({ session, isActive, isNew, currentAgentId, onClick }:
           ) : (
             <span>{session.user?.firstName?.charAt(0)?.toUpperCase() || '?'}</span>
           )}
+        </div>
+        {/* Channel indicator badge */}
+        <div 
+          className={`absolute -top-0.5 -left-0.5 w-4 h-4 rounded-full ${channelConfig.bg} flex items-center justify-center border border-zinc-950`}
+          title={channelConfig.label}
+        >
+          <ChannelIcon className={`w-2.5 h-2.5 ${channelConfig.color}`} />
         </div>
         {!isClosed && (
            <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-zinc-950 flex items-center justify-center`}>

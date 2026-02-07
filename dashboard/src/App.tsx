@@ -22,6 +22,7 @@ import ContactsPage from './pages/ContactsPage';
 import BroadcastPage from './pages/BroadcastPage';
 import InternalBroadcastsPage from './pages/BroadcastsPage';
 import PermissionsPage from './pages/PermissionsPage';
+import LiveChatPage from './pages/LiveChatPage';
 import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -168,6 +169,13 @@ export default function App() {
             <Route path="permissions" element={
               <ProtectedRoute permission="agents.permissions">
                 <PermissionsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Live Chat - requiere settings.read (supervisors and admins) */}
+            <Route path="live-chat" element={
+              <ProtectedRoute permission="settings.read">
+                <LiveChatPage />
               </ProtectedRoute>
             } />
           </Route>

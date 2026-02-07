@@ -93,8 +93,12 @@ export type ExecutionStatus = 'pending' | 'running' | 'paused' | 'completed' | '
 
 // ============= NODE CONFIGS =============
 
+import type { ChannelType } from '../../types/omnichannel.js';
+
 export interface TriggerConfig {
   triggerType: TriggerType;
+  // === OMNICHANNEL FILTER ===
+  channelFilter?: ChannelType[]; // Filter by channel (telegram, web, whatsapp, etc.) - empty means all
   // Command trigger (e.g., /start, /help)
   command?: string;  // e.g., 'start', 'help' (without /)
   commandParamMatch?: 'any' | 'exact' | 'contains' | 'regex';  // How to match deep link param

@@ -681,13 +681,13 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           <div className="relative shrink-0">
             <div className={`
         w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg overflow-hidden
-        ${session.user.isSubscriber
+        ${session?.user?.isSubscriber
                 ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px]' // Borde gradiente
                 : 'bg-zinc-800 ring-1 ring-white/10'
               }
       `}>
               <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden relative">
-                {session.user.photoFileId ? (
+                {session.user?.photoFileId ? (
                   <img
                     src={`/api/media/${session.user.photoFileId}`}
                     alt="Avatar"
@@ -695,37 +695,74 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                   />
                 ) : (
                   <span className="text-zinc-300 select-none">
-                    {session.user.firstName.charAt(0).toUpperCase()}
+                    {session.user?.firstName?.charAt(0)?.toUpperCase() || 
+                     session.channelMetadata?.visitorName?.charAt(0)?.toUpperCase() || 
+                     'V'}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Platform Indicator (Telegram) */}
-            <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
-              <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-            </div>
+            {/* Platform Indicator */}
+            {session.channel === 'web' ? (
+              <div className="absolute -bottom-0.5 -right-0.5 bg-indigo-500 rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
+                <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+              </div>
+            ) : (
+              <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
+                <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* User Info Text */}
           <div className="flex flex-col justify-center gap-0.5 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-zinc-100 truncate max-w-[150px]">
-                {session.user.firstName} {session.user.lastName || ''}
+                {session.user?.firstName 
+                  ? `${session.user.firstName} ${session.user.lastName || ''}`.trim()
+                  : session.channelMetadata?.visitorName || 'Web Visitor'}
               </h3>
-              {session.user.isSubscriber && (
+              {session.user?.isSubscriber && (
                 <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-[9px] font-bold text-indigo-300uppercase">
                   PRO
+                </span>
+              )}
+              {session.channel === 'web' && (
+                <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 text-[9px] font-bold text-indigo-300">
+                  WEB
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-2 text-xs text-zinc-500">
-              {session.user.username && <span className="truncate hover:text-zinc-300 transition-colors">@{session.user.username}</span>}
-              <span className="w-1 h-1 rounded-full bg-zinc-700" />
-              <span className="font-mono opacity-80">{session.user.language?.toUpperCase() || 'UNK'}</span>
+              {session.user?.username ? (
+                <>
+                  <span className="truncate hover:text-zinc-300 transition-colors">@{session.user.username}</span>
+                  <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                  <span className="font-mono opacity-80">{session.user.language?.toUpperCase() || 'UNK'}</span>
+                </>
+              ) : session.channel === 'web' ? (
+                <>
+                  {session.channelMetadata?.visitorEmail && (
+                    <>
+                      <span className="truncate hover:text-zinc-300 transition-colors">{session.channelMetadata.visitorEmail}</span>
+                      <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                    </>
+                  )}
+                  <span className="font-mono opacity-80 truncate max-w-[100px]" title={session.channelMetadata?.pageUrl}>
+                    {session.channelMetadata?.browserName || session.channelMetadata?.device || 'Web'}
+                  </span>
+                </>
+              ) : (
+                <span className="font-mono opacity-80">Unknown</span>
+              )}
             </div>
           </div>
         </div>
@@ -782,9 +819,12 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                 </button>
               )}
 
-              <button onClick={() => setShowBlockModal(true)} className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Bloquear">
-                <Ban className="w-4 h-4" />
-              </button>
+              {/* Block button - solo para Telegram */}
+              {session.user && (
+                <button onClick={() => setShowBlockModal(true)} className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Bloquear">
+                  <Ban className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
 
@@ -793,15 +833,17 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
           {/* GROUP 3: Utilities & Sidebar Toggle */}
           <div className="flex items-center gap-1">
-            <a
-              href={`https://t.me/${session.user.username || ''}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 text-zinc-400 hover:text-[#229ED9] hover:bg-[#229ED9]/10 rounded-lg transition-colors"
-              title="Abrir en Telegram"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
+            {session.user?.username && (
+              <a
+                href={`https://t.me/${session.user.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-zinc-400 hover:text-[#229ED9] hover:bg-[#229ED9]/10 rounded-lg transition-colors"
+                title="Abrir en Telegram"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            )}
 
             {onToggleSidebar && (
               <button
@@ -932,7 +974,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         {/* Typing Indicator */}
         {isUserTyping && (
           <div className="pt-1">
-            <TypingIndicator name={session.user.firstName} />
+            <TypingIndicator name={session.user?.firstName || session.channelMetadata?.visitorName || 'Visitante'} />
           </div>
         )}
 
@@ -998,13 +1040,15 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         currentAgentId={session.assignedAgent?._id}
       />
 
-      <BlockUserModal
-        isOpen={showBlockModal}
-        onClose={() => setShowBlockModal(false)}
-        telegramId={session.user.telegramId}
-        username={session.user.username}
-        firstName={session.user.firstName}
-      />
+      {session.user && (
+        <BlockUserModal
+          isOpen={showBlockModal}
+          onClose={() => setShowBlockModal(false)}
+          telegramId={session.user.telegramId}
+          username={session.user.username}
+          firstName={session.user.firstName}
+        />
+      )}
 
       {/* Context Menu */}
       {contextMenu && (
@@ -1215,11 +1259,15 @@ function MessageBubble({
             )
           ) : isBot ? (
             <Bot className="w-4 h-4 text-white" />
-          ) : session.user.photoFileId ? (
+          ) : session.user?.photoFileId ? (
             <img
               src={`/api/media/${session.user.photoFileId}`}
               className="w-full h-full object-cover"
             />
+          ) : session.channelMetadata?.visitorName ? (
+            <span className="text-xs font-semibold text-white">
+              {session.channelMetadata.visitorName.charAt(0).toUpperCase()}
+            </span>
           ) : (
             <User className="w-4 h-4 text-white" />
           )}

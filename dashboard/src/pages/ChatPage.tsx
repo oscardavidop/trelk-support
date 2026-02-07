@@ -117,7 +117,7 @@ export default function ChatPage() {
         {activeSession ? (
           <ChatWindow
             key={activeSession.sessionId}
-            session={activeSession}
+            session={activeSession  }
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
             targetMessageId={targetMessageId}

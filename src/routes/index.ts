@@ -34,6 +34,7 @@ import { registerMFARoutes } from './mfa.routes.js';
 import { registerTelegramLinkRoutes } from './telegram-link.routes.js';
 import internalNotificationsRoutes from './internal-notifications.routes.js';
 import internalBroadcastRoutes from './internal-broadcast.routes.js';
+import webchatRoutes from './webchat.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -159,4 +160,7 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // Internal Broadcast routes (admin announcements)
   await fastify.register(internalBroadcastRoutes, { prefix: '/api/internal-broadcasts' });
+
+  // WebChat / Omnichannel routes (widget config + project management)
+  await fastify.register(webchatRoutes, { prefix: '/api/webchat' });
 }

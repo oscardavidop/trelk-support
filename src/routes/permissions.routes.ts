@@ -148,6 +148,7 @@ export async function registerPermissionRoutes(fastify: FastifyInstance): Promis
           return {
             _id: agent._id.toString(),
             name: agent.name,
+            avatar: agent.avatar,
             email: agent.email,
             role: agent.role,
             roleId: agent.roleId?.toString(),
