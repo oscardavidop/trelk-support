@@ -59,22 +59,54 @@ export class WebChatAdapter extends BaseChannelAdapter {
       const messageId = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const visitorId = String(chatId);
 
-      // Emit message to the visitor's room
-      webChatSocketIO.to(`webchat:${visitorId}`).emit('web:message:new', {
+      // Build message payload
+      const messagePayload: Record<string, unknown> = {
         id: messageId,
         sessionId: visitorId,
         channel: 'web',
-        senderType: 'agent',
+        senderType: 'bot', // Changed from 'agent' - this is a bot message from flow
         contentType: 'text',
         content: text,
         timestamp: new Date().toISOString(),
-      });
+      };
+      
+      // Add inline keyboard (buttons) if provided
+      // Convert Telegram format to web format
+      if (options?.replyMarkup) {
+        const markup = options.replyMarkup as any;
+        
+        // Handle inline_keyboard (inline buttons with callbacks)
+        if (markup.inline_keyboard) {
+          messagePayload.inlineKeyboard = markup.inline_keyboard.map((row: any[]) => 
+            row.map((btn: any) => ({
+              text: btn.text,
+              callbackData: btn.callback_data,
+              url: btn.url,
+            }))
+          );
+        }
+        
+        // Handle reply_keyboard (quick reply buttons)
+        if (markup.keyboard) {
+          messagePayload.replyKeyboard = markup.keyboard.map((row: any[]) =>
+            row.map((btn: any) => ({
+              text: typeof btn === 'string' ? btn : btn.text,
+            }))
+          );
+          messagePayload.oneTimeKeyboard = markup.one_time_keyboard || false;
+        }
+      }
+
+      // Emit message to the visitor's room
+      webChatSocketIO.to(`webchat:${visitorId}`).emit('web:message:new', messagePayload);
 
       logger.info('channels', {
         adapter: 'webchat',
         action: 'sendMessage',
         visitorId,
         messageId,
+        hasInlineKeyboard: !!(messagePayload.inlineKeyboard),
+        hasReplyKeyboard: !!(messagePayload.replyKeyboard),
       });
 
       return { success: true, messageId };

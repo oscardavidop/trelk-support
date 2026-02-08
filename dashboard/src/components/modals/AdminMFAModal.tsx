@@ -181,7 +181,7 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
         </div>
 
         {/* Content Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">

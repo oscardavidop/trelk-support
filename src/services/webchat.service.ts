@@ -153,6 +153,13 @@ export function generateVisitorId(): string {
 }
 
 /**
+ * Get visitor by ID
+ */
+export async function getVisitorById(visitorId: string): Promise<IWebVisitor | null> {
+  return WebVisitor.findOne({ visitorId });
+}
+
+/**
  * Get or create visitor
  */
 export async function getOrCreateVisitor(
@@ -379,14 +386,17 @@ export async function getOrCreateWebSession(
       visitorId: visitor.visitorId,
       projectId,
       currentPageUrl: visitor.currentPageUrl,
+      visitorName: visitor.name,
+      visitorEmail: visitor.email,
       browser: visitor.browser,
+      browserName: visitor.browser,
       os: visitor.os,
       device: visitor.device,
       country: visitor.country,
     },
     webVisitor: visitor._id,
     externalChatId: visitor.visitorId,
-    status: 'waiting', // Web chats go directly to waiting/queue
+    status: 'bot', // Start in bot mode - flow will handle transferToHuman when needed
     priority: 'medium',
     tags: [],
     reopenCount: 0,

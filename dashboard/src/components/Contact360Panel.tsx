@@ -449,7 +449,7 @@ function FieldsManagerModal({
         </div>
 
         {/* Modal Content */}
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-6scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           {showNewForm ? (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -1125,7 +1125,7 @@ export default function Contact360Panel({
       </div>
 
       {/* --- CONTENT AREA --- */}
-      <div className="flex-1 overflow-y-auto bg-zinc-950 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent p-4">
+      <div className="flex-1 overflow-y-auto bg-zinc-950scrollbar-thumb-zinc-800 scrollbar-track-transparent p-4">
         {/* VIEW: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="space-y-6">
@@ -1342,7 +1342,7 @@ export default function Contact360Panel({
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
                   placeholder="Escribe una observación interna sobre este contacto..."
-                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all min-h-[100px] scrollbar-thin scrollbar-thumb-zinc-700 border-2"
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all min-h-[100px]scrollbar-thumb-zinc-700 border-2"
                 />
                 <div className="absolute bottom-2 right-2 flex items-center gap-2">
                   <span className="text-[10px] text-zinc-600 font-mono">

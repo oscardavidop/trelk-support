@@ -34,6 +34,7 @@ export const ENV = {
   // Server
   PORT: parseInt(process.env.PORT || '8443', 10),
   HOST: process.env.HOST || '0.0.0.0',
+  IP_HOST: process.env.IP_HOST || '127.0.0.1',
   NODE_ENV: process.env.NODE_ENV || 'development',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   
@@ -53,7 +54,7 @@ export const ENV = {
 // ============= WEBHOOK CONFIGURATION =============
 
 export const WEBHOOK_CONFIG = {
-  path: '/api/webhook/support',
+  path: '/webhook/support',
   secretHeader: 'x-telegram-bot-api-secret-token',
 } as const;
 

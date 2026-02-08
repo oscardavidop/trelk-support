@@ -57,6 +57,7 @@ import {
   buildReplyKeyboardRemove,
   buildInlineKeyboard,
 } from './telegram.js';
+import { webChatAdapter } from '../channels/webchat.adapter.js';
 import type { InlineKeyboardMarkup, ReplyKeyboardMarkup, ChatAction } from '../types/index.js';
 import { logger } from './logger.js';
 import { createScheduledMessage } from './scheduledMessage.service.js';
@@ -102,6 +103,188 @@ interface ExecutionResult {
   shouldPause?: boolean;
   pauseUntil?: Date;
   pauseFor?: string;
+}
+
+// ============= OMNICHANNEL MESSAGE ROUTING =============
+// Helper functions to route messages to the correct channel
+
+import { Message } from '../database/models/Message.js';
+
+/**
+ * Save a bot message to database for webchat
+ */
+async function saveBotMessageToDb(
+  sessionId: string,
+  content: string,
+  contentType: string = 'text',
+  mediaUrl?: string,
+  replyMarkup?: any
+): Promise<void> {
+  try {
+    const session = await ChatSession.findOne({ sessionId });
+    if (!session) return;
+
+    // Build message data
+    const messageData: Record<string, any> = {
+      session: session._id,
+      channel: 'web',
+      sender: 'bot',
+      senderName: 'Bot',
+      content,
+      messageType: contentType,
+      mediaUrl,
+      externalMessageId: `bot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      deliveryStatus: 'sent',
+    };
+    
+    // Store keyboard data if present (for message history)
+    if (replyMarkup) {
+      const markup = replyMarkup as any;
+      if (markup.inline_keyboard) {
+        messageData.inlineKeyboard = markup.inline_keyboard;
+      }
+      if (markup.keyboard) {
+        messageData.replyKeyboard = markup.keyboard;
+      }
+    }
+
+    await Message.create(messageData);
+
+    await ChatSession.updateOne(
+      { _id: session._id },
+      {
+        lastMessage: content.substring(0, 100),
+        lastMessageAt: new Date(),
+      }
+    );
+  } catch (error) {
+    logger.warn('flow', { action: 'save_bot_message_failed', sessionId, error: String(error) });
+  }
+}
+
+/**
+ * Send a text message to the appropriate channel
+ * Returns message ID for telegram, or a timestamp for webchat
+ */
+async function sendMessageToChannel(
+  ctx: ExecutionContext,
+  content: string,
+  options?: { replyMarkup?: any; parseMode?: 'Markdown' | 'MarkdownV2' | 'HTML' }
+): Promise<number | null> {
+  if (ctx.channel === 'web') {
+    // For webchat, use the webchat adapter
+    // Pass replyMarkup to adapter for button support
+    const result = await webChatAdapter.sendMessage(ctx.sessionId, content, {
+      replyMarkup: options?.replyMarkup,
+    });
+    if (result.success) {
+      // Also save to database (with keyboard data for history)
+      await saveBotMessageToDb(ctx.sessionId, content, 'text', undefined, options?.replyMarkup);
+      return Date.now(); // Return timestamp as pseudo message ID
+    }
+    return null;
+  }
+  
+  // Default: Telegram
+  return await sendMessageWithId(ctx.chatId, content, options);
+}
+
+/**
+ * Send a photo/image to the appropriate channel
+ */
+async function sendPhotoToChannel(
+  ctx: ExecutionContext,
+  url: string,
+  options?: { caption?: string; replyMarkup?: any; parseMode?: 'Markdown' | 'MarkdownV2' | 'HTML' }
+): Promise<number | null> {
+  if (ctx.channel === 'web') {
+    // For webchat, send as media
+    const result = await webChatAdapter.sendMedia(ctx.sessionId, {
+      type: 'image',
+      url,
+    }, { caption: options?.caption });
+    if (result.success) {
+      await saveBotMessageToDb(ctx.sessionId, options?.caption || '[Imagen]', 'image', url);
+      return Date.now();
+    }
+    return null;
+  }
+  
+  return await sendPhotoWithId(ctx.chatId, url, options);
+}
+
+/**
+ * Send a document to the appropriate channel
+ */
+async function sendDocumentToChannel(
+  ctx: ExecutionContext,
+  url: string,
+  options?: { caption?: string; fileName?: string; replyMarkup?: any; parseMode?: 'Markdown' | 'MarkdownV2' | 'HTML' }
+): Promise<number | null> {
+  if (ctx.channel === 'web') {
+    const result = await webChatAdapter.sendMedia(ctx.sessionId, {
+      type: 'file',
+      url,
+      fileName: options?.fileName,
+    }, { caption: options?.caption });
+    if (result.success) {
+      await saveBotMessageToDb(ctx.sessionId, options?.caption || '[Documento]', 'document', url);
+      return Date.now();
+    }
+    return null;
+  }
+  
+  return await sendDocumentWithId(ctx.chatId, url, options);
+}
+
+/**
+ * Send a video to the appropriate channel
+ */
+async function sendVideoToChannel(
+  ctx: ExecutionContext,
+  url: string,
+  options?: { caption?: string; replyMarkup?: any; parseMode?: 'Markdown' | 'MarkdownV2' | 'HTML' }
+): Promise<number | null> {
+  if (ctx.channel === 'web') {
+    const result = await webChatAdapter.sendMedia(ctx.sessionId, {
+      type: 'video',
+      url,
+    }, { caption: options?.caption });
+    if (result.success) {
+      await saveBotMessageToDb(ctx.sessionId, options?.caption || '[Video]', 'video', url);
+      return Date.now();
+    }
+    return null;
+  }
+  
+  return await sendVideoWithId(ctx.chatId, url, options);
+}
+
+/**
+ * Send audio/voice to the appropriate channel
+ */
+async function sendAudioToChannel(
+  ctx: ExecutionContext,
+  url: string,
+  isVoice: boolean,
+  options?: { replyMarkup?: any }
+): Promise<boolean> {
+  if (ctx.channel === 'web') {
+    const messageType = isVoice ? 'voice' : 'audio';
+    const result = await webChatAdapter.sendMedia(ctx.sessionId, {
+      type: messageType,
+      url,
+    });
+    if (result.success) {
+      await saveBotMessageToDb(ctx.sessionId, `[${isVoice ? 'Nota de voz' : 'Audio'}]`, messageType, url);
+    }
+    return result.success;
+  }
+  
+  if (isVoice) {
+    return await sendVoice(ctx.chatId, url, options);
+  }
+  return await sendAudio(ctx.chatId, url, options);
 }
 
 // ============= CALLBACK DATA REGISTRY =============
@@ -366,19 +549,81 @@ export class FlowEngine {
       status: { $in: ['running', 'paused'] },
     });
 
-    // Get session and user data for context
+    // Get session and user/visitor data for context
     const isNoSession = event.sessionId.startsWith('nosession-');
     const session = isNoSession ? null : await ChatSession.findOne({ sessionId: event.sessionId });
-    const user = await User.findOne({ telegramId: event.userId });
+    
+    // Handle different channels for user data
+    let userData: {
+      id: number | string;
+      firstName: string;
+      lastName?: string;
+      username?: string;
+      language: string;
+      email?: string;
+      phone?: string;
+      visitorId?: string;
+    } | null = null;
+    
+    if (event.channel === 'web') {
+      // For WebChat, get user data from the event.data.user (populated by trigger)
+      // WebVisitors don't have a User record - their data comes from the trigger event
+      if (event.data?.user) {
+        userData = {
+          id: event.externalUserId || 0,
+          firstName: event.data.user.firstName || 'Web Visitor',
+          lastName: event.data.user.lastName || '',
+          username: event.data.user.username || event.data.user.email || '',
+          language: event.data.user.language || 'es',
+          email: event.data.user.email,
+          phone: event.data.user.phone,
+          visitorId: event.data.user.visitorId || event.externalUserId,
+        };
+      } else {
+        // Fallback: create minimal user data from event
+        userData = {
+          id: event.externalUserId || 0,
+          firstName: 'Web Visitor',
+          language: 'es',
+          visitorId: event.externalUserId,
+        };
+      }
+      
+      logger.info('flow', {
+        action: 'web_user_data_resolved',
+        sessionId: event.sessionId,
+        visitorId: userData.visitorId,
+        firstName: userData.firstName,
+      });
+    } else {
+      // For Telegram/other channels, get User from database
+      const user = await User.findOne({ telegramId: event.userId });
+      if (user) {
+        userData = {
+          id: user.telegramId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          language: user.language,
+        };
+      }
+    }
 
-    // For no-session triggers, we only need the user
-    if (!user) {
-      logger.warn('flow', { action: 'missing_user', sessionId: event.sessionId, userId: event.userId });
+    // For Telegram no-session triggers, we need user data
+    // For WebChat, we always have user data from the event
+    if (!userData && event.channel !== 'web') {
+      logger.warn('flow', { action: 'missing_user', sessionId: event.sessionId, userId: event.userId, channel: event.channel });
+      return;
+    }
+    
+    // Ensure we have user data for all channels
+    if (!userData) {
+      logger.warn('flow', { action: 'missing_user_data', sessionId: event.sessionId, channel: event.channel });
       return;
     }
 
-    // For session-based triggers, we need both session and user
-    if (!isNoSession && !session) {
+    // For session-based triggers, we need session (but NOT for webchat initial triggers)
+    if (!isNoSession && !session && event.channel !== 'web') {
       logger.warn('flow', { action: 'missing_session', sessionId: event.sessionId });
       return;
     }
@@ -407,15 +652,20 @@ export class FlowEngine {
       sessionId: event.sessionId,
       chatId: event.chatId,
       userId: event.userId,
+      channel: event.channel, // Add channel for omnichannel message routing
       user: {
-        id: user.telegramId,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username,
-        language: user.language,
+        id: typeof userData.id === 'number' ? userData.id : 0,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        username: userData.username,
+        language: userData.language,
+        // Include web-specific fields
+        ...(userData.visitorId && { visitorId: userData.visitorId }),
+        ...(userData.email && { email: userData.email }),
+        ...(userData.phone && { phone: userData.phone }),
       },
       variables: {},
-      customFields: (user as any).customFields || {}, // Load custom fields from user profile
+      customFields: event.data?.user?.customFields || {}, // Load custom fields from event data
       startedAt: new Date(),
       lastActiveAt: new Date(),
     };
@@ -1077,6 +1327,43 @@ export class FlowEngine {
       }
 
       case 'assign_agent': {
+        // Handle webchat channel - session already exists
+        if (ctx.channel === 'web') {
+          // For webchat, the session already exists, just transfer to human
+          if (config.targetAgentId) {
+            await ChatSession.updateOne(
+              { sessionId: ctx.sessionId },
+              {
+                $set: {
+                  assignedAgent: new Types.ObjectId(config.targetAgentId),
+                  status: 'waiting', // Go to waiting so agent can accept
+                  escalatedAt: new Date(),
+                },
+              }
+            );
+          } else {
+            await transferToHuman(ctx.sessionId);
+          }
+
+          // Notify dashboard - for webchat, get session directly by sessionId
+          const webSession = await ChatSession.findOne({ sessionId: ctx.sessionId })
+            .populate('webVisitor')
+            .populate('assignedAgent');
+          if (webSession) {
+            await notifyNewSession(webSession);
+          }
+
+          logger.info('flow', {
+            action: 'webchat_agent_assigned',
+            sessionId: ctx.sessionId,
+            targetAgentId: config.targetAgentId || 'queue',
+            channel: 'web',
+          });
+
+          return { success: true };
+        }
+
+        // === TELEGRAM FLOW ===
         // Si es una sesión temporal (nosession-*), crear sesión real
         // Replicamos exactamente el flujo de handleHumanConfirm
 
@@ -2452,7 +2739,8 @@ export class FlowEngine {
       const legacyKeyboard = config.keyboard ? this.buildKeyboard(config.keyboard, flowId, nodeId) : undefined;
 
       if (content) {
-        const msgId = await sendMessageWithId(chatId, content, { replyMarkup: legacyKeyboard });
+        // Use omnichannel message routing
+        const msgId = await sendMessageToChannel(ctx, content, { replyMarkup: legacyKeyboard });
         if (msgId) {
           lastMessageId = msgId;
         } else {
@@ -2464,10 +2752,12 @@ export class FlowEngine {
       if (config.mediaUrl) {
         const caption = config.messageContent ? this.resolvePlaceholders(config.messageContent, ctx, config.i18nConfig) : undefined;
         if (config.messageType === 'image') {
-          const msgId = await sendPhotoWithId(chatId, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
+          // Use omnichannel message routing
+          const msgId = await sendPhotoToChannel(ctx, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
           if (msgId) lastMessageId = msgId;
         } else if (config.messageType === 'document') {
-          const msgId = await sendDocumentWithId(chatId, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
+          // Use omnichannel message routing
+          const msgId = await sendDocumentToChannel(ctx, config.mediaUrl, { caption, replyMarkup: legacyKeyboard });
           if (msgId) lastMessageId = msgId;
         }
       }
@@ -2585,6 +2875,7 @@ export class FlowEngine {
 
   /**
    * Execute a message block and return the message ID
+   * Supports omnichannel routing (Telegram, WebChat)
    */
   private async executeMessageBlockWithId(
     block: MessageBlock,
@@ -2602,6 +2893,7 @@ export class FlowEngine {
         logger.info('flow', {
           action: 'send_block_text_preparing',
           chatId,
+          channel: ctx.channel || 'telegram',
           originalContent: block.content?.substring(0, 100),
           resolvedContent: content?.substring(0, 100),
           contentLength: content?.length || 0,
@@ -2614,19 +2906,22 @@ export class FlowEngine {
           return null; // Empty text is ok - skipped
         }
         
-        // Attempt to send
+        // Attempt to send via channel router
         logger.info('flow', {
           action: 'send_block_text_sending',
           chatId,
+          channel: ctx.channel || 'telegram',
           contentPreview: content.substring(0, 50),
         });
         
-        const messageId = await sendMessageWithId(chatId, content, { replyMarkup, parseMode });
+        // Use omnichannel message routing
+        const messageId = await sendMessageToChannel(ctx, content, { replyMarkup, parseMode });
         
         if (messageId) {
           logger.info('flow', {
             action: 'send_block_text_success',
             chatId,
+            channel: ctx.channel || 'telegram',
             messageId,
           });
           return messageId;
@@ -2634,7 +2929,8 @@ export class FlowEngine {
           logger.error('flow', {
             action: 'send_block_text_failed',
             chatId,
-            reason: 'telegram_api_returned_null',
+            channel: ctx.channel || 'telegram',
+            reason: 'channel_api_returned_null',
             contentPreview: content.substring(0, 50),
           });
           return false; // API error - mark as failed
@@ -2647,9 +2943,10 @@ export class FlowEngine {
           return false;
         }
         const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx, i18nConfig) : undefined;
-        const messageId = await sendPhotoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+        // Use omnichannel message routing
+        const messageId = await sendPhotoToChannel(ctx, block.url, { caption, replyMarkup, parseMode });
         if (!messageId) {
-          logger.error('flow', { action: 'send_block_image_failed', chatId, url: block.url });
+          logger.error('flow', { action: 'send_block_image_failed', chatId, channel: ctx.channel || 'telegram', url: block.url });
           return false;
         }
         return messageId;
@@ -2661,14 +2958,15 @@ export class FlowEngine {
           return false;
         }
         const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx, i18nConfig) : undefined;
-        const messageId = await sendDocumentWithId(chatId, block.url, {
+        // Use omnichannel message routing
+        const messageId = await sendDocumentToChannel(ctx, block.url, {
           caption,
           fileName: (block as any).filename,
           replyMarkup,
           parseMode,
         });
         if (!messageId) {
-          logger.error('flow', { action: 'send_block_document_failed', chatId, url: block.url });
+          logger.error('flow', { action: 'send_block_document_failed', chatId, channel: ctx.channel || 'telegram', url: block.url });
           return false;
         }
         return messageId;
@@ -2679,21 +2977,18 @@ export class FlowEngine {
           logger.warn('flow', { action: 'send_block_audio_no_url', chatId });
           return false;
         }
-        if ((block as any).isVoiceNote) {
-          const success = await sendVoice(chatId, block.url, { replyMarkup });
-          if (!success) {
-            logger.error('flow', { action: 'send_block_voice_failed', chatId, url: block.url });
-            return false;
-          }
-          return null; // Voice doesn't return messageId but succeeded
-        } else {
-          const success = await sendAudio(chatId, block.url, { replyMarkup });
-          if (!success) {
-            logger.error('flow', { action: 'send_block_audio_failed', chatId, url: block.url });
-            return false;
-          }
-          return null; // Audio doesn't return messageId but succeeded
+        // Use omnichannel message routing
+        const success = await sendAudioToChannel(ctx, block.url, !!(block as any).isVoiceNote, { replyMarkup });
+        if (!success) {
+          logger.error('flow', { 
+            action: (block as any).isVoiceNote ? 'send_block_voice_failed' : 'send_block_audio_failed', 
+            chatId, 
+            channel: ctx.channel || 'telegram',
+            url: block.url 
+          });
+          return false;
         }
+        return null; // Audio/Voice doesn't return messageId but succeeded
       }
 
       case 'video': {
@@ -2702,9 +2997,10 @@ export class FlowEngine {
           return false;
         }
         const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx, i18nConfig) : undefined;
-        const messageId = await sendVideoWithId(chatId, block.url, { caption, replyMarkup, parseMode });
+        // Use omnichannel message routing
+        const messageId = await sendVideoToChannel(ctx, block.url, { caption, replyMarkup, parseMode });
         if (!messageId) {
-          logger.error('flow', { action: 'send_block_video_failed', chatId, url: block.url });
+          logger.error('flow', { action: 'send_block_video_failed', chatId, channel: ctx.channel || 'telegram', url: block.url });
           return false;
         }
         return messageId;
@@ -2725,6 +3021,7 @@ export class FlowEngine {
 
   /**
    * Execute a single message block
+   * Supports omnichannel routing (Telegram, WebChat)
    */
   private async executeMessageBlock(
     block: MessageBlock,
@@ -2739,39 +3036,44 @@ export class FlowEngine {
       case 'text': {
         const content = this.resolvePlaceholders(block.content || '', ctx);
         if (!content) return true; // Empty text is ok
-        return await sendMessage(chatId, content, { replyMarkup, parseMode });
+        // Use omnichannel message routing
+        const msgId = await sendMessageToChannel(ctx, content, { replyMarkup, parseMode });
+        return msgId !== null;
       }
 
       case 'image': {
         if (!block.url) return false;
         const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
-        return await sendPhoto(chatId, block.url, { caption, replyMarkup, parseMode });
+        // Use omnichannel message routing
+        const msgId = await sendPhotoToChannel(ctx, block.url, { caption, replyMarkup, parseMode });
+        return msgId !== null;
       }
 
       case 'document': {
         if (!block.url) return false;
         const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
-        return await sendDocument(chatId, block.url, {
+        // Use omnichannel message routing
+        const msgId = await sendDocumentToChannel(ctx, block.url, {
           caption,
           fileName: block.filename,
           replyMarkup,
           parseMode,
         });
+        return msgId !== null;
       }
 
       case 'audio': {
         if (!block.url) return false;
-        if (block.isVoiceNote) {
-          return await sendVoice(chatId, block.url, { replyMarkup });
-        } else {
-          return await sendAudio(chatId, block.url, { replyMarkup });
-        }
+        // Use omnichannel message routing
+        return await sendAudioToChannel(ctx, block.url, !!block.isVoiceNote, { replyMarkup });
       }
 
       case 'video': {
         if (!block.url) return false;
         const caption = block.caption ? this.resolvePlaceholders(block.caption, ctx) : undefined;
-        return await sendVideo(chatId, block.url, { caption, replyMarkup, parseMode });
+        // Use omnichannel message routing
+        const msgId = await sendVideoToChannel(ctx, block.url, { caption, replyMarkup, parseMode });
+        return msgId !== null;
       }
 
       case 'delay': {

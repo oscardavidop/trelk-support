@@ -407,7 +407,7 @@ export function SidebarTags({ userId, tags, onTagsChanged }: TagsProps) {
           </div>
 
           {/* List of Tags */}
-          <div className="max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700 p-1">
+          <div className="max-h-40 overflow-y-autoscrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700 p-1">
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />

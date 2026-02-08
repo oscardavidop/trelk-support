@@ -112,7 +112,7 @@ export const CreateBroadcastModal: React.FC<{
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-6scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           <form id="create-broadcast-form" onSubmit={handleSubmit} className="space-y-6">
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -198,7 +198,7 @@ export const NotificationCenter: React.FC = () => {
           </div>
 
           {/* List */}
-          <div className="overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+          <div className="overflow-y-auto max-h-[400px]scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             {notificationsLoading && notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />

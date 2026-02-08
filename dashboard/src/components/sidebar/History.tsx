@@ -193,7 +193,7 @@ export function SidebarHistory({ userId, totalSessions, currentSessionId }: Hist
           {/* Vertical Line */}
           <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200 dark:bg-gray-700"></div>
 
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
             
             {/* Header: Hide button when open */}
             <div className="flex justify-end mb-2">

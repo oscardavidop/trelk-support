@@ -1,11 +1,12 @@
 /**
  * Contact Info Service
  * Provides unified contact information for the sidebar
+ * Supports both Telegram users and WebChat visitors
  */
 
 import {
   User, IUser, ChatSession, IChatSession, Note, INote, Tag, UserTag,
-  CustomFieldDefinition, UserCustomField, Message
+  CustomFieldDefinition, UserCustomField, Message, WebVisitor, IWebVisitor
 } from '../database/index.js';
 import mongoose from 'mongoose';
 
@@ -14,15 +15,34 @@ import mongoose from 'mongoose';
 export interface ContactInfo {
   user: {
     id: string;
-    telegramId: number;
+    // Telegram fields
+    telegramId?: number;
     username?: string;
     firstName: string;
     lastName?: string;
-    language: string;
-    platform: 'telegram';
+    language?: string;
+    photoFileId?: string;
+    // WebChat fields
+    email?: string;
+    phone?: string;
+    visitorId?: string;
+    // Device info (webchat)
+    browser?: string;
+    browserVersion?: string;
+    os?: string;
+    osVersion?: string;
+    device?: string;
+    // Geo info (webchat)
+    country?: string;
+    city?: string;
+    // Page info (webchat)
+    currentPageUrl?: string;
+    currentPageTitle?: string;
+    referrerUrl?: string;
+    // Common fields
+    platform: 'telegram' | 'web' | 'whatsapp';
     createdAt: Date;
     lastActivity: Date;
-    photoFileId?: string;
   };
   session: {
     sessionId: string;
@@ -79,18 +99,44 @@ export interface ContactInfo {
 
 /**
  * Get complete contact info for sidebar
+ * Supports both Telegram users and WebChat visitors
  */
 export async function getContactInfo(sessionId: string): Promise<ContactInfo | null> {
   const session = await ChatSession.findOne({ sessionId })
     .populate<{ user: IUser }>('user')
+    .populate<{ webVisitor: IWebVisitor }>('webVisitor')
     .populate('assignedAgent', 'name email')
     .populate('closedBy', 'name');
 
-  if (!session || !session.user) {
+  if (!session) {
     return null;
   }
 
-  const user = session.user;
+  // Determine if this is a Telegram or WebChat session
+  const isTelegramSession = session.channel === 'telegram' && session.user;
+  const isWebChatSession = session.channel === 'web' && session.webVisitor;
+
+  if (!isTelegramSession && !isWebChatSession) {
+    return null;
+  }
+
+  // Handle Telegram session
+  if (isTelegramSession && session.user) {
+    return getTelegramContactInfo(session as any, session.user);
+  }
+
+  // Handle WebChat session
+  if (isWebChatSession && session.webVisitor) {
+    return getWebChatContactInfo(session as any, session.webVisitor);
+  }
+
+  return null;
+}
+
+/**
+ * Get contact info for Telegram user
+ */
+async function getTelegramContactInfo(session: IChatSession, user: IUser): Promise<ContactInfo> {
   const userId = user._id as mongoose.Types.ObjectId;
 
   // Get parallel data
@@ -135,7 +181,6 @@ export async function getContactInfo(sessionId: string): Promise<ContactInfo | n
     value: customFieldsMap.get(def._id?.toString()) ?? null,
   }));
 
-  // Build response
   return {
     user: {
       id: userId.toString(),
@@ -185,7 +230,92 @@ export async function getContactInfo(sessionId: string): Promise<ContactInfo | n
     },
     customFields,
     automations: {
-      active: false, // TODO: integrate with inactivity service
+      active: false,
+    },
+  };
+}
+
+/**
+ * Get contact info for WebChat visitor
+ */
+async function getWebChatContactInfo(session: IChatSession, visitor: IWebVisitor): Promise<ContactInfo> {
+  const visitorId = visitor._id as mongoose.Types.ObjectId;
+
+  // Get parallel data
+  const [
+    totalMessages,
+    totalSessions,
+    firstSession,
+  ] = await Promise.all([
+    Message.countDocuments({ session: session._id }).lean(),
+    ChatSession.countDocuments({ webVisitor: visitorId }).lean(),
+    ChatSession.findOne({ webVisitor: visitorId }).sort({ createdAt: 1 }).select('createdAt').lean(),
+  ]);
+
+  // Calculate chat duration
+  let chatDuration: number | undefined;
+  if (session.status === 'closed' && session.closedAt) {
+    chatDuration = Math.floor((session.closedAt.getTime() - session.createdAt.getTime()) / 1000);
+  } else if (session.status !== 'closed') {
+    chatDuration = Math.floor((Date.now() - session.createdAt.getTime()) / 1000);
+  }
+
+  return {
+    user: {
+      id: visitorId.toString(),
+      visitorId: visitor.visitorId,
+      firstName: visitor.name || 'Web Visitor',
+      email: visitor.email,
+      phone: visitor.phone,
+      // Device info
+      browser: visitor.browser,
+      browserVersion: visitor.browserVersion,
+      os: visitor.os,
+      osVersion: visitor.osVersion,
+      device: visitor.device,
+      // Geo info
+      country: visitor.country,
+      city: visitor.city,
+      // Page info
+      currentPageUrl: visitor.currentPageUrl,
+      currentPageTitle: visitor.currentPageTitle,
+      referrerUrl: visitor.referrerUrl,
+      // Common
+      platform: 'web',
+      createdAt: visitor.firstVisit || visitor.createdAt,
+      lastActivity: visitor.lastVisit || visitor.updatedAt,
+    },
+    session: {
+      sessionId: session.sessionId,
+      status: session.status,
+      priority: session.priority,
+      category: session.category,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      closedAt: session.closedAt,
+      closedBy: (session.closedBy as any)?.name,
+      closureReason: session.closureReason,
+      assignedAgent: session.assignedAgent ? {
+        id: (session.assignedAgent as any)._id.toString(),
+        name: (session.assignedAgent as any).name,
+      } : undefined,
+    },
+    stats: {
+      totalMessages,
+      totalSessions,
+      firstContactDate: firstSession?.createdAt || session.createdAt,
+      chatDuration,
+    },
+    // WebChat visitors don't have traditional tags/notes yet
+    // They could have custom fields from the project config
+    tags: [],
+    notes: {
+      count: 0,
+      latest: undefined,
+    },
+    customFields: [],
+    automations: {
+      active: false,
     },
   };
 }

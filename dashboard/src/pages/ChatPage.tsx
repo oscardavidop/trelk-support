@@ -124,7 +124,7 @@ export default function ChatPage() {
           />
         ) : (
           <div className="flex-1 flex items-center justify-center relative">
-            <div className="absolute inset-0 bg-[url('/assets/pattern.svg')] opacity-5" />
+            <div className="absolute inset-0 bg-[url('/assets/img/pattern.jpg')] opacity-2" />
             <EmptyState />
           </div>
         )}

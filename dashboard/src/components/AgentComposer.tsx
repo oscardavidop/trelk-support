@@ -280,9 +280,9 @@ const scrollToBottom = () => {
 
   const getPlaceholderContext = () => ({
     agentName: agent?.name || 'Agent',
-    userName: session.user.firstName,
-    userUsername: session.user.username,
-    chatId: session.user.telegramId.toString(),
+    userName: session.user?.firstName,
+    userUsername: session.user?.username,
+    chatId: session.user?.telegramId?.toString?.(),
     sessionId: session.sessionId,
   });
 
@@ -743,7 +743,7 @@ const scrollToBottom = () => {
               disabled={disabled || sendStatus === 'sending'}
               placeholder={placeholder}
               rows={1}
-              className="w-full px-4 py-3 bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600"
+              className="w-full px-4 py-3 bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none max-h-64 overflow-y-auto scrollbar-thin"
               style={{ minHeight: '56px' }}
             />
 

@@ -20,10 +20,15 @@ import {
   submitWebSurvey,
   areAgentsOnline,
   generateVisitorId,
+  getVisitorById,
 } from './webchat.service.js';
 import { assignAgent, getQueuedSessions } from './chat.service.js';
 import { getOnlineAgents } from './agent.service.js';
-import { triggerMessageReceived, triggerKeywordDetected } from './flowTriggers.service.js';
+import {
+  triggerWebMessageReceived,
+  triggerWebKeywordDetected,
+  triggerWebSessionOpened,
+} from './flowTriggers.service.js';
 import {
   checkRateLimit,
   isIPBlocked,
@@ -257,16 +262,13 @@ export function initializeWebChatSocket(httpServer: HttpServer): SocketServer {
         });
 
         // Notify dashboard about new web chat if it's a new session
-        if (dashboardIO && messages.length === 0) {
-          dashboardIO.emit('session:new', {
-            sessionId: session.sessionId,
-            channel: 'web',
-            status: session.status,
-            visitorId,
-            visitorName: visitor.name || 'Web Visitor',
-            pageUrl: visitor.currentPageUrl,
-            createdAt: session.createdAt,
-          });
+        // Note: Don't emit session:new here - let the flow handle it
+        // The session will appear in dashboard when user requests human help (transferToHuman)
+        if (messages.length === 0) {
+          // Trigger flow for new chat (welcome message, etc.)
+          // The flow's transferToHuman action will emit session:new when appropriate
+          // Use WebVisitor-specific trigger instead of session-based trigger
+          triggerWebSessionOpened(visitor, session.sessionId);
         }
 
         logger.info('webchat-socket', {
@@ -401,8 +403,8 @@ export function initializeWebChatSocket(httpServer: HttpServer): SocketServer {
         if (dashboardIO) {
           dashboardIO.emit('message:new', {
             _id: message._id.toString(),
-            sessionId: connectionInfo.sessionId,
-            session: message.session,
+            session: connectionInfo.sessionId, // Use sessionId (UUID) for matching
+            sessionId: connectionInfo.sessionId, // Also include as sessionId for compatibility
             channel: 'web',
             sender: 'user',
             content: data.content,
@@ -412,19 +414,21 @@ export function initializeWebChatSocket(httpServer: HttpServer): SocketServer {
           });
         }
 
-        // Trigger flow engine
-        const session = await getSessionByVisitorId(visitorId);
-        if (session) {
-          // Fire message received trigger - pass full session and message object
-          triggerMessageReceived(session, {
+        // Trigger flow engine - use WebVisitor-specific triggers
+        // This is the CRITICAL part: WebChat messages must enter the same flow pipeline as Telegram
+        const visitor = await getVisitorById(visitorId);
+        if (visitor) {
+          // Fire message received trigger - this is the same pipeline Telegram uses
+          await triggerWebMessageReceived(visitor, connectionInfo.sessionId, {
             content: data.content,
-            messageType: 'text',
+            messageType: data.contentType || 'text',
+            messageId: message._id.toString(),
           });
 
-          // Check for keywords
-          triggerKeywordDetected(session, {
+          // Check for keywords - same as Telegram's triggerKeywordDetectedNoSession
+          await triggerWebKeywordDetected(visitor, connectionInfo.sessionId, {
             content: data.content,
-            messageType: 'text',
+            messageType: data.contentType || 'text',
           });
         }
 
@@ -443,6 +447,54 @@ export function initializeWebChatSocket(httpServer: HttpServer): SocketServer {
         socket.emit('web:error', {
           code: 'MESSAGE_ERROR',
           message: 'Failed to process message',
+        });
+      }
+    });
+
+    // Handle button click from flow inline keyboard
+    socket.on('web:button:click', async (data: { callbackData: string }) => {
+      try {
+        // Find visitor info
+        let visitorId: string | undefined;
+        let sessionInfo: { socketId: string; projectId: string; sessionId?: string; connectedAt: Date } | undefined;
+        
+        for (const [vid, info] of connectedVisitors.entries()) {
+          if (info.socketId === socket.id) {
+            visitorId = vid;
+            sessionInfo = info;
+            break;
+          }
+        }
+
+        if (!visitorId || !sessionInfo?.sessionId) {
+          socket.emit('web:error', {
+            code: 'NOT_CONNECTED',
+            message: 'Visitor not connected or no session',
+          });
+          return;
+        }
+
+        logger.info('webchat-socket', {
+          action: 'button_click',
+          visitorId,
+          sessionId: sessionInfo.sessionId,
+          callbackData: data.callbackData,
+        });
+
+        // Import flow triggers callback handler
+        const { handleWebChatCallback } = await import('./flowTriggers.service.js');
+        
+        // Process the callback (this will execute the flow action)
+        await handleWebChatCallback(sessionInfo.sessionId, visitorId, data.callbackData);
+
+      } catch (error) {
+        logger.error('webchat-socket', {
+          action: 'button_click_error',
+          error: String(error),
+        });
+        socket.emit('web:error', {
+          code: 'CALLBACK_ERROR',
+          message: 'Failed to process button click',
         });
       }
     });
@@ -522,6 +574,83 @@ export function initializeWebChatSocket(httpServer: HttpServer): SocketServer {
           }
           break;
         }
+      }
+    });
+
+    // Handle user ending the chat
+    socket.on('web:chat:end', async (data: { sessionId?: string }) => {
+      // Find visitor info
+      let visitorId: string | undefined;
+      let sessionId: string | undefined;
+      
+      for (const [vid, info] of connectedVisitors.entries()) {
+        if (info.socketId === socket.id) {
+          visitorId = vid;
+          sessionId = info.sessionId;
+          break;
+        }
+      }
+
+      if (!sessionId) {
+        socket.emit('web:error', {
+          code: 'NO_SESSION',
+          message: 'No active session',
+        });
+        return;
+      }
+
+      try {
+        // Import closeSessionDetailed from chat.service
+        const { closeSessionDetailed } = await import('./chat.service.js');
+        const { triggerChatClosed } = await import('./flowTriggers.service.js');
+        
+        // Close the session
+        const closedSession = await closeSessionDetailed(
+          sessionId,
+          'user', // closedByType
+          'manual', // closeReason
+          undefined, // agentId (user closed it)
+          'El visitante finalizó el chat'
+        );
+
+        if (closedSession) {
+          // Trigger flow: chat closed
+          await triggerChatClosed(closedSession, 'user', 'El visitante finalizó el chat');
+
+          // Send survey to visitor
+          socket.emit('web:survey:request', {
+            surveyId: `survey_${Date.now()}`,
+            question: '¿Cómo calificarías tu experiencia?',
+            type: 'rating',
+            allowComment: true,
+          });
+
+          // Notify dashboard
+          if (dashboardIO) {
+            dashboardIO.emit('session:closed', sessionId);
+            dashboardIO.emit('chat:closed', {
+              sessionId,
+              reason: 'El visitante finalizó el chat',
+              closedBy: 'user',
+              closedAt: new Date().toISOString(),
+            });
+          }
+
+          logger.info('webchat-socket', {
+            action: 'chat_ended_by_visitor',
+            visitorId,
+            sessionId,
+          });
+        }
+      } catch (error) {
+        logger.error('webchat-socket', {
+          action: 'chat_end_error',
+          error: String(error),
+        });
+        socket.emit('web:error', {
+          code: 'CLOSE_ERROR',
+          message: 'Failed to close chat',
+        });
       }
     });
 

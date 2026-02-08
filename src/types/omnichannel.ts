@@ -241,6 +241,7 @@ export interface SendMessageOptions {
   parseMode?: 'HTML' | 'Markdown' | 'text';
   replyToMessageId?: string | number;
   keyboard?: any;
+  replyMarkup?: any; // Telegram-style keyboard format
   disablePreview?: boolean;
 }
 

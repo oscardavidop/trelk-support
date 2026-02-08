@@ -98,4 +98,5 @@ export {
   deleteTOTPSecret,
   hasTOTPEnabled,
 } from './models/TOTPSecret.js';
+export { WebVisitor, type IWebVisitor } from './models/WebVisitor.js';
 export { connectDatabase, disconnectDatabase } from './connection.js';

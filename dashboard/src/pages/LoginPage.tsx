@@ -645,7 +645,7 @@ export default function LoginPage() {
             </button>
 
             {/* Scrollable Content */}
-            <div className="overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+            <div className="overflow-y-auto p-6scrollbar-thumb-zinc-800 scrollbar-track-transparent">
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">

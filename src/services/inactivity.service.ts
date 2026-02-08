@@ -19,6 +19,7 @@ import {
   removeJob,
   QUEUE_NAMES,
 } from './queue.js';
+import { webChatAdapter } from '../channels/webchat.adapter.js';
 
 // ============= FALLBACK IN-MEMORY TIMERS =============
 // Used only when Redis is not available
@@ -290,9 +291,17 @@ async function sendWarningFallback(
   const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.\n\n⚠️ This chat will close automatically in ${remainingMinutes} minutes due to inactivity.`;
 
   try {
-    await sendTelegramMessage(telegramChatId, warningMessage);
+    const channel = session.channel || 'telegram';
+    
+    if (channel === 'web') {
+      const visitorId = session.channelMetadata?.visitorId || sessionId;
+      await webChatAdapter.sendMessage(visitorId, warningMessage);
+    } else {
+      await sendTelegramMessage(telegramChatId, warningMessage);
+    }
+    
     emitChatWarning(sessionId, remainingMinutes);
-    logger.info('inactivity', { action: 'warning_sent', sessionId, remainingMinutes });
+    logger.info('inactivity', { action: 'warning_sent', sessionId, remainingMinutes, channel });
   } catch (error) {
     logger.error('inactivity', { action: 'warning_failed', sessionId, error });
   }
@@ -323,14 +332,22 @@ async function autoCloseSessionFallback(
     
     const closeMessage = `✅ El chat ha sido cerrado por inactividad. Gracias por contactar con Trelk Support.`;
     
-    await sendTelegramMessage(telegramChatId, closeMessage, {
-      replyMarkup: { remove_keyboard: true },
-    });
+    const channel = session.channel || 'telegram';
+    
+    if (channel === 'web') {
+      const visitorId = session.channelMetadata?.visitorId || sessionId;
+      await webChatAdapter.sendMessage(visitorId, closeMessage);
+      await webChatAdapter.closeChat(visitorId, closeMessage);
+    } else {
+      await sendTelegramMessage(telegramChatId, closeMessage, {
+        replyMarkup: { remove_keyboard: true },
+      });
+    }
     
     emitChatClosed(sessionId, 'Closed due to inactivity', 'inactivity');
     fallbackTimers.delete(sessionId);
     
-    logger.info('inactivity', { action: 'auto_closed', sessionId });
+    logger.info('inactivity', { action: 'auto_closed', sessionId, channel });
   } catch (error) {
     logger.error('inactivity', { action: 'auto_close_failed', sessionId, error });
   }
@@ -357,14 +374,22 @@ async function autoCloseQueuedSessionFallback(
     
     const closeMessage = `✅ El chat ha sido cerrado automáticamente por inactividad.\n\n✅ Chat closed automatically due to inactivity.\n\nSi necesitas ayuda, inicia una nueva conversación.`;
     
-    await sendTelegramMessage(telegramChatId, closeMessage, {
-      replyMarkup: { remove_keyboard: true },
-    });
+    const channel = session.channel || 'telegram';
+    
+    if (channel === 'web') {
+      const visitorId = session.channelMetadata?.visitorId || sessionId;
+      await webChatAdapter.sendMessage(visitorId, closeMessage);
+      await webChatAdapter.closeChat(visitorId, closeMessage);
+    } else {
+      await sendTelegramMessage(telegramChatId, closeMessage, {
+        replyMarkup: { remove_keyboard: true },
+      });
+    }
     
     emitChatClosed(sessionId, 'Closed due to inactivity in queue', 'inactivity');
     fallbackQueuedTimers.delete(sessionId);
     
-    logger.info('inactivity', { action: 'queued_auto_closed', sessionId });
+    logger.info('inactivity', { action: 'queued_auto_closed', sessionId, channel });
   } catch (error) {
     logger.error('inactivity', { action: 'queued_auto_close_failed', sessionId, error });
   }

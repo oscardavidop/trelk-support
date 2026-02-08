@@ -78,6 +78,8 @@ import { hasPermission } from './permission.service.js';
 import type { ChatCategory, IChatSession } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
+import { webChatAdapter } from '../channels/webchat.adapter.js';
+import { addAgentWebMessage } from './webchat.service.js';
 
 // Helper to get telegram chat ID safely (returns 0 for non-telegram channels)
 const getTelegramChatId = (session: IChatSession | { telegramChatId?: number }): number => {
@@ -1009,6 +1011,24 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         },
       });
 
+      // Handle closing based on channel type
+      if (session.channel === 'web') {
+        // ========== WEBCHAT CHANNEL ==========
+        const visitorId = session.externalChatId || session.channelMetadata?.visitorId;
+        
+        if (visitorId) {
+          // Close chat in widget (sends close event + shows survey)
+          await webChatAdapter.closeChat(visitorId, '✅ El chat ha sido cerrado. ¡Gracias por contactarnos!');
+          
+          // Send survey to visitor
+          await webChatAdapter.sendSurvey(visitorId, {
+            question: '¿Cómo calificarías tu experiencia?',
+            type: 'rating',
+            allowComment: true,
+          });
+        }
+      } else {
+        // ========== TELEGRAM CHANNEL ==========
       // Notify user via Telegram - remove keyboard
       const lang = session.user && 'language' in session.user
         ? (session.user as unknown as { language: string }).language
@@ -1063,6 +1083,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
           sessionId: nextSession.sessionId,
           agentId
         });
+      }
       }
 
       callback({ ok: true });
@@ -1257,39 +1278,74 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         }
       }
 
-      // Send to user via Telegram FIRST to get the telegram message ID
-      let telegramMessageId: number | null = null;
-      try {
-        telegramMessageId = await sendMessageWithId(session.telegramChatId!, content, {
-          reply_to_message_id: telegramReplyToMessageId,
-        });
-      } catch (telegramError) {
-        // Check if this is a blocking error (user blocked bot, etc.)
-        const { handled, reason } = await telegramErrorHandler.handleError(
-          telegramError as Error,
-          session.telegramChatId!,
-          sessionId
-        );
+      let message;
 
-        if (handled) {
-          // Return specific error for blocked user
-          return callback({
-            ok: false,
-            error: `No se puede enviar el mensaje: ${reason === 'bot_blocked' ? 'El usuario bloqueó el bot' : 'Usuario no disponible'}`,
-            data: { code: 'USER_BLOCKED', reason },
-          });
+      // Handle based on channel type
+      if (session.channel === 'web') {
+        // ========== WEBCHAT CHANNEL ==========
+        // Get visitor ID from session metadata or externalChatId
+        const visitorId = session.externalChatId || session.channelMetadata?.visitorId;
+        
+        if (!visitorId) {
+          return callback({ ok: false, error: 'No visitor ID found for this session' });
         }
 
-        // Re-throw if not a blocking error
-        throw telegramError;
-      }
+        // Send to visitor via WebChat adapter (Socket.IO)
+        const result = await webChatAdapter.sendMessage(visitorId, content);
+        if (!result.success) {
+          return callback({ ok: false, error: result.error || 'Failed to send message to visitor' });
+        }
 
-      // Save message to DB with telegram message ID (needed for edit/delete)
-      const message = await addMessage(sessionId, 'agent', content, {
-        senderAgentId: agentId,
-        replyToMessageId,
-        telegramMessageId: telegramMessageId || undefined,
-      });
+        // Save message to DB
+        message = await addAgentWebMessage(sessionId, agentId, agent?.name || 'Agent', content);
+        if (!message) {
+          return callback({ ok: false, error: 'Failed to save message to database' });
+        }
+        
+        // Start inactivity timer for webchat - use 0 as chatId since we identify by sessionId/visitorId
+        await startInactivityTimer(sessionId, 0);
+
+      } else {
+        // ========== TELEGRAM CHANNEL (default) ==========
+        // Send to user via Telegram FIRST to get the telegram message ID
+        let telegramMessageId: number | null = null;
+        try {
+          telegramMessageId = await sendMessageWithId(session.telegramChatId!, content, {
+            reply_to_message_id: telegramReplyToMessageId,
+          });
+        } catch (telegramError) {
+          // Check if this is a blocking error (user blocked bot, etc.)
+          const { handled, reason } = await telegramErrorHandler.handleError(
+            telegramError as Error,
+            session.telegramChatId!,
+            sessionId
+          );
+
+          if (handled) {
+            // Return specific error for blocked user
+            return callback({
+              ok: false,
+              error: `No se puede enviar el mensaje: ${reason === 'bot_blocked' ? 'El usuario bloqueó el bot' : 'Usuario no disponible'}`,
+              data: { code: 'USER_BLOCKED', reason },
+            });
+          }
+
+          // Re-throw if not a blocking error
+          throw telegramError;
+        }
+
+        // Save message to DB with telegram message ID (needed for edit/delete)
+        message = await addMessage(sessionId, 'agent', content, {
+          senderAgentId: agentId,
+          replyToMessageId,
+          telegramMessageId: telegramMessageId || undefined,
+        });
+
+        // Start/restart inactivity timer - agent sent message, waiting for user response
+        if (session.telegramChatId) {
+          await startInactivityTimer(sessionId, session.telegramChatId);
+        }
+      }
 
       // Trigger flow: agent message sent
       await triggerAgentMessageSent(session, {
@@ -1297,11 +1353,6 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         agentId,
         agentName: agent?.name || 'Agent',
       });
-
-      // Start/restart inactivity timer - agent sent message, waiting for user response
-      if (session.telegramChatId) {
-        await startInactivityTimer(sessionId, session.telegramChatId);
-      }
 
       // Ensure this socket is in the session room
       const room = `session:${sessionId}`;

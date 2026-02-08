@@ -110,7 +110,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       section: t('sidebar.sections.operations'),
       items: [
         { path: '/dashboard/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
-        { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios internos'), permission: 'system.admin' },
+        { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios'), permission: 'system.admin' },
         { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
         { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
         { path: '/dashboard/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
@@ -228,7 +228,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
       {/* 3. Navigation */}
       {/* only show scrollbar on hover */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-hover custom-scrollbar">
+      <nav className="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-hover">
         {navItems.map((group, groupIdx) => {
           const visibleItems = group.items.filter(item => item.permission === null || can(item.permission));
           if (visibleItems.length === 0) return null;

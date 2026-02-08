@@ -1,6 +1,8 @@
 /**
  * LiveChatPage - WebChat Projects Management
  * Configure and manage live chat widgets for websites
+ * 
+ * Diseño consistente con SavedRepliesPage, BroadcastsPage, PermissionsPage
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -17,24 +19,20 @@ import {
   Code,
   Shield,
   Eye,
-  EyeOff,
   Loader2,
   AlertCircle,
   CheckCircle,
   X,
-  ChevronRight,
   Palette,
-  Bell,
   Users,
   Clock,
-  ExternalLink,
   Key,
   Power,
   PowerOff,
   MoreVertical,
-  Edit,
   ShieldAlert,
   Ban,
+  Zap,
 } from 'lucide-react';
 import {
   listWebChatProjects,
@@ -51,10 +49,9 @@ import {
   type WebChatProject,
   type WebChatProjectConfig,
   type SecurityEvent,
-  type CreateProjectData,
 } from '../services/webchat.service';
 
-// ============= PROJECT FORM =============
+// ============= TYPES =============
 
 interface ProjectFormData {
   name: string;
@@ -70,6 +67,30 @@ const initialFormData: ProjectFormData = {
   config: { ...DEFAULT_PROJECT_CONFIG },
 };
 
+// ============= STAT BADGE =============
+
+function StatBadge({ icon: Icon, count, label, color, bg }: { 
+  icon: React.ElementType; 
+  count: number | string; 
+  label: string; 
+  color: string; 
+  bg: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <div className={`p-1.5 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <div className="flex flex-col leading-none">
+        <span className={`font-bold text-lg ${color}`}>{typeof count === 'number' ? count.toLocaleString() : count}</span>
+        <span className="text-[10px] font-bold text-zinc-500 uppercase">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ============= MAIN COMPONENT =============
+
 export default function LiveChatPage() {
   const { agent } = useAuthStore();
   const isAdmin = agent?.role === 'admin';
@@ -78,6 +99,7 @@ export default function LiveChatPage() {
   const [projects, setProjects] = useState<WebChatProject[]>([]);
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // UI states
@@ -124,6 +146,15 @@ export default function LiveChatPage() {
       loadSecurityEvents();
     }
   }, [loadProjects, loadSecurityEvents, isAdmin]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadProjects();
+    if (isAdmin) {
+      await loadSecurityEvents();
+    }
+    setIsRefreshing(false);
+  };
 
   // ============= HANDLERS =============
 
@@ -270,167 +301,218 @@ export default function LiveChatPage() {
     }
   };
 
+  // Stats calculation
+  const stats = {
+    totalProjects: projects.length,
+    onlineProjects: projects.filter(p => p.isOnline && p.currentlyOnline).length,
+    totalAgentsOnline: projects.reduce((sum, p) => sum + (p.onlineAgentCount || 0), 0),
+    securityEventsCount: securityEvents.length,
+  };
+
   // ============= RENDER =============
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      <div className="flex-1 flex items-center justify-center h-full bg-zinc-950">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <MessageCircle className="w-7 h-7 text-indigo-600" />
-            Live Chat
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Configura widgets de chat para tus sitios web
-          </p>
-        </div>
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-blue-500/30">
+      
+      {/* Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-        {isAdmin && (
-          <button
-            onClick={() => {
-              setFormData(initialFormData);
-              setShowCreateModal(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Nuevo Proyecto
-          </button>
-        )}
-      </div>
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+        
+        {/* Header Section */}
+        <div className="px-8 py-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-blue-900/10">
+                <MessageCircle className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Live Chat</h1>
+                <p className="text-sm text-zinc-400">Configura widgets de chat para tus sitios web</p>
+              </div>
+            </div>
 
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600" />
-          <span className="text-red-700 dark:text-red-400">{error}</span>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex gap-6">
-          <button
-            onClick={() => setActiveTab('projects')}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'projects'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Globe className="w-4 h-4 inline mr-2" />
-            Proyectos ({projects.length})
-          </button>
-          {isAdmin && (
-            <button
-              onClick={() => {
-                setActiveTab('security');
-                loadSecurityEvents();
-              }}
-              className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'security'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Shield className="w-4 h-4 inline mr-2" />
-              Seguridad
-            </button>
-          )}
-        </nav>
-      </div>
-
-      {/* Projects Tab */}
-      {activeTab === 'projects' && (
-        <div className="grid gap-6">
-          {projects.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-              <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No hay proyectos
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Crea tu primer proyecto de Live Chat para tu sitio web
-              </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+              >
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+              </button>
+              
               {isAdmin && (
                 <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  onClick={() => {
+                    setFormData(initialFormData);
+                    setShowCreateModal(true);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Plus className="w-5 h-5" />
-                  Crear Proyecto
+                  <span>Nuevo Proyecto</span>
                 </button>
               )}
             </div>
-          ) : (
-            projects.map((project) => (
-              <ProjectCard
-                key={project.projectId}
-                project={project}
-                isAdmin={isAdmin}
-                copiedField={copiedField}
-                onCopy={handleCopy}
-                onToggleStatus={handleToggleStatus}
-                onShowEmbed={handleShowEmbed}
-                onEditConfig={handleEditConfig}
-                onRegenerateKey={handleRegenerateKey}
-                onDelete={(p) => {
-                  setSelectedProject(p);
-                  setShowDeleteModal(true);
-                }}
-              />
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Security Tab */}
-      {activeTab === 'security' && isAdmin && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-500" />
-                Eventos de Seguridad
-              </h3>
-              <button
-                onClick={loadSecurityEvents}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <RefreshCw className="w-5 h-5" />
-              </button>
-            </div>
           </div>
 
-          <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
-            {securityEvents.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No hay eventos de seguridad recientes</p>
-              </div>
-            ) : (
-              securityEvents.map((event, idx) => (
-                <SecurityEventRow
-                  key={idx}
-                  event={event}
-                  onBlockIP={handleBlockIP}
-                  onUnblockVisitor={handleUnblockVisitor}
-                />
-              ))
+          {/* Stats Bar */}
+          <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6">
+            <StatBadge icon={Globe} count={stats.totalProjects} label="Proyectos" color="text-zinc-200" bg="bg-zinc-800" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Zap} count={stats.onlineProjects} label="Online" color="text-emerald-400" bg="bg-emerald-500/10" />
+            <div className="h-4 w-px bg-white/10" />
+            <StatBadge icon={Users} count={stats.totalAgentsOnline} label="Agentes" color="text-blue-400" bg="bg-blue-500/10" />
+            {isAdmin && (
+              <>
+                <div className="h-4 w-px bg-white/10" />
+                <StatBadge icon={ShieldAlert} count={stats.securityEventsCount} label="Eventos" color="text-amber-400" bg="bg-amber-500/10" />
+              </>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <span className="text-red-400">{error}</span>
+              <button onClick={() => setError(null)} className="ml-auto p-1 hover:bg-red-500/20 rounded-lg">
+                <X className="w-4 h-4 text-red-400" />
+              </button>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="flex items-center gap-2 p-1 bg-zinc-900/60 backdrop-blur-md border border-zinc-800 rounded-xl w-fit">
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'projects'
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              Proyectos ({projects.length})
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setActiveTab('security');
+                  loadSecurityEvents();
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === 'security'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                Seguridad
+              </button>
             )}
           </div>
         </div>
-      )}
 
-      {/* Create Project Modal */}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
+          
+          {/* Projects Tab */}
+          {activeTab === 'projects' && (
+            <>
+              {projects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
+                  <div className="p-4 bg-zinc-900 rounded-2xl border border-zinc-800 mb-4">
+                    <MessageCircle className="w-12 h-12 stroke-1" />
+                  </div>
+                  <p className="text-lg font-medium text-zinc-300 mb-2">No hay proyectos</p>
+                  <p className="text-zinc-500 mb-6">Crea tu primer proyecto de Live Chat para tu sitio web</p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Crear Proyecto
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  {projects.map((project) => (
+                    <ProjectCard
+                      key={project.projectId}
+                      project={project}
+                      isAdmin={isAdmin}
+                      copiedField={copiedField}
+                      onCopy={handleCopy}
+                      onToggleStatus={handleToggleStatus}
+                      onShowEmbed={handleShowEmbed}
+                      onEditConfig={handleEditConfig}
+                      onRegenerateKey={handleRegenerateKey}
+                      onDelete={(p) => {
+                        setSelectedProject(p);
+                        setShowDeleteModal(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && isAdmin && (
+            <div className="bg-zinc-900/60 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                    <ShieldAlert className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-zinc-100">Eventos de Seguridad</h3>
+                    <p className="text-xs text-zinc-500">Últimos 100 eventos registrados</p>
+                  </div>
+                </div>
+                <button
+                  onClick={loadSecurityEvents}
+                  className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="divide-y divide-zinc-800/50 max-h-[600px] overflow-y-auto custom-scrollbar">
+                {securityEvents.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <Shield className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
+                    <p className="text-zinc-500">No hay eventos de seguridad recientes</p>
+                  </div>
+                ) : (
+                  securityEvents.map((event, idx) => (
+                    <SecurityEventRow
+                      key={idx}
+                      event={event}
+                      onBlockIP={handleBlockIP}
+                      onUnblockVisitor={handleUnblockVisitor}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
       {showCreateModal && (
         <Modal
           title="Nuevo Proyecto de Live Chat"
@@ -447,7 +529,6 @@ export default function LiveChatPage() {
         </Modal>
       )}
 
-      {/* Edit Config Modal */}
       {showConfigModal && selectedProject && (
         <Modal
           title={`Configurar: ${selectedProject.name}`}
@@ -471,7 +552,6 @@ export default function LiveChatPage() {
         </Modal>
       )}
 
-      {/* Embed Code Modal */}
       {showEmbedModal && selectedProject && (
         <Modal
           title="Código de Instalación"
@@ -481,36 +561,35 @@ export default function LiveChatPage() {
           }}
         >
           <div className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-400">
-              Copia este código y pégalo antes del cierre del tag <code>&lt;/body&gt;</code> en tu sitio web.
+            <p className="text-zinc-400">
+              Copia este código y pégalo antes del cierre del tag <code className="px-1.5 py-0.5 bg-zinc-800 rounded text-emerald-400">&lt;/body&gt;</code> en tu sitio web.
             </p>
 
-            <div className="relative">
-              <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-x-auto">
+            <div className="relative group">
+              <pre className="bg-zinc-950 border border-zinc-800 text-emerald-400 p-4 rounded-xl text-sm overflow-x-auto font-mono">
                 {embedCode}
               </pre>
               <button
                 onClick={() => handleCopy(embedCode, 'embed')}
-                className="absolute top-2 right-2 p-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
+                className="absolute top-3 right-3 p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
               >
                 {copiedField === 'embed' ? (
-                  <Check className="w-4 h-4 text-green-400" />
+                  <Check className="w-4 h-4 text-emerald-400" />
                 ) : (
-                  <Copy className="w-4 h-4 text-gray-300" />
+                  <Copy className="w-4 h-4 text-zinc-400" />
                 )}
               </button>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-amber-800 dark:text-amber-200 text-sm">
-                <strong>Importante:</strong> El widget solo funcionará en los dominios autorizados configurados en el proyecto.
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <p className="text-amber-200 text-sm">
+                <strong className="text-amber-400">Importante:</strong> El widget solo funcionará en los dominios autorizados configurados en el proyecto.
               </p>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedProject && (
         <Modal
           title="Eliminar Proyecto"
@@ -520,23 +599,25 @@ export default function LiveChatPage() {
           }}
         >
           <div className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-400">
-              ¿Estás seguro de que deseas eliminar el proyecto <strong>{selectedProject.name}</strong>?
-              Esta acción no se puede deshacer.
-            </p>
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <p className="text-zinc-300">
+                ¿Estás seguro de que deseas eliminar el proyecto <strong className="text-white">{selectedProject.name}</strong>?
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setSelectedProject(null);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                className="px-4 py-2 text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteProject}
-                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                className="px-4 py-2 text-white bg-red-600 hover:bg-red-500 rounded-xl transition-colors"
               >
                 Eliminar
               </button>
@@ -548,7 +629,7 @@ export default function LiveChatPage() {
   );
 }
 
-// ============= COMPONENTS =============
+// ============= PROJECT CARD =============
 
 function ProjectCard({
   project,
@@ -572,209 +653,178 @@ function ProjectCard({
   onDelete: (p: WebChatProject) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const isOnline = project.isOnline && project.currentlyOnline;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: project.config.primaryColor + '20' }}
-            >
-              <MessageCircle
-                className="w-6 h-6"
-                style={{ color: project.config.primaryColor }}
-              />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {project.name}
-              </h3>
-              {project.description && (
-                <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
-                  {project.description}
-                </p>
-              )}
-            </div>
+    <div className={`group relative bg-zinc-900/60 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/20 overflow-hidden flex flex-col ${
+      isOnline
+        ? 'border-zinc-800 hover:border-blue-500/30'
+        : 'border-zinc-800/50'
+    }`}>
+      
+      {/* Online indicator */}
+      {isOnline && (
+        <div className="absolute top-3 right-3 z-10">
+          <span className="flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+          </span>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="p-5 flex-1">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-4">
+          <div 
+            className="p-2.5 rounded-xl border"
+            style={{ 
+              backgroundColor: project.config.primaryColor + '15',
+              borderColor: project.config.primaryColor + '30'
+            }}
+          >
+            <MessageCircle 
+              className="w-5 h-5" 
+              style={{ color: project.config.primaryColor }}
+            />
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Status badge */}
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                project.isOnline && project.currentlyOnline
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-              }`}
-            >
-              {project.isOnline && project.currentlyOnline ? (
-                <>
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />
-                  Online ({project.onlineAgentCount || 0} agentes)
-                </>
-              ) : (
-                <>
-                  <span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-1.5" />
-                  Offline
-                </>
-              )}
-            </span>
-
-            {/* Actions menu */}
-            {isAdmin && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                >
-                  <MoreVertical className="w-5 h-5" />
-                </button>
-
-                {showMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowMenu(false)}
-                    />
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                      <button
-                        onClick={() => {
-                          onEditConfig(project);
-                          setShowMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <Settings className="w-4 h-4" />
-                        Configuración
-                      </button>
-                      <button
-                        onClick={() => {
-                          onToggleStatus(project);
-                          setShowMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        {project.isOnline ? (
-                          <>
-                            <PowerOff className="w-4 h-4" />
-                            Desactivar
-                          </>
-                        ) : (
-                          <>
-                            <Power className="w-4 h-4" />
-                            Activar
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          onRegenerateKey(project);
-                          setShowMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <Key className="w-4 h-4" />
-                        Regenerar API Key
-                      </button>
-                      <hr className="my-1 border-gray-200 dark:border-gray-700" />
-                      <button
-                        onClick={() => {
-                          onDelete(project);
-                          setShowMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Eliminar
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-zinc-100 truncate">{project.name}</h3>
+            </div>
+            {project.description && (
+              <p className="text-sm text-zinc-500 truncate">{project.description}</p>
             )}
           </div>
         </div>
 
-        {/* Project details */}
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Project ID
-            </span>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="text-sm font-mono text-gray-700 dark:text-gray-300">
-                {project.projectId}
-              </code>
+        {/* Status Badge */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase border ${
+            isOnline
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+            {isOnline ? `Online (${project.onlineAgentCount || 0} agentes)` : 'Offline'}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+            <Palette className="w-3 h-3" />
+            {project.config.position === 'right' ? 'Derecha' : 'Izquierda'}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+            {project.config.theme === 'auto' ? 'Auto' : project.config.theme}
+          </span>
+        </div>
+
+        {/* Project Details */}
+        <div className="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-zinc-500 uppercase tracking-wide">Project ID</span>
+            <div className="flex items-center gap-1.5">
+              <code className="text-xs font-mono text-zinc-400">{project.projectId}</code>
               <button
                 onClick={() => onCopy(project.projectId, `pid-${project.projectId}`)}
-                className="p-1 text-gray-400 hover:text-gray-600"
+                className="p-1 text-zinc-600 hover:text-zinc-400 transition-colors"
               >
                 {copiedField === `pid-${project.projectId}` ? (
-                  <Check className="w-4 h-4 text-green-500" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
                 ) : (
-                  <Copy className="w-4 h-4" />
+                  <Copy className="w-3.5 h-3.5" />
                 )}
               </button>
             </div>
           </div>
-
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Dominios Autorizados
-            </span>
-            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-zinc-500 uppercase tracking-wide">Dominios</span>
+            <span className="text-xs text-zinc-400">
               {project.allowedDomains.length > 0
                 ? project.allowedDomains.slice(0, 2).join(', ') +
-                  (project.allowedDomains.length > 2
-                    ? ` +${project.allowedDomains.length - 2} más`
-                    : '')
-                : 'Todos (sin restricción)'}
-            </p>
-          </div>
-
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Posición
+                  (project.allowedDomains.length > 2 ? ` +${project.allowedDomains.length - 2}` : '')
+                : 'Todos'}
             </span>
-            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 capitalize">
-              {project.config.position === 'right' ? 'Derecha' : 'Izquierda'}
-            </p>
-          </div>
-
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Tema
-            </span>
-            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 capitalize">
-              {project.config.theme === 'auto' ? 'Automático' : project.config.theme}
-            </p>
           </div>
         </div>
+      </div>
 
-        {/* Action buttons */}
-        <div className="mt-6 flex items-center gap-3">
-          <button
-            onClick={() => onShowEmbed(project)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Code className="w-4 h-4" />
-            Obtener Código
-          </button>
-          {isAdmin && (
+      {/* Footer */}
+      <div className="px-5 py-3 border-t border-zinc-800/50 bg-zinc-900/30 flex items-center justify-between">
+        <button
+          onClick={() => onShowEmbed(project)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-lg text-sm font-medium transition-colors"
+        >
+          <Code className="w-4 h-4" />
+          Obtener Código
+        </button>
+
+        {isAdmin && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onEditConfig(project)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+              title="Configurar"
             >
               <Settings className="w-4 h-4" />
-              Configurar
             </button>
-          )}
-        </div>
+            <button
+              onClick={() => onToggleStatus(project)}
+              className={`p-2 rounded-lg transition-colors ${
+                project.isOnline
+                  ? 'text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10'
+                  : 'text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10'
+              }`}
+              title={project.isOnline ? 'Desactivar' : 'Activar'}
+            >
+              {project.isOnline ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute right-0 bottom-full mb-1 w-44 bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 z-20 overflow-hidden">
+                    <button
+                      onClick={() => {
+                        onRegenerateKey(project);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                    >
+                      <Key className="w-4 h-4 text-amber-400" />
+                      Regenerar API Key
+                    </button>
+                    <hr className="border-zinc-800" />
+                    <button
+                      onClick={() => {
+                        onDelete(project);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+// ============= SECURITY EVENT ROW =============
 
 function SecurityEventRow({
   event,
@@ -785,49 +835,49 @@ function SecurityEventRow({
   onBlockIP: (ip: string) => void;
   onUnblockVisitor: (visitorId: string) => void;
 }) {
-  const typeConfig = {
-    rate_limit: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30' },
-    abuse: { icon: ShieldAlert, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' },
-    ip_block: { icon: Ban, color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30' },
-    domain_reject: { icon: Globe, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30' },
-    suspicious: { icon: Eye, color: 'text-purple-500', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+  const typeConfig: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
+    rate_limit: { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+    abuse: { icon: ShieldAlert, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+    ip_block: { icon: Ban, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+    domain_reject: { icon: Globe, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+    suspicious: { icon: Eye, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
   };
 
   const config = typeConfig[event.type] || typeConfig.suspicious;
   const Icon = config.icon;
 
   return (
-    <div className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-      <div className={`p-2 rounded-lg ${config.bg}`}>
+    <div className="p-4 flex items-center gap-4 hover:bg-zinc-800/30 transition-colors">
+      <div className={`p-2 rounded-xl ${config.bg} border ${config.border}`}>
         <Icon className={`w-5 h-5 ${config.color}`} />
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 dark:text-white capitalize">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className={`font-medium capitalize ${config.color}`}>
             {event.type.replace('_', ' ')}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-zinc-600">
             {new Date(event.timestamp).toLocaleString()}
           </span>
         </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+        <div className="text-sm text-zinc-500 truncate">
           {event.ip && <span className="mr-2">IP: {event.ip}</span>}
           {event.visitorId && <span className="mr-2">Visitor: {event.visitorId.slice(0, 12)}...</span>}
           {event.projectId && <span>Project: {event.projectId}</span>}
         </div>
         {event.details && (
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-xs text-zinc-600 mt-0.5 truncate">
             {JSON.stringify(event.details).slice(0, 100)}...
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {event.ip && (
           <button
             onClick={() => onBlockIP(event.ip!)}
-            className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg"
+            className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
             title="Bloquear IP"
           >
             <Ban className="w-4 h-4" />
@@ -836,7 +886,7 @@ function SecurityEventRow({
         {event.visitorId && event.type === 'abuse' && (
           <button
             onClick={() => onUnblockVisitor(event.visitorId!)}
-            className="p-2 text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg"
+            className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
             title="Desbloquear Visitor"
           >
             <CheckCircle className="w-4 h-4" />
@@ -846,6 +896,8 @@ function SecurityEventRow({
     </div>
   );
 }
+
+// ============= PROJECT FORM =============
 
 function ProjectForm({
   formData,
@@ -869,7 +921,7 @@ function ProjectForm({
       {/* Basic Info */}
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
             Nombre del Proyecto *
           </label>
           <input
@@ -877,12 +929,12 @@ function ProjectForm({
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="Mi Sitio Web"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
             Descripción
           </label>
           <input
@@ -890,23 +942,23 @@ function ProjectForm({
             value={formData.description}
             onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             placeholder="Widget de soporte para sitio principal"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
             Dominios Autorizados
-            <span className="text-gray-500 font-normal ml-2">(uno por línea)</span>
+            <span className="text-zinc-500 font-normal ml-2">(uno por línea)</span>
           </label>
           <textarea
             value={formData.allowedDomains}
             onChange={(e) => setFormData((prev) => ({ ...prev, allowedDomains: e.target.value }))}
-            placeholder="ejemplo.com&#10;*.ejemplo.com&#10;subdominio.ejemplo.com"
+            placeholder={"ejemplo.com\n*.ejemplo.com\nsubdominio.ejemplo.com"}
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 font-mono text-sm transition-all"
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-zinc-500">
             Usa *.dominio.com para permitir subdominios. Deja vacío para permitir cualquier dominio (no recomendado).
           </p>
         </div>
@@ -915,24 +967,22 @@ function ProjectForm({
       {/* Config Tabs */}
       {isEdit && (
         <>
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex gap-4">
-              {['general', 'appearance', 'behavior'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveConfigTab(tab as typeof activeConfigTab)}
-                  className={`pb-2 px-1 border-b-2 text-sm font-medium transition-colors ${
-                    activeConfigTab === tab
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {tab === 'general' && 'General'}
-                  {tab === 'appearance' && 'Apariencia'}
-                  {tab === 'behavior' && 'Comportamiento'}
-                </button>
-              ))}
-            </nav>
+          <div className="flex items-center gap-1 p-1 bg-zinc-800/50 rounded-xl">
+            {['general', 'appearance', 'behavior'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveConfigTab(tab as typeof activeConfigTab)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeConfigTab === tab
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                {tab === 'general' && 'General'}
+                {tab === 'appearance' && 'Apariencia'}
+                {tab === 'behavior' && 'Comportamiento'}
+              </button>
+            ))}
           </div>
 
           <div className="space-y-4">
@@ -940,7 +990,7 @@ function ProjectForm({
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Título del Header
                     </label>
                     <input
@@ -952,11 +1002,11 @@ function ProjectForm({
                           config: { ...prev.config, headerText: e.target.value },
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Placeholder del Input
                     </label>
                     <input
@@ -968,13 +1018,13 @@ function ProjectForm({
                           config: { ...prev.config, inputPlaceholder: e.target.value },
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                     Mensaje de Bienvenida
                   </label>
                   <textarea
@@ -986,12 +1036,12 @@ function ProjectForm({
                       }))
                     }
                     rows={2}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                     Mensaje Offline
                   </label>
                   <textarea
@@ -1003,7 +1053,7 @@ function ProjectForm({
                       }))
                     }
                     rows={2}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                   />
                 </div>
               </>
@@ -1013,7 +1063,7 @@ function ProjectForm({
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Color Principal
                     </label>
                     <div className="flex items-center gap-3">
@@ -1026,7 +1076,7 @@ function ProjectForm({
                             config: { ...prev.config, primaryColor: e.target.value },
                           }))
                         }
-                        className="w-12 h-10 rounded cursor-pointer"
+                        className="w-12 h-10 rounded-lg cursor-pointer bg-transparent border-0"
                       />
                       <input
                         type="text"
@@ -1037,13 +1087,13 @@ function ProjectForm({
                             config: { ...prev.config, primaryColor: e.target.value },
                           }))
                         }
-                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono"
+                        className="flex-1 px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Posición
                     </label>
                     <select
@@ -1054,7 +1104,7 @@ function ProjectForm({
                           config: { ...prev.config, position: e.target.value as 'left' | 'right' },
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="right">Derecha</option>
                       <option value="left">Izquierda</option>
@@ -1064,7 +1114,7 @@ function ProjectForm({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Tema
                     </label>
                     <select
@@ -1075,7 +1125,7 @@ function ProjectForm({
                           config: { ...prev.config, theme: e.target.value as 'light' | 'dark' | 'auto' },
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="auto">Automático</option>
                       <option value="light">Claro</option>
@@ -1084,7 +1134,7 @@ function ProjectForm({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Icono del Botón
                     </label>
                     <select
@@ -1095,7 +1145,7 @@ function ProjectForm({
                           config: { ...prev.config, bubbleIcon: e.target.value as 'chat' | 'message' | 'support' | 'custom' },
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="chat">Chat</option>
                       <option value="message">Mensaje</option>
@@ -1104,8 +1154,8 @@ function ProjectForm({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <div className="grid grid-cols-3 gap-4">
+                  <label className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors">
                     <input
                       type="checkbox"
                       checked={formData.config.showAgentPhotos !== false}
@@ -1115,14 +1165,12 @@ function ProjectForm({
                           config: { ...prev.config, showAgentPhotos: e.target.checked },
                         }))
                       }
-                      className="w-4 h-4 rounded border-gray-300"
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500/20"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar fotos de agentes
-                    </span>
+                    <span className="text-sm text-zinc-300">Fotos de agentes</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors">
                     <input
                       type="checkbox"
                       checked={formData.config.showAgentNames !== false}
@@ -1132,14 +1180,12 @@ function ProjectForm({
                           config: { ...prev.config, showAgentNames: e.target.checked },
                         }))
                       }
-                      className="w-4 h-4 rounded border-gray-300"
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500/20"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar nombres de agentes
-                    </span>
+                    <span className="text-sm text-zinc-300">Nombres</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors">
                     <input
                       type="checkbox"
                       checked={formData.config.showPoweredBy !== false}
@@ -1149,11 +1195,9 @@ function ProjectForm({
                           config: { ...prev.config, showPoweredBy: e.target.checked },
                         }))
                       }
-                      className="w-4 h-4 rounded border-gray-300"
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500/20"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar "Powered by"
-                    </span>
+                    <span className="text-sm text-zinc-300">"Powered by"</span>
                   </label>
                 </div>
               </>
@@ -1161,152 +1205,39 @@ function ProjectForm({
 
             {activeConfigTab === 'behavior' && (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.config.enableAttachments !== false}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          config: { ...prev.config, enableAttachments: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Permitir archivos adjuntos
-                    </span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.config.enableEmoji !== false}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          config: { ...prev.config, enableEmoji: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Permitir emojis
-                    </span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.config.enableTypingIndicator !== false}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          config: { ...prev.config, enableTypingIndicator: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Indicador de escritura
-                    </span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.config.enableSoundNotifications !== false}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          config: { ...prev.config, enableSoundNotifications: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Sonidos de notificación
-                    </span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.config.enableSurvey !== false}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          config: { ...prev.config, enableSurvey: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Encuesta de satisfacción
-                    </span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.config.hideWhenOffline === true}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          config: { ...prev.config, hideWhenOffline: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Ocultar cuando offline
-                    </span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'enableAttachments', label: 'Archivos adjuntos' },
+                    { key: 'enableEmoji', label: 'Emojis' },
+                    { key: 'enableTypingIndicator', label: 'Indicador escritura' },
+                    { key: 'enableSoundNotifications', label: 'Sonidos' },
+                    { key: 'enableSurvey', label: 'Encuesta satisfacción' },
+                    { key: 'hideWhenOffline', label: 'Ocultar si offline', defaultFalse: true },
+                    { key: 'requireName', label: 'Requerir nombre', defaultFalse: true },
+                    { key: 'requireEmail', label: 'Requerir email', defaultFalse: true },
+                  ].map(({ key, label, defaultFalse }) => (
+                    <label 
+                      key={key}
+                      className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors"
+                    >
                       <input
                         type="checkbox"
-                        checked={formData.config.requireName === true}
+                        checked={defaultFalse ? formData.config[key as keyof WebChatProjectConfig] === true : formData.config[key as keyof WebChatProjectConfig] !== false}
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            config: { ...prev.config, requireName: e.target.checked },
+                            config: { ...prev.config, [key]: e.target.checked },
                           }))
                         }
-                        className="w-4 h-4 rounded border-gray-300"
+                        className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500/20"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Requerir nombre
-                      </span>
+                      <span className="text-sm text-zinc-300">{label}</span>
                     </label>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.config.requireEmail === true}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            config: { ...prev.config, requireEmail: e.target.checked },
-                          }))
-                        }
-                        className="w-4 h-4 rounded border-gray-300"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Requerir email
-                      </span>
-                    </label>
-                  </div>
+                  ))}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                     Delay para abrir automáticamente (segundos)
                   </label>
                   <input
@@ -1319,9 +1250,9 @@ function ProjectForm({
                         config: { ...prev.config, autoOpenDelay: parseInt(e.target.value) || 0 },
                       }))
                     }
-                    className="w-32 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-32 px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-zinc-500">
                     0 = desactivado (el usuario debe hacer clic para abrir)
                   </p>
                 </div>
@@ -1332,17 +1263,17 @@ function ProjectForm({
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+          className="px-4 py-2.5 text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={onSubmit}
           disabled={isSaving || !formData.name.trim()}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {isSaving ? (
             <>
@@ -1360,6 +1291,8 @@ function ProjectForm({
     </div>
   );
 }
+
+// ============= MODAL =============
 
 function Modal({
   title,
@@ -1382,20 +1315,20 @@ function Modal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-black/50 transition-opacity"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
 
         <div
-          className={`relative w-full ${sizeClasses[size]} bg-white dark:bg-gray-800 rounded-xl shadow-xl`}
+          className={`relative w-full ${sizeClasses[size]} bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50`}
         >
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center justify-between p-5 border-b border-zinc-800">
+            <h2 className="text-lg font-semibold text-white">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-1.5 text-zinc-500 hover:text-zinc-300 rounded-lg hover:bg-zinc-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

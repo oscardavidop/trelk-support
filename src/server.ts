@@ -87,8 +87,8 @@ const fastify = Fastify({
         }
       : true,
   https: {
-    key: fs.readFileSync("certs/webhook.key"),
-    cert: fs.readFileSync("certs/webhook.crt"),
+    key: fs.readFileSync(`certs/${ENV.IP_HOST}/server.key`),
+    cert: fs.readFileSync(`certs/${ENV.IP_HOST}/server.crt`),
   },
 });
 
@@ -200,6 +200,7 @@ fastify.post("/api/webhook/setup", async (request, reply) => {
   }
 
   const webhookUrl = `${ENV.WEBHOOK_URL}${WEBHOOK_CONFIG.path}`;
+  console.log("Setting webhook URL to:", webhookUrl);
   const result = await setWebhook(webhookUrl, ENV.WEBHOOK_SECRET);
 
   if (result) {
@@ -226,7 +227,7 @@ fastify.post("/webhook/delete", async (request, reply) => {
   return reply.code(500).send({ ok: false, error: "Failed to delete webhook" });
 });
 
-fastify.get("/webhook/info", async (request, reply) => {
+fastify.get("/api/webhook/info", async (request, reply) => {
   const authHeader = request.headers.authorization;
   if (authHeader !== `Bearer ${ENV.WEBHOOK_SECRET}`) {
     return reply.code(401).send({ ok: false });

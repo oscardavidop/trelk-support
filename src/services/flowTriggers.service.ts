@@ -12,6 +12,7 @@
 import { flowEngine, TriggerEvent } from './flowEngine.service.js';
 import { ChatSession, type IChatSession } from '../database/models/ChatSession.js';
 import { User, type IUser } from '../database/models/User.js';
+import { WebVisitor, type IWebVisitor } from '../database/models/WebVisitor.js';
 import { logger } from './logger.js';
 import FlowExecution from '../database/models/FlowExecution.js';
 import Flow from '../database/models/Flow.js';
@@ -59,7 +60,53 @@ function buildTriggerEventFromUser(
 }
 
 /**
+ * Build trigger event from WebVisitor (with or without session)
+ * Used for web chat flows - mirrors buildTriggerEventFromUser for Telegram
+ */
+function buildTriggerEventFromWebVisitor(
+  type: TriggerEvent['type'],
+  visitor: IWebVisitor,
+  sessionId: string,
+  extraData: Record<string, any> = {}
+): TriggerEvent {
+  return {
+    type,
+    sessionId, // Can be real sessionId or virtual like 'nosession-{visitorId}'
+    chatId: 0, // No Telegram chat ID for web
+    externalChatId: visitor.visitorId,
+    userId: 0, // No Telegram user ID for web
+    externalUserId: visitor.visitorId,
+    channel: 'web',
+    data: {
+      session: {
+        id: sessionId,
+        status: sessionId.startsWith('nosession-') ? 'none' : 'bot',
+        category: undefined,
+        priority: undefined,
+        tags: visitor.tags || [],
+      },
+      user: {
+        firstName: visitor.name || 'Web Visitor',
+        lastName: '',
+        username: visitor.email || '',
+        language: visitor.language || 'es',
+        email: visitor.email,
+        phone: visitor.phone,
+        browser: visitor.browser,
+        os: visitor.os,
+        device: visitor.device,
+        currentPageUrl: visitor.currentPageUrl,
+        visitorId: visitor.visitorId,
+      },
+      channel: 'web',
+      ...extraData,
+    },
+  };
+}
+
+/**
  * Build base trigger event from session
+ * Supports both Telegram users and WebChat visitors
  */
 async function buildTriggerEvent(
   type: TriggerEvent['type'],
@@ -67,19 +114,62 @@ async function buildTriggerEvent(
   extraData: Record<string, any> = {}
 ): Promise<TriggerEvent | null> {
   try {
+    // Determine channel from session or default to telegram
+    const channel: ChannelType = session.channel || 'telegram';
+
+    // Handle WebChat sessions
+    if (channel === 'web') {
+      const visitor = await WebVisitor.findById(session.webVisitor);
+      if (!visitor) {
+        logger.warn('flow', { action: 'trigger_no_visitor', sessionId: session.sessionId });
+        return null;
+      }
+
+      return {
+        type,
+        sessionId: session.sessionId,
+        chatId: 0, // No telegram chat ID for web
+        externalChatId: session.externalChatId || visitor.visitorId,
+        userId: 0, // No telegram user ID for web
+        externalUserId: visitor.visitorId,
+        channel,
+        data: {
+          session: {
+            id: session.sessionId,
+            status: session.status,
+            category: session.category,
+            priority: session.priority,
+            tags: session.tags,
+          },
+          user: {
+            firstName: visitor.name || 'Web Visitor',
+            lastName: '',
+            username: visitor.email || '',
+            language: visitor.language || 'es',
+            email: visitor.email,
+            phone: visitor.phone,
+            browser: visitor.browser,
+            os: visitor.os,
+            device: visitor.device,
+            currentPageUrl: visitor.currentPageUrl,
+          },
+          channel,
+          ...extraData,
+        },
+      };
+    }
+
+    // Handle Telegram sessions (default)
     const user = await User.findById(session.user);
     if (!user) {
       logger.warn('flow', { action: 'trigger_no_user', sessionId: session.sessionId });
       return null;
     }
 
-    // Determine channel from session or default to telegram
-    const channel: ChannelType = session.channel || 'telegram';
-
     return {
       type,
       sessionId: session.sessionId,
-      chatId: session.telegramChatId || 0, // 0 for web/non-telegram sessions
+      chatId: session.telegramChatId || 0,
       externalChatId: session.externalChatId || String(session.telegramChatId),
       userId: user.telegramId || 0,
       externalUserId: String(user.telegramId || session.webVisitor),
@@ -98,7 +188,7 @@ async function buildTriggerEvent(
           username: user.username,
           language: user.language,
         },
-        channel, // Also include in data for condition evaluation
+        channel,
         ...extraData,
       },
     };
@@ -477,6 +567,84 @@ export async function triggerKeywordDetectedNoSession(
   
   const event = buildTriggerEventFromUser('keyword_detected', user, chatId, { message });
   logger.info('flow', { action: 'trigger_keyword_no_session', chatId });
+  await flowEngine.handleTrigger(event);
+}
+
+// ============= WEB VISITOR TRIGGERS (LIVECHAT) =============
+// These mirror the Telegram triggers but work with WebVisitors instead of Users
+
+/**
+ * Trigger: Message received from WebChat visitor
+ * Works with or without an existing session - mirrors triggerMessageReceivedNoSession for Telegram
+ * THIS IS THE MAIN ENTRY POINT FOR WEBCHAT MESSAGES INTO THE FLOW ENGINE
+ */
+export async function triggerWebMessageReceived(
+  visitor: IWebVisitor,
+  sessionId: string,
+  message: {
+    content: string;
+    messageType: string;
+    messageId?: string;
+  }
+): Promise<void> {
+  logger.info('flow', { 
+    action: 'triggerWebMessageReceived_called', 
+    visitorId: visitor.visitorId,
+    sessionId,
+    content: message.content?.substring(0, 50),
+  });
+  
+  const event = buildTriggerEventFromWebVisitor('message_received', visitor, sessionId, { message });
+  
+  logger.info('flow', { 
+    action: 'trigger_web_message', 
+    visitorId: visitor.visitorId,
+    sessionId,
+    eventType: event.type,
+  });
+  
+  await flowEngine.handleTrigger(event);
+  
+  // Also resume any flows waiting for user response
+  await flowEngine.resumeOnUserResponse(sessionId, message.content);
+}
+
+/**
+ * Trigger: Keyword detected from WebChat visitor
+ */
+export async function triggerWebKeywordDetected(
+  visitor: IWebVisitor,
+  sessionId: string,
+  message: { content: string; messageType: string }
+): Promise<void> {
+  logger.info('flow', { 
+    action: 'triggerWebKeywordDetected_called', 
+    visitorId: visitor.visitorId,
+    sessionId,
+    content: message.content?.substring(0, 50),
+  });
+  
+  const event = buildTriggerEventFromWebVisitor('keyword_detected', visitor, sessionId, { message });
+  logger.info('flow', { action: 'trigger_web_keyword', visitorId: visitor.visitorId, sessionId });
+  await flowEngine.handleTrigger(event);
+}
+
+/**
+ * Trigger: WebChat session opened/started
+ * Called when visitor opens the chat widget
+ */
+export async function triggerWebSessionOpened(
+  visitor: IWebVisitor,
+  sessionId: string
+): Promise<void> {
+  logger.info('flow', { 
+    action: 'triggerWebSessionOpened_called', 
+    visitorId: visitor.visitorId,
+    sessionId,
+  });
+  
+  const event = buildTriggerEventFromWebVisitor('chat_created', visitor, sessionId, {});
+  logger.info('flow', { action: 'trigger_web_session_opened', visitorId: visitor.visitorId, sessionId });
   await flowEngine.handleTrigger(event);
 }
 
@@ -866,6 +1034,206 @@ async function handleFlowButtonWithData(
   }
 }
 
+/**
+ * Handle button callback from WebChat widget
+ * Similar to handleFlowButtonCallback but works with sessionId and visitorId
+ */
+export async function handleWebChatCallback(
+  sessionId: string,
+  visitorId: string,
+  callbackData: string
+): Promise<{ handled: boolean; error?: string }> {
+  const parts = callbackData.split(':');
+  
+  // Check for compact format: fb:{shortId}
+  if (parts[0] === 'fb' && parts.length === 2) {
+    const shortId = parts[1];
+    const { getCallbackDataAsync } = await import('./flowEngine.service.js');
+    const callbackMapping = await getCallbackDataAsync(shortId);
+    
+    if (!callbackMapping) {
+      logger.warn('flow', {
+        action: 'webchat_button_expired_or_invalid',
+        shortId,
+        sessionId,
+        visitorId,
+      });
+      return { handled: false, error: 'Button expired or invalid' };
+    }
+    
+    logger.info('flow', {
+      action: 'webchat_button_compact_format',
+      shortId,
+      flowId: callbackMapping.flowId,
+      nodeId: callbackMapping.nodeId,
+      btnId: callbackMapping.btnId,
+      mode: callbackMapping.mode,
+      sessionId,
+      visitorId,
+    });
+    
+    // Use the callback mapping data
+    return handleWebChatButtonWithData(
+      callbackMapping.flowId,
+      callbackMapping.nodeId,
+      callbackMapping.btnId,
+      callbackMapping.mode as 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none',
+      sessionId,
+      visitorId
+    );
+  }
+  
+  // Legacy flow:* format
+  if (parts[0] === 'flow') {
+    let flowId: string | undefined;
+    let nodeId: string | undefined;
+    let btnId: string;
+    let mode: 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none' = 'continue';
+    
+    if (parts.length === 4 && parts[2] === 'btn') {
+      nodeId = parts[1];
+      btnId = parts[3];
+    } else if (parts.length >= 6 && parts[2] === 'node' && parts[4] === 'btn') {
+      flowId = parts[1];
+      nodeId = parts[3];
+      btnId = parts[5];
+      mode = (parts[6] as typeof mode) || 'continue';
+    } else {
+      return { handled: false, error: 'Invalid callback format' };
+    }
+    
+    return handleWebChatButtonWithData(flowId, nodeId, btnId, mode, sessionId, visitorId);
+  }
+  
+  return { handled: false, error: 'Unknown callback format' };
+}
+
+/**
+ * Handle webchat button with parsed data
+ */
+async function handleWebChatButtonWithData(
+  flowId: string | undefined,
+  nodeId: string | undefined,
+  btnId: string,
+  mode: 'continue' | 'goto_node' | 'goto_flow' | 'url' | 'none',
+  sessionId: string,
+  visitorId: string
+): Promise<{ handled: boolean; error?: string }> {
+  try {
+    // Find the execution for this session
+    let execution = await FlowExecution.findOne({
+      sessionId,
+      status: { $in: ['running', 'paused'] },
+    }).sort({ updatedAt: -1 });
+    
+    if (!execution && !flowId) {
+      // Try to find any recent execution
+      execution = await FlowExecution.findOne({ sessionId }).sort({ updatedAt: -1 });
+    }
+    
+    if (!flowId && execution) {
+      flowId = execution.flowId.toString();
+      if (!nodeId || nodeId === 'node') {
+        nodeId = execution.currentNodeId || undefined;
+      }
+    }
+    
+    if (!flowId) {
+      logger.warn('flow', {
+        action: 'webchat_button_no_flow',
+        sessionId,
+        visitorId,
+        btnId,
+      });
+      return { handled: false, error: 'No active flow found' };
+    }
+    
+    // Get the flow
+    const flow = await Flow.findById(flowId);
+    if (!flow) {
+      return { handled: false, error: 'Flow not found' };
+    }
+    
+    // Find button in flow
+    let foundButton: any = null;
+    let foundNode: any = null;
+    
+    for (const node of flow.nodes) {
+      const nodeConfig = node?.config as any;
+      if (nodeConfig?.messageBlocks) {
+        for (const block of nodeConfig.messageBlocks) {
+          if (block.keyboard?.rows) {
+            for (const row of block.keyboard.rows) {
+              for (const button of row.buttons) {
+                if (button.id === btnId) {
+                  foundButton = button;
+                  foundNode = node;
+                  break;
+                }
+              }
+              if (foundButton) break;
+            }
+          }
+          if (foundButton) break;
+        }
+      }
+      if (foundButton) break;
+    }
+    
+    // If button not found but we have an execution, try to continue
+    const buttonMode = foundButton?.onClick?.mode || mode;
+    
+    logger.info('flow', {
+      action: 'webchat_button_processing',
+      sessionId,
+      visitorId,
+      flowId,
+      nodeId,
+      btnId,
+      mode: buttonMode,
+      foundButton: !!foundButton,
+    });
+    
+    // Use the FlowEngine resumeFromButton method
+    const { FlowEngine } = await import('./flowEngine.service.js');
+    const engine = FlowEngine.getInstance();
+    
+    const resumed = await engine.resumeFromButton(
+      flowId,
+      nodeId || '',
+      btnId,
+      buttonMode,
+      sessionId,
+      {
+        button: foundButton,
+        visitorId,
+        channel: 'web',
+      }
+    );
+    
+    if (resumed) {
+      logger.info('flow', {
+        action: 'webchat_button_resumed_flow',
+        sessionId,
+        flowId,
+        nodeId,
+        btnId,
+      });
+    }
+    
+    return { handled: resumed };
+  } catch (error) {
+    logger.error('flow', {
+      action: 'webchat_button_error',
+      error: String(error),
+      sessionId,
+      visitorId,
+      btnId,
+    });
+    return { handled: false, error: String(error) };
+  }
+}
+
 export default {
   triggerChatCreated,
   triggerMessageReceived,
@@ -885,4 +1253,9 @@ export default {
   triggerCommandReceivedNoSession,
   triggerCommandReceived,
   handleFlowButtonCallback,
+  handleWebChatCallback,
+  // WebChat/LiveChat triggers
+  triggerWebMessageReceived,
+  triggerWebKeywordDetected,
+  triggerWebSessionOpened,
 };

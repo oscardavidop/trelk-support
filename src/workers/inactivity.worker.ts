@@ -16,6 +16,7 @@ import { sendMessage as sendTelegramMessage } from '../services/telegram.js';
 import { emitChatWarning, emitChatClosed, getIO } from '../services/socket.js';
 import { closeSession, getSessionById, addMessage } from '../services/chat.service.js';
 import { telegramErrorHandler, isBlockingError } from '../services/telegram-error-handler.js';
+import { webChatAdapter } from '../channels/webchat.adapter.js';
 
 // ============= WORKER PROCESSOR =============
 
@@ -89,8 +90,17 @@ async function handleWarning(
   const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.\n\n⚠️ This chat will close automatically in ${remainingMinutes} minutes due to inactivity.`;
 
   try {
-    // Send to Telegram
-    await sendTelegramMessage(chatId, warningMessage);
+    // Send message based on channel
+    const channel = session.channel || 'telegram';
+    
+    if (channel === 'web') {
+      // Send to WebChat via Socket.IO
+      const visitorId = session.channelMetadata?.visitorId || sessionId;
+      await webChatAdapter.sendMessage(visitorId, warningMessage);
+    } else {
+      // Send to Telegram
+      await sendTelegramMessage(chatId, warningMessage);
+    }
     
     // Save message in database
     const savedMessage = await addMessage(sessionId, 'bot', 'Se envió una advertencia de inactividad.', {
@@ -118,16 +128,17 @@ async function handleWarning(
       action: 'warning_sent',
       sessionId,
       remainingMinutes,
+      channel,
     });
 
     return { success: true, type: 'warning' };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     
-    // Check if this is a blocking error (user blocked bot)
+    // Check if this is a blocking error (user blocked bot - Telegram only)
     const { isBlocking } = isBlockingError(errorMessage);
     
-    if (isBlocking) {
+    if (isBlocking && session.channel !== 'web') {
       logger.warn('worker:inactivity', {
         action: 'warning_blocked_user',
         sessionId,
@@ -196,15 +207,25 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
     const agentId = session.assignedAgent?._id?.toString() || null;
     await closeSession(sessionId, agentId, 'Closed due to inactivity', 'system');
 
-    await sendTelegramMessage(chatId, closeMessage, {
-      replyMarkup: { remove_keyboard: true },
-    });
+    // Send message based on channel
+    const channel = session.channel || 'telegram';
+    
+    if (channel === 'web') {
+      const visitorId = session.channelMetadata?.visitorId || sessionId;
+      await webChatAdapter.sendMessage(visitorId, closeMessage);
+      await webChatAdapter.closeChat(visitorId, closeMessage);
+    } else {
+      await sendTelegramMessage(chatId, closeMessage, {
+        replyMarkup: { remove_keyboard: true },
+      });
+    }
 
     emitChatClosed(sessionId, 'Closed due to inactivity', 'inactivity');
 
     logger.info('worker:inactivity', {
       action: 'auto_closed',
       sessionId,
+      channel,
     });
 
     return { success: true, type: 'close' };
@@ -264,15 +285,25 @@ async function handleQueuedClose(sessionId: string, chatId: number): Promise<any
     
     await closeSession(sessionId, null, 'Closed due to inactivity in queue', 'system');
 
-    await sendTelegramMessage(chatId, closeMessage, {
-      replyMarkup: { remove_keyboard: true },
-    });
+    // Send message based on channel
+    const channel = session.channel || 'telegram';
+    
+    if (channel === 'web') {
+      const visitorId = session.channelMetadata?.visitorId || sessionId;
+      await webChatAdapter.sendMessage(visitorId, closeMessage);
+      await webChatAdapter.closeChat(visitorId, closeMessage);
+    } else {
+      await sendTelegramMessage(chatId, closeMessage, {
+        replyMarkup: { remove_keyboard: true },
+      });
+    }
 
     emitChatClosed(sessionId, 'Closed due to inactivity in queue', 'inactivity');
 
     logger.info('worker:inactivity', {
       action: 'queued_auto_closed',
       sessionId,
+      channel,
     });
 
     return { success: true, type: 'queued_close' };

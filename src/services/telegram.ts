@@ -947,7 +947,6 @@ export async function getFile(fileId: string): Promise<TelegramFile | null> {
 
 /**
  * Get full URL for a file from Telegram servers (remote API)
- * @deprecated Use local file serving with getFile() for local bot-api
  */
 export function getFileUrl(filePath: string): string {
   return `https://api.telegram.org/file/bot${ENV.BOT_TOKEN}/${filePath}`;
@@ -967,6 +966,16 @@ export async function resolveFileUrl(fileId: string): Promise<string | null> {
   // Return the file_id as the media identifier
   // The frontend will use /api/media/{fileId} to fetch the file
   return fileId;
+}
+
+export async function getFileBuffer(fileId: string) {
+  const fileUrl = getFileUrl(fileId);
+  const response = await fetch(fileUrl);
+  console.log('getFileBuffer response', fileUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch file from Telegram: ${response.statusText}`);
+  }
+  return await response.arrayBuffer();
 }
 
 // ============= ADVANCED MESSAGE OPERATIONS =============

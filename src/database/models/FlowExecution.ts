@@ -31,6 +31,8 @@ export interface ExecutionContext {
   sessionId: string;
   chatId: number;
   userId: number;
+  // Channel type for omnichannel support
+  channel?: 'telegram' | 'web' | 'whatsapp' | 'instagram' | 'email';
   // User data (resolved at start)
   user: {
     id: number;

@@ -12,7 +12,7 @@
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authMiddleware } from '../middleware/auth.js';
-import { getFile } from '../services/telegram.js';
+import { getFile, getFileBuffer } from '../services/telegram.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -94,6 +94,7 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
 
         // Get file info from Telegram API
         const file = await getFile(fileId);
+        console.log('file', file)
 
         if (!file || !file.file_path) {
           console.error('File not found:', fileId);
@@ -107,14 +108,22 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
         // The path should be under the telegram-bot-api working directory
         if (!localPath.startsWith('/home/quinton/support/')) {
           console.error('Invalid file path:', localPath);
-          localPath= './uploads/notfound.jpg'
+          // localPath= './uploads/notfound.jpg'
           // return reply.status(403).send({ ok: false, error: 'Access denied' });
         }
 
         // Check if file exists
         if (!fs.existsSync(localPath)) {
           console.error('File does not exist:', localPath);
-          return reply.status(404).send({ ok: false, error: 'File not found on disk' });
+          try {
+            localPath = `./uploads/api/${path.basename(localPath)}`;
+            const fileBuffer = await getFileBuffer(file.file_path);
+            fs.writeFileSync(localPath, Buffer.from(fileBuffer));
+            console.log('File downloaded and saved to disk:', localPath);
+          } catch (error) {
+            console.error('Failed to download file from Telegram:', error);
+            return reply.status(404).send({ ok: false, error: 'File not found on disk' });
+          }
         }
 
         // Get file stats

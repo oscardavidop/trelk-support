@@ -1,40 +1,38 @@
 /**
- * Trelk WebChat Widget
- * Embeddable chat widget for websites
+ * Trelk WebChat Widget - Premium Zinc Refactor
+ * High-fidelity embeddable chat widget
  *
  * Usage:
  * <script src="https://trelk.site/widget/trelk-chat.js"></script>
  * <script>
- *   TrelkChat.init({
- *     projectId: "your-project-id",
- *     user: { name: "User", email: "user@example.com" }
- *   });
+ * TrelkChat.init({
+ * projectId: "your-project-id",
+ * user: { name: "User", email: "user@example.com" }
+ * });
  * </script>
  */
 
 (function () {
   "use strict";
 
-  // Prevent double initialization
   if (window.TrelkChat && window.TrelkChat._initialized) {
     console.warn("TrelkChat already initialized");
     return;
   }
 
-  // Configuration
+  // ============= CONFIGURATION =============
   const DEFAULT_CONFIG = {
     projectId: null,
-    theme: "auto",
+    theme: "dark", // Default to dark for Premium Zinc look
     position: "right",
-    primaryColor: "#4F46E5",
-    headerText: "Soporte en vivo",
-    welcomeMessage: "¡Hola! 👋 ¿En qué podemos ayudarte?",
-    offlineMessage: "No hay agentes disponibles.",
+    primaryColor: "#6366f1", // Indigo 500
+    headerText: "Soporte Trelk",
+    welcomeMessage: "¡Hola! 👋 ¿Cómo podemos ayudarte hoy?",
+    offlineMessage: "Nuestro equipo no está disponible en este momento.",
     inputPlaceholder: "Escribe un mensaje...",
     user: null,
     autoOpen: false,
     autoOpenDelay: 0,
-    hideWhenOffline: false,
     enableSoundNotifications: true,
     showPoweredBy: true,
     zIndex: 999999,
@@ -52,616 +50,560 @@
   let unreadCount = 0;
   let isTyping = false;
   let typingTimeout = null;
-  let agentTyping = false;
-  let assignedAgent = null;
-
+  
   // DOM Elements
-  let container = null;
-  let bubble = null;
-  let chatWindow = null;
-  let messagesContainer = null;
-  let inputField = null;
+  let container, bubble, chatWindow, messagesContainer, inputField, sendBtn;
 
   // ============= UTILITIES =============
+  const generateId = () => "vis_" + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+  
+  const getStoredVisitorId = () => {
+    try { return localStorage.getItem("trelk_visitor_id"); } catch (e) { return null; }
+  };
 
-  function generateId() {
-    return (
-      "vis_" + Math.random().toString(36).substr(2, 9) + Date.now().toString(36)
-    );
-  }
+  const setStoredVisitorId = (id) => {
+    try { localStorage.setItem("trelk_visitor_id", id); } catch (e) {}
+  };
 
-  function getStoredVisitorId() {
-    try {
-      return localStorage.getItem("trelk_visitor_id");
-    } catch (e) {
-      return null;
-    }
-  }
+  const formatTime = (date) => new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  function setStoredVisitorId(id) {
-    try {
-      localStorage.setItem("trelk_visitor_id", id);
-    } catch (e) {}
-  }
-
-  function getTheme() {
-    if (config.theme === "auto") {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    }
-    return config.theme;
-  }
-
-  function formatTime(date) {
-    return new Date(date).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  function escapeHtml(text) {
+  const escapeHtml = (text) => {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
-  }
+  };
 
-  function playNotificationSound() {
-    if (!config.enableSoundNotifications) return;
-    try {
-      const audio = new Audio(
-        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleicBB5i7voN2B...",
-      ); // Short beep
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
-    } catch (e) {}
-  }
-
-  // ============= STYLES =============
-
+  // ============= STYLES (PREMIUM ZINC) =============
   function injectStyles() {
     if (document.getElementById("trelk-chat-styles")) return;
-
-    const isDark = getTheme() === "dark";
-    const primaryColor = config.primaryColor;
-    const position = config.position;
 
     const styles = document.createElement("style");
     styles.id = "trelk-chat-styles";
     styles.textContent = `
+      :root {
+        --tr-bg: #09090b;       /* Zinc 950 */
+        --tr-bg-alt: #18181b;   /* Zinc 900 */
+        --tr-border: #27272a;   /* Zinc 800 */
+        --tr-text: #fafafa;     /* Zinc 50 */
+        --tr-text-sec: #a1a1aa; /* Zinc 400 */
+        --tr-primary: ${config.primaryColor};
+        --tr-primary-glow: rgba(99, 102, 241, 0.3);
+      }
+
       #trelk-chat-container {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        font-size: 14px;
-        line-height: 1.5;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         position: fixed;
-        bottom: 20px;
-        ${position}: 20px;
+        bottom: 24px;
+        ${config.position}: 24px;
         z-index: ${config.zIndex};
+        display: flex;
+        flex-direction: column;
+        align-items: ${config.position === 'right' ? 'flex-end' : 'flex-start'};
+        gap: 16px;
+        pointer-events: none; /* Allow clicking through container area */
       }
 
       #trelk-chat-container * {
         box-sizing: border-box;
+        pointer-events: auto;
       }
 
-      /* Bubble */
+      /* === LAUNCHER BUBBLE === */
       #trelk-chat-bubble {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: ${primaryColor};
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        width: 56px;
+        height: 56px;
+        border-radius: 20px;
+        background: var(--tr-bg-alt);
+        border: 1px solid var(--tr-border);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255,255,255,0.05);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        color: var(--tr-text);
       }
 
       #trelk-chat-bubble:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: var(--tr-text-sec);
       }
 
       #trelk-chat-bubble svg {
         width: 28px;
         height: 28px;
-        fill: white;
+        stroke: currentColor;
+        stroke-width: 2;
       }
 
       #trelk-chat-bubble .badge {
         position: absolute;
-        top: -5px;
-        right: -5px;
+        top: -6px;
+        right: -6px;
         background: #ef4444;
         color: white;
-        font-size: 12px;
-        font-weight: bold;
+        font-size: 11px;
+        font-weight: 700;
         min-width: 20px;
         height: 20px;
-        border-radius: 10px;
+        border-radius: 9999px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0 6px;
+        padding: 0 4px;
+        border: 2px solid var(--tr-bg);
+        box-shadow: 0 0 0 1px #ef4444;
       }
 
-      /* Chat Window */
+      /* === MAIN WINDOW === */
       #trelk-chat-window {
-        position: absolute;
-        bottom: 75px;
-        ${position}: 0;
         width: 380px;
+        height: 650px;
         max-width: calc(100vw - 40px);
-        height: 600px;
         max-height: calc(100vh - 120px);
-        background: ${isDark ? "#18181b" : "#ffffff"};
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        display: none;
+        background: var(--tr-bg);
+        border: 1px solid var(--tr-border);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        display: flex;
         flex-direction: column;
         overflow: hidden;
-        animation: trelk-slide-up 0.3s ease;
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+        transform-origin: bottom ${config.position};
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        visibility: hidden;
       }
 
       #trelk-chat-window.open {
-        display: flex;
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+        visibility: visible;
       }
 
-      @keyframes trelk-slide-up {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      /* Header */
+      /* === HEADER === */
       .trelk-header {
-        background: ${primaryColor};
-        color: white;
-        padding: 16px 20px;
+        padding: 20px 24px;
+        background: rgba(24, 24, 27, 0.6); /* Zinc 900 / 60% */
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--tr-border);
         display: flex;
         align-items: center;
         justify-content: space-between;
+        z-index: 10;
       }
 
-      .trelk-header-title {
-        font-size: 16px;
+      .trelk-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .trelk-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--tr-primary);
+      }
+
+      .trelk-title h3 {
+        margin: 0;
+        font-size: 15px;
         font-weight: 600;
+        color: var(--tr-text);
+        line-height: 1.2;
       }
 
-      .trelk-header-subtitle {
+      .trelk-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         font-size: 12px;
-        opacity: 0.9;
+        color: var(--tr-text-sec);
         margin-top: 2px;
       }
 
-      .trelk-header-close {
-        background: rgba(255,255,255,0.2);
-        border: none;
+      .trelk-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #10b981; /* Emerald 500 */
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      }
+      .trelk-dot.offline { background: #ef4444; box-shadow: none; }
+
+      /* Actions */
+      .trelk-actions { display: flex; gap: 4px; }
+      
+      .trelk-btn-icon {
         width: 32px;
         height: 32px;
-        border-radius: 50%;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--tr-text-sec);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s;
+        transition: all 0.2s;
       }
+      .trelk-btn-icon:hover { background: var(--tr-bg-alt); color: var(--tr-text); }
 
-      .trelk-header-close:hover {
-        background: rgba(255,255,255,0.3);
-      }
-
-      .trelk-header-close svg {
-        width: 16px;
-        height: 16px;
-        fill: white;
-      }
-
-      /* Messages */
+      /* === MESSAGES AREA === */
       .trelk-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 16px;
-        background: ${isDark ? "#09090b" : "#f4f4f5"};
+        padding: 24px;
+        background: radial-gradient(circle at top right, rgba(99,102,241,0.03), transparent 40%);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
 
-      .trelk-message {
+      /* Scrollbar */
+      .trelk-messages::-webkit-scrollbar { width: 4px; }
+      .trelk-messages::-webkit-scrollbar-thumb { background: var(--tr-border); border-radius: 4px; }
+
+      .trelk-message-row {
+        display: flex;
+        gap: 12px;
         max-width: 85%;
-        margin-bottom: 12px;
-        animation: trelk-fade-in 0.2s ease;
+      }
+      
+      .trelk-message-row.user {
+        align-self: flex-end;
+        flex-direction: row-reverse;
       }
 
-      @keyframes trelk-fade-in {
-        from { opacity: 0; transform: translateY(5px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .trelk-message.user {
-        margin-left: auto;
-      }
-
-      .trelk-message.agent {
-        margin-right: auto;
-      }
-
-      .trelk-message-content {
-        padding: 10px 14px;
-        border-radius: 16px;
-        word-wrap: break-word;
-      }
-
-      .trelk-message.user .trelk-message-content {
-        background: ${primaryColor};
-        color: white;
-        border-bottom-right-radius: 4px;
-      }
-
-      .trelk-message.agent .trelk-message-content {
-        background: ${isDark ? "#27272a" : "#ffffff"};
-        color: ${isDark ? "#fafafa" : "#18181b"};
-        border-bottom-left-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-
-      .trelk-message-time {
-        font-size: 11px;
-        color: ${isDark ? "#71717a" : "#a1a1aa"};
-        margin-top: 4px;
-        display: block;
-      }
-
-      .trelk-message.user .trelk-message-time {
-        text-align: right;
-      }
-
-      /* Typing indicator */
-      .trelk-typing {
+      .trelk-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--tr-border);
+        flex-shrink: 0;
         display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        font-size: 10px;
+        color: var(--tr-text-sec);
+      }
+
+      .trelk-bubble {
         padding: 10px 14px;
-        background: ${isDark ? "#27272a" : "#ffffff"};
-        border-radius: 16px;
-        width: fit-content;
-        margin-bottom: 12px;
+        border-radius: 14px;
+        font-size: 13px;
+        line-height: 1.5;
+        position: relative;
       }
 
-      .trelk-typing-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: ${isDark ? "#71717a" : "#a1a1aa"};
-        animation: trelk-bounce 1.4s infinite ease-in-out;
+      .trelk-message-row.agent .trelk-bubble {
+        background: var(--tr-bg-alt);
+        border: 1px solid var(--tr-border);
+        color: var(--tr-text);
+        border-top-left-radius: 2px;
       }
 
-      .trelk-typing-dot:nth-child(1) { animation-delay: 0s; }
-      .trelk-typing-dot:nth-child(2) { animation-delay: 0.2s; }
-      .trelk-typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-      @keyframes trelk-bounce {
-        0%, 60%, 100% { transform: translateY(0); }
-        30% { transform: translateY(-6px); }
+      .trelk-message-row.user .trelk-bubble {
+        background: var(--tr-primary);
+        color: white;
+        border-top-right-radius: 2px;
+        box-shadow: 0 4px 12px var(--tr-primary-glow);
       }
 
-      /* Input */
-      .trelk-input-container {
-        padding: 12px 16px;
-        background: ${isDark ? "#18181b" : "#ffffff"};
-        border-top: 1px solid ${isDark ? "#27272a" : "#e4e4e7"};
+      .trelk-time {
+        font-size: 10px;
+        color: var(--tr-text-sec);
+        margin-top: 4px;
+        opacity: 0.7;
+      }
+
+      /* === SYSTEM MESSAGES === */
+      .trelk-message-row.system {
+        align-self: center;
+        max-width: 90%;
+      }
+      
+      .trelk-message-row.system .trelk-bubble {
+        background: transparent;
+        border: 1px dashed var(--tr-border);
+        color: var(--tr-text-sec);
+        font-size: 12px;
+        text-align: center;
+        padding: 8px 16px;
+        border-radius: 8px;
+      }
+
+      /* === INLINE BUTTONS (Keyboard) === */
+      .trelk-buttons {
         display: flex;
-        gap: 10px;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+        width: 100%;
+      }
+
+      .trelk-button-row {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+
+      .trelk-inline-btn {
+        flex: 1;
+        padding: 10px 16px;
+        background: var(--tr-bg-alt);
+        border: 1px solid var(--tr-border);
+        border-radius: 10px;
+        color: var(--tr-text);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        min-width: 80px;
+      }
+
+      .trelk-inline-btn:hover {
+        background: var(--tr-primary);
+        border-color: var(--tr-primary);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px var(--tr-primary-glow);
+      }
+
+      .trelk-inline-btn:active {
+        transform: translateY(0);
+      }
+
+      .trelk-inline-btn.url-btn::after {
+        content: ' ↗';
+        font-size: 11px;
+      }
+
+      /* === FOOTER INPUT === */
+      .trelk-footer {
+        padding: 16px 20px;
+        background: var(--tr-bg);
+        border-top: 1px solid var(--tr-border);
+      }
+
+      .trelk-input-wrapper {
+        display: flex;
         align-items: flex-end;
+        gap: 8px;
+        background: var(--tr-bg-alt);
+        border: 1px solid var(--tr-border);
+        border-radius: 16px;
+        padding: 8px;
+        transition: border-color 0.2s;
+      }
+
+      .trelk-input-wrapper:focus-within {
+        border-color: var(--tr-primary);
+        box-shadow: 0 0 0 1px var(--tr-primary);
       }
 
       .trelk-input {
         flex: 1;
-        border: 1px solid ${isDark ? "#3f3f46" : "#e4e4e7"};
-        background: ${isDark ? "#27272a" : "#fafafa"};
-        color: ${isDark ? "#fafafa" : "#18181b"};
-        border-radius: 20px;
-        padding: 10px 16px;
+        background: transparent;
+        border: none;
+        color: var(--tr-text);
+        padding: 8px 12px;
         font-size: 14px;
-        outline: none;
         resize: none;
-        max-height: 120px;
-        min-height: 40px;
-        transition: border-color 0.2s;
-      }
-
-      .trelk-input:focus {
-        border-color: ${primaryColor};
-      }
-
-      .trelk-input::placeholder {
-        color: ${isDark ? "#71717a" : "#a1a1aa"};
+        max-height: 100px;
+        min-height: 24px;
+        outline: none;
+        font-family: inherit;
       }
 
       .trelk-send-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: ${primaryColor};
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: var(--tr-primary);
         border: none;
-        cursor: pointer;
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
         flex-shrink: 0;
-        transition: transform 0.2s, opacity 0.2s;
       }
 
       .trelk-send-btn:hover {
+        opacity: 0.9;
         transform: scale(1.05);
       }
 
-      .trelk-send-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+      .trelk-send-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.5; }
 
-      .trelk-send-btn svg {
-        width: 18px;
-        height: 18px;
-        fill: white;
-      }
-
-      /* Welcome message */
-      .trelk-welcome {
-        text-align: center;
-        padding: 20px;
-        color: ${isDark ? "#a1a1aa" : "#71717a"};
-      }
-
-      .trelk-welcome-icon {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 12px;
-        background: ${primaryColor}20;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .trelk-welcome-icon svg {
-        width: 24px;
-        height: 24px;
-        fill: ${primaryColor};
-      }
-
-      /* Powered by */
-      .trelk-powered {
+      /* === POWERED BY === */
+      .trelk-branding {
         text-align: center;
         padding: 8px;
-        font-size: 11px;
-        color: ${isDark ? "#52525b" : "#a1a1aa"};
-        background: ${isDark ? "#18181b" : "#ffffff"};
+        font-size: 10px;
+        color: var(--tr-text-sec);
+        background: var(--tr-bg);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
+      .trelk-branding a { color: var(--tr-text-sec); text-decoration: none; font-weight: 600; }
+      .trelk-branding a:hover { color: var(--tr-primary); }
 
-      .trelk-powered a {
-        color: ${primaryColor};
-        text-decoration: none;
-      }
-
-      /* Survey Modal */
-      .trelk-survey {
-        position: absolute;
-        inset: 0;
-        background: ${isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.5)"};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-      }
-
-      .trelk-survey-content {
-        background: ${isDark ? "#18181b" : "#ffffff"};
-        border-radius: 16px;
-        padding: 24px;
-        text-align: center;
-        max-width: 320px;
-      }
-
-      .trelk-survey-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: ${isDark ? "#fafafa" : "#18181b"};
-        margin-bottom: 16px;
-      }
-
-      .trelk-survey-stars {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-bottom: 16px;
-      }
-
-      .trelk-survey-star {
-        width: 40px;
-        height: 40px;
-        cursor: pointer;
-        transition: transform 0.2s;
-      }
-
-      .trelk-survey-star:hover {
-        transform: scale(1.2);
-      }
-
-      .trelk-survey-star svg {
-        width: 100%;
-        height: 100%;
-        fill: ${isDark ? "#3f3f46" : "#e4e4e7"};
-        transition: fill 0.2s;
-      }
-
-      .trelk-survey-star.active svg {
-        fill: #fbbf24;
-      }
-
-      .trelk-survey-comment {
-        width: 100%;
-        border: 1px solid ${isDark ? "#3f3f46" : "#e4e4e7"};
-        background: ${isDark ? "#27272a" : "#fafafa"};
-        color: ${isDark ? "#fafafa" : "#18181b"};
-        border-radius: 8px;
-        padding: 10px;
-        font-size: 14px;
-        resize: none;
-        height: 80px;
-        margin-bottom: 16px;
-      }
-
-      .trelk-survey-submit {
-        width: 100%;
-        background: ${primaryColor};
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
-
-      .trelk-survey-submit:hover {
-        opacity: 0.9;
-      }
-
-      /* Offline state */
-      .trelk-offline-banner {
-        background: #fef3c7;
-        color: #92400e;
-        padding: 10px 16px;
-        font-size: 13px;
-        text-align: center;
-      }
-
-      /* Mobile responsive */
+      /* Mobile */
       @media (max-width: 480px) {
         #trelk-chat-window {
-          width: calc(100vw - 20px);
-          height: calc(100vh - 100px);
-          bottom: 70px;
-          ${position}: 10px;
-          border-radius: 12px;
-        }
-
-        #trelk-chat-bubble {
-          width: 54px;
-          height: 54px;
+          width: 100vw;
+          height: 100%;
+          max-height: 100vh;
+          bottom: 0;
+          right: 0;
+          left: 0;
+          border-radius: 0;
         }
       }
     `;
     document.head.appendChild(styles);
   }
 
-  // ============= DOM CREATION =============
-
+  // ============= DOM BUILDING =============
   function createWidget() {
-    // Container
     container = document.createElement("div");
     container.id = "trelk-chat-container";
 
-    // Bubble
+    // 1. Bubble Launcher
     bubble = document.createElement("div");
     bubble.id = "trelk-chat-bubble";
+    // Lucide MessageCircle Icon
     bubble.innerHTML = `
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-      </svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
     `;
     bubble.onclick = toggleChat;
 
-    // Chat Window
+    // 2. Main Window
     chatWindow = document.createElement("div");
     chatWindow.id = "trelk-chat-window";
-    chatWindow.innerHTML = `
+    
+    // Header HTML
+    const headerHtml = `
       <div class="trelk-header">
-        <div>
-          <div class="trelk-header-title">${escapeHtml(config.headerText)}</div>
-          <div class="trelk-header-subtitle">${isOnline ? "En línea" : "Fuera de línea"}</div>
-        </div>
-        <button class="trelk-header-close" onclick="TrelkChat.close()">
-          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </div>
-      ${!isOnline ? '<div class="trelk-offline-banner">' + escapeHtml(config.offlineMessage) + "</div>" : ""}
-      <div class="trelk-messages" id="trelk-messages">
-        <div class="trelk-welcome">
-          <div class="trelk-welcome-icon">
-            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <div class="trelk-brand">
+          <div class="trelk-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <p>${escapeHtml(config.welcomeMessage)}</p>
+          <div class="trelk-title">
+            <h3>${escapeHtml(config.headerText)}</h3>
+            <div class="trelk-status">
+              <span class="trelk-dot" id="trelk-status-dot"></span>
+              <span id="trelk-status-text">En línea</span>
+            </div>
+          </div>
+        </div>
+        <div class="trelk-actions">
+          <button class="trelk-btn-icon" id="trelk-close-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
       </div>
-      <div class="trelk-input-container">
-        <textarea class="trelk-input" id="trelk-input" placeholder="${escapeHtml(config.inputPlaceholder)}" rows="1"></textarea>
-        <button class="trelk-send-btn" id="trelk-send-btn">
-          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
-      </div>
-      ${config.showPoweredBy ? '<div class="trelk-powered">Powered by <a href="https://trelk.site" target="_blank">Trelk</a></div>' : ""}
     `;
 
-    container.appendChild(bubble);
+    // Body HTML
+    const bodyHtml = `
+      <div class="trelk-messages" id="trelk-messages">
+        <div style="text-align: center; margin-top: auto; margin-bottom: 20px; opacity: 0.5;">
+           <p style="font-size: 13px; color: var(--tr-text-sec);">${escapeHtml(config.welcomeMessage)}</p>
+        </div>
+      </div>
+    `;
+
+    // Footer HTML
+    const footerHtml = `
+      <div class="trelk-footer">
+        <div class="trelk-input-wrapper">
+          <textarea id="trelk-input" class="trelk-input" placeholder="${escapeHtml(config.inputPlaceholder)}" rows="1"></textarea>
+          <button id="trelk-send-btn" class="trelk-send-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+      </div>
+      ${config.showPoweredBy ? '<div class="trelk-branding">Powered by <a href="https://trelk.site" target="_blank">Trelk</a></div>' : ''}
+    `;
+
+    chatWindow.innerHTML = headerHtml + bodyHtml + footerHtml;
+
     container.appendChild(chatWindow);
+    container.appendChild(bubble);
     document.body.appendChild(container);
 
-    // Get references
+    // References
     messagesContainer = document.getElementById("trelk-messages");
     inputField = document.getElementById("trelk-input");
+    sendBtn = document.getElementById("trelk-send-btn");
 
-    // Event listeners
-    document.getElementById("trelk-send-btn").onclick = sendMessage;
+    // Listeners
+    document.getElementById("trelk-close-btn").onclick = close;
+    sendBtn.onclick = sendMessage;
+    
     inputField.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
       }
     });
-    inputField.addEventListener("input", handleTyping);
+    
+    // Auto-resize textarea
+    inputField.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = (this.scrollHeight) + "px";
+      handleTyping();
+    });
   }
 
-  // ============= CHAT FUNCTIONS =============
+  // ============= LOGIC =============
 
-  function toggleChat() {
-    if (isOpen) {
-      close();
-    } else {
-      open();
-    }
-  }
+  function toggleChat() { isOpen ? close() : open(); }
 
   function open() {
     isOpen = true;
     chatWindow.classList.add("open");
+    bubble.style.transform = "scale(0.9)";
+    bubble.style.opacity = "0";
+    setTimeout(() => bubble.style.display = 'none', 200); // Hide bubble for cleaner look
+    
     unreadCount = 0;
     updateBadge();
-    inputField?.focus();
-
-    // Connect socket if not connected
-    if (!socket) {
-      connectSocket();
-    }
+    if (!socket) connectSocket();
+    setTimeout(() => inputField?.focus(), 300);
   }
 
   function close() {
     isOpen = false;
     chatWindow.classList.remove("open");
+    bubble.style.display = 'flex';
+    setTimeout(() => {
+       bubble.style.opacity = "1";
+       bubble.style.transform = "scale(1)";
+    }, 10);
   }
 
   function updateBadge() {
-    const existingBadge = bubble.querySelector(".badge");
-    if (existingBadge) existingBadge.remove();
-
-    if (unreadCount > 0 && !isOpen) {
-      const badge = document.createElement("span");
+    const existing = bubble.querySelector(".badge");
+    if (existing) existing.remove();
+    if (unreadCount > 0) {
+      const badge = document.createElement("div");
       badge.className = "badge";
       badge.textContent = unreadCount > 9 ? "9+" : unreadCount;
       bubble.appendChild(badge);
@@ -669,26 +611,108 @@
   }
 
   function addMessage(msg) {
-    messages.push(msg);
+    const isUser = msg.senderType === "user";
+    const isSystem = msg.senderType === "system" || msg.senderType === "bot" && msg.contentType === "system";
+    const row = document.createElement("div");
+    
+    // Determine message type
+    if (isSystem) {
+      row.className = 'trelk-message-row system';
+    } else {
+      row.className = `trelk-message-row ${isUser ? 'user' : 'agent'}`;
+    }
+    
+    let html = '';
+    
+    // Avatar for agent (not for system or user)
+    if (!isUser && !isSystem) {
+      html += `<div class="trelk-avatar">${msg.senderName ? msg.senderName.charAt(0).toUpperCase() : 'AG'}</div>`;
+    }
 
-    // Remove welcome message
-    const welcome = messagesContainer.querySelector(".trelk-welcome");
-    if (welcome) welcome.remove();
-
-    const msgEl = document.createElement("div");
-    msgEl.className = `trelk-message ${msg.senderType === "user" ? "user" : "agent"}`;
-    msgEl.innerHTML = `
-      <div class="trelk-message-content">${escapeHtml(msg.content)}</div>
-      <span class="trelk-message-time">${formatTime(msg.timestamp)}</span>
+    html += `
+      <div class="trelk-message-content">
+        <div class="trelk-bubble">${escapeHtml(msg.content)}</div>
     `;
+    
+    // Handle inline keyboard (buttons) - support both old and new format
+    // Old format: msg.keyboard.inline_keyboard
+    // New format: msg.inlineKeyboard (from adapter)
+    const inlineKeyboard = msg.inlineKeyboard || (msg.keyboard && msg.keyboard.inline_keyboard);
+    if (inlineKeyboard && Array.isArray(inlineKeyboard)) {
+      html += '<div class="trelk-buttons">';
+      inlineKeyboard.forEach(buttonRow => {
+        html += '<div class="trelk-button-row">';
+        buttonRow.forEach(btn => {
+          // Handle both formats: callbackData (new) or callback_data (old/Telegram)
+          const callbackData = btn.callbackData || btn.callback_data;
+          if (btn.url) {
+            // URL button - opens link
+            html += `<a href="${escapeHtml(btn.url)}" target="_blank" rel="noopener" class="trelk-inline-btn url-btn">${escapeHtml(btn.text)}</a>`;
+          } else if (callbackData) {
+            // Callback button - sends callback to server
+            html += `<button class="trelk-inline-btn" data-callback="${escapeHtml(callbackData)}">${escapeHtml(btn.text)}</button>`;
+          }
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    
+    // Handle reply keyboard (quick replies) - support both old and new format
+    // Old format: msg.keyboard.keyboard
+    // New format: msg.replyKeyboard (from adapter)
+    const replyKeyboard = msg.replyKeyboard || (msg.keyboard && msg.keyboard.keyboard);
+    if (replyKeyboard && Array.isArray(replyKeyboard)) {
+      html += '<div class="trelk-buttons">';
+      replyKeyboard.forEach(buttonRow => {
+        html += '<div class="trelk-button-row">';
+        buttonRow.forEach(btn => {
+          const text = typeof btn === 'string' ? btn : btn.text;
+          html += `<button class="trelk-inline-btn" data-reply="${escapeHtml(text)}">${escapeHtml(text)}</button>`;
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    
+    if (!isSystem) {
+      html += `<div class="trelk-time" style="text-align: ${isUser ? 'right' : 'left'}">${formatTime(msg.timestamp)}</div>`;
+    }
+    
+    html += '</div>';
 
-    messagesContainer.appendChild(msgEl);
+    row.innerHTML = html;
+    
+    // Add click handlers for buttons
+    row.querySelectorAll('.trelk-inline-btn[data-callback]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const callbackData = btn.dataset.callback;
+        if (callbackData && socket) {
+          socket.emit('web:button:click', { callbackData });
+          // Optionally disable button after click
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        }
+      });
+    });
+    
+    row.querySelectorAll('.trelk-inline-btn[data-reply]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const replyText = btn.dataset.reply;
+        if (replyText) {
+          // Send as a regular message
+          addMessage({ senderType: "user", content: replyText, timestamp: new Date() });
+          if (socket) socket.emit("web:message:send", { content: replyText, contentType: "text" });
+        }
+      });
+    });
+    
+    messagesContainer.appendChild(row);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    if (msg.senderType !== "user") {
+    if (!isUser && !isSystem && !isOpen) {
       unreadCount++;
       updateBadge();
-      playNotificationSound();
     }
   }
 
@@ -696,34 +720,17 @@
     const content = inputField.value.trim();
     if (!content) return;
 
-    // Add to UI immediately
-    addMessage({
-      senderType: "user",
-      content,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Clear input
+    addMessage({ senderType: "user", content, timestamp: new Date() });
     inputField.value = "";
     inputField.style.height = "auto";
 
-    // Send via socket
-    if (socket) {
-      socket.emit("web:message:send", {
-        content,
-        contentType: "text",
-      });
-    }
+    if (socket) socket.emit("web:message:send", { content, contentType: "text" });
   }
 
   function handleTyping() {
-    if (!socket) return;
-
-    if (!isTyping) {
-      isTyping = true;
-      socket.emit("web:typing:start");
-    }
-
+    if (!socket || isTyping) return;
+    isTyping = true;
+    socket.emit("web:typing:start");
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
       isTyping = false;
@@ -731,252 +738,40 @@
     }, 2000);
   }
 
-  function showTypingIndicator() {
-    if (messagesContainer.querySelector(".trelk-typing")) return;
-
-    const typing = document.createElement("div");
-    typing.className = "trelk-typing";
-    typing.innerHTML = `
-      <div class="trelk-typing-dot"></div>
-      <div class="trelk-typing-dot"></div>
-      <div class="trelk-typing-dot"></div>
-    `;
-    messagesContainer.appendChild(typing);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  }
-
-  function hideTypingIndicator() {
-    const typing = messagesContainer.querySelector(".trelk-typing");
-    if (typing) typing.remove();
-  }
-
-  // ============= SOCKET CONNECTION =============
-
+  // ============= SOCKET LOGIC =============
   function connectSocket() {
-    // Load Socket.IO client
     const script = document.createElement("script");
-    // modedule type
-    script.src = "https://cdn.socket.io/4.8.3/socket.io.min.js";
+    script.src = "https://cdn.socket.io/4.7.4/socket.io.min.js"; // Stable version
     script.onload = () => {
-      initSocket();
+      socket = io(config.baseUrl, { path: "/webchat-socket", transports: ["websocket"] });
+      
+      socket.on("connect", () => {
+        visitorId = getStoredVisitorId() || generateId();
+        setStoredVisitorId(visitorId);
+        socket.emit("web:connect", { visitorId, projectId: config.projectId, user: config.user });
+        document.getElementById("trelk-status-dot").classList.remove("offline");
+        document.getElementById("trelk-status-text").textContent = "En línea";
+      });
+
+      socket.on("web:message:new", addMessage);
+      
+      socket.on("disconnect", () => {
+        document.getElementById("trelk-status-dot").classList.add("offline");
+        document.getElementById("trelk-status-text").textContent = "Desconectado";
+      });
     };
     document.head.appendChild(script);
   }
 
-  function initSocket() {
-    socket = io("https://s.trelk.site", {
-      path: "/webchat-socket",
-      transports: ["websocket", "polling"],
-    });
-
-    socket.on("connect", () => {
-      // Get or generate visitor ID
-      visitorId = getStoredVisitorId() || generateId();
-      setStoredVisitorId(visitorId);
-
-      // Send connection data
-      socket.emit("web:connect", {
-        visitorId,
-        projectId: config.projectId,
-        user: config.user,
-        pageUrl: window.location.href,
-        pageTitle: document.title,
-        referrer: document.referrer,
-        userAgent: navigator.userAgent,
-      });
-    });
-
-    socket.on("web:connected", (data) => {
-      sessionId = data.sessionId;
-      isOnline = data.isOnline;
-
-      // Load existing messages
-      if (data.existingMessages) {
-        data.existingMessages.forEach((msg) => {
-          addMessage(msg);
-        });
-      }
-
-      // Show agent if assigned
-      if (data.agent) {
-        assignedAgent = data.agent;
-      }
-    });
-
-    socket.on("web:message:new", (msg) => {
-      addMessage(msg);
-      hideTypingIndicator();
-    });
-
-    socket.on("web:typing:agent", (data) => {
-      showTypingIndicator();
-    });
-
-    socket.on("web:typing:stop", () => {
-      hideTypingIndicator();
-    });
-
-    socket.on("web:agent:assigned", (data) => {
-      assignedAgent = data;
-      // Could show a system message
-    });
-
-    socket.on("web:chat:closed", (data) => {
-      // Show chat closed message
-      addMessage({
-        senderType: "system",
-        content: data.message || "El chat ha sido cerrado.",
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    socket.on("web:survey:request", (data) => {
-      showSurvey(data);
-    });
-
-    socket.on("disconnect", () => {
-      // Reconnect logic handled by Socket.IO
-    });
-  }
-
-  // ============= SURVEY =============
-
-  let surveyRating = 0;
-
-  function showSurvey(data) {
-    const surveyHtml = `
-      <div class="trelk-survey" id="trelk-survey">
-        <div class="trelk-survey-content">
-          <div class="trelk-survey-title">${escapeHtml(data.question)}</div>
-          <div class="trelk-survey-stars">
-            ${[1, 2, 3, 4, 5]
-              .map(
-                (i) => `
-              <div class="trelk-survey-star" data-rating="${i}">
-                <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-              </div>
-            `,
-              )
-              .join("")}
-          </div>
-          <textarea class="trelk-survey-comment" id="trelk-survey-comment" placeholder="Comentario opcional..."></textarea>
-          <button class="trelk-survey-submit" id="trelk-survey-submit">Enviar</button>
-        </div>
-      </div>
-    `;
-
-    chatWindow.insertAdjacentHTML("beforeend", surveyHtml);
-
-    // Star click handlers
-    document.querySelectorAll(".trelk-survey-star").forEach((star) => {
-      star.onclick = () => {
-        surveyRating = parseInt(star.dataset.rating);
-        document.querySelectorAll(".trelk-survey-star").forEach((s, i) => {
-          s.classList.toggle("active", i < surveyRating);
-        });
-      };
-    });
-
-    // Submit handler
-    document.getElementById("trelk-survey-submit").onclick = () => {
-      if (surveyRating === 0) return;
-
-      const comment = document.getElementById("trelk-survey-comment").value;
-      socket.emit("web:survey:submit", { rating: surveyRating, comment });
-      document.getElementById("trelk-survey").remove();
-    };
-  }
-
   // ============= PUBLIC API =============
-
   window.TrelkChat = {
-    _initialized: false,
-
     init(options) {
-      if (this._initialized) {
-        console.warn("TrelkChat already initialized");
-        return;
-      }
-
-      if (!options.projectId) {
-        console.error("TrelkChat: projectId is required");
-        return;
-      }
-
+      if (!options.projectId) return console.error("TrelkChat: Project ID required");
       config = { ...DEFAULT_CONFIG, ...options };
-
-      // Wait for DOM
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => {
-          this._setup();
-        });
-      } else {
-        this._setup();
-      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { injectStyles(); createWidget(); });
+      else { injectStyles(); createWidget(); }
     },
-
-    _setup() {
-      injectStyles();
-      createWidget();
-      this._initialized = true;
-
-      // Auto open if configured
-      if (config.autoOpen && config.autoOpenDelay > 0) {
-        setTimeout(() => open(), config.autoOpenDelay);
-      } else if (config.autoOpen) {
-        open();
-      }
-
-      // Track page changes (SPA support)
-      let lastUrl = window.location.href;
-      setInterval(() => {
-        if (window.location.href !== lastUrl) {
-          lastUrl = window.location.href;
-          if (socket) {
-            socket.emit("web:page:change", {
-              url: window.location.href,
-              title: document.title,
-            });
-          }
-        }
-      }, 1000);
-    },
-
-    open() {
-      open();
-    },
-
-    close() {
-      close();
-    },
-
-    toggle() {
-      toggleChat();
-    },
-
-    setUser(user) {
-      config.user = user;
-      if (socket && visitorId) {
-        socket.emit("web:user:update", user);
-      }
-    },
-
-    sendMessage(content) {
-      if (!content) return;
-      inputField.value = content;
-      sendMessage();
-    },
-
-    destroy() {
-      if (socket) {
-        socket.disconnect();
-        socket = null;
-      }
-      if (container) {
-        container.remove();
-        container = null;
-      }
-      this._initialized = false;
-    },
+    open, close, toggle: toggleChat
   };
+
 })();

@@ -45,7 +45,10 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
     try {
       const info = await getContactInfo(sessionId);
       if (info) setContactInfo(info);
-      else setError('No se pudo cargar la información');
+      else {
+        setContactInfo(null);
+        setError('No se encontró información para este chat');
+      }
     } catch (err) {
       setError('Error cargando información');
       console.error(err);
