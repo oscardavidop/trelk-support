@@ -98,7 +98,7 @@ async function processCleanupJob(job: Job<CleanupJob>): Promise<any> {
  * Clean up expired sessions
  */
 async function cleanupExpiredSessions(): Promise<{ cleaned: number; archived: number }> {
-  const Session = mongoose.model('Session');
+  const Session = mongoose.model('ChatSession');
   
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() - CLEANUP_CONFIG.sessionExpiryDays);
@@ -166,7 +166,7 @@ async function cleanupOldMessages(): Promise<{ deleted: number }> {
 
   try {
     // Delete old messages from archived sessions only
-    const Session = mongoose.model('Session');
+    const Session = mongoose.model('ChatSession');
     const archivedSessionIds = await Session.find({ archived: true })
       .select('_id')
       .lean();

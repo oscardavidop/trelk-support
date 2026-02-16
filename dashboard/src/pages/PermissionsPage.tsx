@@ -828,7 +828,7 @@ export default function PermissionsPage() {
               <KeyRound className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
+              <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">
                 Permisos y Accesos
               </h1>
               <p className="text-sm text-zinc-400">
@@ -840,7 +840,7 @@ export default function PermissionsPage() {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="group flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-400 hover:text-white transition-all active:scale-95"
+            className="group flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-400 hover:text-zinc-50 transition-all active:scale-95"
           >
             <RefreshCw
               className={`w-4 h-4 transition-transform ${isRefreshing ? "animate-spin" : "group-hover:rotate-180"}`}
@@ -996,13 +996,13 @@ export default function PermissionsPage() {
                         >
                           <div className="flex items-center gap-3">
                             <div
-                              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${selectedAgent?._id === agent._id ? "bg-purple-500 text-white" : "bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700"}`}
+                              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${selectedAgent?._id === agent._id ? "bg-purple-500 text-zinc-50" : "bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700"}`}
                             >
                               <UserCog className="w-5 h-5" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div
-                                className={`font-medium truncate ${selectedAgent?._id === agent._id ? "text-white" : "text-zinc-300 group-hover:text-white"}`}
+                                className={`font-medium truncate ${selectedAgent?._id === agent._id ? "text-zinc-50" : "text-zinc-300 group-hover:text-zinc-50"}`}
                               >
                                 {agent.name}
                               </div>
@@ -1077,13 +1077,13 @@ export default function PermissionsPage() {
                               />
                             ) : (
                               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/10 flex items-center justify-center shadow-lg">
-                                <span className="text-2xl font-bold text-white">
+                                <span className="text-2xl font-bold text-zinc-50">
                                   {selectedAgent.name.charAt(0)}
                                 </span>
                               </div>
                             )}
                             <div>
-                              <h2 className="text-2xl font-bold text-white mb-1">
+                              <h2 className="text-2xl font-bold text-zinc-50 mb-1">
                                 {selectedAgent.name}
                               </h2>
                               <p className="text-zinc-400 font-mono text-sm mb-3">
@@ -1117,7 +1117,7 @@ export default function PermissionsPage() {
                                   )
                                 }
                                 disabled={isSaving}
-                                className="bg-transparent text-sm font-medium text-white px-3 py-1.5 focus:outline-none"
+                                className="bg-transparent text-sm font-medium text-zinc-50 px-3 py-1.5 focus:outline-none"
                               >
                                 <option value="admin">Admin</option>
                                 <option value="supervisor">Supervisor</option>
@@ -1130,7 +1130,7 @@ export default function PermissionsPage() {
                               <button
                                 onClick={() => handleReset(selectedAgent._id)}
                                 disabled={isSaving}
-                                className="p-2 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+                                className="p-2 text-zinc-400 hover:text-zinc-50 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
                                 title="Resetear a valores por defecto"
                               >
                                 <RefreshCw className="w-4 h-4" />
@@ -1265,7 +1265,7 @@ export default function PermissionsPage() {
                                               disabled={isSaving || isAdmin}
                                               className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all ${
                                                 hasPerm
-                                                  ? "bg-purple-600 border-purple-600 text-white"
+                                                  ? "bg-purple-600 border-purple-600 text-zinc-50"
                                                   : "bg-zinc-900 border-zinc-600 hover:border-zinc-500"
                                               } ${isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
                                             >
@@ -1354,7 +1354,7 @@ export default function PermissionsPage() {
                           )}
                         </div>
 
-                        <h3 className="text-lg font-bold text-white mb-1">
+                        <h3 className="text-lg font-bold text-zinc-50 mb-1">
                           {role.displayName}
                         </h3>
                         <p className="text-xs font-mono text-zinc-500 mb-4">
@@ -1466,11 +1466,11 @@ export default function PermissionsPage() {
                         {/* Header */}
                         <div className="flex items-start justify-between bg-zinc-900 border border-white/5 rounded-2xl p-6">
                           <div className="flex gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-xl font-bold text-white border border-white/10">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-xl font-bold text-zinc-50 border border-white/10">
                               {selectedRequest.agent.name.charAt(0)}
                             </div>
                             <div>
-                              <h2 className="text-xl font-bold text-white mb-1">
+                              <h2 className="text-xl font-bold text-zinc-50 mb-1">
                                 {selectedRequest.agent.name}
                               </h2>
                               <div className="flex items-center gap-2 text-sm">
@@ -1507,7 +1507,7 @@ export default function PermissionsPage() {
                         {/* Permissions List */}
                         <div className="bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
                           <div className="px-6 py-4 border-b border-white/5 bg-zinc-900">
-                            <h3 className="font-medium text-white flex items-center gap-2">
+                            <h3 className="font-medium text-zinc-50 flex items-center gap-2">
                               <KeyRound className="w-4 h-4 text-purple-400" />
                               Permisos Solicitados
                             </h3>
@@ -1542,7 +1542,7 @@ export default function PermissionsPage() {
                                               "reject",
                                             )
                                           }
-                                          className={`p-1.5 rounded-md transition-all ${decision === "reject" ? "bg-red-500 text-white shadow" : "text-zinc-500 hover:text-red-400"}`}
+                                          className={`p-1.5 rounded-md transition-all ${decision === "reject" ? "bg-red-500 text-zinc-50 shadow" : "text-zinc-500 hover:text-red-400"}`}
                                         >
                                           <XCircle className="w-4 h-4" />
                                         </button>
@@ -1554,7 +1554,7 @@ export default function PermissionsPage() {
                                               "approve",
                                             )
                                           }
-                                          className={`p-1.5 rounded-md transition-all ${decision === "approve" ? "bg-emerald-500 text-white shadow" : "text-zinc-500 hover:text-emerald-400"}`}
+                                          className={`p-1.5 rounded-md transition-all ${decision === "approve" ? "bg-emerald-500 text-zinc-50 shadow" : "text-zinc-500 hover:text-emerald-400"}`}
                                         >
                                           <CheckCircle className="w-4 h-4" />
                                         </button>
@@ -1584,14 +1584,14 @@ export default function PermissionsPage() {
                         {/* Review Form */}
                         {selectedRequest.status === "pending" && (
                           <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6">
-                            <h3 className="font-medium text-white mb-4">
+                            <h3 className="font-medium text-zinc-50 mb-4">
                               Finalizar Revisión
                             </h3>
                             <textarea
                               value={reviewNotes}
                               onChange={(e) => setReviewNotes(e.target.value)}
                               placeholder="Añade notas sobre tu decisión (obligatorio si rechazas)..."
-                              className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500 mb-4 resize-none"
+                              className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-purple-500 mb-4 resize-none"
                             />
 
                             {Object.values(permissionDecisions).some(
@@ -1620,7 +1620,7 @@ export default function PermissionsPage() {
                                   (d) => d === "pending",
                                 )
                               }
-                              className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                              className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-zinc-50 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                             >
                               {isSaving ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -1670,7 +1670,7 @@ function TabButton({ active, onClick, icon: Icon, label, badge }: any) {
       onClick={onClick}
       className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
         active
-          ? "bg-zinc-800 text-white shadow-sm"
+          ? "bg-zinc-800 text-zinc-50 shadow-sm"
           : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
       }`}
     >
@@ -1693,7 +1693,7 @@ function EmptyState({ icon: Icon, title, description, small }: any) {
       <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mb-4 border border-zinc-800">
         <Icon className="w-10 h-10 text-zinc-700" />
       </div>
-      <h3 className="text-lg font-medium text-white mb-2">{title}</h3>
+      <h3 className="text-lg font-medium text-zinc-50 mb-2">{title}</h3>
       <p className="text-zinc-500 max-w-sm">{description}</p>
     </div>
   );

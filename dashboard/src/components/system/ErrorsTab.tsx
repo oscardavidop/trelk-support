@@ -106,7 +106,7 @@ export function ErrorsTab() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
             <Bug className="w-5 h-5 text-red-500" />
             Registro de Errores
           </h2>
@@ -279,7 +279,7 @@ function ErrorCard({ error, expanded, onToggle }: { error: ErrorLogEntry; expand
               </span>
               <button
                 onClick={() => copyToClipboard(error.stack || error.error)}
-                className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white transition-colors"
+                className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-50 transition-colors"
               >
                 {copied ? <CheckCircle className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                 {copied ? 'Copiado' : 'Copiar'}

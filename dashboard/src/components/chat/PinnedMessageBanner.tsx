@@ -179,7 +179,7 @@ export function PinHistoryModal({
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <div className="flex items-center gap-2">
             <Pin className="w-5 h-5 text-blue-400" />
-            <h3 className="text-lg font-semibold text-white">Historial de Mensajes Fijados</h3>
+            <h3 className="text-lg font-semibold text-zinc-50">Historial de Mensajes Fijados</h3>
           </div>
           <button
             onClick={onClose}

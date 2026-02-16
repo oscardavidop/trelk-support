@@ -107,3 +107,29 @@ export {
   BroadcastReceipt as InternalBroadcastReceipt,
   type IBroadcastReceipt as IInternalBroadcastReceipt,
 } from './BroadcastReceipt.js';
+
+// Login Policy & Rules Engine
+export {
+  LoginPolicy,
+  type ILoginPolicy,
+  type PolicyContext,
+  type PolicyResult,
+  type ChatActionContext,
+  type ChatActionResult,
+  type IChatActionRule,
+  type IGlobalAlert,
+  type ITimeRange,
+  type IRoleRedirect,
+  type ILocationRestriction,
+  type IDeviceTrust,
+  type ISessionPolicy,
+  type IProfileRequirements,
+  type IAutoStatus,
+  type IAutoQueueAssignment,
+  type IMaintenanceMode,
+  type ISupervisorAlerts,
+  type IPolicyAcceptance,
+} from './LoginPolicy.js';
+
+// Enterprise models - Media Admin
+export { MediaFile, type IMediaFile, type MediaSource, type MediaType, type MediaStatus } from './MediaFile.js';

@@ -139,12 +139,14 @@ export async function handleAgentDisconnection(agentId: string): Promise<{
         const queuedSession = await addToQueue(session.sessionId);
         if (queuedSession) {
           // Emit minimal session data for queued notification
+          const userData = session.user as any;
           io.emit('session:queued', {
             sessionId: session.sessionId,
             user: {
-              telegramId: (session.user as any).telegramId,
-              firstName: (session.user as any).firstName,
-              username: (session.user as any).username,
+              _id: userData?._id?.toString() || '',
+              telegramId: userData?.telegramId,
+              firstName: userData?.firstName,
+              username: userData?.username,
             },
             status: 'queued',
             createdAt: session.createdAt,

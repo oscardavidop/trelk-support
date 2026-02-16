@@ -14,7 +14,7 @@ import { getSocket, disconnectSocket } from './socket';
 
 const CHANNEL_NAME = 'trelk-session-guard';
 const STORAGE_KEY = 'trelk-active-tab';
-const HEARTBEAT_INTERVAL = 5000;
+const HEARTBEAT_INTERVAL = 10 * 1000; // 10 seconds
 
 // ============= TYPES =============
 

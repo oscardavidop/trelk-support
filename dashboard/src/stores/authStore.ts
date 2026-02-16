@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Agent } from '../types';
 import { usePermissionStore } from './permissionStore';
+import { usePolicyStore } from './policyStore';
 import { clearBrowserSessionId } from '../services/sessionGuard.service';
 
 // Authentication states for the auth flow
@@ -14,6 +15,7 @@ export type AuthFlowState =
   | 'mfa_setup_required'
   | 'telegram_link_required'
   | 'force_password_change'
+  | 'profile_incomplete'
   | 'authenticated';
 
 interface AuthState {
@@ -76,6 +78,9 @@ export const useAuthStore = create<AuthState>()(
             } else if (data.telegramLinkRequired) {
               authFlowState = 'telegram_link_required';
               telegramLinkRequired = true;
+            } else if (data.profileIncomplete) {
+              // Profile requirements not met
+              authFlowState = 'profile_incomplete';
             }
             
             set({
@@ -96,6 +101,18 @@ export const useAuthStore = create<AuthState>()(
                 data.agent?.permissionVersion || 1
               );
             }
+
+            // Store login policy results
+            usePolicyStore.getState().setLoginPolicyResults({
+              redirect: data.redirect,
+              profileIncomplete: data.profileIncomplete,
+              globalAlert: data.globalAlert,
+              policyAcceptanceRequired: data.policyAcceptanceRequired,
+              readOnlyMode: data.readOnlyMode,
+              maintenanceMode: data.maintenanceMode,
+              maintenanceMessage: data.maintenanceMessage,
+              warnings: data.warnings,
+            });
             
             return true;
           }
@@ -124,6 +141,9 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           // Clear permissions on logout
           usePermissionStore.getState().clearPermissions();
+          
+          // Clear policy state on logout
+          usePolicyStore.getState().clearPolicyState();
           
           // Clear browser session ID so next login gets a new session
           clearBrowserSessionId();

@@ -4,6 +4,8 @@
  */
 
 import mongoose, { Schema, Document, Types } from 'mongoose';
+import { getAgentRules } from '../../services/settings-cache.service.js';
+import { IAgentRules } from './Settings.js';
 
 export interface INotificationSettings {
   newChat: boolean;
@@ -16,13 +18,13 @@ export interface INotificationSettings {
 export interface IAgentPreferences extends Document {
   _id: Types.ObjectId;
   agentId: Types.ObjectId;
-  
+
   // Theme & Display
   theme: 'light' | 'dark' | 'system';
   focusMode: boolean;
   language: string;
   timezone: string;
-  
+
   // Sounds
   sounds: {
     enabled: boolean;
@@ -31,26 +33,31 @@ export interface IAgentPreferences extends Document {
     mention: boolean;
     volume: number; // 0-100
   };
-  
+
   // Chat behavior
   autoScroll: boolean;
   enterToSend: boolean;
   showTypingIndicator: boolean;
   markAsReadOnOpen: boolean;
-  
+
   // Keyboard shortcuts
   shortcutsEnabled: boolean;
-  
+
   // Notifications
   notifications: {
     email: INotificationSettings;
     inApp: INotificationSettings;
     telegram: INotificationSettings;
   };
-  
+  organizationSettings?: {
+    agentRules: {
+      focusModeEnabled: boolean;
+    }
+  };
+
   // Desktop notifications
   desktopNotifications: boolean;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,7 +79,7 @@ const AgentPreferencesSchema = new Schema<IAgentPreferences>(
       unique: true,
       index: true,
     },
-    
+
     // Theme & Display
     theme: {
       type: String,
@@ -91,7 +98,7 @@ const AgentPreferencesSchema = new Schema<IAgentPreferences>(
       type: String,
       default: 'America/Mexico_City',
     },
-    
+
     // Sounds
     sounds: {
       enabled: { type: Boolean, default: true },
@@ -100,23 +107,23 @@ const AgentPreferencesSchema = new Schema<IAgentPreferences>(
       mention: { type: Boolean, default: true },
       volume: { type: Number, default: 80, min: 0, max: 100 },
     },
-    
+
     // Chat behavior
     autoScroll: { type: Boolean, default: true },
     enterToSend: { type: Boolean, default: true },
     showTypingIndicator: { type: Boolean, default: true },
     markAsReadOnOpen: { type: Boolean, default: true },
-    
+
     // Keyboard shortcuts
     shortcutsEnabled: { type: Boolean, default: true },
-    
+
     // Notifications
     notifications: {
       email: { type: NotificationSettingsSchema, default: () => ({}) },
       inApp: { type: NotificationSettingsSchema, default: () => ({}) },
       telegram: { type: NotificationSettingsSchema, default: () => ({}) },
     },
-    
+
     // Desktop notifications
     desktopNotifications: { type: Boolean, default: true },
   },
@@ -132,10 +139,19 @@ export const AgentPreferences = mongoose.model<IAgentPreferences>('AgentPreferen
  */
 export async function getOrCreatePreferences(agentId: string): Promise<IAgentPreferences> {
   let prefs = await AgentPreferences.findOne({ agentId });
-  
+
   if (!prefs) {
     prefs = await AgentPreferences.create({ agentId });
   }
-  
-  return prefs;
+
+
+  const globalSettings = await getAgentRules();
+
+  return {
+    ...prefs.toObject(), organizationSettings: {
+      agentRules: {
+        focusModeEnabled: globalSettings.focusModeEnabled,
+      }
+    }
+  } as unknown as IAgentPreferences;
 }

@@ -203,7 +203,7 @@ const RenderConditionConfig = (config: ConditionConfig, updateConfig: (key: stri
                                         <select
                                             value={rule.value || ''}
                                             onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
-                                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 outline-none"
+                                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 outline-none"
                                         >
                                             <option value="">Seleccionar...</option>
                                             {SUPPORTED_LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
@@ -221,13 +221,13 @@ const RenderConditionConfig = (config: ConditionConfig, updateConfig: (key: stri
                                                     updateRule(groupIndex, ruleIndex, 'customFieldName', e.target.value);
                                                     updateRule(groupIndex, ruleIndex, 'field', `customFields.${e.target.value}`);
                                                 }}
-                                                className="w-1/2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 outline-none"
+                                                className="w-1/2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 outline-none"
                                             />
                                             <input 
                                                 placeholder="Valor" 
                                                 value={rule.value || ''}
                                                 onChange={e => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
-                                                className="w-1/2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 outline-none"
+                                                className="w-1/2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 outline-none"
                                             />
                                         </div>
                                     );
@@ -239,7 +239,7 @@ const RenderConditionConfig = (config: ConditionConfig, updateConfig: (key: stri
                                         value={rule.value || ''}
                                         onChange={(e) => updateRule(groupIndex, ruleIndex, 'value', e.target.value)}
                                         placeholder="Valor a comparar..."
-                                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
+                                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
                                     />
                                 );
                             })()}

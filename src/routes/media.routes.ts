@@ -13,6 +13,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authMiddleware } from '../middleware/auth.js';
 import { getFile, getFileBuffer } from '../services/telegram.js';
+import { Message } from '../database/index.js';
+import { ChatSession } from '../database/index.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -199,6 +201,130 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
       } catch (error) {
         console.error('Download error:', error);
         return reply.status(500).send({ ok: false, error: 'Failed to download file' });
+      }
+    }
+  );
+
+  /**
+   * GET /api/media/chat/:sessionId
+   * Get all media from a chat session organized by type
+   */
+  fastify.get<{ Params: { sessionId: string }; Querystring: { cursor?: string; limit?: string } }>(
+    '/api/media/chat/:sessionId',
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      try {
+        const { sessionId } = request.params;
+        const { cursor, limit = '50' } = request.query;
+        const limitNum = Math.min(parseInt(limit) || 50, 100);
+
+        // Verify session exists and agent has access
+        const session = await ChatSession.findOne({ sessionId }).lean();
+        if (!session) {
+          return reply.status(404).send({ ok: false, error: 'Session not found' });
+        }
+
+        // Build query for media messages
+        const mediaTypes = ['image', 'video', 'audio', 'voice', 'file', 'document', 'sticker'];
+        const query: any = {
+          session: session._id,
+          messageType: { $in: mediaTypes },
+          isDeleted: { $ne: true }
+        };
+
+        // Cursor pagination
+        if (cursor) {
+          query._id = { $lt: cursor };
+        }
+
+        // Fetch media messages
+        const messages = await Message.find(query)
+          .sort({ createdAt: -1 })
+          .limit(limitNum + 1) // +1 to check if there are more
+          .select('_id messageType media mediaUrl content sender senderName createdAt metadata')
+          .lean();
+
+        const hasMore = messages.length > limitNum;
+        const items = hasMore ? messages.slice(0, -1) : messages;
+
+        // Organize by type
+        const mediaByType = {
+          images: [] as any[],
+          videos: [] as any[],
+          audios: [] as any[],
+          files: [] as any[],
+          stickers: [] as any[]
+        };
+
+        for (const msg of items) {
+          const mediaItem = {
+            id: msg._id.toString(),
+            type: msg.messageType,
+            url: msg.media?.url || msg.mediaUrl || '',
+            thumbnailUrl: msg.media?.thumbnailUrl,
+            fileName: msg.media?.fileName || msg.content || 'Unknown',
+            fileSize: msg.media?.fileSize,
+            mimeType: msg.media?.mimeType,
+            duration: msg.media?.duration,
+            width: msg.media?.width,
+            height: msg.media?.height,
+            caption: msg.content,
+            sender: msg.sender,
+            senderName: msg.senderName,
+            createdAt: msg.createdAt,
+            metadata: msg.metadata
+          };
+
+          switch (msg.messageType) {
+            case 'image':
+              mediaByType.images.push(mediaItem);
+              break;
+            case 'video':
+              mediaByType.videos.push(mediaItem);
+              break;
+            case 'audio':
+            case 'voice':
+              mediaByType.audios.push(mediaItem);
+              break;
+            case 'file':
+            case 'document':
+              mediaByType.files.push(mediaItem);
+              break;
+            case 'sticker':
+              mediaByType.stickers.push(mediaItem);
+              break;
+          }
+        }
+
+        // Get counts for each type
+        const counts = await Message.aggregate([
+          { $match: { session: session._id, messageType: { $in: mediaTypes }, isDeleted: { $ne: true } } },
+          { $group: { _id: '$messageType', count: { $sum: 1 } } }
+        ]);
+
+        const countsMap: Record<string, number> = {};
+        for (const c of counts) {
+          countsMap[c._id] = c.count;
+        }
+
+        return reply.send({
+          ok: true,
+          media: mediaByType,
+          counts: {
+            images: countsMap['image'] || 0,
+            videos: countsMap['video'] || 0,
+            audios: (countsMap['audio'] || 0) + (countsMap['voice'] || 0),
+            files: (countsMap['file'] || 0) + (countsMap['document'] || 0),
+            stickers: countsMap['sticker'] || 0,
+            total: Object.values(countsMap).reduce((a, b) => a + b, 0)
+          },
+          hasMore,
+          nextCursor: hasMore ? items[items.length - 1]._id.toString() : null
+        });
+
+      } catch (error) {
+        console.error('Chat media error:', error);
+        return reply.status(500).send({ ok: false, error: 'Failed to get chat media' });
       }
     }
   );

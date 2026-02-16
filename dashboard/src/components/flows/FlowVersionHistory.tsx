@@ -77,13 +77,13 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
               <History className="w-6 h-6 text-indigo-500" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Historial de Versiones</h2>
+              <h2 className="text-lg font-bold text-zinc-50 tracking-tight">Historial de Versiones</h2>
               <p className="text-xs text-zinc-400 font-mono mt-0.5">{flowName}</p>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -124,7 +124,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     {/* Timeline Dot */}
                     <div className={`
                       absolute left-0 top-1 w-10 h-10 rounded-full border-4 border-zinc-900 flex items-center justify-center z-10 transition-colors
-                      ${isCurrent ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700 group-hover:text-zinc-200'}
+                      ${isCurrent ? 'bg-indigo-600 text-zinc-50 shadow-lg shadow-indigo-500/20' : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700 group-hover:text-zinc-200'}
                     `}>
                       <span className="text-xs font-bold">{v.version}</span>
                     </div>
@@ -139,7 +139,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold ${isCurrent ? 'text-white' : 'text-zinc-300'}`}>
+                            <span className={`text-sm font-bold ${isCurrent ? 'text-zinc-50' : 'text-zinc-300'}`}>
                               Versión {v.version}
                             </span>
                             {isCurrent && (

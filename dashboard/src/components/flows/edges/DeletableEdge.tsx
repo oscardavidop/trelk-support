@@ -92,7 +92,7 @@ export default function DeletableEdge({
               onMouseDown={(e) => {
                 e.stopPropagation();
               }}
-              className="w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg flex items-center justify-center transition-colors cursor-pointer border-2 border-white"
+              className="w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-zinc-50 shadow-lg flex items-center justify-center transition-colors cursor-pointer border-2 border-white"
               title="Eliminar conexión"
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -103,11 +103,11 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
               <Clock className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Programar Mensaje</h2>
+              <h2 className="text-lg font-bold text-zinc-50 tracking-tight">Programar Mensaje</h2>
               <p className="text-xs text-zinc-400">Automatiza el envío de respuestas</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -129,11 +129,11 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
                       : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'
                   }`}
                 >
-                  <div className={`p-2 rounded-lg ${type === t.value ? 'bg-indigo-500 text-white' : 'bg-zinc-800 text-zinc-400 group-hover:text-zinc-200'}`}>
+                  <div className={`p-2 rounded-lg ${type === t.value ? 'bg-indigo-500 text-zinc-50' : 'bg-zinc-800 text-zinc-400 group-hover:text-zinc-200'}`}>
                     <t.icon className="w-4 h-4" />
                   </div>
                   <div className="flex-1">
-                    <p className={`text-sm font-medium ${type === t.value ? 'text-white' : 'text-zinc-300'}`}>{t.label}</p>
+                    <p className={`text-sm font-medium ${type === t.value ? 'text-zinc-50' : 'text-zinc-300'}`}>{t.label}</p>
                     <p className="text-xs text-zinc-500">{t.desc}</p>
                   </div>
                   {type === t.value && <Check className="w-4 h-4 text-indigo-400" />}
@@ -151,7 +151,7 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
                   type="datetime-local"
                   value={scheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none transition-all text-sm"
+                  className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-50 focus:border-indigo-500 focus:outline-none transition-all text-sm"
                 />
               </div>
             )}
@@ -161,13 +161,13 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
                 <label className="text-xs font-bold text-zinc-500">Tiempo de Espera</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {QUICK_DELAYS.map(m => (
-                    <button key={m} onClick={() => setDelayMinutes(m)} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${delayMinutes === m ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}`}>
+                    <button key={m} onClick={() => setDelayMinutes(m)} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${delayMinutes === m ? 'bg-indigo-600 text-zinc-50 border-indigo-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}`}>
                       {m} min
                     </button>
                   ))}
                 </div>
                 <div className="flex items-center gap-3">
-                  <input type="number" min="1" value={delayMinutes} onChange={(e) => setDelayMinutes(parseInt(e.target.value))} className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-white text-center focus:border-indigo-500 outline-none" />
+                  <input type="number" min="1" value={delayMinutes} onChange={(e) => setDelayMinutes(parseInt(e.target.value))} className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-50 text-center focus:border-indigo-500 outline-none" />
                   <span className="text-sm text-zinc-400">minutos de inactividad</span>
                 </div>
               </div>
@@ -176,7 +176,7 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
             {type === 'on_event' && (
               <div className="space-y-2">
                 <label className="text-xs font-bold text-zinc-500">Evento Disparador</label>
-                <select value={triggerEvent} onChange={(e) => setTriggerEvent(e.target.value as any)} className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl text-white focus:border-indigo-500 outline-none text-sm">
+                <select value={triggerEvent} onChange={(e) => setTriggerEvent(e.target.value as any)} className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-50 focus:border-indigo-500 outline-none text-sm">
                   {TRIGGER_EVENTS.map(ev => <option key={ev.value} value={ev.value}>{ev.label}</option>)}
                 </select>
               </div>
@@ -192,7 +192,7 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
                 onChange={(e) => setMessageText(e.target.value)}
                 rows={3}
                 placeholder="Escribe el mensaje aquí..."
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none text-sm transition-all"
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none text-sm transition-all"
               />
               <p className="text-[10px] text-zinc-500 text-right">{messageText.length}/4096 caracteres</p>
             </div>
@@ -205,7 +205,7 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
                <div className="p-4 bg-zinc-950/50 border border-zinc-800/50 border-dashed rounded-xl">
                   {messageText ? (
                     <div className="flex justify-end">
-                       <div className="bg-indigo-600 text-white px-4 py-2 rounded-2xl rounded-tr-sm text-sm max-w-[90%] shadow-lg shadow-indigo-900/10">
+                       <div className="bg-indigo-600 text-zinc-50 px-4 py-2 rounded-2xl rounded-tr-sm text-sm max-w-[90%] shadow-lg shadow-indigo-900/10">
                           <p className="whitespace-pre-wrap break-words">{messageText}</p>
                        </div>
                     </div>
@@ -234,8 +234,8 @@ export function ScheduleMessageModal({ sessionId, isOpen, onClose, onCreated, de
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-4 border-t border-zinc-800 bg-zinc-900 rounded-b-2xl shrink-0">
-          <button onClick={onClose} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all">Cancelar</button>
-          <button onClick={handleSubmit} disabled={isSubmitting || !messageText.trim()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]">
+          <button onClick={onClose} disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all">Cancelar</button>
+          <button onClick={handleSubmit} disabled={isSubmitting || !messageText.trim()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]">
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {isSubmitting ? 'Procesando...' : 'Programar Envío'}
           </button>

@@ -261,7 +261,7 @@ export default function ContactsPage() {
           <h3 className="font-bold text-zinc-300 text-sm flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-500" /> Segmentos
           </h3>
-          <button onClick={() => setShowSegmentsManager(true)} className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded transition-colors"><Settings className="w-4 h-4" /></button>
+          <button onClick={() => setShowSegmentsManager(true)} className="p-1.5 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded transition-colors"><Settings className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
@@ -313,15 +313,15 @@ export default function ContactsPage() {
                 <Users className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Contactos</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Contactos</h1>
                 <p className="text-sm text-zinc-400">Base de datos CRM</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleRefresh} disabled={isRefreshing} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+              <button onClick={handleRefresh} disabled={isRefreshing} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-50 transition-all">
                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
-              <button onClick={() => setShowBulkActions(!showBulkActions)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white font-medium rounded-xl transition-all relative">
+              <button onClick={() => setShowBulkActions(!showBulkActions)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-zinc-50 font-medium rounded-xl transition-all relative">
                 <Download className="w-4 h-4" /> Exportar
                 {showBulkActions && (
                   <div className="absolute right-0 top-full mt-2 w-40 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col p-1">
@@ -368,7 +368,7 @@ export default function ContactsPage() {
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                   placeholder="Buscar contactos..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
                 />
               </div>
 
@@ -382,7 +382,7 @@ export default function ContactsPage() {
 
               <button
                 onClick={() => setShowColumnSettings(!showColumnSettings)}
-                className="p-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+                className="p-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-colors"
                 title="Configurar columnas"
               >
                 <Settings className="w-4 h-4" />
@@ -393,9 +393,9 @@ export default function ContactsPage() {
               <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-xl animate-in slide-in-from-top-2 fade-in">
                 <span className="text-sm font-medium text-blue-300 mr-2">{selectedContacts.size} seleccionados</span>
                 <div className="h-4 w-px bg-blue-500/20" />
-                <button onClick={() => setBulkActionModal('add-tag')} className="p-1.5 text-blue-400 hover:text-white hover:bg-blue-500/20 rounded-lg"><Tag className="w-4 h-4" /></button>
+                <button onClick={() => setBulkActionModal('add-tag')} className="p-1.5 text-blue-400 hover:text-zinc-50 hover:bg-blue-500/20 rounded-lg"><Tag className="w-4 h-4" /></button>
                 <button onClick={() => setBulkActionModal('block')} className="p-1.5 text-blue-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg"><Ban className="w-4 h-4" /></button>
-                <button onClick={() => setSelectedContacts(new Set())} className="p-1.5 text-blue-400 hover:text-white hover:bg-blue-500/20 rounded-lg"><X className="w-4 h-4" /></button>
+                <button onClick={() => setSelectedContacts(new Set())} className="p-1.5 text-blue-400 hover:text-zinc-50 hover:bg-blue-500/20 rounded-lg"><X className="w-4 h-4" /></button>
               </div>
             )}
           </div>
@@ -417,7 +417,7 @@ export default function ContactsPage() {
             <div className="flex-1 flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
-          ) : <div className="flex-1 overflow-auto custom-scrollbar px-8">
+          ) : <div className="flex-1 overflow-auto px-8 scrollbar-hover">
             <table className="w-full text-left text-sm text-zinc-400">
               <thead className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-sm border-b border-zinc-800">
                 <tr>
@@ -486,7 +486,7 @@ export default function ContactsPage() {
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="px-2 py-1 bg-gray-700/50 border border-gray-600/50 rounded text-sm text-white"
+              className="px-2 py-1 bg-gray-700/50 border border-gray-600/50 rounded text-sm text-zinc-50"
             >
               <option value={25}>25 por página</option>
               <option value={50}>50 por página</option>
@@ -497,7 +497,7 @@ export default function ContactsPage() {
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="p-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 text-gray-300 hover:text-zinc-50 hover:bg-gray-700/50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -518,7 +518,7 @@ export default function ContactsPage() {
                   key={pageNum}
                   onClick={() => setPage(pageNum)}
                   className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${page === pageNum
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-600 text-zinc-50'
                     : 'text-gray-300 hover:bg-gray-700/50'
                     }`}
                 >
@@ -530,7 +530,7 @@ export default function ContactsPage() {
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
-              className="p-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 text-gray-300 hover:text-zinc-50 hover:bg-gray-700/50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -552,15 +552,15 @@ export default function ContactsPage() {
       {bulkActionModal === 'add-tag' && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Añadir Etiqueta</h3>
+            <h3 className="text-lg font-bold text-zinc-50 mb-4">Añadir Etiqueta</h3>
             <p className="text-zinc-400 text-sm mb-4">Selecciona una etiqueta para {selectedContacts.size} contactos.</p>
-            <select value={bulkTagId} onChange={(e) => setBulkTagId(e.target.value)} className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white mb-6 focus:border-blue-500 outline-none">
+            <select value={bulkTagId} onChange={(e) => setBulkTagId(e.target.value)} className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 mb-6 focus:border-blue-500 outline-none">
               <option value="">Seleccionar...</option>
               {tags.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
             </select>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setBulkActionModal(null)} className="px-4 py-2 text-zinc-400 hover:text-white">Cancelar</button>
-              <button onClick={() => executeBulkAction('add-tag', { tagId: bulkTagId })} disabled={!bulkTagId || bulkActionLoading} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl disabled:opacity-50 flex items-center gap-2">
+              <button onClick={() => setBulkActionModal(null)} className="px-4 py-2 text-zinc-400 hover:text-zinc-50">Cancelar</button>
+              <button onClick={() => executeBulkAction('add-tag', { tagId: bulkTagId })} disabled={!bulkTagId || bulkActionLoading} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-zinc-50 rounded-xl disabled:opacity-50 flex items-center gap-2">
                 {bulkActionLoading && <Loader2 className="w-4 h-4 animate-spin" />} Añadir
               </button>
             </div>
@@ -574,13 +574,13 @@ export default function ContactsPage() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <div className="flex items-center gap-3 mb-4 text-red-500">
               <Ban className="w-6 h-6" />
-              <h3 className="text-lg font-bold text-white">Bloquear Contactos</h3>
+              <h3 className="text-lg font-bold text-zinc-50">Bloquear Contactos</h3>
             </div>
             <p className="text-zinc-400 text-sm mb-4">Se bloquearán {selectedContacts.size} contactos. No podrán enviarte mensajes.</p>
-            <input type="text" value={bulkBlockReason} onChange={(e) => setBulkBlockReason(e.target.value)} placeholder="Motivo (opcional)" className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white mb-6 focus:border-red-500 outline-none" />
+            <input type="text" value={bulkBlockReason} onChange={(e) => setBulkBlockReason(e.target.value)} placeholder="Motivo (opcional)" className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 mb-6 focus:border-red-500 outline-none" />
             <div className="flex justify-end gap-3">
-              <button onClick={() => setBulkActionModal(null)} className="px-4 py-2 text-zinc-400 hover:text-white">Cancelar</button>
-              <button onClick={() => executeBulkAction('block', { reason: bulkBlockReason })} disabled={bulkActionLoading} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl disabled:opacity-50 flex items-center gap-2">
+              <button onClick={() => setBulkActionModal(null)} className="px-4 py-2 text-zinc-400 hover:text-zinc-50">Cancelar</button>
+              <button onClick={() => executeBulkAction('block', { reason: bulkBlockReason })} disabled={bulkActionLoading} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl disabled:opacity-50 flex items-center gap-2">
                 {bulkActionLoading && <Loader2 className="w-4 h-4 animate-spin" />} Bloquear
               </button>
             </div>
@@ -593,8 +593,8 @@ export default function ContactsPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-80 max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-              <h3 className="font-bold text-white">Columnas</h3>
-              <button onClick={() => setShowColumnSettings(false)}><X className="w-5 h-5 text-zinc-500 hover:text-white" /></button>
+              <h3 className="font-bold text-zinc-50">Columnas</h3>
+              <button onClick={() => setShowColumnSettings(false)}><X className="w-5 h-5 text-zinc-500 hover:text-zinc-50" /></button>
             </div>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {columns.filter(c => c.id !== 'select' && c.id !== 'actions').map(col => (
@@ -605,7 +605,7 @@ export default function ContactsPage() {
               ))}
             </div>
             <div className="p-4 border-t border-zinc-800">
-              <button onClick={() => setColumns(DEFAULT_COLUMNS)} className="w-full py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg">Restaurar defecto</button>
+              <button onClick={() => setColumns(DEFAULT_COLUMNS)} className="w-full py-2 text-sm text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg">Restaurar defecto</button>
             </div>
           </div>
         </div>
@@ -641,7 +641,7 @@ function NavButton({ active, onClick, label, icon: Icon, count }: any) {
 
 function SegmentItem({ segment, active, onClick }: any) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all group ${active ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/30'}`}>
+    <button onClick={onClick} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all group ${active ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/30'}`}>
       <div className="flex items-center gap-2.5">
         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: segment.color || '#71717a' }} />
         <span className="truncate">{segment.name}</span>
@@ -670,8 +670,8 @@ function renderCell(colId: string, contact: IContactListItem, selected: boolean,
       <input type="checkbox" checked={selected} onChange={onSelect} className="rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-offset-0 focus:ring-blue-500/50" />
     );
     case 'fullName': return (
-      <button onClick={onView} className="flex items-center gap-3 text-left group-hover:text-white transition-colors">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">{contact.firstName?.[0] || '?'}</div>
+      <button onClick={onView} className="flex items-center gap-3 text-left group-hover:text-zinc-50 transition-colors">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-xs font-bold text-zinc-50 shadow-sm">{contact.firstName?.[0] || '?'}</div>
         <div>
           <div className="font-medium text-zinc-200">{contact.fullName}</div>
           {contact.username && <div className="text-xs text-zinc-500">@{contact.username}</div>}

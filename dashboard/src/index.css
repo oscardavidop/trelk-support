@@ -20,7 +20,7 @@ html {
 
 body {
   color: var(--text-primary);
-  background-color: #18181b;
+  background-color: var(--bg-base);
 }
 
 h1,
@@ -117,7 +117,164 @@ select {
   --input-placeholder: #6b7280;
 }
 
-/* Keep old theme colors for Tailwind compatibility */
+/* ============= LIGHT THEME ============= */
+:root[data-theme="light"] {
+  /* Backgrounds — Telegram-inspired soft blue-gray */
+  --bg-base: #ffffff;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-elevated: #e2e8f0;
+  --bg-hover: #cbd5e1;
+  --bg-active: #94a3b8;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+
+  /* Borders */
+  --border-primary: #cbd5e1;
+  --border-secondary: #e2e8f0;
+  --border-subtle: #f1f5f9;
+
+  /* Accents */
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  --accent-primary-muted: rgba(37, 99, 235, 0.08);
+  --accent-primary-strong: #1e40af;
+
+  /* Semantic Colors — slightly deeper for light bg contrast */
+  --color-success: #059669;
+  --color-success-muted: rgba(5, 150, 105, 0.08);
+  --color-warning: #d97706;
+  --color-warning-muted: rgba(217, 119, 6, 0.08);
+  --color-danger: #dc2626;
+  --color-danger-muted: rgba(220, 38, 38, 0.08);
+  --color-info: #2563eb;
+  --color-info-muted: rgba(37, 99, 235, 0.08);
+
+  /* Scrollbars */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(148, 163, 184, 0.4);
+  --scrollbar-thumb-hover: rgba(100, 116, 139, 0.5);
+
+  /* Shadows — lighter, more diffuse */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+
+  /* Input */
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-border-focus: #2563eb;
+  --input-placeholder: #94a3b8;
+
+  /* ===== Tailwind Zinc Palette Swap (contrast-optimized) ===== */
+  --color-zinc-950: #ffffff;
+  --color-zinc-900: #f8fafc;
+  --color-zinc-800: #eef2f6;
+  --color-zinc-700: #e2e8f0;
+  --color-zinc-600: #94a3b8;
+  --color-zinc-500: #64748b;
+  --color-zinc-400: #475569;
+  --color-zinc-300: #334155;
+  --color-zinc-200: #1e293b;
+  --color-zinc-100: #0f172a;
+  --color-zinc-50: #020617;
+
+  /* ===== Tailwind Gray Palette Swap (contrast-optimized) ===== */
+  --color-gray-950: #ffffff;
+  --color-gray-900: #f9fafb;
+  --color-gray-800: #f0f1f3;
+  --color-gray-700: #e5e7eb;
+  --color-gray-600: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-400: #4b5563;
+  --color-gray-300: #374151;
+  --color-gray-200: #1f2937;
+  --color-gray-100: #111827;
+  --color-gray-50: #030712;
+
+  /* ===== Tailwind Slate Palette Swap (contrast-optimized) ===== */
+  --color-slate-950: #ffffff;
+  --color-slate-900: #f8fafc;
+  --color-slate-800: #eef2f6;
+  --color-slate-700: #e2e8f0;
+  --color-slate-600: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-400: #475569;
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #0f172a;
+  --color-slate-50: #020617;
+
+  /* ===== Tailwind Neutral Palette Swap (contrast-optimized) ===== */
+  --color-neutral-950: #ffffff;
+  --color-neutral-900: #fafafa;
+  --color-neutral-800: #f0f0f0;
+  --color-neutral-700: #e5e5e5;
+  --color-neutral-600: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-400: #525252;
+  --color-neutral-300: #404040;
+  --color-neutral-200: #262626;
+  --color-neutral-100: #171717;
+  --color-neutral-50: #0a0a0a;
+}
+
+/* ===== Preserve white text/fill on saturated colored backgrounds ===== */
+[data-theme="light"] :is(
+  [class*="bg-blue-"], [class*="bg-red-"], [class*="bg-green-"],
+  [class*="bg-emerald-"], [class*="bg-indigo-"], [class*="bg-purple-"],
+  [class*="bg-cyan-"], [class*="bg-amber-"], [class*="bg-yellow-"],
+  [class*="bg-orange-"], [class*="bg-rose-"], [class*="bg-teal-"],
+  [class*="bg-violet-"], [class*="bg-fuchsia-"], [class*="bg-pink-"],
+  [class*="bg-lime-"], [class*="bg-sky-"]) {
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+}
+
+/* ===== Translucent overlays adapt for light mode ===== */
+[data-theme="light"] .bg-white\/5 { background-color: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .bg-white\/10 { background-color: rgba(0, 0, 0, 0.05); }
+[data-theme="light"] .bg-white\/20 { background-color: rgba(0, 0, 0, 0.08); }
+[data-theme="light"] .text-white\/60 { color: rgba(15, 23, 42, 0.6); }
+[data-theme="light"] .text-white\/70 { color: rgba(15, 23, 42, 0.7); }
+[data-theme="light"] .text-white\/80 { color: rgba(15, 23, 42, 0.8); }
+[data-theme="light"] .text-white\/90 { color: rgba(15, 23, 42, 0.9); }
+[data-theme="light"] .border-white\/10 { border-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .border-white\/20 { border-color: rgba(0, 0, 0, 0.1); }
+[data-theme="light"] .divide-white\/5 > :not(:first-child) { border-color: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .divide-white\/10 > :not(:first-child) { border-color: rgba(0, 0, 0, 0.05); }
+[data-theme="light"] .ring-white\/10 { --tw-ring-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .ring-white\/20 { --tw-ring-color: rgba(0, 0, 0, 0.1); }
+
+/* ===== Scrollbar light mode ===== */
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.08) !important;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.5);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.1) !important;
+}
+[data-theme="light"] ::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.04);
+}
+
+/* ===== Theme transition ===== */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 0.3s ease, color 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Custom theme colors for Tailwind */
 @theme {
   --color-primary: #2563eb;
   --color-primary-light: #3b82f6;
@@ -125,18 +282,245 @@ select {
   --color-secondary: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-  --color-gray-950: #030712;
 }
+
+/* =====================================================
+   LIGHT MODE — Safety-net direct utility overrides
+   Ensures correct contrast even if CSS var cascade fails
+   ===================================================== */
+
+/* --- Text Colors: Zinc --- */
+/* Regla general (la que ya tienes) */
+[data-theme="light"] .text-zinc-50,
+[data-theme="light"] .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+/* NUEVA REGLA: Excepción para botones */
+[data-theme="light"] button .text-zinc-50,
+[data-theme="light"] button .text-zinc-100,
+[data-theme="light"] button.text-zinc-50,    /* Por si la clase está en el botón mismo */
+[data-theme="light"] button.text-zinc-100 {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .text-zinc-200 {
+  color: #1e293b !important;
+}
+[data-theme="light"] .text-zinc-300 {
+  color: #334155 !important;
+}
+[data-theme="light"] .text-zinc-400 {
+  color: #475569 !important;
+}
+[data-theme="light"] .text-zinc-500 {
+  color: #64748b !important;
+}
+[data-theme="light"] .text-zinc-600 {
+  color: #94a3b8 !important;
+}
+
+/* --- Text Colors: Gray --- */
+[data-theme="light"] .text-gray-50,
+[data-theme="light"] .text-gray-100 {
+  color: #111827 !important;
+}
+[data-theme="light"] .text-gray-200 {
+  color: #1f2937 !important;
+}
+[data-theme="light"] .text-gray-300 {
+  color: #374151 !important;
+}
+[data-theme="light"] .text-gray-400 {
+  color: #4b5563 !important;
+}
+[data-theme="light"] .text-gray-500 {
+  color: #6b7280 !important;
+}
+[data-theme="light"] .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+/* --- Opacity text variants (zinc-50 with opacity — common patterns) --- */
+[data-theme="light"] .text-zinc-50\/60 { color: rgba(2, 6, 23, 0.6) !important; }
+[data-theme="light"] .text-zinc-50\/70 { color: rgba(2, 6, 23, 0.7) !important; }
+[data-theme="light"] .text-zinc-50\/80 { color: rgba(2, 6, 23, 0.8) !important; }
+[data-theme="light"] .text-zinc-50\/90 { color: rgba(2, 6, 23, 0.9) !important; }
+[data-theme="light"] .text-zinc-400\/80 { color: rgba(71, 85, 105, 0.8) !important; }
+[data-theme="light"] .text-zinc-500\/80 { color: rgba(100, 116, 139, 0.8) !important; }
+
+/* --- Background Colors: Core Zinc --- */
+[data-theme="light"] .bg-zinc-950 { background-color: #ffffff !important; }
+[data-theme="light"] .bg-zinc-900 { background-color: #f8fafc !important; }
+[data-theme="light"] .bg-zinc-800 { background-color: #eef2f6 !important; }
+[data-theme="light"] .bg-zinc-700 { background-color: #e2e8f0 !important; }
+
+/* --- Background Colors: Core Gray --- */
+[data-theme="light"] .bg-gray-950 { background-color: #ffffff !important; }
+[data-theme="light"] .bg-gray-900 { background-color: #f9fafb !important; }
+[data-theme="light"] .bg-gray-800 { background-color: #f0f1f3 !important; }
+[data-theme="light"] .bg-gray-700 { background-color: #e5e7eb !important; }
+
+/* --- Background opacity variants --- */
+[data-theme="light"] .bg-zinc-900\/90 { background-color: rgba(248, 250, 252, 0.95) !important; }
+[data-theme="light"] .bg-zinc-900\/80 { background-color: rgba(248, 250, 252, 0.9) !important; }
+[data-theme="light"] .bg-zinc-800\/90 { background-color: rgba(238, 242, 246, 0.95) !important; }
+[data-theme="light"] .bg-zinc-800\/80 { background-color: rgba(238, 242, 246, 0.9) !important; }
+[data-theme="light"] .bg-zinc-800\/50 { background-color: rgba(238, 242, 246, 0.5) !important; }
+[data-theme="light"] .bg-zinc-950\/50 { background-color: rgba(255, 255, 255, 0.5) !important; }
+[data-theme="light"] .bg-zinc-950\/80 { background-color: rgba(255, 255, 255, 0.85) !important; }
+[data-theme="light"] .bg-black\/40 { background-color: rgba(0, 0, 0, 0.15) !important; }
+[data-theme="light"] .bg-black\/50 { background-color: rgba(0, 0, 0, 0.2) !important; }
+[data-theme="light"] .bg-black\/60 { background-color: rgba(0, 0, 0, 0.25) !important; }
+
+/* --- Border Colors --- */
+[data-theme="light"] .border-zinc-800 { border-color: #e2e8f0 !important; }
+[data-theme="light"] .border-zinc-700 { border-color: #cbd5e1 !important; }
+[data-theme="light"] .border-zinc-600 { border-color: #e2e8f0 !important; }
+[data-theme="light"] .border-zinc-900 { border-color: #eef2f6 !important; }
+[data-theme="light"] .border-zinc-950 { border-color: #eef2f6 !important; }
+[data-theme="light"] .border-gray-800 { border-color: #e5e7eb !important; }
+[data-theme="light"] .border-gray-700 { border-color: #d1d5db !important; }
+
+/* --- Border opacity variants --- */
+[data-theme="light"] .border-zinc-800\/50 { border-color: rgba(226, 232, 240, 0.6) !important; }
+[data-theme="light"] .border-zinc-700\/50 { border-color: rgba(203, 213, 225, 0.6) !important; }
+
+/* --- Divide colors --- */
+[data-theme="light"] .divide-zinc-800 > :not(:first-child) { border-color: #e2e8f0 !important; }
+[data-theme="light"] .divide-zinc-700 > :not(:first-child) { border-color: #cbd5e1 !important; }
+
+/* --- Ring colors --- */
+[data-theme="light"] .ring-zinc-800 { --tw-ring-color: #e2e8f0 !important; }
+[data-theme="light"] .ring-zinc-700 { --tw-ring-color: #cbd5e1 !important; }
+
+/* --- Placeholder colors --- */
+[data-theme="light"] .placeholder\:text-zinc-500::placeholder,
+[data-theme="light"] .placeholder-zinc-500::placeholder { color: #94a3b8 !important; }
+[data-theme="light"] .placeholder\:text-zinc-600::placeholder,
+[data-theme="light"] .placeholder-zinc-600::placeholder { color: #94a3b8 !important; }
+
+/* =====================================================
+   LIGHT MODE — Toast & Notification Overrides
+   ===================================================== */
+[data-theme="light"] [role="alert"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  color: #1e293b !important;
+}
+[data-theme="light"] [role="alert"] p {
+  color: #1e293b !important;
+}
+[data-theme="light"] [role="alert"] .opacity-80 {
+  color: #475569 !important;
+}
+[data-theme="light"] [role="alert"] button {
+  color: #475569 !important;
+}
+[data-theme="light"] [role="alert"] button:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+/* Toast action buttons in light mode */
+[data-theme="light"] [role="alert"] .bg-white\/10 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  color: #2563eb !important;
+}
+[data-theme="light"] [role="alert"] .bg-white\/10:hover,
+[data-theme="light"] [role="alert"] .bg-white\/20 {
+  background-color: rgba(37, 99, 235, 0.15) !important;
+}
+/* Toast progress bar */
+[data-theme="light"] [role="alert"] .bg-white\/10:not(button) {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+/* Hidden count badge */
+[data-theme="light"] .bg-zinc-800\/90 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+/* =====================================================
+   LIGHT MODE — Hover state improvements
+   ===================================================== */
+[data-theme="light"] .hover\:bg-zinc-800:hover { background-color: #e8ecf2 !important; }
+[data-theme="light"] .hover\:bg-zinc-700:hover { background-color: #dbe1ea !important; }
+[data-theme="light"] .hover\:bg-zinc-900:hover { background-color: #f1f5f9 !important; }
+[data-theme="light"] .hover\:bg-zinc-950:hover { background-color: #f5f7fa !important; }
+[data-theme="light"] .hover\:bg-gray-800:hover { background-color: #eaecef !important; }
+[data-theme="light"] .hover\:bg-gray-700:hover { background-color: #dde0e4 !important; }
+[data-theme="light"] .hover\:text-zinc-50:hover { color: #020617 !important; }
+[data-theme="light"] .hover\:text-zinc-100:hover { color: #0f172a !important; }
+[data-theme="light"] .hover\:text-zinc-200:hover { color: #1e293b !important; }
+[data-theme="light"] .hover\:text-zinc-300:hover { color: #334155 !important; }
+[data-theme="light"] .hover\:text-zinc-400:hover { color: #475569 !important; }
+[data-theme="light"] .hover\:border-zinc-700:hover { border-color: #cbd5e1 !important; }
+[data-theme="light"] .hover\:border-zinc-800:hover { border-color: #e2e8f0 !important; }
+[data-theme="light"] .hover\:border-zinc-600:hover { border-color: #94a3b8 !important; }
+
+/* --- Group hover variants --- */
+[data-theme="light"] .group-hover\:text-zinc-50:is(:where(.group):hover *) { color: #020617 !important; }
+[data-theme="light"] .group-hover\:text-zinc-100:is(:where(.group):hover *) { color: #0f172a !important; }
+[data-theme="light"] .group-hover\:text-zinc-200:is(:where(.group):hover *) { color: #1e293b !important; }
+[data-theme="light"] .group-hover\:text-zinc-300:is(:where(.group):hover *) { color: #334155 !important; }
+[data-theme="light"] .group:hover .group-hover\:text-zinc-50 { color: #020617 !important; }
+[data-theme="light"] .group:hover .group-hover\:text-zinc-100 { color: #0f172a !important; }
+[data-theme="light"] .group:hover .group-hover\:text-zinc-200 { color: #1e293b !important; }
+[data-theme="light"] .group:hover .group-hover\:text-zinc-300 { color: #334155 !important; }
+
+/* =====================================================
+   LIGHT MODE — Focus state improvements
+   ===================================================== */
+[data-theme="light"] .focus\:ring-zinc-700:focus { --tw-ring-color: #cbd5e1 !important; }
+[data-theme="light"] .focus\:ring-zinc-800:focus { --tw-ring-color: #e2e8f0 !important; }
+[data-theme="light"] .focus\:border-zinc-600:focus { border-color: #94a3b8 !important; }
+[data-theme="light"] .focus\:border-zinc-700:focus { border-color: #cbd5e1 !important; }
+
+/* =====================================================
+   LIGHT MODE — Additional background overrides
+   ===================================================== */
+[data-theme="light"] .bg-zinc-900\/95 { background-color: rgba(248, 250, 252, 0.97) !important; }
+[data-theme="light"] .bg-zinc-900\/60 { background-color: rgba(248, 250, 252, 0.7) !important; }
+[data-theme="light"] .bg-zinc-900\/40 { background-color: rgba(248, 250, 252, 0.5) !important; }
+[data-theme="light"] .bg-zinc-900\/30 { background-color: rgba(248, 250, 252, 0.4) !important; }
+[data-theme="light"] .bg-zinc-950\/50 { background-color: rgba(255, 255, 255, 0.6) !important; }
+[data-theme="light"] .bg-zinc-950\/80 { background-color: rgba(255, 255, 255, 0.85) !important; }
+[data-theme="light"] .bg-zinc-950\/90 { background-color: rgba(255, 255, 255, 0.92) !important; }
+[data-theme="light"] .bg-gray-900\/60 { background-color: rgba(249, 250, 251, 0.7) !important; }
+[data-theme="light"] .bg-gray-950 { background-color: #ffffff !important; }
+
+/* Selection highlight on sidebar / active items */
+[data-theme="light"] .bg-zinc-800\/80 { background-color: rgba(226, 232, 240, 0.8) !important; }
+[data-theme="light"] .bg-zinc-800\/60 { background-color: rgba(226, 232, 240, 0.6) !important; }
+[data-theme="light"] .bg-zinc-800\/40 { background-color: rgba(226, 232, 240, 0.4) !important; }
+[data-theme="light"] .bg-zinc-700\/50 { background-color: rgba(203, 213, 225, 0.5) !important; }
+
+/* --- Input & Form overrides --- */
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color: #1e293b !important;
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* =====================================================
+   LIGHT MODE — Popup / Dropdown / Modal backdrops
+   ===================================================== */
+[data-theme="light"] .bg-zinc-900\/95,
+[data-theme="light"] .bg-zinc-950\/95 {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* =====================================================
+   LIGHT MODE — Shadow improvements for cards
+   ===================================================== */
+[data-theme="light"] .shadow-lg { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important; }
+[data-theme="light"] .shadow-2xl { box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 10px 15px -6px rgba(0, 0, 0, 0.06) !important; }
+[data-theme="light"] .shadow-xl { box-shadow: 0 12px 28px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important; }
 
 /* ============= CUSTOM SCROLLBARS ============= */
 
@@ -174,13 +558,13 @@ select {
 /* ============================= */
 
 .scrollbar-hover::-webkit-scrollbar {
-  width: 9px;
+  width: 8px;
   transition: width 0.25s ease;
 }
 
 /* Show scrollbar only on hover */
 .scrollbar-hover:hover::-webkit-scrollbar {
-  width: 9px;
+  width: 8px;
 }
 
 .scrollbar-hover:hover::-webkit-scrollbar-thumb {
@@ -504,3 +888,34 @@ input[type="checkbox"]:disabled {
   background-color: rgb(39 39 42); 
   border-color: rgb(63 63 70); 
 } */
+
+/* ============= REACT FLOW LIGHT MODE ============= */
+[data-theme="light"] .react-flow__background {
+  background-color: #f8fafc;
+}
+[data-theme="light"] .react-flow__minimap {
+  background-color: #f1f5f9;
+}
+[data-theme="light"] .react-flow__controls button {
+  background-color: #ffffff;
+  border-bottom-color: #e2e8f0;
+  fill: #64748b;
+}
+[data-theme="light"] .react-flow__controls button:hover {
+  background-color: #f1f5f9;
+}
+[data-theme="light"] .react-flow__edge-path {
+  stroke: #94a3b8;
+}
+[data-theme="light"] .react-flow__handle {
+  background-color: #94a3b8;
+  border-color: #ffffff;
+}
+
+/* ============= CHART.JS / RECHARTS LIGHT MODE ============= */
+[data-theme="light"] .recharts-cartesian-grid line {
+  stroke: #e2e8f0;
+}
+[data-theme="light"] .recharts-text {
+  fill: #64748b;
+}

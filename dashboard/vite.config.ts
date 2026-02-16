@@ -2,10 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
-
+import { visualizer } from "rollup-plugin-visualizer";
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), visualizer({ open: true })],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -39,4 +39,19 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Separa las librerías grandes en sus propios archivos
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('lucide')) return 'vendor-icons';
+            if (id.includes('chart.js')) return 'vendor-charts';
+            return 'vendor-others'; // El resto de librerías
+          }
+        },
+      },
+    },
+  }
 })

@@ -58,6 +58,17 @@ export interface ContactInfo {
       id: string;
       name: string;
     };
+    disposition?: {
+      categoryId?: string;
+      categoryCode?: string;
+      categoryName?: string;
+      subcategoryId?: string;
+      subcategoryCode?: string;
+      subcategoryName?: string;
+      comment?: string;
+      tags?: string[];
+      completedAt?: Date;
+    };
   };
   stats: {
     totalMessages: number;
@@ -208,6 +219,17 @@ async function getTelegramContactInfo(session: IChatSession, user: IUser): Promi
         id: (session.assignedAgent as any)._id.toString(),
         name: (session.assignedAgent as any).name,
       } : undefined,
+      disposition: session.disposition ? {
+        categoryId: session.disposition.categoryId?.toString(),
+        categoryCode: session.disposition.categoryCode,
+        categoryName: session.disposition.categoryName,
+        subcategoryId: session.disposition.subcategoryId?.toString(),
+        subcategoryCode: session.disposition.subcategoryCode,
+        subcategoryName: session.disposition.subcategoryName,
+        comment: session.disposition.comment,
+        tags: session.disposition.tags,
+        completedAt: session.disposition.completedAt,
+      } : undefined,
     },
     stats: {
       totalMessages,
@@ -298,6 +320,17 @@ async function getWebChatContactInfo(session: IChatSession, visitor: IWebVisitor
       assignedAgent: session.assignedAgent ? {
         id: (session.assignedAgent as any)._id.toString(),
         name: (session.assignedAgent as any).name,
+      } : undefined,
+      disposition: session.disposition ? {
+        categoryId: session.disposition.categoryId?.toString(),
+        categoryCode: session.disposition.categoryCode,
+        categoryName: session.disposition.categoryName,
+        subcategoryId: session.disposition.subcategoryId?.toString(),
+        subcategoryCode: session.disposition.subcategoryCode,
+        subcategoryName: session.disposition.subcategoryName,
+        comment: session.disposition.comment,
+        tags: session.disposition.tags,
+        completedAt: session.disposition.completedAt,
       } : undefined,
     },
     stats: {

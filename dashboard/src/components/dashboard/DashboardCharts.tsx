@@ -1,10 +1,42 @@
 /**
- * Dashboard Charts
- * Chart components for data visualization
+ * Dashboard Charts — powered by Recharts
+ * Bar, Line, Donut, Gauge, Progress, Sparkline
  */
 
 import { useMemo } from 'react';
+import {
+  BarChart as ReBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart as ReLineChart,
+  Line,
+  Area,
+  AreaChart,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 import type { TimeSeriesPoint, CategoryBreakdown } from '../../types/dashboard';
+
+// ==================== CUSTOM TOOLTIP ====================
+
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 shadow-xl">
+      <p className="text-xs text-zinc-400 mb-1">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <p key={i} className="text-sm font-bold text-zinc-50">
+          {p.value}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 // ==================== BAR CHART ====================
 
@@ -16,55 +48,41 @@ interface BarChartProps {
   showValues?: boolean;
 }
 
-export function BarChart({ 
-  data, 
-  height = 200, 
-  color = 'bg-purple-500',
+export function BarChart({
+  data,
+  height = 200,
+  color = '#6366f1',
   showLabels = true,
-  showValues = true,
 }: BarChartProps) {
-  const maxValue = useMemo(() => Math.max(...data.map(d => d.value), 1), [data]);
-  
+  const chartData = useMemo(
+    () => data.map((d) => ({ name: d.label || d.timestamp, value: d.value })),
+    [data],
+  );
+
   return (
-    <div className="w-full" style={{ height }}>
-      <div className="flex items-end justify-between h-full gap-1">
-        {data.map((point, i) => {
-          const heightPercent = (point.value / maxValue) * 100;
-          const isHighest = point.value === maxValue && point.value > 0;
-          
-          return (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
-              <div className="flex-1 w-full flex items-end justify-center">
-                {showValues && point.value > 0 && (
-                  <span className={`text-xs mb-1 ${isHighest ? 'text-purple-400 font-medium' : 'text-gray-500'}`}>
-                    {point.value}
-                  </span>
-                )}
-              </div>
-              <div 
-                className={`w-full rounded-t-sm transition-all duration-500 ${
-                  isHighest ? 'bg-purple-500' : color.replace('bg-', 'bg-') + '/60'
-                }`}
-                style={{ 
-                  height: `${Math.max(heightPercent, 2)}%`,
-                  minHeight: point.value > 0 ? '4px' : '0px',
-                }}
-                title={`${point.label || point.timestamp}: ${point.value}`}
-              />
-              {showLabels && (
-                <span className="text-[10px] text-gray-500 mt-1 truncate w-full text-center">
-                  {point.label || point.timestamp}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={height}>
+      <ReBarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+        <XAxis
+          dataKey="name"
+          tick={{ fill: '#71717a', fontSize: 10 }}
+          axisLine={{ stroke: '#3f3f46' }}
+          tickLine={false}
+          hide={!showLabels}
+        />
+        <YAxis
+          tick={{ fill: '#71717a', fontSize: 10 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.08)' }} />
+        <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} maxBarSize={32} />
+      </ReBarChart>
+    </ResponsiveContainer>
   );
 }
 
-// ==================== LINE CHART (SVG) ====================
+// ==================== LINE CHART ====================
 
 interface LineChartProps {
   data: TimeSeriesPoint[];
@@ -81,85 +99,51 @@ export function LineChart({
   showArea = true,
   showDots = true,
 }: LineChartProps) {
-  const { points, areaPath, linePath, maxValue, minValue } = useMemo(() => {
-    const values = data.map(d => d.value);
-    const max = Math.max(...values, 1);
-    const min = Math.min(...values, 0);
-    const range = max - min || 1;
-    
-    const width = 100;
-    const chartHeight = height - 40; // Leave space for labels
-    const stepX = width / (data.length - 1 || 1);
-    
-    const pts = data.map((d, i) => ({
-      x: i * stepX,
-      y: chartHeight - ((d.value - min) / range) * chartHeight,
-      ...d,
-    }));
-    
-    // Create SVG path
-    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    const area = `${line} L ${pts[pts.length - 1]?.x || 0} ${chartHeight} L 0 ${chartHeight} Z`;
-    
-    return {
-      points: pts,
-      linePath: line,
-      areaPath: area,
-      maxValue: max,
-      minValue: min,
-    };
-  }, [data, height]);
+  const chartData = useMemo(
+    () => data.map((d) => ({ name: d.label || d.timestamp, value: d.value })),
+    [data],
+  );
+
+  if (showArea) {
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+          <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={{ stroke: '#3f3f46' }} tickLine={false} />
+          <YAxis tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
+          <Tooltip content={<ChartTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            fill={color}
+            fillOpacity={0.12}
+            strokeWidth={2}
+            dot={showDots ? { r: 3, fill: color, stroke: '#18181b', strokeWidth: 2 } : false}
+            activeDot={{ r: 5, stroke: color, strokeWidth: 2, fill: '#18181b' }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  }
 
   return (
-    <div className="w-full" style={{ height }}>
-      <svg 
-        viewBox={`0 0 100 ${height}`} 
-        className="w-full h-full"
-        preserveAspectRatio="none"
-      >
-        {/* Area fill */}
-        {showArea && (
-          <path
-            d={areaPath}
-            fill={color}
-            fillOpacity={0.1}
-          />
-        )}
-        
-        {/* Line */}
-        <path
-          d={linePath}
-          fill="none"
+    <ResponsiveContainer width="100%" height={height}>
+      <ReLineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+        <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={{ stroke: '#3f3f46' }} tickLine={false} />
+        <YAxis tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
+        <Tooltip content={<ChartTooltip />} />
+        <Line
+          type="monotone"
+          dataKey="value"
           stroke={color}
-          strokeWidth={0.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeWidth={2}
+          dot={showDots ? { r: 3, fill: color, stroke: '#18181b', strokeWidth: 2 } : false}
+          activeDot={{ r: 5, stroke: color, strokeWidth: 2, fill: '#18181b' }}
         />
-        
-        {/* Dots */}
-        {showDots && points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={1}
-            fill={color}
-            className="hover:r-2 transition-all"
-          >
-            <title>{`${p.label || p.timestamp}: ${p.value}`}</title>
-          </circle>
-        ))}
-      </svg>
-      
-      {/* X-axis labels */}
-      <div className="flex justify-between mt-2">
-        {data.filter((_, i) => i % Math.ceil(data.length / 6) === 0).map((point, i) => (
-          <span key={i} className="text-[10px] text-gray-500">
-            {point.label || point.timestamp}
-          </span>
-        ))}
-      </div>
-    </div>
+      </ReLineChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -173,106 +157,70 @@ interface DonutChartProps {
 }
 
 const CHART_COLORS = [
-  '#8b5cf6', // purple
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#06b6d4', // cyan
-  '#6366f1', // indigo
-  '#ec4899', // pink
+  '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b',
+  '#ef4444', '#06b6d4', '#6366f1', '#ec4899',
 ];
 
 export function DonutChart({
   data,
   size = 160,
-  thickness = 20,
   showLegend = true,
 }: DonutChartProps) {
-  const total = useMemo(() => data.reduce((sum, d) => sum + d.count, 0), [data]);
-  
-  const segments = useMemo(() => {
-    let currentAngle = -90; // Start from top
-    
-    return data.map((item, i) => {
-      const angle = (item.count / total) * 360;
-      const startAngle = currentAngle;
-      currentAngle += angle;
-      
-      return {
-        ...item,
-        startAngle,
-        endAngle: currentAngle,
-        color: CHART_COLORS[i % CHART_COLORS.length],
-      };
-    });
-  }, [data, total]);
-
-  const radius = size / 2;
-  const innerRadius = radius - thickness;
-
-  // Create arc path
-  const createArc = (startAngle: number, endAngle: number) => {
-    const startRad = (startAngle * Math.PI) / 180;
-    const endRad = (endAngle * Math.PI) / 180;
-    
-    const x1 = radius + radius * Math.cos(startRad);
-    const y1 = radius + radius * Math.sin(startRad);
-    const x2 = radius + radius * Math.cos(endRad);
-    const y2 = radius + radius * Math.sin(endRad);
-    
-    const x3 = radius + innerRadius * Math.cos(endRad);
-    const y3 = radius + innerRadius * Math.sin(endRad);
-    const x4 = radius + innerRadius * Math.cos(startRad);
-    const y4 = radius + innerRadius * Math.sin(startRad);
-    
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    
-    return `
-      M ${x1} ${y1}
-      A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}
-      L ${x3} ${y3}
-      A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4} ${y4}
-      Z
-    `;
-  };
+  const total = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
+  const chartData = useMemo(
+    () => data.map((d) => ({ name: d.category, value: d.count, percentage: d.percentage })),
+    [data],
+  );
 
   return (
     <div className="flex items-center gap-6">
-      {/* Chart */}
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size}>
-          {segments.map((seg, i) => (
-            <path
-              key={i}
-              d={createArc(seg.startAngle, seg.endAngle - 0.5)}
-              fill={seg.color}
-              className="transition-all hover:opacity-80"
-            >
-              <title>{`${seg.category}: ${seg.count} (${seg.percentage}%)`}</title>
-            </path>
+      <PieChart width={size} height={size}>
+        <Pie
+          data={chartData}
+          cx={size / 2}
+          cy={size / 2}
+          innerRadius={size / 2 - 24}
+          outerRadius={size / 2 - 4}
+          paddingAngle={2}
+          dataKey="value"
+          strokeWidth={0}
+        >
+          {chartData.map((_, i) => (
+            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
           ))}
-        </svg>
-        
+        </Pie>
+        <Tooltip
+          content={({ active, payload }: any) => {
+            if (!active || !payload?.length) return null;
+            const d = payload[0].payload;
+            return (
+              <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 shadow-xl">
+                <p className="text-xs text-zinc-400">{d.name}</p>
+                <p className="text-sm font-bold text-zinc-50">{d.value} ({d.percentage}%)</p>
+              </div>
+            );
+          }}
+        />
         {/* Center label */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold text-white">{total}</span>
-          <span className="text-xs text-gray-500">Total</span>
-        </div>
-      </div>
-      
-      {/* Legend */}
+        <text x={size / 2} y={size / 2 - 6} textAnchor="middle" fill="#fff" fontWeight="bold" fontSize={20}>
+          {total}
+        </text>
+        <text x={size / 2} y={size / 2 + 14} textAnchor="middle" fill="#71717a" fontSize={11}>
+          Total
+        </text>
+      </PieChart>
+
       {showLegend && (
         <div className="flex-1 space-y-2">
-          {segments.map((seg, i) => (
+          {data.map((seg, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div 
+              <div
                 className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: seg.color }}
+                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{seg.category}</p>
-                <p className="text-xs text-gray-500">{seg.count} ({seg.percentage}%)</p>
+                <p className="text-sm text-zinc-50 truncate">{seg.category}</p>
+                <p className="text-xs text-zinc-500">{seg.count} ({seg.percentage}%)</p>
               </div>
             </div>
           ))}
@@ -307,13 +255,8 @@ export function ProgressBar({
 }: ProgressBarProps) {
   const percentage = Math.min((value / max) * 100, 100);
   const showPct = showLabel !== undefined ? showLabel : showPercentage;
-  
-  const heights = {
-    sm: 'h-1.5',
-    md: 'h-2.5',
-    lg: 'h-4',
-  };
 
+  const heights: Record<string, string> = { sm: 'h-1.5', md: 'h-2.5', lg: 'h-4' };
   const heightClass = height ? '' : heights[size];
   const heightStyle = height ? { height: `${height}px` } : {};
 
@@ -321,14 +264,11 @@ export function ProgressBar({
     <div className="w-full">
       {(label || showPct) && (
         <div className="flex items-center justify-between mb-1">
-          {label && <span className="text-sm text-gray-400">{label}</span>}
-          {showPct && <span className="text-sm text-white font-medium">{Math.round(percentage)}%</span>}
+          {label && <span className="text-sm text-zinc-400">{label}</span>}
+          {showPct && <span className="text-sm text-zinc-50 font-medium">{Math.round(percentage)}%</span>}
         </div>
       )}
-      <div 
-        className={`w-full bg-gray-700 rounded-full overflow-hidden ${heightClass}`}
-        style={heightStyle}
-      >
+      <div className={`w-full bg-zinc-700 rounded-full overflow-hidden ${heightClass}`} style={heightStyle}>
         <div
           className={`${color} ${heightClass} rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%`, ...heightStyle }}
@@ -355,26 +295,20 @@ export function Sparkline({
 }: SparklineProps) {
   const values = useMemo(() => {
     if (data.length === 0) return [];
-    // Handle both number[] and TimeSeriesPoint[]
-    if (typeof data[0] === 'number') {
-      return data as number[];
-    }
-    return (data as TimeSeriesPoint[]).map(p => p.value);
+    if (typeof data[0] === 'number') return data as number[];
+    return (data as TimeSeriesPoint[]).map((p) => p.value);
   }, [data]);
 
   const path = useMemo(() => {
     if (values.length < 2) return '';
-    
     const max = Math.max(...values, 1);
     const min = Math.min(...values, 0);
     const range = max - min || 1;
-    
     const stepX = width / (values.length - 1);
-    
     return values
-      .map((value, i) => {
+      .map((v, i) => {
         const x = i * stepX;
-        const y = height - ((value - min) / range) * height;
+        const y = height - ((v - min) / range) * height;
         return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
       })
       .join(' ');
@@ -385,18 +319,9 @@ export function Sparkline({
   return (
     <div className="flex items-center gap-2">
       <svg width={width} height={height} className="overflow-visible">
-        <path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d={path} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className={`text-xs font-medium ${
-        trend > 0 ? 'text-green-400' : trend < 0 ? 'text-red-400' : 'text-gray-400'
-      }`}>
+      <span className={`text-xs font-medium ${trend > 0 ? 'text-emerald-400' : trend < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
         {trend > 0 ? '+' : ''}{Math.round(trend)}
       </span>
     </div>
@@ -423,11 +348,11 @@ export function GaugeChart({
   ],
 }: GaugeChartProps) {
   const percentage = Math.min((value / max) * 100, 100);
-  
-  // Determine color based on thresholds
-  const color = thresholds.find(t => percentage <= t.value)?.color || thresholds[thresholds.length - 1]?.color || '#10b981';
-  
-  // Arc calculation
+  const color =
+    thresholds.find((t) => percentage <= t.value)?.color ||
+    thresholds[thresholds.length - 1]?.color ||
+    '#10b981';
+
   const radius = 45;
   const strokeWidth = 8;
   const circumference = Math.PI * radius;
@@ -437,18 +362,9 @@ export function GaugeChart({
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: 120, height: 70 }}>
         <svg width={120} height={70} viewBox="0 0 100 60">
-          {/* Background arc */}
+          <path d="M 5 55 A 45 45 0 0 1 95 55" fill="none" stroke="#374151" strokeWidth={strokeWidth} strokeLinecap="round" />
           <path
-            d={`M 5 55 A ${radius} ${radius} 0 0 1 95 55`}
-            fill="none"
-            stroke="#374151"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-          
-          {/* Value arc */}
-          <path
-            d={`M 5 55 A ${radius} ${radius} 0 0 1 95 55`}
+            d="M 5 55 A 45 45 0 0 1 95 55"
             fill="none"
             stroke={color}
             strokeWidth={strokeWidth}
@@ -458,15 +374,12 @@ export function GaugeChart({
             className="transition-all duration-700"
           />
         </svg>
-        
-        {/* Value label */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
-          <span className="text-2xl font-bold text-white">{Math.round(value)}</span>
-          <span className="text-xs text-gray-500">%</span>
+          <span className="text-2xl font-bold text-zinc-50">{Math.round(value)}</span>
+          <span className="text-xs text-zinc-500">%</span>
         </div>
       </div>
-      
-      {label && <span className="text-sm text-gray-400 mt-2">{label}</span>}
+      {label && <span className="text-sm text-zinc-400 mt-2">{label}</span>}
     </div>
   );
 }

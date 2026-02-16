@@ -346,7 +346,7 @@ export default function InternalBroadcastsPage() {
                 <Megaphone className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Centro de Anuncios</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Centro de Anuncios</h1>
                 <p className="text-sm text-zinc-400">Comunicaciones internas para tu equipo</p>
               </div>
             </div>
@@ -355,14 +355,14 @@ export default function InternalBroadcastsPage() {
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
               
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus className="w-5 h-5" />
                 <span>Nuevo Anuncio</span>
@@ -391,7 +391,7 @@ export default function InternalBroadcastsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por título o mensaje..."
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
               />
             </div>
 

@@ -11,7 +11,7 @@ import type {
 } from '../../../types/flow';
 
 // Estilos base para inputs del sistema
-const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-600";
+const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-600";
 
 // ============= BUTTON CARD (Componente Individual de Botón) =============
 
@@ -76,7 +76,7 @@ export const ButtonCard: React.FC<ButtonCardProps> = ({
             value={button.text}
             onChange={(e) => onUpdate({ text: e.target.value })}
             disabled={readOnly}
-            className="w-full bg-transparent text-sm font-semibold text-zinc-200 focus:text-white outline-none placeholder-zinc-600 border-none p-0 focus:ring-0"
+            className="w-full bg-transparent text-sm font-semibold text-zinc-200 focus:text-zinc-50 outline-none placeholder-zinc-600 border-none p-0 focus:ring-0"
             placeholder="Etiqueta del botón"
           />
           {/* Subtítulo de estado */}
@@ -431,7 +431,7 @@ export const BlockKeyboardEditor: React.FC<BlockKeyboardEditorProps> = ({ keyboa
               rows: [...keyboard.rows, { id: Date.now().toString(), buttons: [{ id: btnId, text: 'Nuevo Botón', callbackData: `btn:${btnId}`, onClick: { mode: 'continue' } }] }]
             });
           }}
-          className="w-full py-2 text-xs font-medium text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-lg hover:text-white hover:border-zinc-700 transition-all flex items-center justify-center gap-2"
+          className="w-full py-2 text-xs font-medium text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-lg hover:text-zinc-50 hover:border-zinc-700 transition-all flex items-center justify-center gap-2"
         >
           <Plus className="w-3.5 h-3.5" /> Nueva Fila
         </button>

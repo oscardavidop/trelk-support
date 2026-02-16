@@ -11,6 +11,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import * as settingsService from '../services/settings.service';
+import useFocusModeStore from './useFocusMode';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -55,7 +56,7 @@ export const useThemeStore = create<ThemeState>()(
         const resolvedTheme = resolveTheme(theme);
         applyTheme(resolvedTheme);
         set({ theme, resolvedTheme });
-        
+
         // Save to server in background
         get().saveThemeToServer(theme);
       },
@@ -65,6 +66,10 @@ export const useThemeStore = create<ThemeState>()(
           const prefs = await settingsService.getPreferences();
           const theme = (prefs?.theme as Theme) || 'dark';
           const resolvedTheme = resolveTheme(theme);
+          useFocusModeStore.setState({
+            isEnabled: Boolean(prefs?.organizationSettings?.agentRules?.focusModeEnabled || prefs?.focusMode), // Legacy support for individual focus mode setting
+            isForce: Boolean(prefs?.organizationSettings?.agentRules?.focusModeEnabled),
+          });
           applyTheme(resolvedTheme);
           set({ theme, resolvedTheme, isLoaded: true });
         } catch {
@@ -117,6 +122,6 @@ export const useTheme = () => {
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const setTheme = useThemeStore((s) => s.setTheme);
   const isLoaded = useThemeStore((s) => s.isLoaded);
-  
+
   return { theme, resolvedTheme, setTheme, isLoaded };
 };

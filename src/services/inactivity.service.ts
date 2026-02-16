@@ -256,7 +256,13 @@ export async function closeByUserRequest(
     ? session.assignedAgent._id?.toString() || null
     : null;
   
-  await closeSession(sessionId, agentId, 'Closed by user', 'user');
+  await closeSession(sessionId, agentId, 'Closed by user', 'user', undefined, {
+    disposition: {
+      categoryId: '6991e9e7d2963ae2db19f921',
+      categoryName: 'Closed by user',
+      categoryCode: 'closed_by_user',
+    }
+  });
   
   const closeMessage = `✅ El chat ha sido cerrado. Gracias por contactar con Trelk Support.\n\n✅ Chat closed. Thank you for contacting Trelk Support.`;
   
@@ -288,7 +294,7 @@ async function sendWarningFallback(
     return;
   }
 
-  const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.\n\n⚠️ This chat will close automatically in ${remainingMinutes} minutes due to inactivity.`;
+  const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.`;
 
   try {
     const channel = session.channel || 'telegram';

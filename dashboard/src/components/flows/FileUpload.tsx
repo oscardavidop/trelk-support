@@ -160,7 +160,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             className={`
               flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all
               ${mode === tab.id 
-                ? 'bg-zinc-800 text-white shadow-sm' 
+                ? 'bg-zinc-800 text-zinc-50 shadow-sm' 
                 : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'}
             `}
           >
@@ -268,7 +268,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           <div className="animate-in fade-in slide-in-from-bottom-1 duration-200">
             <div className="flex justify-between items-center mb-3 px-1">
                <span className="text-xs font-bold text-zinc-500 uppercase r">Archivos Recientes</span>
-               <button onClick={loadGallery} disabled={galleryLoading} className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800">
+               <button onClick={loadGallery} disabled={galleryLoading} className="text-zinc-500 hover:text-zinc-50 p-1 rounded hover:bg-zinc-800">
                   <RefreshCw className={`w-3.5 h-3.5 ${galleryLoading ? 'animate-spin' : ''}`} />
                </button>
             </div>
@@ -295,7 +295,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                      >
                         <img src={file.url} alt={file.filename} className="w-full h-full object-cover bg-zinc-800" />
                         <div className={`absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${value === file.url ? 'opacity-100 bg-indigo-900/40' : ''}`}>
-                           {value === file.url && <Check className="w-6 h-6 text-white drop-shadow-md" />}
+                           {value === file.url && <Check className="w-6 h-6 text-zinc-50 drop-shadow-md" />}
                         </div>
                      </button>
                   ))}

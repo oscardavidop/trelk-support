@@ -179,7 +179,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
           </div>
 
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-white tracking-tight">{agent?.name || 'Usuario'}</h2>
+            <h2 className="text-2xl font-bold text-zinc-50 tracking-tight">{agent?.name || 'Usuario'}</h2>
             <p className="text-sm text-zinc-500 font-medium">{agent?.email}</p>
           </div>
 
@@ -221,7 +221,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-4 pr-10 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                      className="w-full pl-4 pr-10 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                       placeholder="Ingresa tu clave para desbloquear"
                       disabled={isUnlocking}
                     />
@@ -247,7 +247,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
                     maxLength={6}
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                    className="w-full py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-center text-xl font-mono text-white tracking-[0.5em] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-700"
+                    className="w-full py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-center text-xl font-mono text-zinc-50 tracking-[0.5em] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-700"
                     placeholder="000000"
                     disabled={isUnlocking}
                   />
@@ -257,7 +257,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
               <button
                 type="submit"
                 disabled={isUnlocking}
-                className="w-full group relative py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                className="w-full group relative py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
               >
                 <div className="relative z-10 flex items-center justify-center gap-2">
                   {isUnlocking ? (
@@ -282,7 +282,7 @@ export default function LockScreenOverlay({ state, actions, onLogout }: LockScre
             {step === 'mfa' ? (
               <button 
                 onClick={() => { setStep('password'); setMfaCode(''); setError(null); }}
-                className="text-xs text-zinc-500 hover:text-white transition-colors"
+                className="text-xs text-zinc-500 hover:text-zinc-50 transition-colors"
               >
                 ← Volver a contraseña
               </button>

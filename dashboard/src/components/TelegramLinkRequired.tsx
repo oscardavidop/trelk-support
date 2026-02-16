@@ -188,7 +188,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
             <div className="mx-auto w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/20 shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]">
                 <ReasonIcon className="w-8 h-8 text-blue-400" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">{currentReason.title}</h2>
+            <h2 className="text-xl font-bold text-zinc-50 mb-2">{currentReason.title}</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
               {currentReason.description}
             </p>
@@ -219,7 +219,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
                 <button
                   onClick={startLinking}
                   disabled={state.step === 'loading'}
-                  className="w-full py-3 px-4 bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold rounded-xl shadow-lg shadow-blue-500/10 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-[#0088cc] hover:bg-[#0077b5] text-zinc-50 font-bold rounded-xl shadow-lg shadow-blue-500/10 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {state.step === 'loading' ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -235,7 +235,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
             {state.step === 'widget' && (
               <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-2">
                 <div className="text-center mb-6">
-                  <p className="text-sm font-medium text-white mb-1 text-teal-400 text-[17px]">Autorizar Vinculación</p>
+                  <p className="text-sm font-medium text-zinc-50 mb-1 text-teal-400 text-[17px]">Autorizar Vinculación</p>
                   <p className="text-xs text-zinc-500">Pulsa el botón de abajo para autorizar</p>
                 </div>
                 
@@ -260,7 +260,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
                   <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-white">Verificando cuenta...</h3>
+                  <h3 className="text-sm font-medium text-zinc-50">Verificando cuenta...</h3>
                   <p className="text-xs text-zinc-500 mt-1">Estamos confirmando tus datos</p>
                 </div>
               </div>
@@ -273,7 +273,7 @@ export function TelegramLinkRequired({ onLinkComplete, reason = 'policy' }: Tele
                   <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">¡Vinculación Exitosa!</h3>
+                  <h3 className="text-lg font-bold text-zinc-50">¡Vinculación Exitosa!</h3>
                   <p className="text-sm text-zinc-400 mt-1">Tu cuenta está ahora protegida.</p>
                 </div>
               </div>

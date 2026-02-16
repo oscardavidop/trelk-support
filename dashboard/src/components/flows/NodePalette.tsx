@@ -214,7 +214,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
       
       {/* Header & Search */}
       <div className="p-4 border-b border-zinc-800">
-        <h3 className="text-sm font-bold text-white mb-3 uppercase r opacity-80">
+        <h3 className="text-sm font-bold text-zinc-50 mb-3 uppercase r opacity-80">
           Nodos de Flujo
         </h3>
         <div className="relative">

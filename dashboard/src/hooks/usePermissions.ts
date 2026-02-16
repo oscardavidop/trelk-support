@@ -8,7 +8,7 @@
  * if (canAny(['contacts.read', 'contacts.write'])) { ... }
  */
 
-import { useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { usePermissionStore } from '../stores/permissionStore';
 
 export function usePermissions() {
@@ -55,6 +55,10 @@ export function usePermissions() {
     return permissions.includes('*');
   }, [permissions]);
 
+  const isSuperior = useCallback((): boolean => {
+    return permissions.includes('*') || permissions.includes('supervisor.*') || permissions.includes('supervisor');
+  }, [permissions]);
+
   return {
     permissions,
     isInitialized,
@@ -63,6 +67,7 @@ export function usePermissions() {
     canAny,
     canAll,
     isAdmin,
+    isSuperior,
     refreshPermissions,
   };
 }

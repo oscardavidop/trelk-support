@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../stores/chatStore';
 import SessionList from '../components/SessionList';
@@ -12,21 +12,28 @@ import {
   releaseTab,
   cleanupSessionGuard,
 } from '../services/sessionGuard.service';
+import api from '../services/api';
 import { MessageSquare, MessageCircle } from 'lucide-react';
 
 export default function ChatPage() {
-  const { activeSession, sessions, setActiveSession } = useChatStore();
+  const { activeSession, sessions, closedSessions, setActiveSession } = useChatStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const fetchedSessionRef = useRef<string | null>(null);
 
   // Session guard state
   const [isTabBlocked, setIsTabBlocked] = useState(false);
   const [sessionReplaced, setSessionReplaced] = useState<{ device: string; ip: string } | null>(null);
 
-  // Get target message ID from URL hash
-  const targetMessageId = location.hash?.replace('#message-', '') || null;
+  // Get target message ID from URL hash — persist in ref so URL cleanup doesn't kill it
+  const initialHash = location.hash?.replace('#message-', '') || null;
+  const targetMessageRef = useRef<string | null>(initialHash);
+  if (initialHash && !targetMessageRef.current) {
+    targetMessageRef.current = initialHash;
+  }
+  const targetMessageId = targetMessageRef.current;
 
   // Initialize session guard on mount
   useEffect(() => {
@@ -45,24 +52,50 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Handle session param from URL
+  // Handle session param from URL — search open, closed, then fetch from API
   useEffect(() => {
     const sessionParam = searchParams.get('session');
-    if (sessionParam && sessions.length > 0) {
-      const targetSession = sessions.find(s => s.sessionId === sessionParam);
-      if (targetSession && (!activeSession || activeSession.sessionId !== targetSession.sessionId)) {
-        setActiveSession(targetSession);
-      }
-    }
-  }, [searchParams, sessions, activeSession, setActiveSession]);
+    if (!sessionParam) return;
+    if (activeSession?.sessionId === sessionParam) return;
 
-  // Clean up URL after navigating
+    // 1) Search in open sessions
+    const inOpen = sessions.find(s => s.sessionId === sessionParam);
+    if (inOpen) {
+      setActiveSession(inOpen);
+      return;
+    }
+
+    // 2) Search in closed sessions
+    const inClosed = closedSessions.find(s => s.sessionId === sessionParam);
+    if (inClosed) {
+      setActiveSession(inClosed);
+      return;
+    }
+
+    // 3) Not in any store — fetch directly from API (only once per session)
+    if (fetchedSessionRef.current === sessionParam) return;
+    fetchedSessionRef.current = sessionParam;
+
+    (async () => {
+      try {
+        const res = await api.get<any>(`/api/sessions/${sessionParam}`);
+        if (res.ok && res.data?.session) {
+          setActiveSession(res.data.session);
+        }
+      } catch (err) {
+        console.error('Failed to fetch session from URL param:', err);
+      }
+    })();
+  }, [searchParams, sessions, closedSessions, activeSession, setActiveSession]);
+
+  // Clean up URL after message has been scrolled to
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     if (sessionParam && activeSession?.sessionId === sessionParam && targetMessageId) {
       const timer = setTimeout(() => {
+        targetMessageRef.current = null;
         navigate('/dashboard/chat', { replace: true });
-      }, 1000);
+      }, 5000);
       return () => clearTimeout(timer);
     }
   }, [activeSession, searchParams, targetMessageId, navigate]);
@@ -89,7 +122,7 @@ export default function ChatPage() {
               <MessageSquare className="w-5 h-5 text-indigo-500" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight leading-none">Conversaciones</h2>
+              <h2 className="text-base font-bold text-zinc-50 tracking-tight leading-none">Conversaciones</h2>
               <p className="text-[10px] text-zinc-500 font-medium mt-0.5">Bandeja de entrada</p>
             </div>
           </div>

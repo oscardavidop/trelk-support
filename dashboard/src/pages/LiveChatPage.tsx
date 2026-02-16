@@ -335,7 +335,7 @@ export default function LiveChatPage() {
                 <MessageCircle className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Live Chat</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Live Chat</h1>
                 <p className="text-sm text-zinc-400">Configura widgets de chat para tus sitios web</p>
               </div>
             </div>
@@ -344,7 +344,7 @@ export default function LiveChatPage() {
               <button 
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
@@ -355,7 +355,7 @@ export default function LiveChatPage() {
                     setFormData(initialFormData);
                     setShowCreateModal(true);
                   }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Plus className="w-5 h-5" />
                   <span>Nuevo Proyecto</span>
@@ -438,7 +438,7 @@ export default function LiveChatPage() {
                   {isAdmin && (
                     <button
                       onClick={() => setShowCreateModal(true)}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all"
                     >
                       <Plus className="w-5 h-5" />
                       Crear Proyecto
@@ -601,7 +601,7 @@ export default function LiveChatPage() {
           <div className="space-y-4">
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
               <p className="text-zinc-300">
-                ¿Estás seguro de que deseas eliminar el proyecto <strong className="text-white">{selectedProject.name}</strong>?
+                ¿Estás seguro de que deseas eliminar el proyecto <strong className="text-zinc-50">{selectedProject.name}</strong>?
                 Esta acción no se puede deshacer.
               </p>
             </div>
@@ -617,7 +617,7 @@ export default function LiveChatPage() {
               </button>
               <button
                 onClick={handleDeleteProject}
-                className="px-4 py-2 text-white bg-red-600 hover:bg-red-500 rounded-xl transition-colors"
+                className="px-4 py-2 text-zinc-50 bg-red-600 hover:bg-red-500 rounded-xl transition-colors"
               >
                 Eliminar
               </button>
@@ -720,7 +720,7 @@ function ProjectCard({
         {/* Project Details */}
         <div className="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500 uppercase tracking-wide">Project ID</span>
+            <span className="text-xs text-zinc-500 uppercase ">Project ID</span>
             <div className="flex items-center gap-1.5">
               <code className="text-xs font-mono text-zinc-400">{project.projectId}</code>
               <button
@@ -736,7 +736,7 @@ function ProjectCard({
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500 uppercase tracking-wide">Dominios</span>
+            <span className="text-xs text-zinc-500 uppercase ">Dominios</span>
             <span className="text-xs text-zinc-400">
               {project.allowedDomains.length > 0
                 ? project.allowedDomains.slice(0, 2).join(', ') +
@@ -929,7 +929,7 @@ function ProjectForm({
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="Mi Sitio Web"
-            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
           />
         </div>
 
@@ -942,7 +942,7 @@ function ProjectForm({
             value={formData.description}
             onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             placeholder="Widget de soporte para sitio principal"
-            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
           />
         </div>
 
@@ -956,7 +956,7 @@ function ProjectForm({
             onChange={(e) => setFormData((prev) => ({ ...prev, allowedDomains: e.target.value }))}
             placeholder={"ejemplo.com\n*.ejemplo.com\nsubdominio.ejemplo.com"}
             rows={3}
-            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 font-mono text-sm transition-all"
+            className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 font-mono text-sm transition-all"
           />
           <p className="mt-2 text-xs text-zinc-500">
             Usa *.dominio.com para permitir subdominios. Deja vacío para permitir cualquier dominio (no recomendado).
@@ -1002,7 +1002,7 @@ function ProjectForm({
                           config: { ...prev.config, headerText: e.target.value },
                         }))
                       }
-                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                     />
                   </div>
                   <div>
@@ -1018,7 +1018,7 @@ function ProjectForm({
                           config: { ...prev.config, inputPlaceholder: e.target.value },
                         }))
                       }
-                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                     />
                   </div>
                 </div>
@@ -1036,7 +1036,7 @@ function ProjectForm({
                       }))
                     }
                     rows={2}
-                    className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                    className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                   />
                 </div>
 
@@ -1053,7 +1053,7 @@ function ProjectForm({
                       }))
                     }
                     rows={2}
-                    className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                    className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                   />
                 </div>
               </>
@@ -1087,7 +1087,7 @@ function ProjectForm({
                             config: { ...prev.config, primaryColor: e.target.value },
                           }))
                         }
-                        className="flex-1 px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                        className="flex-1 px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                       />
                     </div>
                   </div>
@@ -1104,7 +1104,7 @@ function ProjectForm({
                           config: { ...prev.config, position: e.target.value as 'left' | 'right' },
                         }))
                       }
-                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="right">Derecha</option>
                       <option value="left">Izquierda</option>
@@ -1125,7 +1125,7 @@ function ProjectForm({
                           config: { ...prev.config, theme: e.target.value as 'light' | 'dark' | 'auto' },
                         }))
                       }
-                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="auto">Automático</option>
                       <option value="light">Claro</option>
@@ -1145,7 +1145,7 @@ function ProjectForm({
                           config: { ...prev.config, bubbleIcon: e.target.value as 'chat' | 'message' | 'support' | 'custom' },
                         }))
                       }
-                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
+                      className="w-full px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="chat">Chat</option>
                       <option value="message">Mensaje</option>
@@ -1250,7 +1250,7 @@ function ProjectForm({
                         config: { ...prev.config, autoOpenDelay: parseInt(e.target.value) || 0 },
                       }))
                     }
-                    className="w-32 px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                    className="w-32 px-4 py-2.5 border border-zinc-700 rounded-xl bg-zinc-800 text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
                   />
                   <p className="mt-2 text-xs text-zinc-500">
                     0 = desactivado (el usuario debe hacer clic para abrir)
@@ -1273,7 +1273,7 @@ function ProjectForm({
         <button
           onClick={onSubmit}
           disabled={isSaving || !formData.name.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {isSaving ? (
             <>
@@ -1323,7 +1323,7 @@ function Modal({
           className={`relative w-full ${sizeClasses[size]} bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50`}
         >
           <div className="flex items-center justify-between p-5 border-b border-zinc-800">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-zinc-50">
               {title}
             </h2>
             <button

@@ -132,13 +132,24 @@ export async function closeSession(
   agentId: string | null,
   reason?: string,
   closedByType: ClosedByType = 'agent',
-  agentName?: string
+  agentName?: string,
+  options?: { disposition?: { categoryId: string; categoryName: string, categoryCode: string} }
 ): Promise<IChatSession | null> {
   const updateData: Record<string, unknown> = {
     status: 'closed',
     closedAt: new Date(),
     closureReason: reason,
     closedByType,
+    ...options?.disposition ? {
+      disposition: {
+        categoryId: new Types.ObjectId(options.disposition.categoryId),
+        categoryCode: options.disposition.categoryCode,
+        categoryName: options.disposition.categoryName,
+        comment: reason,
+        completedAt: new Date(),
+        tags: ['inactivity_auto_closed'], // Could be extended to include specific tags based on reason or other factors
+      }
+    } : {}
   };
 
   if (agentId) {
@@ -635,9 +646,9 @@ export async function getSessionMessagesV2(
   limit = 50,
   before?: Date
 ): Promise<{ messages: IMessage[]; hasMore: boolean; oldestTimestamp?: Date }> {
-  
+
   const query: Record<string, unknown> = { session: sessionObjectId };
-  
+
   if (before) {
     query.createdAt = { $lt: before };
   }
@@ -646,7 +657,7 @@ export async function getSessionMessagesV2(
   const messages = await Message.find(query)
     .populate('senderAgent', 'name avatar')
     .populate('replyTo', 'sender content senderAgent') // Cuidado aquí si replyTo es muy profundo
-    .sort({ createdAt: -1 }) 
+    .sort({ createdAt: -1 })
     .limit(limit + 1)
     .lean(); // IMPORTANTE: Devuelve JSON puro, mucho más rápido para listas
 
@@ -656,8 +667,8 @@ export async function getSessionMessagesV2(
   // Invertir para mostrar cronológicamente en el chat
   resultMessages.reverse();
 
-  const oldestTimestamp = resultMessages.length > 0 
-    ? (resultMessages[0] as any).createdAt 
+  const oldestTimestamp = resultMessages.length > 0
+    ? (resultMessages[0] as any).createdAt
     : undefined;
 
   return {
@@ -1038,14 +1049,25 @@ export async function getSessionCounts(agentId?: string, isAdmin = false): Promi
 }
 
 /**
- * Close session with detailed info
+ * Disposition data for closing a chat
+ */
+export interface CloseDispositionData {
+  categoryId: string;
+  subcategoryId?: string;
+  comment?: string;
+  tags?: string[];
+}
+
+/**
+ * Close session with detailed info and disposition
  */
 export async function closeSessionDetailed(
   sessionId: string,
   closedByType: 'user' | 'agent' | 'system',
   closeReason: 'manual' | 'inactivity' | 'resolved' | 'spam',
   agentId?: string,
-  closureReason?: string
+  closureReason?: string,
+  disposition?: CloseDispositionData
 ): Promise<IChatSession | null> {
   const update: Record<string, unknown> = {
     status: 'closed',
@@ -1059,6 +1081,37 @@ export async function closeSessionDetailed(
   }
   if (closureReason) {
     update.closureReason = closureReason;
+  }
+
+  // Add disposition data if provided
+  if (disposition) {
+    // Get category and subcategory names for denormalization
+    const { DispositionCategory, incrementCategoryUsage, incrementTagUsage } = await import('../database/index.js');
+
+    const category = await DispositionCategory.findById(disposition.categoryId).lean();
+    if (category) {
+      const subcategory = disposition.subcategoryId
+        ? category.subcategories.find(s => s._id?.toString() === disposition.subcategoryId)
+        : null;
+
+      update.disposition = {
+        categoryId: new Types.ObjectId(disposition.categoryId),
+        categoryCode: category.code,
+        categoryName: category.name,
+        subcategoryId: subcategory ? subcategory._id : undefined,
+        subcategoryCode: subcategory?.code,
+        subcategoryName: subcategory?.name,
+        comment: disposition.comment,
+        tags: disposition.tags || [],
+        completedAt: new Date(),
+      };
+
+      // Update usage statistics (async, don't wait)
+      incrementCategoryUsage(disposition.categoryId).catch(() => { });
+      if (disposition.tags && disposition.tags.length > 0) {
+        incrementTagUsage(disposition.tags).catch(() => { });
+      }
+    }
   }
 
   return ChatSession.findOneAndUpdate(

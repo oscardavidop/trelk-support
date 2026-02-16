@@ -67,11 +67,11 @@ function MyChatList({ chats, onOpenChat }: MyChatListProps) {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-white font-medium truncate">
+                  <p className="text-sm text-zinc-50 font-medium truncate">
                     {chat.customerName}
                   </p>
                   {chat.unreadCount > 0 && (
-                    <span className="px-1.5 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">
+                    <span className="px-1.5 py-0.5 bg-purple-500 text-zinc-50 text-xs font-bold rounded-full">
                       {chat.unreadCount}
                     </span>
                   )}
@@ -176,7 +176,7 @@ function UpcomingActionsList({ actions, onAction }: UpcomingActionsListProps) {
               <Icon className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate">{action.title}</p>
+              <p className="text-sm text-zinc-50 truncate">{action.title}</p>
               <p className="text-xs text-gray-500">
                 {action.customerName} • {dueTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
@@ -267,7 +267,7 @@ export function AgentDashboard() {
         <p className="text-sm mt-1">{error || 'Intenta de nuevo más tarde'}</p>
         <button
           onClick={refresh}
-          className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+          className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-zinc-50 rounded-lg transition-colors"
         >
           Reintentar
         </button>
@@ -314,7 +314,7 @@ export function AgentDashboard() {
               />
             </div>
             <div className="ml-6 text-right">
-              <p className="text-2xl font-bold text-white">
+              <p className="text-2xl font-bold text-zinc-50">
                 {data.performanceTrend[data.performanceTrend.length - 1]?.value || 0}
               </p>
               <p className="text-xs text-gray-500">Chats hoy</p>
@@ -377,7 +377,7 @@ export function AgentDashboard() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-300">Chats resueltos</span>
-                <span className="text-sm text-white font-medium">
+                <span className="text-sm text-zinc-50 font-medium">
                   {data.todayResolved || 0} / {data.dailyGoal || 20}
                 </span>
               </div>
@@ -392,7 +392,7 @@ export function AgentDashboard() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-300">Tiempo de respuesta</span>
-                <span className="text-sm text-white font-medium">
+                <span className="text-sm text-zinc-50 font-medium">
                   {Math.round((data.avgResponseTime || 0) / 60)}m
                 </span>
               </div>
@@ -410,7 +410,7 @@ export function AgentDashboard() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-300">Satisfacción</span>
-                <span className="text-sm text-white font-medium">
+                <span className="text-sm text-zinc-50 font-medium">
                   {data.csat || 0}%
                 </span>
               </div>
@@ -443,7 +443,7 @@ export function AgentDashboard() {
             <CheckCircle2 className="w-5 h-5 text-green-400" />
             <span className="text-sm text-green-300">Resueltos Hoy</span>
           </div>
-          <p className="text-2xl font-bold text-white">{data.todayResolved || 0}</p>
+          <p className="text-2xl font-bold text-zinc-50">{data.todayResolved || 0}</p>
         </div>
 
         <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/10 p-4 rounded-xl border border-purple-500/20">
@@ -451,7 +451,7 @@ export function AgentDashboard() {
             <Star className="w-5 h-5 text-purple-400" />
             <span className="text-sm text-purple-300">Calificación</span>
           </div>
-          <p className="text-2xl font-bold text-white">{data.avgRating?.toFixed(1) || '0.0'}</p>
+          <p className="text-2xl font-bold text-zinc-50">{data.avgRating?.toFixed(1) || '0.0'}</p>
         </div>
 
         <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/10 p-4 rounded-xl border border-blue-500/20">
@@ -459,7 +459,7 @@ export function AgentDashboard() {
             <TrendingUp className="w-5 h-5 text-blue-400" />
             <span className="text-sm text-blue-300">Esta Semana</span>
           </div>
-          <p className="text-2xl font-bold text-white">{data.weekTotal || 0}</p>
+          <p className="text-2xl font-bold text-zinc-50">{data.weekTotal || 0}</p>
         </div>
 
         <div className="bg-gradient-to-br from-amber-900/30 to-amber-800/10 p-4 rounded-xl border border-amber-500/20">
@@ -467,7 +467,7 @@ export function AgentDashboard() {
             <Target className="w-5 h-5 text-amber-400" />
             <span className="text-sm text-amber-300">Racha</span>
           </div>
-          <p className="text-2xl font-bold text-white">{data.streak || 0} días</p>
+          <p className="text-2xl font-bold text-zinc-50">{data.streak || 0} días</p>
         </div>
       </div>
     </div>

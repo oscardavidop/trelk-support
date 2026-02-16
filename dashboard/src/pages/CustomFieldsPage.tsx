@@ -124,7 +124,7 @@ export default function CustomFieldsPage() {
                 <Database className="w-6 h-6 text-indigo-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Campos Personalizados</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Campos Personalizados</h1>
                 <p className="text-sm text-zinc-400">Estructura de datos para contactos</p>
               </div>
             </div>
@@ -133,14 +133,14 @@ export default function CustomFieldsPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
 
               <button
                 onClick={() => { setEditingField(undefined); setShowFormModal(true); }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus className="w-5 h-5" />
                 <span>Nuevo Campo</span>
@@ -168,7 +168,7 @@ export default function CustomFieldsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar campos..."
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
               />
             </div>
 
@@ -483,9 +483,9 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
             <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
               {isEdit ? <Edit3 className="w-5 h-5 text-indigo-500" /> : <Plus className="w-5 h-5 text-indigo-500" />}
             </div>
-            <h2 className="text-lg font-bold text-white">{isEdit ? 'Editar Campo' : 'Nuevo Campo'}</h2>
+            <h2 className="text-lg font-bold text-zinc-50">{isEdit ? 'Editar Campo' : 'Nuevo Campo'}</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -536,7 +536,7 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
                         }`}
                     >
                       <Icon className={`w-4 h-4 ${formData.type === type ? 'text-indigo-400' : 'text-zinc-500'}`} />
-                      <span className={`text-sm ${formData.type === type ? 'text-white' : 'text-zinc-400'}`}>{label}</span>
+                      <span className={`text-sm ${formData.type === type ? 'text-zinc-50' : 'text-zinc-400'}`}>{label}</span>
                     </button>
                   ))}
                 </div>
@@ -544,7 +544,7 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
             ) : (
               <div className="p-3 bg-zinc-800/30 border border-zinc-800 rounded-xl flex items-center justify-between">
                 <span className="text-xs text-zinc-500 font-bold">Tipo de dato</span>
-                <span className="text-sm font-medium text-white">{FIELD_TYPE_LABELS[formData.type]}</span>
+                <span className="text-sm font-medium text-zinc-50">{FIELD_TYPE_LABELS[formData.type]}</span>
               </div>
             )}
 
@@ -580,12 +580,12 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
                       }
                     }}
                     placeholder="Escribe y presiona Enter..."
-                    className="flex-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:border-indigo-500 outline-none"
+                    className="flex-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:border-indigo-500 outline-none"
                   />
                   <button
                     onClick={(e) => { e.preventDefault(); addOption(); }}
                     type="button"
-                    className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-white border border-zinc-700 transition-colors"
+                    className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-50 border border-zinc-700 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -684,12 +684,12 @@ function FieldModal({ field, isOpen, onClose, onSave }: FieldModalProps) {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-zinc-800 bg-zinc-900/95">
-          <button type="button" onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
+          <button type="button" onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             <span>{isEdit ? 'Guardar Cambios' : 'Crear Campo'}</span>
@@ -708,13 +708,13 @@ function DeleteModal({ field, isOpen, onClose, onConfirm }: any) {
         <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
           <Trash2 className="w-8 h-8 text-amber-500" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Archivar Campo</h2>
+        <h2 className="text-xl font-bold text-zinc-50 mb-2">Archivar Campo</h2>
         <p className="text-zinc-400 mb-6">
-          El campo <strong className="text-white">{field.name}</strong> dejará de estar disponible. Los datos existentes se mantendrán.
+          El campo <strong className="text-zinc-50">{field.name}</strong> dejará de estar disponible. Los datos existentes se mantendrán.
         </p>
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
-          <button onClick={onConfirm} className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-amber-900/20">Archivar</button>
+          <button onClick={onConfirm} className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-500 text-zinc-50 rounded-xl transition-all font-medium shadow-lg shadow-amber-900/20">Archivar</button>
         </div>
       </div>
     </div>

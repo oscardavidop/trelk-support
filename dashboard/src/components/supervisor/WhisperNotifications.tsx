@@ -39,7 +39,7 @@ function WhisperItem({ whisper, onDismiss }: Props) {
             </p>
             <button
               onClick={handleDismiss}
-              className="p-1 text-purple-300 hover:text-white rounded transition-colors"
+              className="p-1 text-purple-300 hover:text-zinc-50 rounded transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -48,7 +48,7 @@ function WhisperItem({ whisper, onDismiss }: Props) {
           </div>
           
           {/* Content */}
-          <p className="text-sm text-white">{whisper.content}</p>
+          <p className="text-sm text-zinc-50">{whisper.content}</p>
           
           {/* Time */}
           <p className="text-xs text-purple-400 mt-2">

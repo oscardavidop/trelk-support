@@ -118,7 +118,7 @@ const SimulationModal: React.FC<{
           <button
             onClick={runSimulation}
             disabled={loading}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-2 bg-blue-600 text-zinc-50 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -504,7 +504,7 @@ const FlowsPage: React.FC = () => {
                 <Workflow className="w-6 h-6 text-cyan-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Flow Builder</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Flow Builder</h1>
                 <p className="text-sm text-zinc-400">Automatización visual de conversaciones</p>
               </div>
             </div>
@@ -512,7 +512,7 @@ const FlowsPage: React.FC = () => {
             <div className="flex gap-3">
               <button
                 onClick={loadFlows}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
@@ -520,7 +520,7 @@ const FlowsPage: React.FC = () => {
               <button
                 onClick={handleCreateFlow}
                 disabled={isCreating}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-medium rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
               >
                 {isCreating ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-5 h-5" />}
                 <span>Nuevo Flow</span>
@@ -548,7 +548,7 @@ const FlowsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar flows..."
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/50 transition-all"
               />
             </div>
 
@@ -603,11 +603,11 @@ const FlowsPage: React.FC = () => {
             <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">¿Eliminar Flow?</h3>
+            <h3 className="text-lg font-bold text-zinc-50 mb-2">¿Eliminar Flow?</h3>
             <p className="text-zinc-400 text-sm mb-6">Esta acción es irreversible y eliminará todo el historial de ejecuciones.</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowDeleteModal(null)} className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-colors font-medium">Cancelar</button>
-              <button onClick={() => handleDeleteFlow(showDeleteModal)} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-colors font-medium shadow-lg shadow-red-900/20">Eliminar</button>
+              <button onClick={() => setShowDeleteModal(null)} className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 rounded-xl transition-colors font-medium">Cancelar</button>
+              <button onClick={() => handleDeleteFlow(showDeleteModal)} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl transition-colors font-medium shadow-lg shadow-red-900/20">Eliminar</button>
             </div>
           </div>
         </div>
@@ -643,7 +643,7 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
             <Workflow className="w-5 h-5 text-zinc-400 group-hover:text-cyan-400 transition-colors" />
           </div>
           <div>
-            <h3 className="font-semibold text-zinc-100 truncate max-w-[140px] group-hover:text-white transition-colors">{flow.name}</h3>
+            <h3 className="font-semibold text-zinc-100 truncate max-w-[140px] group-hover:text-zinc-50 transition-colors">{flow.name}</h3>
             <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold${style.bg} ${style.text} ${style.border}`}>
               {flow.status}
             </span>
@@ -651,15 +651,15 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
         </div>
 
         <div className="relative">
-          <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <MoreVertical className="w-4 h-4" />
           </button>
           {showMenu && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
               <div className="absolute right-0 top-8 w-40 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                <button onClick={onEdit} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white flex items-center gap-2"><Edit3 className="w-3.5 h-3.5" /> Editar</button>
-                <button onClick={onDuplicate} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white flex items-center gap-2"><Copy className="w-3.5 h-3.5" /> Duplicar</button>
+                <button onClick={onEdit} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50 flex items-center gap-2"><Edit3 className="w-3.5 h-3.5" /> Editar</button>
+                <button onClick={onDuplicate} className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50 flex items-center gap-2"><Copy className="w-3.5 h-3.5" /> Duplicar</button>
                 <div className="h-px bg-zinc-800 my-1" />
                 <button onClick={onDelete} className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"><Trash2 className="w-3.5 h-3.5" /> Eliminar</button>
               </div>
@@ -671,7 +671,7 @@ const FlowCard: React.FC<FlowCardProps> = ({ flow, onEdit, onDuplicate, onDelete
       {/* Metrics */}
       <div className="grid grid-cols-2 gap-2 mb-4 bg-zinc-950/50 p-2 rounded-xl border border-zinc-800/50">
         <div className="text-center p-1">
-          <div className="text-sm font-bold text-white">{flow.executionCount || 0}</div>
+          <div className="text-sm font-bold text-zinc-50">{flow.executionCount || 0}</div>
           <div className="text-[10px] text-zinc-500 ">Runs</div>
         </div>
         <div className="text-center p-1 border-l border-zinc-800">

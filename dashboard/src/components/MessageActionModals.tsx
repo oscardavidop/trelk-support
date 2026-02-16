@@ -40,8 +40,8 @@ function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps)
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-zinc-900">
-          <h3 className="text-lg font-bold text-white tracking-tight">{title}</h3>
-          <button onClick={onClose} className="p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <h3 className="text-lg font-bold text-zinc-50 tracking-tight">{title}</h3>
+          <button onClick={onClose} className="p-1 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -89,8 +89,8 @@ export function EditMessageModal({ isOpen, onClose, message, onSave }: EditMessa
       title="Editar mensaje"
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-          <button onClick={handleSave} disabled={!hasChanges || isSaving} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50">
+          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 transition-colors text-sm font-medium">Cancelar</button>
+          <button onClick={handleSave} disabled={!hasChanges || isSaving} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl text-sm font-medium transition-all disabled:opacity-50">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar
           </button>
         </>
@@ -105,7 +105,7 @@ export function EditMessageModal({ isOpen, onClose, message, onSave }: EditMessa
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full h-32 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none transition-all text-sm leading-relaxed"
+          className="w-full h-32 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none transition-all text-sm leading-relaxed"
           placeholder="Escribe el mensaje..."
         />
         <p className="text-xs text-zinc-500 text-right">Se añadirá la etiqueta (editado)</p>
@@ -134,8 +134,8 @@ export function DeleteMessageModal({ isOpen, onClose, message, onConfirm }: Dele
       title="Eliminar mensaje"
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-          <button onClick={handleDelete} disabled={isDeleting} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50">
+          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 transition-colors text-sm font-medium">Cancelar</button>
+          <button onClick={handleDelete} disabled={isDeleting} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl text-sm font-medium transition-all disabled:opacity-50">
             {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar'}
           </button>
         </>
@@ -184,8 +184,8 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
       title="Nueva Respuesta Rápida"
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-          <button onClick={handleSave} disabled={!title.trim() || !content.trim() || isSaving} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50">
+          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 transition-colors text-sm font-medium">Cancelar</button>
+          <button onClick={handleSave} disabled={!title.trim() || !content.trim() || isSaving} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl text-sm font-medium transition-all disabled:opacity-50">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />} Guardar
           </button>
         </>
@@ -195,11 +195,11 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-zinc-500 mb-1.5">Nombre</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-all" placeholder="Ej: Saludo" />
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 text-sm focus:border-indigo-500 focus:outline-none transition-all" placeholder="Ej: Saludo" />
           </div>
           <div>
             <label className="block text-xs font-bold text-zinc-500 mb-1.5">Categoría</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-all">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 text-sm focus:border-indigo-500 focus:outline-none transition-all">
               {REPLY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -209,13 +209,13 @@ export function SaveQuickReplyModal({ isOpen, onClose, message, onSave }: SaveQu
           <label className="block text-xs font-bold text-zinc-500 mb-1.5">Atajo (Opcional)</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-mono">/</span>
-            <input type="text" value={shortcut} onChange={(e) => setShortcut(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))} className="w-full pl-6 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-all font-mono" placeholder="saludo" />
+            <input type="text" value={shortcut} onChange={(e) => setShortcut(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))} className="w-full pl-6 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 text-sm focus:border-indigo-500 focus:outline-none transition-all font-mono" placeholder="saludo" />
           </div>
         </div>
 
         <div>
           <label className="block text-xs font-bold text-zinc-500 mb-1.5">Contenido</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} className="w-full h-24 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none resize-none transition-all" placeholder="Texto del mensaje..." />
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} className="w-full h-24 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 text-sm focus:border-indigo-500 focus:outline-none resize-none transition-all" placeholder="Texto del mensaje..." />
         </div>
       </div>
     </BaseModal>
@@ -243,8 +243,8 @@ export function AddNoteModal({ isOpen, onClose, onSave }: AddNoteModalProps) {
       title="Agregar Nota Interna"
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-          <button onClick={handleSave} disabled={!content.trim() || isSaving} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50">
+          <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 transition-colors text-sm font-medium">Cancelar</button>
+          <button onClick={handleSave} disabled={!content.trim() || isSaving} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl text-sm font-medium transition-all disabled:opacity-50">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Guardar Nota
           </button>
         </>
@@ -258,7 +258,7 @@ export function AddNoteModal({ isOpen, onClose, onSave }: AddNoteModalProps) {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full h-32 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none transition-all text-sm leading-relaxed"
+          className="w-full h-32 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none transition-all text-sm leading-relaxed"
           placeholder="Escribe detalles importantes sobre este usuario..."
           autoFocus
         />
@@ -300,8 +300,8 @@ export function TagSelectorModal({ isOpen, onClose, onSelect, existingTags = [] 
           ))}
         </div>
         <div className="flex gap-2">
-          <input type="text" value={customTag} onChange={(e) => setCustomTag(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()} className="flex-1 px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 outline-none transition-all placeholder-zinc-600" placeholder="Nueva etiqueta..." />
-          <button onClick={handleAddCustom} disabled={!customTag.trim()} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50">Añadir</button>
+          <input type="text" value={customTag} onChange={(e) => setCustomTag(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()} className="flex-1 px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 text-sm focus:border-indigo-500 outline-none transition-all placeholder-zinc-600" placeholder="Nueva etiqueta..." />
+          <button onClick={handleAddCustom} disabled={!customTag.trim()} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50">Añadir</button>
         </div>
       </div>
     </BaseModal>
@@ -320,8 +320,8 @@ export function PinnedMessageConfirmationModal({ isOpen, message, onConfirm, onC
       title="Fijar Mensaje"
       footer={
         <>
-          <button onClick={onCancel} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-          <button onClick={onConfirm} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-900/20">Confirmar</button>
+          <button onClick={onCancel} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 transition-colors text-sm font-medium">Cancelar</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-900/20">Confirmar</button>
         </>
       }
     >
@@ -339,9 +339,43 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v
   return (
     <div className="flex items-center gap-3 cursor-pointer group p-2 hover:bg-zinc-900/50 rounded-lg transition-colors" onClick={() => onChange(!checked)}>
       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${checked ? 'bg-indigo-600 border-indigo-600' : 'border-zinc-600 group-hover:border-zinc-500'}`}>
-        {checked && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+        {checked && <CheckCircle className="w-3.5 h-3.5 text-zinc-50" />}
       </div>
-      <span className="text-sm text-zinc-300 group-hover:text-white transition-colors select-none">{label}</span>
+      <span className="text-sm text-zinc-300 group-hover:text-zinc-50 transition-colors select-none">{label}</span>
     </div>
+  );
+}
+
+interface CloseChatModalProps { isOpen: boolean; onClose: () => void; onConfirm: () => void; closingChat: boolean; }
+
+export function CloseChatModal({ isOpen, onClose, onConfirm, closingChat }: CloseChatModalProps) {
+  return (
+    closingChat ? (
+      <BaseModal isOpen={isOpen} onClose={onClose} title="Cerrando conversación...">
+        <div className="flex flex-col items-center gap-4 py-6">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <p className="text-sm text-zinc-400">Estamos cerrando la conversación, por favor espera un momento.</p>
+        </div>
+      </BaseModal>
+    ) : (
+      <BaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Cerrar Conversación"
+        footer={
+          <>
+            <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 transition-colors text-sm font-medium">Cancelar</button>
+            <button onClick={onConfirm} disabled={closingChat} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl text-sm font-medium transition-all shadow-lg shadow-red-900/20">Cerrar Conversación</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="text-sm text-red-300">¿Estás seguro de que quieres cerrar esta conversación? El usuario no podrá enviar más mensajes, pero podrás seguir viendo el historial.</div>
+          </div>
+        </div>
+      </BaseModal>
+    )
   );
 }

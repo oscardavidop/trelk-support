@@ -149,7 +149,7 @@ export default function SupervisorPage() {
                 <Shield className="w-6 h-6 text-purple-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Panel de Supervisor</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Panel de Supervisor</h1>
                 <p className="text-sm text-zinc-400">Monitoreo y gestión en tiempo real</p>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function SupervisorPage() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all flex items-center gap-2"
+              className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all flex items-center gap-2"
             >
               <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               <span className="text-sm font-medium">Actualizar</span>
@@ -215,11 +215,11 @@ export default function SupervisorPage() {
                 {/* Chat Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-bold border border-white/10">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-zinc-50 font-bold border border-white/10">
                       {selectedChat.userName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white">{selectedChat.userName}</h3>
+                      <h3 className="font-semibold text-zinc-50">{selectedChat.userName}</h3>
                       <div className="flex items-center gap-2 text-xs text-zinc-400">
                         <span>Agente: <span className="text-zinc-300">{selectedChat.agentName}</span></span>
                         <span>•</span>
@@ -258,12 +258,12 @@ export default function SupervisorPage() {
                       onChange={(e) => setWhisperText(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendWhisper()}
                       placeholder="Escribe un mensaje privado para el agente..."
-                      className="w-full pl-4 pr-12 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                      className="w-full pl-4 pr-12 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                     />
                     <button
                       onClick={handleSendWhisper}
                       disabled={!whisperText.trim() || whisperSending}
-                      className="absolute right-2 top-1.5 p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:bg-zinc-800"
+                      className="absolute right-2 top-1.5 p-1.5 bg-purple-600 hover:bg-purple-500 text-zinc-50 rounded-lg transition-colors disabled:opacity-50 disabled:bg-zinc-800"
                     >
                       {whisperSending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
@@ -307,13 +307,13 @@ function TabButton({ active, onClick, icon: Icon, label, badge, alert }: any) {
       onClick={onClick}
       className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-all ${active
           ? 'border-purple-500 text-purple-400 bg-purple-500/5'
-          : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-900'
+          : 'border-transparent text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900'
         }`}
     >
       <Icon className="w-4 h-4" />
       <span className="text-sm font-medium">{label}</span>
       {badge > 0 && (
-        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${alert ? 'bg-red-500 text-white' : 'bg-zinc-800 text-zinc-400'}`}>
+        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${alert ? 'bg-red-500 text-zinc-50' : 'bg-zinc-800 text-zinc-400'}`}>
           {badge}
         </span>
       )}
@@ -338,12 +338,12 @@ function AgentList({ agents }: { agents: AgentOverview[] }) {
                   }`} />
               </div>
               <div>
-                <p className="text-sm font-medium text-white">{agent.name}</p>
+                <p className="text-sm font-medium text-zinc-50">{agent.name}</p>
                 <p className="text-[10px] text-zinc-500 capitalize">{agent.status}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-bold text-white">{agent.activeChats}</p>
+              <p className="text-sm font-bold text-zinc-50">{agent.activeChats}</p>
               <p className="text-[10px] text-zinc-500">Chats</p>
             </div>
           </div>
@@ -407,7 +407,7 @@ function SLAAlerts({ chats, onSelectChat }: { chats: LiveChat[], onSelectChat: (
             }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="font-medium text-white text-sm">{chat.userName}</span>
+            <span className="font-medium text-zinc-50 text-sm">{chat.userName}</span>
             <AlertTriangle className={`w-4 h-4 ${chat.slaStatus === 'critical' ? 'text-red-400' : 'text-amber-400'}`} />
           </div>
           <div className="flex justify-between items-center text-xs opacity-80">

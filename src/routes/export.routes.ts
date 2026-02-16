@@ -32,14 +32,24 @@ interface ExportBody {
     transfers?: boolean;
     ratings?: boolean;
     userInfo?: boolean;
+    media?: boolean;
+    scheduledMessages?: boolean;
+    whispers?: boolean;
+    contactHistory?: boolean;
+    qaReview?: boolean;
+    disposition?: boolean;
   };
-  format: ExportFormat;
+  format: string; // validated at runtime; allows 'html' which maps to 'pdf'
   pdfOptions?: {
     includeBranding?: boolean;
     logoUrl?: string;
     companyName?: string;
     headerText?: string;
     footerText?: string;
+  };
+  advanced?: {
+    redactPII?: boolean;
+    gdprMode?: boolean;
   };
 }
 
@@ -76,13 +86,13 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
     ) => {
       try {
         const { sessionId } = request.params;
-        const { include, format, pdfOptions } = request.body;
+        const { include, format, pdfOptions, advanced } = request.body;
         const agent = (request as any).agent;
 
-        if (!format || !['pdf', 'json', 'csv'].includes(format)) {
+        if (!format || !['pdf', 'json', 'csv', 'xlsx', 'zip', 'html'].includes(format)) {
           return reply.status(400).send({
             success: false,
-            error: 'Invalid format. Must be pdf, json, or csv',
+            error: 'Invalid format. Must be pdf, json, csv, xlsx, zip, or html',
           });
         }
 
@@ -90,8 +100,9 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
           type: 'session',
           sessionId,
           include,
-          format,
+          format: (format === 'html' ? 'pdf' : format) as ExportFormat,
           pdfOptions,
+          advanced,
         });
 
         // Audit log
@@ -132,13 +143,13 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
     { preHandler: requireRole(['supervisor', 'admin']) },
     async (request: FastifyRequest<{ Body: BatchExportBody }>, reply: FastifyReply) => {
       try {
-        const { filters, include, format, pdfOptions } = request.body;
+        const { filters, include, format, pdfOptions, advanced } = (request.body as any);
         const agent = (request as any).agent;
 
-        if (!format || !['pdf', 'json', 'csv'].includes(format)) {
+        if (!format || !['pdf', 'json', 'csv', 'xlsx', 'zip', 'html'].includes(format)) {
           return reply.status(400).send({
             success: false,
-            error: 'Invalid format. Must be pdf, json, or csv',
+            error: 'Invalid format. Must be pdf, json, csv, xlsx, zip, or html',
           });
         }
 
@@ -148,7 +159,7 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
           if (filters.dateFrom) parsedFilters.dateFrom = new Date(filters.dateFrom);
           if (filters.dateTo) parsedFilters.dateTo = new Date(filters.dateTo);
           if (filters.agentIds?.length) {
-            parsedFilters.agentIds = filters.agentIds.map(id => new Types.ObjectId(id));
+            parsedFilters.agentIds = filters.agentIds.map((id: string) => new Types.ObjectId(id));
           }
           if (filters.categories?.length) parsedFilters.categories = filters.categories;
           if (filters.statuses?.length) parsedFilters.statuses = filters.statuses;
@@ -159,8 +170,9 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
           type: 'sessions',
           filters: parsedFilters,
           include,
-          format,
+          format: (format === 'html' ? 'pdf' : format) as ExportFormat,
           pdfOptions,
+          advanced,
         });
 
         // Audit log
@@ -353,6 +365,8 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
         else if (fileName.endsWith('.csv')) contentType = 'text/csv';
         else if (fileName.endsWith('.pdf')) contentType = 'application/pdf';
         else if (fileName.endsWith('.html')) contentType = 'text/html';
+        else if (fileName.endsWith('.xlsx')) contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        else if (fileName.endsWith('.zip')) contentType = 'application/zip';
 
         reply.header('Content-Type', contentType);
         reply.header('Content-Disposition', `attachment; filename="${fileName}"`);

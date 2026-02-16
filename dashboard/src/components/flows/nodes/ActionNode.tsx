@@ -150,7 +150,7 @@ function ActionNode({ data, selected, id }: NodeProps<ActionNodeData>) {
         return data.config.tagName ? (
           <div className="flex items-center gap-2 mt-1">
             <span
-              className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-sm"
+              className="px-2 py-0.5 rounded text-[10px] font-bold text-zinc-50 shadow-sm"
               style={{ backgroundColor: data.config.tagColor || (actionType === 'add_tag' ? '#3B82F6' : '#EF4444') }}
             >
               {data.config.tagName}

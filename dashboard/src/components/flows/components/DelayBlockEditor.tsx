@@ -54,7 +54,7 @@ export const DelayBlockEditor: React.FC<BlockEditorProps<DelayBlock>> = ({
                             disabled={readOnly}
                             min={1}
                             max={60}
-                            className="w-20 pl-3 pr-1 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono text-center focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
+                            className="w-20 pl-3 pr-1 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono text-center focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
                         />
                         <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-xs text-zinc-500 font-medium">seg</span>
                     </div>

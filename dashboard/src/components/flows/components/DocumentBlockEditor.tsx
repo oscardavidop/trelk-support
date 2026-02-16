@@ -12,7 +12,7 @@ import { MessagePreview } from "../MessagePreview";
 import { BlockKeyboardEditor } from "./BlockKeyboardEditor";
 
 // Estilos base consistentes
-const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all placeholder-zinc-600";
+const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all placeholder-zinc-600";
 
 export const DocumentBlockEditor: React.FC<BlockEditorProps<DocumentBlock>> = ({
     block,

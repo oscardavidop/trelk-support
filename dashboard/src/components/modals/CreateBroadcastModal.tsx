@@ -106,13 +106,13 @@ export const CreateBroadcastModal: React.FC<{
               <p className="text-xs text-zinc-500">Comunicación interna para el equipo</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           <form id="create-broadcast-form" onSubmit={handleSubmit} className="space-y-6">
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -124,7 +124,7 @@ export const CreateBroadcastModal: React.FC<{
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Resumen del anuncio"
-                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                   />
                 </div>
 
@@ -135,7 +135,7 @@ export const CreateBroadcastModal: React.FC<{
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Escribe los detalles aquí..."
                     rows={6}
-                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all resize-none"
                   />
                 </div>
               </div>
@@ -178,7 +178,7 @@ export const CreateBroadcastModal: React.FC<{
                         onClick={() => setTargetAudience(type)}
                         className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
                           targetAudience === type 
-                            ? 'bg-zinc-800 text-white shadow-sm' 
+                            ? 'bg-zinc-800 text-zinc-50 shadow-sm' 
                             : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >
@@ -217,7 +217,7 @@ export const CreateBroadcastModal: React.FC<{
                  { label: 'Expiración', sub: 'Fecha límite automática', checked: hasExpiry, set: setHasExpiry, icon: Clock }
                ].map((item, idx) => (
                  <label key={idx} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${item.checked ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700'}`}>
-                    <div className={`mt-0.5 p-1 rounded-md ${item.checked ? 'bg-indigo-500 text-white' : 'bg-zinc-800 text-zinc-600'}`}>
+                    <div className={`mt-0.5 p-1 rounded-md ${item.checked ? 'bg-indigo-500 text-zinc-50' : 'bg-zinc-800 text-zinc-600'}`}>
                        <item.icon className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1">
@@ -252,14 +252,14 @@ export const CreateBroadcastModal: React.FC<{
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-800 bg-zinc-900/50">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors uppercase ">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-colors uppercase ">
             Cancelar
           </button>
           <button
             type="submit"
             form="create-broadcast-form"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase  rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-xs font-bold uppercase  rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Publicar

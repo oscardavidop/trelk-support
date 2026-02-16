@@ -119,9 +119,9 @@ function StepIndicator({
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
               i < currentStep
-                ? "bg-emerald-500 text-white"
+                ? "bg-emerald-500 text-zinc-50"
                 : i === currentStep
-                  ? "bg-indigo-500 text-white"
+                  ? "bg-indigo-500 text-zinc-50"
                   : "bg-zinc-800 text-zinc-500"
             }`}
           >
@@ -329,7 +329,7 @@ export function TelegramMFAModal({
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4">
                 <Send className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                 Configurar Telegram MFA
               </h3>
               <p className="text-sm text-zinc-400">
@@ -339,7 +339,7 @@ export function TelegramMFAModal({
             </div>
 
             <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
-              <h4 className="text-sm font-medium text-white mb-2">
+              <h4 className="text-sm font-medium text-zinc-50 mb-2">
                 ¿Cómo funciona?
               </h4>
               <ul className="text-xs text-zinc-400 space-y-2">
@@ -383,7 +383,7 @@ export function TelegramMFAModal({
               <button
                 onClick={startActivation}
                 disabled={loading}
-                className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-zinc-50 font-medium rounded-xl transition-colors disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -401,7 +401,7 @@ export function TelegramMFAModal({
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4">
                 <Key className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                 Ingresa el Código
               </h3>
               <p className="text-sm text-zinc-400">
@@ -445,7 +445,7 @@ export function TelegramMFAModal({
                   className={`w-11 h-13 text-center text-xl font-bold rounded-lg border-2 transition-all
                     ${digit ? "border-blue-500 bg-blue-500/10" : "border-zinc-700 bg-zinc-800"}
                     ${loading || timeLeft === 0 ? "opacity-50" : "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"}
-                    text-white outline-none`}
+                    text-zinc-50 outline-none`}
                 />
               ))}
             </div>
@@ -667,7 +667,7 @@ export function TOTPMFAModal({
               <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-500/20 rounded-full mb-4">
                 <QrCode className="w-8 h-8 text-purple-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                 Configurar App Autenticador
               </h3>
               <p className="text-sm text-zinc-400">
@@ -676,7 +676,7 @@ export function TOTPMFAModal({
             </div>
 
             <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
-              <h4 className="text-sm font-medium text-white mb-2">Ventajas</h4>
+              <h4 className="text-sm font-medium text-zinc-50 mb-2">Ventajas</h4>
               <ul className="text-xs text-zinc-400 space-y-2">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400" />
@@ -710,7 +710,7 @@ export function TOTPMFAModal({
               <button
                 onClick={startSetup}
                 disabled={loading}
-                className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-zinc-50 font-medium rounded-xl transition-colors disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -725,7 +725,7 @@ export function TOTPMFAModal({
         {step === 1 && setupData && (
           <div className="space-y-6">
             <div className="text-center">
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                 Escanea el Código QR
               </h3>
               <p className="text-sm text-zinc-400">
@@ -749,7 +749,7 @@ export function TOTPMFAModal({
               </p>
               <div className="flex items-center gap-2">
                 <code
-                  className={`flex-1 px-2 py-1.5 bg-zinc-800 rounded text-xs font-mono ${showSecret ? "text-white" : "text-transparent"}`}
+                  className={`flex-1 px-2 py-1.5 bg-zinc-800 rounded text-xs font-mono ${showSecret ? "text-zinc-50" : "text-transparent"}`}
                   style={{
                     textShadow: showSecret
                       ? "none"
@@ -760,7 +760,7 @@ export function TOTPMFAModal({
                 </code>
                 <button
                   onClick={() => setShowSecret(!showSecret)}
-                  className="p-1.5 text-zinc-400 hover:text-white rounded"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-50 rounded"
                 >
                   {showSecret ? (
                     <EyeOff className="w-4 h-4" />
@@ -770,7 +770,7 @@ export function TOTPMFAModal({
                 </button>
                 <button
                   onClick={copySecret}
-                  className="p-1.5 text-zinc-400 hover:text-white rounded"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-50 rounded"
                 >
                   {secretCopied ? (
                     <Check className="w-4 h-4 text-emerald-400" />
@@ -790,7 +790,7 @@ export function TOTPMFAModal({
               </button>
               <button
                 onClick={() => setStep(2)}
-                className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors"
+                className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-zinc-50 font-medium rounded-xl transition-colors"
               >
                 Ya lo escaneé
               </button>
@@ -804,7 +804,7 @@ export function TOTPMFAModal({
               <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-500/20 rounded-full mb-4">
                 <Key className="w-8 h-8 text-purple-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                 Verifica la Configuración
               </h3>
               <p className="text-sm text-zinc-400">
@@ -838,7 +838,7 @@ export function TOTPMFAModal({
                   className={`w-11 h-13 text-center text-xl font-bold rounded-lg border-2 transition-all
                     ${digit ? "border-purple-500 bg-purple-500/10" : "border-zinc-700 bg-zinc-800"}
                     ${loading ? "opacity-50" : "focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"}
-                    text-white outline-none`}
+                    text-zinc-50 outline-none`}
                 />
               ))}
             </div>
@@ -853,7 +853,7 @@ export function TOTPMFAModal({
               <button
                 onClick={() => verifyCode()}
                 disabled={loading || code.join("").length !== 6}
-                className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-zinc-50 font-medium rounded-xl transition-colors disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -871,7 +871,7 @@ export function TOTPMFAModal({
               <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/20 rounded-full mb-4">
                 <ShieldCheck className="w-8 h-8 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                 ¡Configuración Exitosa!
               </h3>
               <p className="text-sm text-zinc-400">
@@ -929,7 +929,7 @@ export function TOTPMFAModal({
 
             <button
               onClick={finishSetup}
-              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors"
+              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 font-medium rounded-xl transition-colors"
             >
               Entendido, ya los guardé
             </button>

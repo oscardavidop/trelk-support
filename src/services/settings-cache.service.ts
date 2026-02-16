@@ -29,7 +29,7 @@ const MEMORY_CACHE_TTL = 60000; // 1 minute for memory fallback
  */
 export async function getCachedSettings(): Promise<ISettings> {
   const redis = getRedisClient();
-  
+
   // Try Redis cache first
   if (redis) {
     try {
@@ -45,12 +45,12 @@ export async function getCachedSettings(): Promise<ISettings> {
       logger.warn('settings-cache', { message: 'Redis cache read failed', error: String(error) });
     }
   }
-  
+
   // Try memory cache
   if (memoryCache && (Date.now() - memoryCacheTime) < MEMORY_CACHE_TTL) {
     return memoryCache;
   }
-  
+
   // Fallback to database
   const settings = await loadSettingsFromDB();
   return settings;
@@ -161,11 +161,11 @@ export async function getWorkingHoursSettings(): Promise<{
  */
 export async function isWithinWorkingHours(): Promise<boolean> {
   const settings = await getWorkingHoursSettings();
-  
+
   if (!settings.enabled) {
     return true; // No restrictions if disabled
   }
-  
+
   try {
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -174,17 +174,17 @@ export async function isWithinWorkingHours(): Promise<boolean> {
       minute: '2-digit',
       hour12: false,
     });
-    
+
     const currentTime = formatter.format(now);
     const [currentHour, currentMinute] = currentTime.split(':').map(Number);
     const currentMinutes = currentHour * 60 + currentMinute;
-    
+
     const [startHour, startMinute] = settings.start.split(':').map(Number);
     const startMinutes = startHour * 60 + startMinute;
-    
+
     const [endHour, endMinute] = settings.end.split(':').map(Number);
     const endMinutes = endHour * 60 + endMinute;
-    
+
     return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
   } catch (error) {
     logger.warn('settings-cache', { message: 'Error checking working hours', error: String(error) });
@@ -244,7 +244,7 @@ export async function updateSettings(
   updatedBy?: string
 ): Promise<ISettings> {
   const updateData: Record<string, unknown> = {};
-  
+
   // Map frontend keys to database keys
   if (data.bot) {
     // Map frontend bot settings to database format
@@ -257,7 +257,7 @@ export async function updateSettings(
       autoReplyDelay: 'autoReplyDelay',
       typingIndicator: 'typingIndicator',
     };
-    
+
     for (const [key, value] of Object.entries(data.bot)) {
       if (value !== undefined) {
         const dbKey = botMapping[key] || key;
@@ -265,7 +265,7 @@ export async function updateSettings(
       }
     }
   }
-  
+
   if (data.chat) {
     // Map frontend chat settings
     const chatMapping: Record<string, string> = {
@@ -278,7 +278,7 @@ export async function updateSettings(
       enableEmoji: 'enableEmoji',
       enableSuggestions: 'enableSuggestions',
     };
-    
+
     for (const [key, value] of Object.entries(data.chat)) {
       if (value !== undefined) {
         const dbKey = chatMapping[key] || key;
@@ -291,7 +291,7 @@ export async function updateSettings(
       }
     }
   }
-  
+
   if (data.agents) {
     // Map frontend agent settings
     const agentMapping: Record<string, string> = {
@@ -304,7 +304,7 @@ export async function updateSettings(
       workingHoursStart: 'workingHoursStart',
       workingHoursEnd: 'workingHoursEnd',
     };
-    
+
     for (const [key, value] of Object.entries(data.agents)) {
       if (value !== undefined) {
         if (key === 'roundRobinEnabled') {
@@ -317,7 +317,7 @@ export async function updateSettings(
       }
     }
   }
-  
+
   if (data.security) {
     // Map frontend security settings
     const securityMapping: Record<string, string> = {
@@ -333,7 +333,7 @@ export async function updateSettings(
       mfaTrustDevicesEnabled: 'mfaTrustDevicesEnabled',
       mfaAllowedMethods: 'mfaAllowedMethods',
     };
-    
+
     for (const [key, value] of Object.entries(data.security)) {
       if (value !== undefined) {
         // Handle nested passwordPolicy
@@ -350,7 +350,7 @@ export async function updateSettings(
       }
     }
   }
-  
+
   if (data.notifications) {
     // Map frontend notification settings
     const notifMapping: Record<string, string> = {
@@ -361,7 +361,7 @@ export async function updateSettings(
       escalationAlerts: 'escalationAlertsEnabled',
       dailyReportEmail: 'dailyReportEnabled',
     };
-    
+
     for (const [key, value] of Object.entries(data.notifications)) {
       if (value !== undefined) {
         const dbKey = notifMapping[key] || key;
@@ -369,30 +369,30 @@ export async function updateSettings(
       }
     }
   }
-  
+
   if (updatedBy) {
     updateData.updatedBy = updatedBy;
   }
-  
+
   // Update in database
   const settings = await Settings.findOneAndUpdate(
     { key: 'main' },
     { $set: updateData },
     { new: true, upsert: true }
   );
-  
+
   // Invalidate caches
   await invalidateCache();
-  
+
   // Notify all connected clients of settings change
   broadcastSettingsUpdate(settings!);
-  
-  logger.info('settings-cache', { 
-    action: 'settings_updated', 
+
+  logger.info('settings-cache', {
+    action: 'settings_updated',
     updatedBy,
     sections: Object.keys(data).filter(k => data[k as keyof typeof data]),
   });
-  
+
   return settings!;
 }
 
@@ -402,12 +402,12 @@ export async function updateSettings(
 export async function resetSettings(updatedBy?: string): Promise<ISettings> {
   await Settings.deleteOne({ key: 'main' });
   const settings = await Settings.create({ key: 'main', updatedBy });
-  
+
   await invalidateCache();
   broadcastSettingsUpdate(settings);
-  
+
   logger.info('settings-cache', { action: 'settings_reset', updatedBy });
-  
+
   return settings;
 }
 
@@ -418,7 +418,7 @@ export async function resetSettings(updatedBy?: string): Promise<ISettings> {
  */
 async function loadSettingsFromDB(): Promise<ISettings> {
   const settingsDoc = await Settings.findOne({ key: 'main' }).lean<ISettings>();
-  
+
   let settings: ISettings;
   if (!settingsDoc) {
     const created = await Settings.create({ key: 'main' });
@@ -426,11 +426,11 @@ async function loadSettingsFromDB(): Promise<ISettings> {
   } else {
     settings = settingsDoc;
   }
-  
+
   // Update memory cache
   memoryCache = settings;
   memoryCacheTime = Date.now();
-  
+
   // Update Redis cache
   const redis = getRedisClient();
   if (redis) {
@@ -440,7 +440,7 @@ async function loadSettingsFromDB(): Promise<ISettings> {
       logger.warn('settings-cache', { message: 'Redis cache write failed', error: String(error) });
     }
   }
-  
+
   return settings;
 }
 
@@ -451,7 +451,7 @@ export async function invalidateCache(): Promise<void> {
   // Clear memory cache
   memoryCache = null;
   memoryCacheTime = 0;
-  
+
   // Clear Redis cache
   const redis = getRedisClient();
   if (redis) {
@@ -519,6 +519,7 @@ function formatSettingsForClient(settings: ISettings): Record<string, unknown> {
       enableSuggestions: settings.chat.enableSuggestions,
     },
     agents: {
+      focusModeEnabled: settings.agentRules.focusModeEnabled,
       defaultMaxChats: settings.agentRules.maxConcurrentChats,
       autoAssign: settings.agentRules.autoAssignEnabled,
       roundRobinEnabled: settings.agentRules.assignmentMode === 'round-robin',

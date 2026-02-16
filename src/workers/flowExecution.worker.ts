@@ -144,7 +144,7 @@ async function executeFlow(
 
   try {
     // Get session context
-    const Session = mongoose.model('Session');
+    const Session = mongoose.model('ChatSession');
     const session = await Session.findById(sessionId);
     
     if (!session) {
@@ -320,7 +320,7 @@ async function executeVariableNode(node: any, context: FlowContext): Promise<any
 }
 
 async function executeTagNode(node: any, context: FlowContext): Promise<void> {
-  const Session = mongoose.model('Session');
+  const Session = mongoose.model('ChatSession');
   const { tags, action = 'add' } = node.data;
   
   if (action === 'add') {
@@ -335,7 +335,7 @@ async function executeTagNode(node: any, context: FlowContext): Promise<void> {
 }
 
 async function executeTransferNode(node: any, context: FlowContext): Promise<void> {
-  const Session = mongoose.model('Session');
+  const Session = mongoose.model('ChatSession');
   const { agentId, department } = node.data;
   
   const update: Record<string, any> = { status: 'queued' };
@@ -346,7 +346,7 @@ async function executeTransferNode(node: any, context: FlowContext): Promise<voi
 }
 
 async function executeCloseNode(node: any, context: FlowContext): Promise<void> {
-  const Session = mongoose.model('Session');
+  const Session = mongoose.model('ChatSession');
   
   await Session.findByIdAndUpdate(context.session._id, {
     status: 'closed',

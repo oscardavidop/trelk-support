@@ -97,7 +97,7 @@ export default function OverviewPage() {
               <LayoutDashboard className="w-6 h-6 text-indigo-500" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">{t('overview')}</h1>
+              <h1 className="text-xl font-bold text-zinc-50 tracking-tight">{t('overview')}</h1>
               <p className="text-sm text-zinc-400">
                 {isAdmin ? 'Vista Ejecutiva Global' : isSupervisor ? 'Supervisión de Equipo' : 'Mi Espacio de Trabajo'}
               </p>

@@ -14,7 +14,7 @@ interface AuditParams {
   actorType: 'agent' | 'admin' | 'system';
   actorName: string;
   actorEmail?: string;
-  targetType: 'message' | 'session' | 'user' | 'agent' | 'rule' | 'setting' | 'export' | 'system' | 'device';
+  targetType: 'message' | 'session' | 'user' | 'agent' | 'rule' | 'setting' | 'export' | 'system' | 'device' | 'disposition' | 'chat_session';
   targetId: string;
   targetDescription?: string;
   previousValue?: Record<string, unknown>;

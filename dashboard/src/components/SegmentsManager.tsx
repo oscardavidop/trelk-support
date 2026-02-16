@@ -233,7 +233,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                                         multiple
                                         value={Array.isArray(rule.value) ? rule.value : []}
                                         onChange={(e) => updateRule(path, idx, { value: Array.from(e.target.selectedOptions, o => o.value) })}
-                                        className="w-full bg-zinc-800 text-xs text-white rounded border border-zinc-700 px-2 py-1"
+                                        className="w-full bg-zinc-800 text-xs text-zinc-50 rounded border border-zinc-700 px-2 py-1"
                                     >
                                         {tags.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
                                     </select>
@@ -243,7 +243,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                                         value={rule.value || ''}
                                         onChange={(e) => updateRule(path, idx, { value: e.target.value })}
                                         placeholder="Valor..."
-                                        className="w-full bg-zinc-800 text-xs text-white rounded border border-zinc-700 px-2 py-1.5 focus:border-blue-500 focus:outline-none"
+                                        className="w-full bg-zinc-800 text-xs text-zinc-50 rounded border border-zinc-700 px-2 py-1.5 focus:border-blue-500 focus:outline-none"
                                     />
                                 )}
                             </div>
@@ -258,8 +258,8 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
 
                 {/* Add Buttons */}
                 <div className="flex gap-2 pt-1 opacity-60 hover:opacity-100 transition-opacity">
-                    <button onClick={() => addRule(path)} className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-white px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Regla</button>
-                    <button onClick={() => addGroup(path)} className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-white px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Grupo</button>
+                    <button onClick={() => addRule(path)} className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-50 px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Regla</button>
+                    <button onClick={() => addGroup(path)} className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-50 px-2 py-1 hover:bg-zinc-700/50 rounded"><Plus className="w-3 h-3" /> Grupo</button>
                 </div>
             </div>
         );
@@ -278,11 +278,11 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                             <Bookmark className="w-5 h-5" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-white">{editingSegment ? 'Editar Segmento' : 'Nuevo Segmento'}</h2>
+                            <h2 className="text-lg font-bold text-zinc-50">{editingSegment ? 'Editar Segmento' : 'Nuevo Segmento'}</h2>
                             <p className="text-xs text-zinc-400">Define reglas para agrupar tus contactos automáticamente</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-all"><X className="w-5 h-5" /></button>
                 </div>
 
                 {/* Body */}
@@ -350,7 +350,7 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
                     {/* 2. Filters Section */}
                     <div className="border-t border-zinc-800 pt-6">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-zinc-50 flex items-center gap-2">
                                 <Users className="w-4 h-4 text-zinc-500" /> Reglas de Segmentación
                             </h3>
 
@@ -382,13 +382,13 @@ export default function SegmentsManager({ onClose, onSegmentCreated, editingSegm
 
                 {/* Footer */}
                 <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all">
+                    <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all">
                         Cancelar
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm rounded-xl shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:transform-none"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-zinc-50 font-medium text-sm rounded-xl shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:transform-none"
                     >
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         {editingSegment ? 'Guardar Cambios' : 'Crear Segmento'}

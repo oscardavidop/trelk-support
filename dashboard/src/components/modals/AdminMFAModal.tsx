@@ -166,14 +166,14 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
           <div className="flex items-center gap-2">
             <button 
               onClick={() => loadStatus()}
-              className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
               title="Recargar datos"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button 
               onClick={onClose} 
-              className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -319,7 +319,7 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
                         <select
                           value={bypassDays}
                           onChange={e => setBypassDays(Number(e.target.value))}
-                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white focus:border-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-50 focus:border-indigo-500 outline-none"
                         >
                           <option value={1}>24 Horas</option>
                           <option value={3}>3 Días</option>
@@ -334,7 +334,7 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
                           value={bypassReason}
                           onChange={e => setBypassReason(e.target.value)}
                           placeholder="Ej: Pérdida de dispositivo"
-                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 outline-none"
                         />
                       </div>
                     </div>
@@ -342,14 +342,14 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setShowBypassForm(false)}
-                        className="px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
                       >
                         Cancelar
                       </button>
                       <button
                         onClick={handleGrantBypass}
                         disabled={actionLoading || !bypassReason.trim()}
-                        className="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                        className="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-lg shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
                       >
                         {actionLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                         Confirmar Bypass
@@ -363,7 +363,7 @@ export default function AdminMFAModal({ agent, onClose, onUpdate, token }: Props
                       <button
                         onClick={handleForceEnable}
                         disabled={actionLoading || !agent.telegramId}
-                        className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase  transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 rounded-xl text-xs font-bold uppercase  transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                         Forzar Activación

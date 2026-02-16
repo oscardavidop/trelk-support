@@ -125,7 +125,7 @@ export function LiveContactTimer({
                  <MessageSquare className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                 <span className="text-sm font-bold text-white leading-none">{messageCount}</span>
+                 <span className="text-sm font-bold text-zinc-50 leading-none">{messageCount}</span>
                  <span className="text-[9px] text-zinc-500 font-medium mt-0.5">Mensajes</span>
               </div>
            </div>

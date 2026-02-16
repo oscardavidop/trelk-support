@@ -93,6 +93,25 @@ async function sendNotificationBotError(chatId: number, errorMessage: string): P
   }
 }
 
+async function sendNotificationBotMessage(chatId: number, text: string): Promise<void> {
+  try {
+    await fetch(`${TELEGRAM_API_BASE}/bot${NOTIFICATION_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+      }),
+    });
+  } catch (error) {
+    logger.error('qr-login', {
+      action: 'send_message_failed',
+      chatId,
+      error: String(error),
+    });
+  }
+}
+
 /**
  * Process a single update from the notification bot (@TrelkAlertsBot)
  * Handles QR login deep links and approval callbacks
@@ -124,6 +143,8 @@ export async function processNotificationBotUpdate(update: NotificationBotUpdate
           message.chat.id
         );
       }
+    } else {
+      await sendNotificationBotMessage(update.message?.chat.id || 0, 'Este bot no acepta mensajes directos. Ve a @TrelkBot, el bot principal de Trelk, para interactuar conmigo.');
     }
   } catch (error) {
     logger.error('qr-login', {

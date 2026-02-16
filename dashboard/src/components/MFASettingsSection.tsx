@@ -297,7 +297,7 @@ export default function MFASettingsSection() {
                 {hasAnyMFA ? <ShieldCheck className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Autenticación de Dos Factores</h3>
+                <h3 className="text-lg font-semibold text-zinc-50">Autenticación de Dos Factores</h3>
                 <p className="text-sm text-zinc-400">
                   {hasAnyMFA 
                     ? `Protegido con ${hasTelegram && hasTOTP ? 'Telegram y App' : hasTelegram ? 'Telegram' : 'App Autenticador'}`
@@ -350,7 +350,7 @@ export default function MFASettingsSection() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">Telegram</span>
+                    <span className="text-sm font-medium text-zinc-50">Telegram</span>
                     {hasTelegram && status?.preferredMethod === 'telegram' && (
                       <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                         <Star className="w-3 h-3" />
@@ -373,7 +373,7 @@ export default function MFASettingsSection() {
                     {hasTOTP && status?.preferredMethod !== 'telegram' && (
                       <button
                         onClick={() => setPreferredMethod('telegram')}
-                        className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
+                        className="text-xs text-zinc-400 hover:text-zinc-50 px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
                       >
                         Preferir
                       </button>
@@ -423,7 +423,7 @@ export default function MFASettingsSection() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">App Autenticador</span>
+                    <span className="text-sm font-medium text-zinc-50">App Autenticador</span>
                     {hasTOTP && status?.preferredMethod === 'totp' && (
                       <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                         <Star className="w-3 h-3" />
@@ -445,14 +445,14 @@ export default function MFASettingsSection() {
                   <>
                     <button
                       onClick={openBackupCodesModal}
-                      className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
+                      className="text-xs text-zinc-400 hover:text-zinc-50 px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
                     >
                       Códigos
                     </button>
                     {hasTelegram && status?.preferredMethod !== 'totp' && (
                       <button
                         onClick={() => setPreferredMethod('totp')}
-                        className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
+                        className="text-xs text-zinc-400 hover:text-zinc-50 px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
                       >
                         Preferir
                       </button>
@@ -484,7 +484,7 @@ export default function MFASettingsSection() {
           {hasAnyMFA && (
             <div className="mt-6 pt-6 border-t border-zinc-800">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-medium text-white">Dispositivos de Confianza</h4>
+                <h4 className="text-sm font-medium text-zinc-50">Dispositivos de Confianza</h4>
                 {(status?.trustedDevices?.length ?? 0) > 0 && (
                   <button
                     onClick={revokeAllDevices}
@@ -565,7 +565,7 @@ export default function MFASettingsSection() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500/20 rounded-full mb-4">
               <ShieldOff className="w-8 h-8 text-red-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-xl font-semibold text-zinc-50 mb-2">
               Desactivar {disableMethod === 'telegram' ? 'Telegram' : 'App Autenticador'}
             </h3>
             <p className="text-sm text-zinc-400">
@@ -585,7 +585,7 @@ export default function MFASettingsSection() {
             value={disablePassword}
             onChange={e => setDisablePassword(e.target.value)}
             placeholder="Tu contraseña"
-            className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+            className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
             autoFocus
           />
           
@@ -599,7 +599,7 @@ export default function MFASettingsSection() {
             <button
               onClick={handleDisable}
               disabled={disableLoading || !disablePassword}
-              className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-500 text-zinc-50 font-medium rounded-xl transition-colors disabled:opacity-50"
             >
               {disableLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Desactivar'}
             </button>
@@ -614,7 +614,7 @@ export default function MFASettingsSection() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-500/20 rounded-full mb-4">
               <Key className="w-8 h-8 text-amber-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Códigos de Respaldo</h3>
+            <h3 className="text-xl font-semibold text-zinc-50 mb-2">Códigos de Respaldo</h3>
             <p className="text-sm text-zinc-400">
               {regeneratedCodes 
                 ? 'Guarda estos nuevos códigos en un lugar seguro'
@@ -627,7 +627,7 @@ export default function MFASettingsSection() {
             <>
               <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl text-center">
                 <p className="text-sm text-zinc-400 mb-1">Códigos restantes</p>
-                <p className="text-3xl font-bold text-white">{status?.backupCodesStatus?.remaining ?? 0}</p>
+                <p className="text-3xl font-bold text-zinc-50">{status?.backupCodesStatus?.remaining ?? 0}</p>
                 <p className="text-xs text-zinc-500 mt-1">de 8 códigos</p>
               </div>
               
@@ -643,7 +643,7 @@ export default function MFASettingsSection() {
                 value={regeneratePassword}
                 onChange={e => setRegeneratePassword(e.target.value)}
                 placeholder="Tu contraseña para regenerar"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
               />
               
               <div className="flex gap-3">
@@ -656,7 +656,7 @@ export default function MFASettingsSection() {
                 <button
                   onClick={regenerateBackupCodes}
                   disabled={regenerateLoading || !regeneratePassword}
-                  className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                  className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-zinc-50 font-medium rounded-xl transition-colors disabled:opacity-50"
                 >
                   {regenerateLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Regenerar'}
                 </button>
@@ -695,7 +695,7 @@ export default function MFASettingsSection() {
               
               <button
                 onClick={closeBackupCodesModal}
-                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors"
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 font-medium rounded-xl transition-colors"
               >
                 He guardado mis códigos
               </button>

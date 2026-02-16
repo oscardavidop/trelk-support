@@ -56,14 +56,14 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: Props) {
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Atajos de Teclado</h2>
+              <h2 className="text-xl font-bold text-zinc-50">Atajos de Teclado</h2>
               <p className="text-sm text-gray-400">Navega más rápido con atajos</p>
             </div>
           </div>
           
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-zinc-50 hover:bg-gray-800 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

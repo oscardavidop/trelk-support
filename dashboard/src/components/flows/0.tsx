@@ -43,7 +43,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all border ${
                     isOpen 
                         ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' 
-                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-600'
+                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-zinc-50 hover:border-zinc-600'
                 }`}
             >
                 <Braces className="w-3.5 h-3.5" />
@@ -98,7 +98,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                         }}
                                         className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-900 group transition-all"
                                     >
-                                        <div className="text-xs font-medium text-zinc-300 group-hover:text-white">
+                                        <div className="text-xs font-medium text-zinc-300 group-hover:text-zinc-50">
                                             {v.label}
                                         </div>
                                         <div className="text-[10px] text-zinc-500 font-mono group-hover:text-indigo-400">
@@ -122,7 +122,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                                     value={customTextKey}
                                                     onChange={(e) => setCustomTextKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
                                                     placeholder="MY_KEY"
-                                                    className="w-full pl-6 pr-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-white font-mono uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none"
+                                                    className="w-full pl-6 pr-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-50 font-mono uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none"
                                                 />
                                             </div>
                                             <button
@@ -135,7 +135,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                                     }
                                                 }}
                                                 disabled={!customTextKey}
-                                                className="px-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-white rounded flex items-center justify-center transition-colors"
+                                                className="px-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-zinc-50 rounded flex items-center justify-center transition-colors"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />
                                             </button>
@@ -157,7 +157,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                                 }}
                                                 className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-900 group transition-all"
                                             >
-                                                <div className="text-xs font-medium text-zinc-300 group-hover:text-white">
+                                                <div className="text-xs font-medium text-zinc-300 group-hover:text-zinc-50">
                                                     {t.description}
                                                 </div>
                                                 <div className="text-[10px] text-zinc-500 font-mono group-hover:text-purple-400">

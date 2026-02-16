@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
+import { usePolicyStore } from "../stores/policyStore";
 import {
   Shield,
   AlertCircle,
@@ -287,10 +288,24 @@ export default function MFAVerifyPage() {
         forcePasswordChange: loginData.forcePasswordChange || false,
       });
 
+      // Store policy results
+      usePolicyStore.getState().setLoginPolicyResults({
+        redirect: loginData.redirect,
+        profileIncomplete: loginData.profileIncomplete,
+        globalAlert: loginData.globalAlert,
+        policyAcceptanceRequired: loginData.policyAcceptanceRequired,
+        readOnlyMode: loginData.readOnlyMode,
+        maintenanceMode: loginData.maintenanceMode,
+        maintenanceMessage: loginData.maintenanceMessage,
+        warnings: loginData.warnings,
+      });
+
       // Redirect
       setTimeout(() => {
         if (loginData.forcePasswordChange) {
           navigate("/force-change-password", { replace: true });
+        } else if (loginData.redirect) {
+          navigate(loginData.redirect, { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
         }
@@ -338,13 +353,29 @@ export default function MFAVerifyPage() {
     }
   };
 
-  // Get device fingerprint (simple implementation)
+  // Get device fingerprint — uses same deviceId from localStorage as LoginPage
   const getDeviceFingerprint = async (): Promise<string> => {
+    const KEY = "trelk_device_id";
+    let deviceId = localStorage.getItem(KEY) || "";
+    if (!deviceId) {
+      const arr = new Uint8Array(16);
+      crypto.getRandomValues(arr);
+      deviceId = Array.from(arr)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      try {
+        localStorage.setItem(KEY, deviceId);
+      } catch {
+        // ignore
+      }
+    }
+
     const data = [
       navigator.userAgent,
       navigator.language,
       screen.width + "x" + screen.height,
       Intl.DateTimeFormat().resolvedOptions().timeZone,
+      deviceId,
     ].join("|");
 
     const encoder = new TextEncoder();
@@ -374,7 +405,7 @@ export default function MFAVerifyPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500/20 rounded-full mb-6">
               <CheckCircle2 className="w-10 h-10 text-green-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
+            <h1 className="text-2xl font-bold text-zinc-50 mb-2">
               ¡Verificación Exitosa!
             </h1>
             <p className="text-zinc-400">Redirigiendo al dashboard...</p>
@@ -411,7 +442,7 @@ export default function MFAVerifyPage() {
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 bg-indigo-500/20">
                 <Shield className="w-6 h-6 text-indigo-400" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">
+              <h1 className="text-2xl font-bold text-zinc-50 mb-2">
                 Verificación de Seguridad
               </h1>
               <p className="text-zinc-400 text-sm">
@@ -435,7 +466,7 @@ export default function MFAVerifyPage() {
                     )}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-white group-hover:text-blue-400 transition-colors">
+                    <div className="font-medium text-zinc-50 group-hover:text-blue-400 transition-colors">
                       Telegram
                     </div>
                     <div className="text-sm text-zinc-500">
@@ -457,7 +488,7 @@ export default function MFAVerifyPage() {
                     <Smartphone className="w-6 h-6 text-purple-400" />
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-white group-hover:text-purple-400 transition-colors">
+                    <div className="font-medium text-zinc-50 group-hover:text-purple-400 transition-colors">
                       App Autenticador
                     </div>
                     <div className="text-sm text-zinc-500">
@@ -481,7 +512,7 @@ export default function MFAVerifyPage() {
           <div className="mt-6">
             <button
               onClick={() => navigate("/login")}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-white text-sm transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-zinc-50 text-sm transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Volver al inicio de sesión
@@ -528,7 +559,7 @@ export default function MFAVerifyPage() {
                 <QrCode className="w-6 h-6 text-purple-400" />
               )}
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
+            <h1 className="text-2xl font-bold text-zinc-50 mb-2">
               Verificación de Seguridad
             </h1>
             <p className="text-zinc-400 text-sm">
@@ -549,7 +580,7 @@ export default function MFAVerifyPage() {
                   setCode(["", "", "", "", "", ""]);
                   setError("");
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 border border-zinc-700 hover:text-white"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 border border-zinc-700 hover:text-zinc-50"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Cambiar método de verificación</span>
@@ -610,7 +641,7 @@ export default function MFAVerifyPage() {
                           ? "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                           : "focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
                     }
-                    text-white outline-none`}
+                    text-zinc-50 outline-none`}
                 />
               ))}
             </div>
@@ -638,7 +669,7 @@ export default function MFAVerifyPage() {
                 }}
                 placeholder="XXXX-XXXX"
                 disabled={isVerifying}
-                className="w-full text-center text-2xl font-mono font-bold py-4 px-4 rounded-xl border-2 border-zinc-700 bg-zinc-800/50 text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-zinc-600"
+                className="w-full text-center text-2xl font-mono font-bold py-4 px-4 rounded-xl border-2 border-zinc-700 bg-zinc-800/50 text-zinc-50 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-zinc-600"
                 autoFocus
               />
               <p className="text-xs text-zinc-500 text-center mt-2">
@@ -659,7 +690,7 @@ export default function MFAVerifyPage() {
               <div className="w-5 h-5 border-2 border-zinc-600 rounded bg-zinc-800 peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all flex items-center justify-center">
                 {trustDevice && (
                   <svg
-                    className="w-3 h-3 text-white"
+                    className="w-3 h-3 text-zinc-50"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -689,7 +720,7 @@ export default function MFAVerifyPage() {
                 : code.join("").length !== 6) ||
               (currentMethod === "telegram" && !isBackupCode && timeLeft === 0)
             }
-            className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 text-white font-medium rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+            className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 text-zinc-50 font-medium rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
               isBackupCode
                 ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-500/25"
                 : currentMethod === "telegram"
@@ -759,7 +790,7 @@ export default function MFAVerifyPage() {
                   setBackupCode("");
                   setError("");
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-white text-sm transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-zinc-50 text-sm transition-colors"
               >
                 <Key className="w-4 h-4" />
                 {isBackupCode
@@ -776,7 +807,7 @@ export default function MFAVerifyPage() {
         >
           <button
             onClick={() => navigate("/login")}
-            className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-white text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-zinc-400 hover:text-zinc-50 text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Volver al inicio de sesión

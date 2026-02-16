@@ -1,0 +1,89 @@
+{
+  "exportedAt": "2026-02-15T16:34:04.139Z",
+  "exportedBy": "6962dc472ba9a76efed78395",
+  "format": "json",
+  "version": "2.0",
+  "totalSessions": 1,
+  "sessions": [
+    {
+      "session": {
+        "id": "CS-6KVZ-7A5A88",
+        "status": "closed",
+        "channel": "telegram",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-02-08T01:22:45.696Z",
+        "closedAt": "2026-02-08T01:58:15.505Z",
+        "closedByType": "admin",
+        "closeReason": "admin_force",
+        "rating": 5,
+        "reopenCount": 1
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Oscar",
+        "email": "admin@trelk.site"
+      },
+      "messages": [],
+      "notes": [],
+      "transfers": [],
+      "activities": [
+        {
+          "action": "session_created",
+          "actor": "Esteban",
+          "description": "Session started by Esteban",
+          "createdAt": "2026-02-08T01:22:45.750Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-02-08T01:22:52.658Z"
+        },
+        {
+          "action": "session_closed",
+          "actor": "System",
+          "description": "Session closed: Closed due to inactivity",
+          "createdAt": "2026-02-08T01:39:37.542Z"
+        },
+        {
+          "action": "session_assigned",
+          "actor": "Oscar",
+          "description": "Assigned to Oscar",
+          "createdAt": "2026-02-08T01:57:13.746Z"
+        }
+      ],
+      "scheduledMessages": [],
+      "whispers": [],
+      "mediaFiles": [],
+      "qaReview": {
+        "totalScore": 50,
+        "status": "completed",
+        "coaching": "none",
+        "comment": "cumple",
+        "reviewedBy": "Oscar",
+        "checks": [
+          {
+            "checkName": "ggggggggggggggggg",
+            "checkCategory": "general",
+            "result": "yes",
+            "score": 100
+          },
+          {
+            "checkName": "Amabilidad",
+            "checkCategory": "tone",
+            "result": "no",
+            "score": 0
+          }
+        ],
+        "createdAt": "2026-02-13T00:43:57.851Z"
+      },
+      "contactHistory": []
+    }
+  ]
+}

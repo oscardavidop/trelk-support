@@ -448,6 +448,10 @@ async function start(): Promise<void> {
     // Start Flow Engine (processes waiting/paused flow executions)
     flowEngine.start(5000); // Check every 5 seconds
 
+    // Initialize Policy Engine cache
+    const { warmupPolicyCache } = await import('./services/policy-engine.service.js');
+    await warmupPolicyCache();
+
     // Determine update mode (polling vs webhook)
     const updateMode = isPollingEnabled() ? "POLLING" : "WEBHOOK";
 
@@ -465,6 +469,7 @@ async function start(): Promise<void> {
 ║   ✅ Socket.IO Ready                                         ║
 ║   ✅ API Routes Registered                                   ║
 ║   ✅ Flow Engine Started                                     ║
+║   ✅ Policy Engine Ready                                     ║
 ║   ✅ Redis & BullMQ Ready                                    ║
 ║                                                              ║
 ║   Ready for support operations!                              ║

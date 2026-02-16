@@ -99,6 +99,7 @@ const TRUSTED_DEVICE_CONFIG = {
 
 /**
  * Generate device fingerprint from various client data
+ * Now includes IP to bind fingerprint to network context
  */
 export function generateDeviceFingerprint(data: {
   userAgent?: string;
@@ -108,13 +109,20 @@ export function generateDeviceFingerprint(data: {
   timezone?: string;
   clientFingerprint?: string; // From client-side fingerprinting library
 }): string {
-  // Combine available data for fingerprinting
+  // If no clientFingerprint provided (incognito, cookies cleared), return empty
+  // The caller must handle empty fingerprints as "untrusted"
+  if (!data.clientFingerprint) {
+    return '';
+  }
+
+  // Combine available data for fingerprinting — now includes IP for network binding
   const fingerprintData = [
     data.userAgent || '',
+    data.ip || '',
     data.acceptLanguage || '',
     data.screenResolution || '',
     data.timezone || '',
-    data.clientFingerprint || '',
+    data.clientFingerprint,
   ].join('|');
 
   return crypto.createHash('sha256').update(fingerprintData).digest('hex');
@@ -211,11 +219,17 @@ export async function trustDevice(
 
 /**
  * Check if device is trusted for an agent
+ * Rejects empty fingerprints to prevent bypass via incognito/cleared storage
  */
 export async function isDeviceTrusted(
   agentId: string | Types.ObjectId,
   fingerprint: string
 ): Promise<{ trusted: boolean; device?: ITrustedDevice }> {
+  // Empty or missing fingerprint = never trusted
+  if (!fingerprint || fingerprint.length < 32) {
+    return { trusted: false };
+  }
+
   const device = await TrustedDevice.findOne({
     agentId: new Types.ObjectId(agentId.toString()),
     fingerprint,

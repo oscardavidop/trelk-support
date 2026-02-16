@@ -34,8 +34,12 @@ import {
   Timer,
   Eye,
   EyeOff,
-  UserX
+  UserX,
+  ShieldCheck,
+  ExternalLink,
+  ArrowLeft,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 type SettingsTab = 'bot' | 'chat' | 'agents' | 'security' | 'notifications';
 
@@ -69,6 +73,7 @@ interface AgentSettings {
   workingHoursEnabled: boolean;
   workingHoursStart: string;
   workingHoursEnd: string;
+  focusModeEnabled: boolean;
 }
 
 interface SecuritySettings {
@@ -123,6 +128,39 @@ const tabs: { id: SettingsTab; label: string; icon: React.ReactNode; description
   { id: 'notifications', label: 'Notificaciones', icon: <Bell className="w-5 h-5" />, description: 'Alertas del sistema' },
 ];
 
+// Link to Agent Rules page
+const AgentRulesLink = () => (
+  <Link 
+    to="/dashboard/agent-rules"
+    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent hover:border-purple-500/30"
+  >
+    <div className="p-2 rounded-lg bg-zinc-800 text-zinc-500 group-hover:text-purple-400 group-hover:bg-purple-500/20 transition-colors">
+      <ShieldCheck className="w-5 h-5" />
+    </div>
+    <div className="text-left flex-1">
+      <p className="font-medium text-sm group-hover:text-zinc-50">Reglas de Agentes</p>
+      <p className="text-[10px] text-zinc-500 line-clamp-1">Políticas de login y chat</p>
+    </div>
+    <ExternalLink className="w-4 h-4 text-zinc-600 group-hover:text-purple-400" />
+  </Link>
+);
+
+const DispositionsLink = () => (
+  <Link
+    to="/dashboard/dispositions"
+    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent hover:border-purple-500/30"
+  >
+    <div className="p-2 rounded-lg bg-zinc-800 text-zinc-500 group-hover:text-purple-400 group-hover:bg-purple-500/20 transition-colors">
+      <FileText className="w-5 h-5" />
+    </div>
+    <div className="text-left flex-1">
+      <p className="font-medium text-sm group-hover:text-zinc-50">Tipificaciones</p>
+      <p className="text-[10px] text-zinc-500 line-clamp-1">Categorías y motivos de cierre</p>
+    </div>
+    <ExternalLink className="w-4 h-4 text-zinc-600 group-hover:text-purple-400" />
+  </Link>
+);
+
 const defaultBotSettings: BotSettings = {
   botName: 'Asistente',
   welcomeMessage: '¡Hola! ¿En qué puedo ayudarte?',
@@ -153,6 +191,7 @@ const defaultAgentSettings: AgentSettings = {
   workingHoursEnabled: false,
   workingHoursStart: '09:00',
   workingHoursEnd: '18:00',
+  focusModeEnabled: false,
 };
 
 const defaultSecuritySettings: SecuritySettings = {
@@ -286,11 +325,13 @@ export default function SettingsPage() {
         <div className="px-8 py-6 pb-2 border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-sm z-20">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-4">
+              {/* back button */}
+             
               <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-xl shadow-purple-900/10">
                 <Settings className="w-6 h-6 text-purple-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Configuración</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Configuración</h1>
                 <p className="text-sm text-zinc-400">Preferencias generales del sistema</p>
               </div>
             </div>
@@ -304,7 +345,7 @@ export default function SettingsPage() {
 
               <button
                 onClick={loadSettings}
-                className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
@@ -312,7 +353,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium rounded-xl shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 <span>Guardar Cambios</span>
@@ -338,12 +379,19 @@ export default function SettingsPage() {
                   {tab.icon}
                 </div>
                 <div className="text-left flex-1">
-                  <p className={`font-medium text-sm ${activeTab === tab.id ? 'text-white' : ''}`}>{tab.label}</p>
+                  <p className={`font-medium text-sm ${activeTab === tab.id ? 'text-zinc-50' : ''}`}>{tab.label}</p>
                   <p className="text-[10px] text-zinc-500 line-clamp-1">{tab.description}</p>
                 </div>
                 {activeTab === tab.id && <ChevronRight className="w-4 h-4 text-purple-500/50" />}
               </button>
             ))}
+            
+            {/* Separator */}
+            <div className="my-3 border-t border-zinc-800/50" />
+            
+            {/* Link to Agent Rules Page */}
+            <AgentRulesLink />
+            <DispositionsLink />
           </div>
 
           {/* Content Area */}
@@ -376,7 +424,7 @@ function FormSection({ title, description, icon, children }: {
       <div className="px-6 py-4 border-b border-zinc-800/50 bg-zinc-900/60 flex items-center gap-3">
         <div className="p-2 bg-zinc-800 rounded-lg text-zinc-400 border border-zinc-700/50">{icon}</div>
         <div>
-          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <h3 className="text-base font-semibold text-zinc-50">{title}</h3>
           {description && <p className="text-xs text-zinc-500">{description}</p>}
         </div>
       </div>
@@ -545,6 +593,7 @@ function AgentSettingsForm({ settings, setSettings }: {
   settings: AgentSettings;
   setSettings: (settings: AgentSettings) => void;
 }) {
+  console.log('AgentSettingsForm render', settings);
   return (
     <div className="space-y-8">
       <FormSection title="Asignación de Chats" description="Reglas de distribución de trabajo" icon={<UserCog className="w-5 h-5 text-emerald-400" />}>
@@ -553,6 +602,7 @@ function AgentSettingsForm({ settings, setSettings }: {
           <ToggleField label="Asignación Automática" checked={settings.autoAssign} onChange={(v: any) => setSettings({ ...settings, autoAssign: v })} />
           {settings.autoAssign && <ToggleField label="Round Robin" description="Distribución equitativa" checked={settings.roundRobinEnabled} onChange={(v: any) => setSettings({ ...settings, roundRobinEnabled: v })} />}
         </div>
+        <ToggleField label="Habilitar Modo de Enfoque" checked={settings.focusModeEnabled} onChange={(v: any) => {console.log('Focus mode enabled changed:', v); setSettings({ ...settings, focusModeEnabled: v })}} />
       </FormSection>
       <FormSection title="Horarios" description="Control de disponibilidad" icon={<Clock className="w-5 h-5 text-emerald-400" />}>
         <ToggleField label="Restricción Horaria" checked={settings.workingHoursEnabled} onChange={(v: any) => setSettings({ ...settings, workingHoursEnabled: v })} />
@@ -562,6 +612,9 @@ function AgentSettingsForm({ settings, setSettings }: {
             <InputField label="Fin" value={settings.workingHoursEnd} onChange={(v: any) => setSettings({ ...settings, workingHoursEnd: v })} type="time" />
           </div>
         )}
+      </FormSection>
+      <FormSection title="Modo de Enfoque" description="Configuración del modo de enfoque para agentes" icon={<Eye className="w-5 h-5 text-emerald-400" />}>
+        <ToggleField label="Habilitar Modo de Enfoque" checked={settings.focusModeEnabled} onChange={(v: any) => {console.log('Focus mode enabled changed:', v); setSettings({ ...settings, focusModeEnabled: !v })}} />
       </FormSection>
     </div>
   );
@@ -626,7 +679,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                     onClick={() => toggleRole(role)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                       settings.mfaRequiredRoles?.includes(role)
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-purple-600 text-zinc-50'
                         : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                     }`}
                   >
@@ -647,7 +700,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                 onClick={() => toggleMethod('telegram')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                   settings.mfaAllowedMethods?.includes('telegram')
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-600 text-zinc-50'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                 }`}
               >
@@ -659,7 +712,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                 onClick={() => toggleMethod('totp')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                   settings.mfaAllowedMethods?.includes('totp')
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-emerald-600 text-zinc-50'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                 }`}
               >
@@ -711,7 +764,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                           admin: parseInt(e.target.value) || 5,
                         }
                       })}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
                     />
                   </div>
                   <div>
@@ -728,7 +781,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                           supervisor: parseInt(e.target.value) || 10,
                         }
                       })}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
                     />
                   </div>
                   <div>
@@ -745,7 +798,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                           agent: parseInt(e.target.value) || 15,
                         }
                       })}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
                     />
                   </div>
                 </div>
@@ -762,7 +815,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                     max={120}
                     value={settings.autoLockGracePeriodSeconds ?? 30}
                     onChange={(e) => setSettings({ ...settings, autoLockGracePeriodSeconds: parseInt(e.target.value) || 30 })}
-                    className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
+                    className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
                   />
                   <span className="text-zinc-400 text-sm">segundos (0 = sin aviso)</span>
                 </div>
@@ -815,7 +868,7 @@ function SecuritySettingsForm({ settings, setSettings }: {
                       }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                         settings.autoLockExemptRoles?.includes(role)
-                          ? 'bg-amber-600 text-white'
+                          ? 'bg-amber-600 text-zinc-50'
                           : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                       }`}
                     >

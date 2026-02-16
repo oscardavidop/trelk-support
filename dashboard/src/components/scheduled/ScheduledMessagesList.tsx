@@ -114,7 +114,7 @@ export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
       {/* Header Actions */}
       <div className="flex justify-between items-center pb-2 border-b border-zinc-800/50">
          <span className="text-[10px] font-bold text-zinc-500 ">Cola de Mensajes</span>
-         <button onClick={loadMessages} disabled={loading} className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+         <button onClick={loadMessages} disabled={loading} className="p-1.5 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
          </button>
       </div>

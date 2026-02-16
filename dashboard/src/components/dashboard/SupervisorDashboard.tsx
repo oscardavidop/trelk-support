@@ -59,7 +59,7 @@ function QueueList({ items, onAssign }: QueueListProps) {
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-sm text-white font-medium truncate">
+                <p className="text-sm text-zinc-50 font-medium truncate">
                   {item.customerName}
                 </p>
                 {item.channel && (
@@ -86,7 +86,7 @@ function QueueList({ items, onAssign }: QueueListProps) {
             {onAssign && (
               <button
                 onClick={() => onAssign(item.chatId)}
-                className="ml-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
+                className="ml-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-zinc-50 text-xs font-medium rounded-lg transition-colors"
               >
                 Asignar
               </button>
@@ -122,7 +122,7 @@ function TransferList({ transfers, onApprove, onReject }: TransferListProps) {
           className="p-3 bg-gray-800/50 rounded-lg border border-gray-700/50"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-white font-medium">
+            <span className="text-sm text-zinc-50 font-medium">
               {transfer.customerName || 'Cliente'}
             </span>
             <span className="text-xs text-gray-500">
@@ -144,7 +144,7 @@ function TransferList({ transfers, onApprove, onReject }: TransferListProps) {
               {onApprove && (
                 <button
                   onClick={() => onApprove(transfer.chatId)}
-                  className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-zinc-50 text-xs font-medium rounded transition-colors"
                 >
                   Aprobar
                 </button>
@@ -152,7 +152,7 @@ function TransferList({ transfers, onApprove, onReject }: TransferListProps) {
               {onReject && (
                 <button
                   onClick={() => onReject(transfer.chatId)}
-                  className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-zinc-50 text-xs font-medium rounded transition-colors"
                 >
                   Rechazar
                 </button>
@@ -188,7 +188,7 @@ function NegativeRatingsList({ ratings, onReview }: NegativeRatingsListProps) {
           className="p-3 bg-gray-800/50 rounded-lg border border-red-500/20"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-white font-medium">
+            <span className="text-sm text-zinc-50 font-medium">
               {rating.agentName}
             </span>
             <span className="text-xs text-gray-500">
@@ -214,7 +214,7 @@ function NegativeRatingsList({ ratings, onReview }: NegativeRatingsListProps) {
             {onReview && (
               <button
                 onClick={() => onReview(rating.chatId)}
-                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded transition-colors"
+                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-zinc-50 text-xs rounded transition-colors"
               >
                 Ver chat
               </button>
@@ -241,7 +241,7 @@ export function SupervisorDashboard() {
         <p className="text-sm mt-1">{error || 'Intenta de nuevo más tarde'}</p>
         <button
           onClick={refresh}
-          className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+          className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-zinc-50 rounded-lg transition-colors"
         >
           Reintentar
         </button>

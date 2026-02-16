@@ -351,7 +351,6 @@ async function handleConversationMessage(message: TelegramMessage, user: IUser):
   const { chat, text } = message;
   const lang = user.language;
   const ctx = getContext(chat.id);
-  
   // Trigger flows for messages without active session
   if (text) {
     // 1. First check for command triggers (higher priority)
@@ -380,6 +379,7 @@ async function handleConversationMessage(message: TelegramMessage, user: IUser):
       content: text,
       messageType: 'text',
     });
+
   }
   
   // switch (ctx.state) {

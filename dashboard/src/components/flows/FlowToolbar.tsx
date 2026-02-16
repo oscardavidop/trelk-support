@@ -85,14 +85,14 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
       <div className="flex items-center gap-4">
         <button
           onClick={onClose}
-          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
           title="Volver al dashboard"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-white tracking-tight">{flowName}</h1>
+          <h1 className="text-lg font-bold text-zinc-50 tracking-tight">{flowName}</h1>
           {getStatusBadge()}
           
           {hasChanges ? (
@@ -114,10 +114,10 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
         {/* Undo/Redo */}
         {!readOnly && (
           <div className="hidden sm:flex items-center gap-1">
-            <button onClick={onUndo} disabled={!canUndo} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors" title="Deshacer (Ctrl+Z)">
+            <button onClick={onUndo} disabled={!canUndo} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors" title="Deshacer (Ctrl+Z)">
               <Undo2 className="w-4 h-4" />
             </button>
-            <button onClick={onRedo} disabled={!canRedo} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors" title="Rehacer (Ctrl+Shift+Z)">
+            <button onClick={onRedo} disabled={!canRedo} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors" title="Rehacer (Ctrl+Shift+Z)">
               <Redo2 className="w-4 h-4" />
             </button>
           </div>
@@ -128,14 +128,14 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
       <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
         <button
           onClick={onTogglePalette}
-          className={`p-1.5 rounded-md transition-colors ${isPaletteOpen ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+          className={`p-1.5 rounded-md transition-colors ${isPaletteOpen ? 'bg-zinc-800 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
           title={isPaletteOpen ? 'Ocultar panel' : 'Mostrar panel'}
         >
           {isPaletteOpen ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
         </button>
         <button
           onClick={onCenterView}
-          className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-md transition-colors"
           title="Centrar vista"
         >
           <Maximize className="w-4 h-4" />
@@ -148,7 +148,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
               document.exitFullscreen();
             }
           }}
-          className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-md transition-colors"
           title="Pantalla completa"
         >
           <Fullscreen className="w-4 h-4" />
@@ -160,7 +160,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
       <div className="flex items-center gap-3">
         
         {/* Simulate */}
-        <button onClick={onSimulate} disabled={isLoading} className="flex items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg border border-transparent hover:border-zinc-700 transition-all text-xs font-medium">
+        <button onClick={onSimulate} disabled={isLoading} className="flex items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg border border-transparent hover:border-zinc-700 transition-all text-xs font-medium">
           <PlayCircle className="w-4 h-4 text-indigo-400" />
           <span className="hidden sm:inline">Simular</span>
         </button>
@@ -173,7 +173,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
               disabled={isLoading || !hasChanges} 
               className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border transition-all text-xs font-bold
                 ${hasChanges 
-                  ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-900/20' 
+                  ? 'bg-indigo-600 border-indigo-500 text-zinc-50 hover:bg-indigo-500 shadow-lg shadow-indigo-900/20' 
                   : 'bg-zinc-900 border-zinc-800 text-zinc-500 cursor-not-allowed opacity-70'}
               `}
             >
@@ -188,7 +188,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
                 <span>Pausar</span>
               </button>
             ) : (
-              <button onClick={onPublish} disabled={isLoading || hasChanges} className="flex items-center gap-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 rounded-lg transition-all text-xs font-bold shadow-lg shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+              <button onClick={onPublish} disabled={isLoading || hasChanges} className="flex items-center gap-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 border border-emerald-500 rounded-lg transition-all text-xs font-bold shadow-lg shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Publicar</span>
               </button>
@@ -196,7 +196,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
             {/* Context Menu */}
             <div className="relative">
-              <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+              <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
                 <MoreVertical className="w-5 h-5" />
               </button>
               
@@ -204,7 +204,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
                   <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-20 overflow-hidden ring-1 ring-white/10 animate-in fade-in slide-in-from-top-1">
-                    <button onClick={() => { onVersionHistory(); setShowMoreMenu(false); }} className="w-full px-4 py-2.5 text-left text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white flex items-center gap-2 transition-colors">
+                    <button onClick={() => { onVersionHistory(); setShowMoreMenu(false); }} className="w-full px-4 py-2.5 text-left text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50 flex items-center gap-2 transition-colors">
                       <History className="w-4 h-4 text-zinc-500" /> Historial de versiones
                     </button>
                     <div className="h-px bg-zinc-800 my-1" />

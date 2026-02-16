@@ -42,6 +42,7 @@ export default function IdleWarningToast({ secondsLeft, onDismiss, visible }: Id
   }[urgency];
 
   return (
+   visible ? (
     <div
       className={`
         fixed bottom-6 right-6 z-[9998]
@@ -64,15 +65,15 @@ export default function IdleWarningToast({ secondsLeft, onDismiss, visible }: Id
             p-2 rounded-xl bg-white/10
             ${urgency === 'urgent' ? 'animate-pulse' : ''}
           `}>
-            <Clock className="w-5 h-5 text-white" />
+            <Clock className="w-5 h-5 text-zinc-50" />
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-white text-sm">
+            <h4 className="font-semibold text-zinc-50 text-sm">
               Sesión por bloquearse
             </h4>
-            <p className="text-white/80 text-xs mt-0.5">
+            <p className="text-zinc-50/80 text-xs mt-0.5">
               Por inactividad, tu sesión se bloqueará en
             </p>
             
@@ -80,17 +81,17 @@ export default function IdleWarningToast({ secondsLeft, onDismiss, visible }: Id
             <div className="mt-2 flex items-center gap-2">
               <span className={`
                 text-2xl font-bold tabular-nums
-                ${urgency === 'urgent' ? 'text-white animate-pulse' : 'text-white'}
+                ${urgency === 'urgent' ? 'text-zinc-50 animate-pulse' : 'text-zinc-50'}
               `}>
                 {secondsLeft}
               </span>
-              <span className="text-white/70 text-sm">segundos</span>
+              <span className="text-zinc-50/70 text-sm">segundos</span>
             </div>
 
             {/* Action Hint */}
             <button
               onClick={onDismiss}
-              className="mt-3 flex items-center gap-1.5 text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
+              className="mt-3 flex items-center gap-1.5 text-xs text-zinc-50/90 hover:text-zinc-50 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
             >
               <MousePointerClick className="w-3.5 h-3.5" />
               Haz clic para continuar activo
@@ -100,7 +101,7 @@ export default function IdleWarningToast({ secondsLeft, onDismiss, visible }: Id
           {/* Close Button */}
           <button
             onClick={onDismiss}
-            className="p-1 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+            className="p-1 text-zinc-50/60 hover:text-zinc-50 transition-colors rounded-lg hover:bg-white/10"
           >
             <X className="w-4 h-4" />
           </button>
@@ -120,5 +121,6 @@ export default function IdleWarningToast({ secondsLeft, onDismiss, visible }: Id
         </div>
       </div>
     </div>
+   ) : null
   );
 }

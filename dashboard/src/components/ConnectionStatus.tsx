@@ -79,7 +79,7 @@ export default function ConnectionStatus({
         
         {/* Label */}
         {showLabel && (
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
+          <span className={`text-[10px] font-bold uppercase r ${config.color}`}>
             {config.label}
             {status === 'reconnecting' && reconnectAttempt > 0 && (
               <span className="ml-1 opacity-70">({reconnectAttempt})</span>
@@ -175,7 +175,7 @@ export function ConnectionBanner() {
           )}
         </div>
 
-        <span className={`text-xs font-medium tracking-wide ${config.color}`}>
+        <span className={`text-xs font-medium  ${config.color}`}>
           {status === 'reconnecting' 
             ? `Intentando reconectar con el servidor... (Intento ${reconnectAttempt})`
             : 'Conexión perdida. Verificando red...'

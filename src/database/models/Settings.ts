@@ -44,9 +44,11 @@ export interface IAgentRules {
   workingHoursStart: string;
   workingHoursEnd: string;
   workingHoursTimezone: string;
+  focusModeEnabled: boolean;
 }
 
 export interface ISecuritySettings {
+  
   jwtExpirationDays: number;
   rateLimitPerMinute: number;
   logCriticalEvents: boolean;
@@ -166,6 +168,7 @@ const SettingsSchema = new Schema<ISettings>(
       workingHoursStart: { type: String, default: '09:00' },
       workingHoursEnd: { type: String, default: '18:00' },
       workingHoursTimezone: { type: String, default: 'America/Bogota' },
+      focusModeEnabled: { type: Boolean, default: false },
     },
     security: {
       jwtExpirationDays: { type: Number, default: 7 },

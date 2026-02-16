@@ -149,7 +149,7 @@ function MessageBubble({ message, userName, agentName, isSequence }: { message: 
   const bubbleStyle = isUser 
     ? "bg-zinc-800 text-zinc-100 rounded-tl-none border-zinc-700"
     : isAgent
-      ? "bg-purple-600 text-white rounded-tr-none border-purple-500"
+      ? "bg-purple-600 text-zinc-50 rounded-tr-none border-purple-500"
       : "bg-blue-600/10 text-blue-200 border-blue-500/20 rounded-xl mx-auto max-w-[85%]"; // Bot style
 
   const alignClass = isUser ? 'justify-start' : isAgent ? 'justify-end' : 'justify-center';
@@ -220,13 +220,13 @@ function ImagePreview({ url, alt }: any) {
       <div className="relative group cursor-pointer mb-1 overflow-hidden rounded-lg bg-black/20" onClick={() => setIsOpen(true)}>
         <img src={url} alt={alt} className="max-w-full h-auto object-cover max-h-60 w-full" loading="lazy" />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-          <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+          <Maximize2 className="w-8 h-8 text-zinc-50 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
         </div>
       </div>
       {isOpen && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
           <img src={url} className="max-w-full max-h-full object-contain rounded shadow-2xl" />
-          <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white">
+          <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-zinc-50">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -268,7 +268,7 @@ function FileDownload({ url, name }: any) {
         <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
         <p className="text-[10px] text-zinc-500 font-bold">Documento</p>
       </div>
-      <Download className="w-4 h-4 text-zinc-500 group-hover:text-white" />
+      <Download className="w-4 h-4 text-zinc-500 group-hover:text-zinc-50" />
     </a>
   );
 }

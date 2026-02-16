@@ -107,7 +107,7 @@ export function FlowsTab() {
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
             <Workflow className="w-5 h-5 text-cyan-500" />
             Monitoreo de Flujos
           </h2>
@@ -122,7 +122,7 @@ export function FlowsTab() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar flujo..."
-              className="pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500 w-full md:w-64 transition-all"
+              className="pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:outline-none focus:border-cyan-500 w-full md:w-64 transition-all"
             />
           </div>
           <button
@@ -227,7 +227,7 @@ function FlowMonitorCard({ flow, expanded, onToggle }: { flow: FlowStats; expand
             <div>
               <h3 className="font-semibold text-zinc-100 truncate text-base">{flow.name}</h3>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-[10px] font-bold uppercasepx-1.5 py-0.5 rounded ${statusConfig.bg} ${statusConfig.color}`}>
+                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${statusConfig.bg} ${statusConfig.color}`}>
                   {statusConfig.label}
                 </span>
                 {flow.lastExecutedAt && (
@@ -238,7 +238,7 @@ function FlowMonitorCard({ flow, expanded, onToggle }: { flow: FlowStats; expand
               </div>
             </div>
           </div>
-          <div className="text-zinc-500 hover:text-white transition-colors">
+          <div className="text-zinc-500 hover:text-zinc-50 transition-colors">
             {expanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </div>
         </div>

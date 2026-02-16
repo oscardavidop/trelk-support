@@ -104,7 +104,7 @@ export function WorkersTab() {
           <AlertTriangle className="w-10 h-10 text-red-500" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-bold text-white">Redis Desconectado</h3>
+          <h3 className="text-lg font-bold text-zinc-50">Redis Desconectado</h3>
           <p className="text-sm">El monitoreo de workers requiere conexión a Redis</p>
         </div>
       </div>
@@ -125,7 +125,7 @@ export function WorkersTab() {
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
             <Cpu className="w-5 h-5 text-blue-500" />
             Workers Activos
           </h2>
@@ -140,7 +140,7 @@ export function WorkersTab() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filtrar por ID o Cola..."
-              className="pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 w-64 transition-all"
+              className="pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:outline-none focus:border-blue-500 w-64 transition-all"
             />
           </div>
           <button

@@ -141,7 +141,7 @@ const HistoryNotificationItem: React.FC<{
               {!notification.read && (
                 <button 
                   onClick={() => onMarkRead(notification._id)} 
-                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
                   title="Marcar como leído"
                 >
                   <Check className="w-4 h-4" />
@@ -348,7 +348,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
                 <Bell className="w-5 h-5 text-indigo-400" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Historial de Notificaciones</h2>
+                <h2 className="text-lg font-bold text-zinc-50">Historial de Notificaciones</h2>
                 <p className="text-xs text-zinc-500">
                   {notifications.length} notificaciones • {unreadCount} sin leer
                 </p>
@@ -359,7 +359,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-400 hover:text-white hover:bg-indigo-500/10 rounded-lg border border-transparent hover:border-indigo-500/20 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-400 hover:text-zinc-50 hover:bg-indigo-500/10 rounded-lg border border-transparent hover:border-indigo-500/20 transition-all"
                 >
                   <CheckCheck className="w-4 h-4" />
                   Marcar todo
@@ -367,7 +367,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
               )}
               <button
                 onClick={onClose}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+                className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -384,7 +384,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar notificaciones..."
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
               />
             </div>
 
@@ -397,7 +397,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
                     onClick={() => setFilter(f)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
                       filter === f 
-                        ? 'bg-zinc-800 text-white' 
+                        ? 'bg-zinc-800 text-zinc-50' 
                         : 'text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
@@ -427,7 +427,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
                   onClick={() => setTypeFilter('all')}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
                     typeFilter === 'all'
-                      ? 'bg-zinc-800 text-white border-zinc-700'
+                      ? 'bg-zinc-800 text-zinc-50 border-zinc-700'
                       : 'text-zinc-500 border-zinc-800 hover:text-zinc-300'
                   }`}
                 >
@@ -457,7 +457,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
           <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1">
             <button
               onClick={() => scrollToDate('up')}
-              className="p-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg border border-zinc-800 transition-colors backdrop-blur-sm"
+              className="p-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-50 rounded-lg border border-zinc-800 transition-colors backdrop-blur-sm"
             >
               <ChevronUp className="w-4 h-4" />
             </button>
@@ -468,7 +468,7 @@ export const NotificationHistoryModal: React.FC<NotificationHistoryModalProps> =
             </div>
             <button
               onClick={() => scrollToDate('down')}
-              className="p-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg border border-zinc-800 transition-colors backdrop-blur-sm"
+              className="p-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-50 rounded-lg border border-zinc-800 transition-colors backdrop-blur-sm"
             >
               <ChevronDown className="w-4 h-4" />
             </button>

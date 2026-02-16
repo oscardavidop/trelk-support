@@ -23,7 +23,7 @@ export default function EmptyState() {
       </div>
 
       {/* Main Text */}
-      <h2 className="text-2xl font-bold text-white mb-3 tracking-tight">
+      <h2 className="text-2xl font-bold text-zinc-50 mb-3 tracking-tight">
         Selecciona una conversación
       </h2>
       

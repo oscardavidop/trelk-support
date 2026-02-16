@@ -128,7 +128,7 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="¿Qué quieres hacer?"
-            className="flex-1 bg-transparent text-white placeholder-zinc-500 outline-none text-lg font-medium"
+            className="flex-1 bg-transparent text-zinc-50 placeholder-zinc-500 outline-none text-lg font-medium"
           />
           <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded-md text-[10px] text-zinc-400 font-mono font-bold r">
             ESC
@@ -167,7 +167,7 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
                           onMouseEnter={() => setSelectedIndex(flatIndex)}
                           className={`
                             w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 group relative
-                            ${isSelected ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50'}
+                            ${isSelected ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400 hover:bg-zinc-800/50'}
                           `}
                         >
                           {/* Selection Indicator */}
@@ -175,7 +175,7 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
                              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-indigo-500 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
                           )}
 
-                          <div className={`p-2 rounded-lg transition-colors ${isSelected ? 'bg-zinc-700 text-white' : 'bg-zinc-900 border border-zinc-800 text-zinc-500'}`}>
+                          <div className={`p-2 rounded-lg transition-colors ${isSelected ? 'bg-zinc-700 text-zinc-50' : 'bg-zinc-900 border border-zinc-800 text-zinc-500'}`}>
                             {cmd.icon}
                           </div>
                           

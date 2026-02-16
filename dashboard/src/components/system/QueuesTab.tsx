@@ -174,7 +174,7 @@ export function QueuesTab() {
       {/* Header & Actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
             <Server className="w-5 h-5 text-purple-500" />
             Colas de Procesamiento
           </h2>
@@ -344,7 +344,7 @@ const IconButton = ({ onClick, loading, icon: Icon, color, bg, tooltip }: any) =
 const MenuItem = ({ onClick, label, danger }: any) => (
   <button
     onClick={(e) => { e.stopPropagation(); onClick(); }}
-    className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-800 transition-colors ${danger ? 'text-red-400 hover:text-red-300' : 'text-zinc-300 hover:text-white'}`}
+    className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-800 transition-colors ${danger ? 'text-red-400 hover:text-red-300' : 'text-zinc-300 hover:text-zinc-50'}`}
   >
     {label}
   </button>

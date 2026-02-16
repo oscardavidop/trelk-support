@@ -181,7 +181,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
                 key={btnIdx}
                 className="flex-1 min-w-0 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded px-3 py-2 text-center cursor-default transition-colors border border-white/5 shadow-sm"
               >
-                <span className="text-xs font-medium text-white block truncate">{btn.text}</span>
+                <span className="text-xs font-medium text-zinc-50 block truncate">{btn.text}</span>
               </div>
             ))}
           </div>
@@ -213,11 +213,11 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
             {/* Documento */}
             {block.type === 'document' && block.url && (
               <div className="flex items-center gap-3 p-2 bg-black/10 rounded-lg">
-                <div className="p-2 bg-blue-500 rounded-full text-white">
+                <div className="p-2 bg-blue-500 rounded-full text-zinc-50">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate text-white">{block.filename || 'Archivo'}</div>
+                  <div className="text-sm font-medium truncate text-zinc-50">{block.filename || 'Archivo'}</div>
                   <div className="text-xs opacity-70">Documento</div>
                 </div>
               </div>
@@ -226,7 +226,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
             {/* Audio */}
             {block.type === 'audio' && block.url && (
               <div className="flex items-center gap-3 p-2 bg-black/10 rounded-lg">
-                <div className="p-2 bg-blue-500 rounded-full text-white">
+                <div className="p-2 bg-blue-500 rounded-full text-zinc-50">
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </div>
                 <div className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
@@ -244,7 +244,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
             {/* Delay Indicator (Visual only, not bubble) */}
             {block.type === 'delay' && (
               <div className="flex justify-center my-2">
-                 <span className="text-[10px] bg-black/20 text-white/60 px-2 py-0.5 rounded-full">
+                 <span className="text-[10px] bg-black/20 text-zinc-50/60 px-2 py-0.5 rounded-full">
                    ⏳ Esperando {(block as any).seconds}s...
                  </span>
               </div>
@@ -286,14 +286,14 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({ blocks, classNam
         }}>
           {/* Mock Time Header */}
           <div className="text-center mb-4">
-            <span className="bg-black/20 text-white/60 text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+            <span className="bg-black/20 text-zinc-50/60 text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
               Hoy
             </span>
           </div>
 
           <div className="flex flex-col items-end space-y-2">
             {/* The Bubble */}
-            <div className="max-w-[85%] bg-[#2b5278] text-white rounded-2xl rounded-tr-sm p-2.5 shadow-sm relative group">
+            <div className="max-w-[85%] bg-[#2b5278] text-zinc-50 rounded-2xl rounded-tr-sm p-2.5 shadow-sm relative group">
               {renderContent()}
               
               {/* Meta Info (Time & Check) */}

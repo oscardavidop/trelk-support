@@ -103,8 +103,8 @@ export interface ChatSession {
   status: 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
   assignedAgent?: Agent;
   closedBy?: Agent;
-  closedByType?: 'user' | 'agent' | 'system';
-  closeReason?: 'manual' | 'inactivity' | 'resolved' | 'spam';
+  closedByType?: 'user' | 'agent' | 'system' | 'admin';
+  closeReason?: 'manual' | 'inactivity' | 'resolved' | 'spam'  | 'admin_force';
   closureReason?: string;
   closedAt?: string;
   unreadCount?: number;
@@ -119,6 +119,7 @@ export interface Message {
   sender: 'user' | 'bot' | 'agent';
   senderAgent?: { name: string, avatar?: string };
   senderUser?: {
+    _id: string;
     telegramId: number;
     username?: string;
     firstName: string;
@@ -278,6 +279,17 @@ export interface ContactInfo {
     assignedAgent?: {
       id: string;
       name: string;
+    };
+    disposition?: {
+      categoryId?: string;
+      categoryCode?: string;
+      categoryName?: string;
+      subcategoryId?: string;
+      subcategoryCode?: string;
+      subcategoryName?: string;
+      comment?: string;
+      tags?: string[];
+      completedAt?: string;
     };
   };
   stats: {
@@ -528,7 +540,11 @@ export interface AgentPreferences {
       onNewChat: boolean;
     };
   };
-  
+  organizationSettings?: {
+    agentRules: {
+      focusModeEnabled: boolean;
+    }
+  };
   createdAt?: string;
   updatedAt?: string;
 }

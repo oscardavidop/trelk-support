@@ -442,7 +442,7 @@ function FieldsManagerModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -476,7 +476,7 @@ function FieldsManagerModal({
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     } // Simplificado
-                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                     placeholder="Ej. ID Cliente"
                   />
                 </div>
@@ -541,14 +541,14 @@ function FieldsManagerModal({
               <div className="pt-4 border-t border-zinc-800 flex justify-end gap-3">
                 <button
                   onClick={resetForm}
-                  className="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/10 transition-all flex items-center gap-2"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/10 transition-all flex items-center gap-2"
                 >
                   {isSaving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -570,12 +570,12 @@ function FieldsManagerModal({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar campos..."
-                    className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
                 <button
                   onClick={() => setShowNewForm(true)}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/10 transition-all"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/10 transition-all"
                 >
                   <Plus className="w-4 h-4" /> Nuevo
                 </button>
@@ -618,7 +618,7 @@ function FieldsManagerModal({
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openEditForm(field)}
-                            className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                            className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
@@ -1042,15 +1042,15 @@ export default function Contact360Panel({
                 className={`absolute -bottom-1 -right-1 p-1 rounded-lg border-4 border-zinc-950 ${contact.isBlocked ? "bg-red-500" : "bg-emerald-500"}`}
               >
                 {contact.isBlocked ? (
-                  <Ban className="w-3 h-3 text-white" />
+                  <Ban className="w-3 h-3 text-zinc-50" />
                 ) : (
-                  <UserCheck className="w-3 h-3 text-white" />
+                  <UserCheck className="w-3 h-3 text-zinc-50" />
                 )}
               </div>
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight leading-none mb-1">
+              <h2 className="text-xl font-bold text-zinc-50 tracking-tight leading-none mb-1">
                 {contact.fullName}
               </h2>
               <div className="flex items-center gap-2 text-zinc-500 text-sm">
@@ -1065,12 +1065,12 @@ export default function Contact360Panel({
           </div>
 
           <div className="flex gap-2">
-            <button className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors border border-transparent hover:border-zinc-800">
+            <button className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900 rounded-lg transition-colors border border-transparent hover:border-zinc-800">
               <MoreHorizontal className="w-5 h-5" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors border border-transparent hover:border-zinc-800"
+              className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900 rounded-lg transition-colors border border-transparent hover:border-zinc-800"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1153,7 +1153,7 @@ export default function Contact360Panel({
                       </span>
                       <button
                         onClick={() => handleCopy(String(contact.telegramId))}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-50 transition-all"
                       >
                         <Copy className="w-3 h-3" />
                       </button>
@@ -1254,7 +1254,7 @@ export default function Contact360Panel({
                           <span className="text-zinc-700 italic">Vacío</span>
                         )}
                       </p>
-                      <button className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all">
+                      <button className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-all">
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1280,7 +1280,7 @@ export default function Contact360Panel({
             {expandedSections.stats && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-white mb-1">
+                  <div className="text-2xl font-bold text-zinc-50 mb-1">
                     {contact.stats.totalSessions}
                   </div>
                   <div className="text-xs text-zinc-500 uppercase font-medium">
@@ -1288,7 +1288,7 @@ export default function Contact360Panel({
                   </div>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-white mb-1">
+                  <div className="text-2xl font-bold text-zinc-50 mb-1">
                     {contact.stats.avgResponseTime}s
                   </div>
                   <div className="text-xs text-zinc-500 uppercase font-medium">

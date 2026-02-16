@@ -21,21 +21,21 @@ const LEVEL_STYLES: Record<InternalBroadcast['level'], {
     iconBg: 'bg-indigo-500/10 border-indigo-500/20',
     iconColor: 'text-indigo-400',
     titleColor: 'text-zinc-100',
-    buttonAck: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20',
+    buttonAck: 'bg-indigo-600 hover:bg-indigo-500 text-zinc-50 shadow-indigo-500/20',
   },
   warning: {
     container: 'bg-amber-950/10 border-b-amber-500/10',
     iconBg: 'bg-amber-500/10 border-amber-500/20',
     iconColor: 'text-amber-400',
     titleColor: 'text-amber-100',
-    buttonAck: 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-500/20',
+    buttonAck: 'bg-amber-600 hover:bg-amber-500 text-zinc-50 shadow-amber-500/20',
   },
   critical: {
     container: 'bg-red-950/20 border-b-red-500/20',
     iconBg: 'bg-red-500/10 border-red-500/20',
     iconColor: 'text-red-400',
     titleColor: 'text-red-100',
-    buttonAck: 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/20',
+    buttonAck: 'bg-red-600 hover:bg-red-500 text-zinc-50 shadow-red-500/20',
   },
 };
 

@@ -147,13 +147,13 @@ export const BroadcastStatsModal: React.FC<BroadcastStatsModalProps> = ({
                 <BarChart3 className="w-5 h-5 text-zinc-400" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Estadísticas del Anuncio</h2>
+                <h2 className="text-lg font-bold text-zinc-50">Estadísticas del Anuncio</h2>
                 <p className="text-xs text-zinc-500">Seguimiento de alcance y engagement</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+              className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -202,7 +202,7 @@ export const BroadcastStatsModal: React.FC<BroadcastStatsModalProps> = ({
                     <Users className="w-4 h-4 text-zinc-500" />
                     <span className="text-xs text-zinc-500 uppercase font-bold">Total</span>
                   </div>
-                  <p className="text-2xl font-bold text-white">{broadcast.stats.totalTargeted}</p>
+                  <p className="text-2xl font-bold text-zinc-50">{broadcast.stats.totalTargeted}</p>
                 </div>
 
                 <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800">
@@ -263,7 +263,7 @@ export const BroadcastStatsModal: React.FC<BroadcastStatsModalProps> = ({
                         onClick={() => setFilter(f)}
                         className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
                           filter === f 
-                            ? 'bg-zinc-800 text-white' 
+                            ? 'bg-zinc-800 text-zinc-50' 
                             : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >

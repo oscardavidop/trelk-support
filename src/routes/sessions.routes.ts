@@ -34,6 +34,7 @@ import {
   deleteSavedReply,
 } from '../services/savedReply.service.js';
 import { getSessionTimeline } from '../services/activity-log.service.js';
+import { logger } from '../services/logger.js';
 import { ChatSession, Message } from '../database/index.js';
 
 interface SessionParams {
@@ -44,6 +45,12 @@ interface CloseSessionBody {
   reason?: string;
   closedByType?: 'user' | 'agent' | 'system';
   closeReason?: 'manual' | 'inactivity' | 'resolved' | 'spam';
+  disposition?: {
+    categoryId: string;
+    subcategoryId?: string;
+    comment?: string;
+    tags?: string[];
+  };
 }
 
 interface MessagesQuery {
@@ -380,25 +387,124 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   /**
    * Close session
    * Requires: chats.close permission
+   * Subject to chat action rules (may require note, tag, etc.)
+   * Requires disposition (tipificación) if enabled in settings
    */
   fastify.post<{ Params: SessionParams; Body: CloseSessionBody }>(
     '/api/sessions/:sessionId/close',
     { preHandler: requirePermission('chats.close') },
     async (request, reply) => {
       const { sessionId } = request.params;
-      const { reason, closedByType = 'agent', closeReason = 'manual' } = request.body;
-      const agentId = request.agent!._id.toString();
+      const { reason, closedByType = 'agent', closeReason = 'manual', disposition } = request.body;
+      const agent = request.agent!;
+      const agentId = agent._id.toString();
+
+      // ============= DISPOSITION VALIDATION =============
+      // Check if disposition is required
+      try {
+        const { getDispositionSettings, validateDisposition } = await import('../database/index.js');
+        const settings = await getDispositionSettings();
+
+        if (settings.requireDisposition && closedByType === 'agent') {
+          if (!disposition || !disposition.categoryId) {
+            return reply.code(400).send({
+              ok: false,
+              error: 'La tipificación es obligatoria para cerrar el chat',
+              code: 'DISPOSITION_REQUIRED',
+            });
+          }
+
+          // Validate disposition data
+          const validation = await validateDisposition(
+            disposition.categoryId,
+            disposition.subcategoryId,
+            disposition.comment,
+            disposition.tags
+          );
+
+          if (!validation.valid) {
+            return reply.code(400).send({
+              ok: false,
+              error: validation.error,
+              code: 'INVALID_DISPOSITION',
+            });
+          }
+        }
+      } catch (error) {
+        logger.warn('sessions', { action: 'disposition_validation_error', sessionId, error: String(error) });
+      }
+
+      // Check chat action rules before closing
+      try {
+        const { evaluateChatAction } = await import('../services/policy-engine.service.js');
+        const { Note } = await import('../database/models/Note.js');
+        const session = await getSessionById(sessionId);
+        
+        if (session) {
+          // Get notes for this session
+          const notes = await Note.find({ sessionId }).lean();
+          const lastNote = notes.length > 0 ? notes[notes.length - 1] : null;
+          
+          // Evaluate policy
+          const actionResult = await evaluateChatAction({
+            agent: { id: agentId, role: agent.role },
+            chat: {
+              id: sessionId,
+              hasNote: notes.length > 0,
+              noteLength: lastNote ? (lastNote.content?.length || 0) : 0,
+              tags: session.tags || [],
+              status: session.status,
+            },
+            action: 'close_chat',
+            timestamp: new Date(),
+          });
+
+          console.log('Policy Engine Result for close_chat:', actionResult);
+
+          if (!actionResult.allowed) {
+            return reply.code(403).send({
+              ok: false,
+              error: actionResult.errorMessage || 'Acción no permitida por política',
+              ruleId: actionResult.ruleId,
+              requiresApproval: actionResult.requiresApproval,
+            });
+          }
+        }
+      } catch (error) {
+        // On policy check error, log but allow action
+        logger.warn('sessions', { action: 'policy_check_error', sessionId, error: String(error) });
+      }
 
       const session = await closeSessionDetailed(
         sessionId,
         closedByType,
         closeReason,
         agentId,
-        reason
+        reason,
+        disposition
       );
 
       if (!session) {
         return reply.code(404).send({ ok: false, error: 'Session not found' });
+      }
+
+      // Audit log for disposition
+      if (disposition) {
+        const { logAuditFromRequest } = await import('../services/audit-log.service.js');
+        await logAuditFromRequest({
+          request,
+          action: 'chat_closed_with_disposition',
+          category: 'chat',
+          targetType: 'chat_session',
+          targetId: sessionId,
+          severity: 'low',
+          metadata: {
+            categoryId: disposition.categoryId,
+            subcategoryId: disposition.subcategoryId,
+            tags: disposition.tags,
+            hasComment: !!disposition.comment,
+          },
+        });
       }
 
       return { ok: true, session };

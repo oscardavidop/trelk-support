@@ -349,18 +349,18 @@ export default function TextsPage() {
                  <Languages className="w-6 h-6 text-indigo-500" />
                </div>
                <div>
-                 <h1 className="text-2xl font-bold text-white tracking-tight">Registro de Textos</h1>
+                 <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Registro de Textos</h1>
                  <p className="text-sm text-zinc-400">Internacionalización y mensajes del sistema</p>
                </div>
              </div>
  
              <div className="flex gap-3">
                <div className="flex bg-zinc-900/50 rounded-xl border border-zinc-800 p-1">
-                 <button onClick={handleExport} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="Exportar">
+                 <button onClick={handleExport} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="Exportar">
                    <Download className="w-4 h-4" />
                  </button>
                  <div className="w-px bg-zinc-800 my-1" />
-                 <button onClick={handleImport} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="Importar">
+                 <button onClick={handleImport} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="Importar">
                    <Upload className="w-4 h-4" />
                  </button>
                </div>
@@ -368,14 +368,14 @@ export default function TextsPage() {
                <button 
                  onClick={handleRefresh}
                  disabled={refreshing}
-                 className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                 className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
                >
                  <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
                </button>
                
                <button
                  onClick={() => { setEditingText(null); setShowFormModal(true); }}
-                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                >
                  <Plus className="w-5 h-5" />
                  <span>Nuevo Texto</span>
@@ -409,7 +409,7 @@ export default function TextsPage() {
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
                  placeholder="Buscar por key o contenido..."
-                 className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
+                 className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
                />
              </div>
  
@@ -429,7 +429,7 @@ export default function TextsPage() {
  
                <button
                  onClick={handleReloadCache}
-                 className="flex items-center gap-2 px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all"
+                 className="flex items-center gap-2 px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-400 hover:text-zinc-50 hover:border-zinc-700 transition-all"
                >
                  <RefreshCw className="w-4 h-4" />
                  <span className="hidden sm:inline">Recargar Cache</span>
@@ -531,7 +531,7 @@ function TextCard({ text, languages, onEdit, onDelete, onTranslate }: any) {
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => setExpanded(!expanded)} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg">
+            <button onClick={() => setExpanded(!expanded)} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg">
               {expanded ? <ChevronDown className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
             <button onClick={() => onEdit(text)} className="p-2 text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg">
@@ -598,7 +598,7 @@ function TextCard({ text, languages, onEdit, onDelete, onTranslate }: any) {
                 </div>
                 <button
                   onClick={() => { navigator.clipboard.writeText(content); toast.success('Copiado'); }}
-                  className="absolute right-2 top-2 p-1.5 text-zinc-600 hover:text-white rounded transition-colors opacity-0 group-hover/text:opacity-100"
+                  className="absolute right-2 top-2 p-1.5 text-zinc-600 hover:text-zinc-50 rounded transition-colors opacity-0 group-hover/text:opacity-100"
                 >
                   <Copy className="w-3 h-3" />
                 </button>
@@ -651,9 +651,9 @@ function TextModal({ isOpen, onClose, onSave, editingText, languages, categories
             <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
               {editingText ? <Edit3 className="w-5 h-5 text-indigo-500" /> : <Plus className="w-5 h-5 text-indigo-500" />}
             </div>
-            <h2 className="text-lg font-bold text-white">{editingText ? 'Editar Texto' : 'Nuevo Texto'}</h2>
+            <h2 className="text-lg font-bold text-zinc-50">{editingText ? 'Editar Texto' : 'Nuevo Texto'}</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -692,7 +692,7 @@ function TextModal({ isOpen, onClose, onSave, editingText, languages, categories
                   <button
                     key={l.code}
                     onClick={() => setFormData({ ...formData, texts: { ...formData.texts, [l.code]: '' } })}
-                    className="text-xs px-2 py-1 bg-zinc-800 hover:bg-indigo-600 hover:text-white rounded border border-zinc-700 transition-colors"
+                    className="text-xs px-2 py-1 bg-zinc-800 hover:bg-indigo-600 hover:text-zinc-50 rounded border border-zinc-700 transition-colors"
                   >
                     + {l.flag} {l.code.toUpperCase()}
                   </button>
@@ -740,11 +740,11 @@ function TextModal({ isOpen, onClose, onSave, editingText, languages, categories
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800">
-          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
+          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={handleSave}
             disabled={saving || !formData.key}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             <span>{editingText ? 'Guardar Cambios' : 'Crear Texto'}</span>
@@ -763,14 +763,14 @@ function DeleteModal({ textKey, isOpen, onClose, onConfirm }: DeleteModalProps) 
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
           <Trash2 className="w-8 h-8 text-red-500" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Eliminar Texto</h2>
+        <h2 className="text-xl font-bold text-zinc-50 mb-2">Eliminar Texto</h2>
         <p className="text-zinc-400 mb-6">
-          ¿Estás seguro de eliminar <span className="text-white font-mono bg-zinc-800 px-1 rounded">{textKey}</span>? <br />
+          ¿Estás seguro de eliminar <span className="text-zinc-50 font-mono bg-zinc-800 px-1 rounded">{textKey}</span>? <br />
           Esta acción podría afectar a los flujos que lo utilicen.
         </p>
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all font-medium">Cancelar</button>
-          <button onClick={onConfirm} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-red-900/20">Eliminar</button>
+          <button onClick={onConfirm} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl transition-all font-medium shadow-lg shadow-red-900/20">Eliminar</button>
         </div>
       </div>
     </div>
@@ -787,7 +787,7 @@ function InputGroup({ label, value, onChange, placeholder, type = "text", option
             value={value}
             onChange={onChange}
             disabled={disabled}
-            className="w-full pl-4 pr-10 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white appearance-none focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+            className="w-full pl-4 pr-10 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 appearance-none focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
           >
             {options.map((opt: any) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
@@ -800,7 +800,7 @@ function InputGroup({ label, value, onChange, placeholder, type = "text", option
           onChange={onChange}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all ${mono ? 'font-mono' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all ${mono ? 'font-mono' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
       )}
     </div>

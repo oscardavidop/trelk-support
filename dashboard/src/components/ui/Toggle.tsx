@@ -13,7 +13,7 @@ export function Toggle({ enabled, onChange, label, description, disabled = false
     <div className="flex items-center justify-between">
       {(label || description) && (
         <div className="flex-1 mr-4">
-          {label && <p className="text-sm font-medium text-white">{label}</p>}
+          {label && <p className="text-sm font-medium text-zinc-50">{label}</p>}
           {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
         </div>
       )}

@@ -12,7 +12,7 @@ import { BlockKeyboardEditor } from "./BlockKeyboardEditor";
 import { MessagePreview } from '../MessagePreview';
 
 // Estilos base para inputs (Consistente con el sistema)
-const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder-zinc-600";
+const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder-zinc-600";
 
 export const ImageBlockEditor: React.FC<BlockEditorProps<ImageBlock>> = ({
     block,

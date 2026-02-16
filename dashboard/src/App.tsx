@@ -23,10 +23,49 @@ import BroadcastPage from './pages/BroadcastPage';
 import InternalBroadcastsPage from './pages/BroadcastsPage';
 import PermissionsPage from './pages/PermissionsPage';
 import LiveChatPage from './pages/LiveChatPage';
+import AgentRulesPage from './pages/AgentRulesPage';
+import DispositionsPage from './pages/DispositionsPage';
+import MediaPage from './pages/MediaPage';
+import QAPage from './pages/QAPage';
+import { lazy } from 'react';
+
+// // Páginas de Autenticación
+// const LoginPage = lazy(() => import('./pages/LoginPage'));
+// const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+// const ForceChangePasswordPage = lazy(() => import('./pages/ForceChangePasswordPage'));
+// const MFAVerifyPage = lazy(() => import('./pages/MFAVerifyPage'));
+
+// // Layout Principal
+// const DashboardLayout = lazy(() => import('./pages/DashboardLayout'));
+
+// // Páginas de Contenido
+// const OverviewPage = lazy(() => import('./pages/OverviewPage'));
+// const ChatPage = lazy(() => import('./pages/ChatPage'));
+// const AgentsPage = lazy(() => import('./pages/AgentsPage'));
+// const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+// const SavedRepliesPage = lazy(() => import('./pages/SavedRepliesPage'));
+// const SupervisorPage = lazy(() => import('./pages/SupervisorPage'));
+// const AuditPage = lazy(() => import('./pages/AuditPage'));
+// const ExportsPage = lazy(() => import('./pages/ExportsPage'));
+// const MySettingsPage = lazy(() => import('./pages/MySettingsPage'));
+// const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
+// const SystemPage = lazy(() => import('./pages/SystemPage'));
+// const SystemControlPage = lazy(() => import('./pages/SystemControlPage'));
+// const TextsPage = lazy(() => import('./pages/TextsPage'));
+// const ContactsPage = lazy(() => import('./pages/ContactsPage'));
+// const BroadcastPage = lazy(() => import('./pages/BroadcastPage'));
+// const InternalBroadcastsPage = lazy(() => import('./pages/BroadcastsPage'));
+// const PermissionsPage = lazy(() => import('./pages/PermissionsPage'));
+// const LiveChatPage = lazy(() => import('./pages/LiveChatPage'));
+// const AgentRulesPage = lazy(() => import('./pages/AgentRulesPage'));
+// const DispositionsPage = lazy(() => import('./pages/DispositionsPage'));
+// const MediaPage = lazy(() => import('./pages/MediaPage'));
+// const QAPage = lazy(() => import('./pages/QAPage'));
 import { FlowsPage } from './components/flows';
 import { ToastContainer } from './components/ui';
 import { ThemeProvider } from './components/ThemeProvider';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PolicyAlertsProvider } from './components/PolicyAlertsProvider';
 import './index.css';
 
 // Redirect /chat/:sessionId to /dashboard/chat?session=:sessionId (preserving hash)
@@ -178,10 +217,42 @@ export default function App() {
                 <LiveChatPage />
               </ProtectedRoute>
             } />
+            
+            {/* Agent Rules - requiere settings.read */}
+            <Route path="agent-rules" element={
+              <ProtectedRoute permission="settings.read">
+                <AgentRulesPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Dispositions (Tipificaciones) - requiere settings.read */}
+            <Route path="dispositions" element={
+              <ProtectedRoute permission="settings.read">
+                <DispositionsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Media Admin - requiere system.manage (admin/supervisor) */}
+            <Route path="media" element={
+              <ProtectedRoute permission="system.manage">
+                <MediaPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* QA & Coaching - requiere supervisor.monitor (admin/supervisor) */}
+            <Route path="qa" element={
+              <ProtectedRoute permission="supervisor.monitor">
+                <QAPage />
+              </ProtectedRoute>
+            } />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        <PolicyAlertsProvider>
+          {/* PolicyAlertsProvider shows alerts/maintenance mode after login */}
+          <></>
+        </PolicyAlertsProvider>
         <ToastContainer />
       </BrowserRouter>
     </ThemeProvider>

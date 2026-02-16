@@ -65,6 +65,19 @@ export interface IWebSurvey {
   answeredAt?: Date;
 }
 
+// Disposition (tipificación) for chat closure
+export interface IChatDisposition {
+  categoryId?: Types.ObjectId;
+  categoryCode?: string;
+  categoryName?: string;
+  subcategoryId?: Types.ObjectId;
+  subcategoryCode?: string;
+  subcategoryName?: string;
+  comment?: string;
+  tags?: string[];
+  completedAt?: Date;
+}
+
 export interface IChatSession extends Document {
   sessionId: string;
   // Omnichannel support
@@ -85,6 +98,7 @@ export interface IChatSession extends Document {
   closedByType?: ClosedByType;
   closeReason?: CloseReason;
   closureReason?: string; // Legacy - detailed reason text
+  disposition?: IChatDisposition; // Enterprise tipificación
   rating?: number;
   feedback?: string;
   // Post-chat satisfaction survey (Telegram polls)
@@ -195,6 +209,18 @@ const ChatSessionSchema = new Schema<IChatSession>(
       enum: ['manual', 'inactivity', 'resolved', 'spam'],
     },
     closureReason: String, // Legacy - detailed text
+    // Disposition (tipificación) - Enterprise feature
+    disposition: {
+      categoryId: { type: Schema.Types.ObjectId, ref: 'DispositionCategory' },
+      categoryCode: String,
+      categoryName: String,
+      subcategoryId: Schema.Types.ObjectId,
+      subcategoryCode: String,
+      subcategoryName: String,
+      comment: String,
+      tags: [String],
+      completedAt: Date,
+    },
     rating: {
       type: Number,
       min: 1,

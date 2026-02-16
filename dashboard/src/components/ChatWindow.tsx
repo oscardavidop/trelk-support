@@ -58,10 +58,13 @@ import AgentComposer from './AgentComposer';
 import { TypingIndicator, TransferModal, BlockUserModal, CategorySelector, ReopenChatButton, SurveyDisplay } from './enterprise';
 import MessageContextMenu from './MessageContextMenu';
 import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal, TagSelectorModal, PinnedMessageConfirmationModal } from './MessageActionModals';
+import { DispositionModal } from './DispositionModal';
 import { WhisperDisplay } from './chat/WhisperDisplay';
+import ChatReplayModal from './ChatReplayModal';
 import { useSupervisorStore } from '../stores/supervisorStore';
 import { markWhisperAsRead as markWhisperReadApi } from '../services/socket';
 import { formatFileSize, useFileDownload, useFileSize } from '../hooks/useFileSize';
+import { set } from 'date-fns';
 
 interface ChatWindowProps {
   session: ChatSession;
@@ -122,7 +125,14 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   const [editModal, setEditModal] = useState<{ message: Message } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ message: Message } | null>(null);
   const [saveQuickReplyModal, setSaveQuickReplyModal] = useState<{ message: Message } | null>(null);
-  const [addNoteModal, setAddNoteModal] = useState<{ message: Message } | null>(null);
+  const [addNoteModal, setAddNoteModal] = useState<
+    {
+      userId: string;
+      onComplete?: () => void;
+    }
+    | null>(null);
+  const [closeChatModal, setCloseChatModal] = useState(false);
+  const [closingChat, setClosingChat] = useState(false);
   const [tagSelectorModal, setTagSelectorModal] = useState<{ message: Message } | null>(null);
   const [pinnedMessageConfirmation, setPinnedMessageConfirmation] = useState<{ message: Message } | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -500,26 +510,25 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   }, [updateMessage]);
 
   const handleAddNote = useCallback((message: Message) => {
-    setAddNoteModal({ message });
+    setAddNoteModal({ userId: session.user._id, onComplete: () => setCloseChatModal(true) });
     closeContextMenu();
   }, [closeContextMenu]);
 
-  const handleNoteSave = useCallback(async (messageId: string, note: string) => {
+  const handleNoteSave = useCallback(async (note: string) => {
     try {
-      await fetch(`/api/messages/${messageId}/note`, {
+      await fetch(`/api/users/${session.user._id}/notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${useAuthStore.getState().token}`,
         },
-        body: JSON.stringify({ note }),
+        body: JSON.stringify({ content: note, sessionId: session.sessionId }),
       });
-      updateMessage(messageId, { internalNote: note });
+      // updateMessage(sessionId, { internalNote: note });
     } catch (error) {
       console.error('Failed to save note:', error);
-    }
-    setAddNoteModal(null);
-  }, [updateMessage]);
+    } finally { setAddNoteModal(null); if (addNoteModal?.onComplete) addNoteModal.onComplete(); }
+  }, [session?.user?._id, setAddNoteModal, addNoteModal]);
 
   const handleReportSpam = useCallback((message: Message) => {
     if (confirm('¿Reportar este mensaje como spam?')) {
@@ -551,23 +560,54 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       onClick={onClick}
       className={`p-1.5 rounded-md transition-colors group relative ${danger
         ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
-        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+        : 'text-gray-400 hover:text-zinc-50 hover:bg-gray-800'
         }`}
       title={label}
     >
       {icon}
     </button>
   );
-  const handleClose = () => {
-    if (confirm('Are you sure you want to close this conversation?')) {
-      closeSession(session.sessionId, 'Agent closed conversation', (result) => {
-        if (!result.ok) {
-          console.error('Failed to close session:', result.error);
+
+  const handleClose = (disposition?: {
+    categoryId: string;
+    subcategoryId?: string;
+    comment?: string;
+    tags?: string[];
+  }) => {
+    setClosingChat(true);
+    closeSession(session.sessionId, 'Agent closed conversation', disposition, (result: any) => {
+      if (!result.ok) {
+        setCloseChatModal(false);
+        if (result.code === 'DISPOSITION_REQUIRED') {
+          toast.error('Tipificación requerida', 'Debes completar la tipificación para cerrar el chat', { duration: 5000 });
+        } else {
+          toast.error('No se pudo cerrar la sesión', result.error || 'No se pudo cerrar la sesión', { duration: 5000 });
+          // handleRuleError(result.data);
         }
-      });
-    }
+      } else {
+        setCloseChatModal(false);
+        toast.success('Chat cerrado', 'La conversación ha sido cerrada correctamente');
+      }
+      setClosingChat(false);
+    });
   };
 
+  const handleRuleError = useCallback((data: {
+    ruleId: string;
+  }) => {
+    const rule = data.ruleId; // Aquí podrías mapear el ID de la regla a un nombre más amigable si tienes esa información disponible
+    switch (rule) {
+      case "close_requires_note":
+        setAddNoteModal({ userId: session.user._id, onComplete: () => setCloseChatModal(true) });
+        break;
+
+      default:
+        break;
+    }
+
+  }, [session?.user?._id]);
+
+  const [showReplay, setShowReplay] = useState(false);
   const isMySession = session.assignedAgent?._id === agent?._id;
   const isClosed = session.status === 'closed';
   const isAdmin = agent?.role === 'admin';
@@ -580,7 +620,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       inactivity: 'Cerrado por inactividad',
       resolved: 'Marcado como resuelto',
       spam: 'Marcado como spam',
-      system: session.closureReason ? session.closureReason  : 'Cerrado por el sistema',
+      system: session.closureReason ? session.closureReason : 'Cerrado por el sistema',
     };
     return (session as any).closureReason || labels[session.closeReason || 'manual'] || 'Conversación cerrada';
   };
@@ -611,7 +651,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       p-2 rounded-lg transition-all duration-200 active:scale-95 relative group
       ${danger
           ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
-          : 'text-gray-400 hover:text-white hover:bg-white/5'
+          : 'text-gray-400 hover:text-zinc-50 hover:bg-white/5'
         }
     `}
       title={tooltip}
@@ -637,7 +677,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
       {isClosed && (
         <div className="relative z-10 flex items-center justify-center w-full h-[56px] border-b border-zinc-800 bg-zinc-900/90 overflow-hidden">
 
-    
+
           <div className="relative flex items-center gap-3 text-xs text-zinc-500">
 
             {/* Icon Badge */}
@@ -680,7 +720,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           {/* Avatar Container */}
           <div className="relative shrink-0">
             <div className={`
-        w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg overflow-hidden
+        w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-zinc-50 shadow-lg overflow-hidden
         ${session?.user?.isSubscriber
                 ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px]' // Borde gradiente
                 : 'bg-zinc-800 ring-1 ring-white/10'
@@ -695,9 +735,9 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                   />
                 ) : (
                   <span className="text-zinc-300 select-none">
-                    {session.user?.firstName?.charAt(0)?.toUpperCase() || 
-                     session.channelMetadata?.visitorName?.charAt(0)?.toUpperCase() || 
-                     'V'}
+                    {session.user?.firstName?.charAt(0)?.toUpperCase() ||
+                      session.channelMetadata?.visitorName?.charAt(0)?.toUpperCase() ||
+                      'V'}
                   </span>
                 )}
               </div>
@@ -706,15 +746,15 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             {/* Platform Indicator */}
             {session.channel === 'web' ? (
               <div className="absolute -bottom-0.5 -right-0.5 bg-indigo-500 rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
-                <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="w-2 h-2 text-zinc-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="2" y1="12" x2="22" y2="12" />
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                 </svg>
               </div>
             ) : (
-              <div className="absolute -bottom-0.5 -right-0.5 bg-[#229ED9] rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
-                <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <div className="absolute -bottom-0.5 -right-0.5 bg-[#1d98dc] rounded-full p-[3px] ring-2 ring-zinc-900 shadow-sm z-10">
+                <svg className="w-2 h-2 text-zinc-50" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
                 </svg>
               </div>
@@ -725,7 +765,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           <div className="flex flex-col justify-center gap-0.5 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-zinc-100 truncate max-w-[150px]">
-                {session.user?.firstName 
+                {session.user?.firstName
                   ? `${session.user.firstName} ${session.user.lastName || ''}`.trim()
                   : session.channelMetadata?.visitorName || 'Web Visitor'}
               </h3>
@@ -775,7 +815,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             {session.status === 'waiting' && (
               <button
                 onClick={handleAccept}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 text-xs font-semibold rounded-lg shadow-lg shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Aceptar</span>
@@ -789,9 +829,20 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
               />
             )}
 
+            {isClosed && (isAdmin || isSupervisor) && (
+              <button
+                onClick={() => setShowReplay(true)}
+                className="flex items-center ml-3 gap-1.5 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 hover:text-purple-200 text-xs font-semibold rounded-lg transition-all hover:-translate-y-0.5 active:translate-y-0"
+                title="Reproducir conversación (QA)"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>Replay</span>
+              </button>
+            )}
+
             {session.status === 'human' && isMySession && canClose && (
               <button
-                onClick={handleClose}
+                onClick={setCloseChatModal.bind(null, true)}
                 className="group flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-red-500/10 border border-zinc-700 hover:border-red-500/30 text-zinc-400 hover:text-red-400 text-xs font-medium rounded-lg transition-all"
                 title="Finalizar sesión"
               >
@@ -850,7 +901,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                 onClick={onToggleSidebar}
                 className={`p-2 rounded-lg transition-all ${isSidebarOpen
                   ? 'text-indigo-400 bg-indigo-500/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  : 'text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800'
                   }`}
                 title={isSidebarOpen ? 'Ocultar detalles' : 'Ver info del usuario'}
               >
@@ -893,7 +944,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
               <Pin className="w-4 h-4 text-primary shrink-0" />
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium truncate">
+                <p className="text-sm text-zinc-50 font-medium truncate">
                   {pinnedMessage.content}
                 </p>
                 <p className="text-xs text-gray-400">
@@ -903,7 +954,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
               <button
                 onClick={() => handleUnpin(pinnedMessage)}
-                className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition"
+                className="p-1.5 rounded-md text-gray-400 hover:text-zinc-50 hover:bg-white/10 transition"
                 title="Desfijar mensaje"
               >
                 <X className="w-4 h-4" />
@@ -995,6 +1046,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           session={session}
           replyTo={replyTo}
           onCancelReply={handleCancelReply}
+          onRequestClose={() => setCloseChatModal(true)}
         />
       ) : session.status === 'waiting' ? (
         <div className="p-4 border-t border-amber-700/50 bg-amber-500/10 text-center">
@@ -1122,9 +1174,29 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
         <AddNoteModal
           isOpen={true}
           onClose={() => setAddNoteModal(null)}
-          onSave={(note) => handleNoteSave(addNoteModal.message._id, note)}
+          onSave={(note) => handleNoteSave(note)}
         />
       )}
+
+      {/* Chat Replay Modal */}
+      <ChatReplayModal
+        session={session}
+        isOpen={showReplay}
+        onClose={() => setShowReplay(false)}
+      />
+
+      {
+        closeChatModal && (
+          <DispositionModal
+            isOpen={true}
+            onClose={() => setCloseChatModal(false)}
+            onConfirm={handleClose}
+            sessionId={session.sessionId}
+            contactName={session.user?.firstName || session.user?.username || 'Usuario'}
+            isLoading={closingChat}
+          />
+        )
+      }
 
       {tagSelectorModal && (
         <TagSelectorModal
@@ -1253,23 +1325,23 @@ function MessageBubble({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-xs font-semibold text-white">
+              <span className="text-xs font-semibold text-zinc-50">
                 {message.senderAgent?.name?.[0]?.toUpperCase()}
               </span>
             )
           ) : isBot ? (
-            <Bot className="w-4 h-4 text-white" />
+            <Bot className="w-4 h-4 text-zinc-50" />
           ) : session.user?.photoFileId ? (
             <img
               src={`/api/media/${session.user.photoFileId}`}
               className="w-full h-full object-cover"
             />
           ) : session.channelMetadata?.visitorName ? (
-            <span className="text-xs font-semibold text-white">
+            <span className="text-xs font-semibold text-zinc-50">
               {session.channelMetadata.visitorName.charAt(0).toUpperCase()}
             </span>
           ) : (
-            <User className="w-4 h-4 text-white" />
+            <User className="w-4 h-4 text-zinc-50" />
           )}
         </div>
 
@@ -1279,8 +1351,8 @@ function MessageBubble({
           className={`
             relative px-4 py-2.5 rounded-2xl transition
             ${isAgent
-              ? 'bg-primary text-white rounded-br-md'
-              : 'bg-primary/40 text-white rounded-bl-md'}
+              ? 'bg-primary text-zinc-50 rounded-br-md'
+              : 'bg-primary/40 text-zinc-50 rounded-bl-md'}
             ${isPinned ? 'ring-2 ring-primary/40' : ''}
             ${isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''}
             hover:shadow-md
@@ -1380,11 +1452,11 @@ function MediaImage({ url, alt, isAgent }: { url: string; alt: string; isAgent: 
       {/* Fullscreen Modal */}
       {isFullscreen && (
         <div
-        style={
-          {
-            zIndex: 9999
+          style={
+            {
+              zIndex: 9999
+            }
           }
-        }
           className="fixed inset-0 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsFullscreen(false)}
         >
@@ -1524,7 +1596,7 @@ function MediaAudio({
         onClick={togglePlay}
         disabled={isLoading}
         className={`w-10 h-10 rounded-full flex items-center justify-center
-          ${isAgent ? 'bg-white/20' : 'bg-primary text-white'}
+          ${isAgent ? 'bg-white/20' : 'bg-primary text-zinc-50'}
         `}
       >
         {isLoading ? (
@@ -1628,7 +1700,7 @@ function FilePreviewModal({
         onClick={onClose}
         className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20"
       >
-        <X className="w-5 h-5 text-white" />
+        <X className="w-5 h-5 text-zinc-50" />
       </button>
 
       {type === 'image' ? (

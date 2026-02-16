@@ -3,7 +3,7 @@ import {
   X, User, MessageSquare, Clock, Tag, StickyNote, Settings, History,
   ChevronDown, ChevronRight, Loader2, AlertCircle, Activity, Timer, Bot,
   SquareDashedMousePointerIcon,
-  MessageCircle
+  MessageCircle, ClipboardCheck, Paperclip, Download
 } from 'lucide-react';
 import type { ContactInfo } from '../types';
 import { getContactInfo } from '../services/contactApi';
@@ -20,7 +20,11 @@ import { LiveContactTimer } from './sidebar/LiveContactTimer';
 import { ActivityTimeline } from './sidebar/ActivityTimeline';
 import { ScheduledMessagesList } from './scheduled/ScheduledMessagesList';
 import { CopilotSection } from './sidebar/Copilot';
+import { SidebarDisposition } from './sidebar/Disposition';
+import { SidebarMedia } from './sidebar/Media';
 import ContactProfileHeader from './0';
+import QAReviewPanel from './QAReviewPanel';
+import ExportPanel from './sidebar/ExportPanel';
 
 interface ChatInfoSidebarProps {
   sessionId: string | null;
@@ -33,7 +37,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scheduledCount, setScheduledCount] = useState(0);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status', 'copilot']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status']));
 
   const fetchContactInfo = useCallback(async () => {
     if (!sessionId) {
@@ -73,7 +77,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 bg-zinc-950 border-l border-zinc-800 flex flex-col h-full shadow-2xl z-20 transition-all duration-300">
+    <div className="w-100 bg-zinc-950 border-l border-zinc-800 flex flex-col h-full shadow-2xl transition-all duration-300">
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md shrink-0 h-[56px]">
@@ -130,143 +134,196 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
             <ContactProfileHeader contactInfo={contactInfo} />
 
             {/* Accordion Sections */}
-            <div className="px-3 mt-4 space-y-2">
+            <SidebarSection
+              title="Estado Actual"
+              icon={<Activity className="w-4 h-4 text-blue-400" />}
+              isExpanded={expandedSections.has('status')}
+              onToggle={() => toggleSection('status')}
+            >
+              <SidebarConversationStatus {...contactInfo.session} />
+            </SidebarSection>
 
+            <SidebarSection
+              title="Tipificación"
+              icon={<ClipboardCheck className="w-4 h-4 text-cyan-400" />}
+              isExpanded={expandedSections.has('disposition')}
+              onToggle={() => toggleSection('disposition')}
+              badge={contactInfo.session.disposition?.categoryId ? 1 : 0}
+            >
+              <SidebarDisposition
+                sessionId={sessionId || ''}
+                disposition={contactInfo.session.disposition}
+                sessionStatus={contactInfo.session.status}
+              />
+            </SidebarSection>
 
+            <SidebarSection
+              title="Tiempo Activo"
+              icon={<Timer className="w-4 h-4 text-orange-400" />}
+              isExpanded={expandedSections.has('time')}
+              onToggle={() => toggleSection('time')}
+            >
+              <LiveContactTimer
+                startTime={contactInfo.session.createdAt}
+                messageCount={contactInfo.stats.totalMessages}
+                isClosed={contactInfo.session.status === 'closed'}
+                endTime={contactInfo.session.closedAt}
+              />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Notas Internas"
+              icon={<StickyNote className="w-4 h-4 text-yellow-400" />}
+              isExpanded={expandedSections.has('notes')}
+              onToggle={() => toggleSection('notes')}
+              badge={contactInfo.notes.count}
+            >
+              <SidebarNotes
+                userId={contactInfo.user.id}
+                sessionId={sessionId || ''}
+                notesCount={contactInfo.notes.count}
+                latestNote={contactInfo.notes.latest}
+                onNoteAdded={fetchContactInfo}
+              />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Media"
+              icon={<Paperclip className="w-4 h-4 text-pink-400" />}
+              isExpanded={expandedSections.has('media')}
+              onToggle={() => toggleSection('media')}
+            >
+              <SidebarMedia sessionId={sessionId || ''} contactInfo={contactInfo} />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Etiquetas"
+              icon={<Tag className="w-4 h-4 text-emerald-400" />}
+              isExpanded={expandedSections.has('tags')}
+              onToggle={() => toggleSection('tags')}
+              badge={contactInfo.tags.length}
+            >
+              <SidebarTags
+                userId={contactInfo.user.id}
+                tags={contactInfo.tags}
+                onTagsChanged={fetchContactInfo}
+              />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Mensajes Programados"
+              icon={<Clock className="w-4 h-4 text-teal-400" />}
+              isExpanded={expandedSections.has('scheduled')}
+              onToggle={() => toggleSection('scheduled')}
+              badge={scheduledCount}
+            >
+              <ScheduledMessagesList sessionId={sessionId || ''} onCountChange={setScheduledCount} />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Historial de Chats"
+              icon={<History className="w-4 h-4 text-zinc-400" />}
+              isExpanded={expandedSections.has('history')}
+              onToggle={() => toggleSection('history')}
+            >
+              <SidebarHistory
+                userId={contactInfo.user.id}
+                totalSessions={contactInfo.stats.totalSessions}
+                currentSessionId={sessionId || ''}
+              />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Línea de Tiempo"
+              icon={<Activity className="w-4 h-4 text-indigo-400" />}
+              isExpanded={expandedSections.has('activity')}
+              onToggle={() => toggleSection('activity')}
+            >
+              {sessionId && <ActivityTimeline sessionId={sessionId} />}
+            </SidebarSection>
+            <SidebarSection
+              title="AI Copilot"
+              icon={<Bot className="w-4 h-4 text-pink-500" />}
+              isExpanded={expandedSections.has('copilot')}
+              onToggle={() => toggleSection('copilot')}
+              headerClassName="hover:bg-pink-500/10"
+            >
+              {sessionId && <CopilotSection sessionId={sessionId} />}
+            </SidebarSection>
+            {/* QA Review Section — only for closed chats */}
+            {contactInfo.session.status === 'closed' && sessionId && contactInfo.session.assignedAgent && (
               <SidebarSection
-                title="Estado Actual"
-                icon={<Activity className="w-4 h-4 text-blue-400" />}
-                isExpanded={expandedSections.has('status')}
-                onToggle={() => toggleSection('status')}
+                title="Evaluación QA"
+                icon={<ClipboardCheck className="w-4 h-4 text-indigo-400" />}
+                isExpanded={expandedSections.has('qa')}
+                onToggle={() => toggleSection('qa')}
+                headerClassName="hover:bg-indigo-500/10"
               >
-                <SidebarConversationStatus {...contactInfo.session} />
+                <div className="px-2 pb-2">
+                  <QAReviewPanel
+                    sessionId={sessionId}
+                    agentId={typeof contactInfo.session.assignedAgent === 'object'
+                      ? (contactInfo.session.assignedAgent as any)._id
+                      : contactInfo.session.assignedAgent}
+                    compact={true}
+                  />
+                </div>
               </SidebarSection>
+            )}
 
+            {/* Export Section */}
+            {sessionId && (
               <SidebarSection
-                title="Tiempo Activo"
-                icon={<Timer className="w-4 h-4 text-orange-400" />}
-                isExpanded={expandedSections.has('time')}
-                onToggle={() => toggleSection('time')}
+                title="Exportar Chat"
+                icon={<Download className="w-4 h-4 text-cyan-400" />}
+                isExpanded={expandedSections.has('export')}
+                onToggle={() => toggleSection('export')}
+                headerClassName="hover:bg-cyan-500/10"
+                className='overflow-x-auto'
               >
-                <LiveContactTimer
-                  startTime={contactInfo.session.createdAt}
-                  messageCount={contactInfo.stats.totalMessages}
-                  isClosed={contactInfo.session.status === 'closed'}
-                  endTime={contactInfo.session.closedAt}
-                />
+                <ExportPanel sessionId={sessionId} />
               </SidebarSection>
+            )}
 
-              <SidebarSection
-                title="Notas Internas"
-                icon={<StickyNote className="w-4 h-4 text-yellow-400" />}
-                isExpanded={expandedSections.has('notes')}
-                onToggle={() => toggleSection('notes')}
-                badge={contactInfo.notes.count}
-              >
-                <SidebarNotes
-                  userId={contactInfo.user.id}
-                  sessionId={sessionId || ''}
-                  notesCount={contactInfo.notes.count}
-                  latestNote={contactInfo.notes.latest}
-                  onNoteAdded={fetchContactInfo}
-                />
-              </SidebarSection>
+            {/* Meta Data Divider */}
+            <div className="pt-6 pb-2 px-2">
+              <p className="text-[12px] font-bold text-zinc-600 st">Información Técnica</p>
+            </div>
 
-              <SidebarSection
-                title="Etiquetas"
-                icon={<Tag className="w-4 h-4 text-emerald-400" />}
-                isExpanded={expandedSections.has('tags')}
-                onToggle={() => toggleSection('tags')}
-                badge={contactInfo.tags.length}
-              >
-                <SidebarTags
-                  userId={contactInfo.user.id}
-                  tags={contactInfo.tags}
-                  onTagsChanged={fetchContactInfo}
-                />
-              </SidebarSection>
+            <SidebarSection
+              title="Identidad de Usuario"
+              icon={<User className="w-4 h-4 text-zinc-500" />}
+              isExpanded={expandedSections.has('identity')}
+              onToggle={() => toggleSection('identity')}
+            >
+              <SidebarUserIdentity user={contactInfo.user} />
+            </SidebarSection>
 
-              <SidebarSection
-                title="Mensajes Programados"
-                icon={<Clock className="w-4 h-4 text-teal-400" />}
-                isExpanded={expandedSections.has('scheduled')}
-                onToggle={() => toggleSection('scheduled')}
-                badge={scheduledCount}
-              >
-                <ScheduledMessagesList sessionId={sessionId || ''} onCountChange={setScheduledCount} />
-              </SidebarSection>
+            <SidebarSection
+              title="Campos del Sistema"
+              icon={<Settings className="w-4 h-4 text-zinc-500" />}
+              isExpanded={expandedSections.has('system')}
+              onToggle={() => toggleSection('system')}
+            >
+              <SidebarSystemFields user={contactInfo.user} />
+            </SidebarSection>
 
-              <SidebarSection
-                title="Historial de Chats"
-                icon={<History className="w-4 h-4 text-zinc-400" />}
-                isExpanded={expandedSections.has('history')}
-                onToggle={() => toggleSection('history')}
-              >
-                <SidebarHistory
-                  userId={contactInfo.user.id}
-                  totalSessions={contactInfo.stats.totalSessions}
-                  currentSessionId={sessionId || ''}
-                />
-              </SidebarSection>
+            <SidebarSection
+              title="Campos Personalizados"
+              icon={<Settings className="w-4 h-4 text-zinc-500" />}
+              isExpanded={expandedSections.has('custom')}
+              onToggle={() => toggleSection('custom')}
+            >
+              <SidebarCustomFields
+                userId={contactInfo.user.id}
+                fields={contactInfo.customFields}
+                onFieldUpdated={fetchContactInfo}
+              />
+            </SidebarSection>
 
-              <SidebarSection
-                title="Línea de Tiempo"
-                icon={<Activity className="w-4 h-4 text-indigo-400" />}
-                isExpanded={expandedSections.has('activity')}
-                onToggle={() => toggleSection('activity')}
-              >
-                {sessionId && <ActivityTimeline sessionId={sessionId} />}
-              </SidebarSection>
+            {/* Highlighted AI Section */}
+            <div className="mb-4">
 
-              {/* Meta Data Divider */}
-              <div className="pt-6 pb-2 px-2">
-                <p className="text-[10px] font-bold text-zinc-600 st">Información Técnica</p>
-              </div>
-
-              <SidebarSection
-                title="Identidad de Usuario"
-                icon={<User className="w-4 h-4 text-zinc-500" />}
-                isExpanded={expandedSections.has('identity')}
-                onToggle={() => toggleSection('identity')}
-              >
-                <SidebarUserIdentity user={contactInfo.user} />
-              </SidebarSection>
-
-              <SidebarSection
-                title="Campos del Sistema"
-                icon={<Settings className="w-4 h-4 text-zinc-500" />}
-                isExpanded={expandedSections.has('system')}
-                onToggle={() => toggleSection('system')}
-              >
-                <SidebarSystemFields user={contactInfo.user} />
-              </SidebarSection>
-
-              <SidebarSection
-                title="Campos Personalizados"
-                icon={<Settings className="w-4 h-4 text-zinc-500" />}
-                isExpanded={expandedSections.has('custom')}
-                onToggle={() => toggleSection('custom')}
-              >
-                <SidebarCustomFields
-                  userId={contactInfo.user.id}
-                  fields={contactInfo.customFields}
-                  onFieldUpdated={fetchContactInfo}
-                />
-              </SidebarSection>
-
-              {/* Highlighted AI Section */}
-              <div className="mb-4">
-                <SidebarSection
-                  title="AI Copilot"
-                  icon={<Bot className="w-4 h-4 text-pink-500" />}
-                  isExpanded={expandedSections.has('copilot')}
-                  onToggle={() => toggleSection('copilot')}
-                  className="border border-pink-500/20 bg-pink-500/5 rounded-xl overflow-hidden"
-                  headerClassName="hover:bg-pink-500/10"
-                >
-                  {sessionId && <CopilotSection sessionId={sessionId} />}
-                </SidebarSection>
-              </div>
             </div>
           </div>
         )}
@@ -277,14 +334,6 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 
 // ============= HELPER COMPONENTS =============
 
-function StatBadge({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 min-w-[80px]">
-      <span className="text-[10px] text-zinc-500 font-bold ">{label}</span>
-      <span className="text-lg font-bold text-white leading-none mt-1">{value}</span>
-    </div>
-  );
-}
 
 interface SidebarSectionProps {
   title: string;
@@ -302,8 +351,8 @@ function SidebarSection({ title, icon, isExpanded, onToggle, badge, children, cl
     <div className={`overflow-hidden transition-all duration-300 ${className || 'border-b border-zinc-800/50 last:border-0'}`}>
       <button
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-3 py-3 group transition-all rounded-lg ${isExpanded
-          ? 'bg-zinc-900/50 text-white'
+        className={`w-full flex items-center justify-between px-4 py-4 group transition-all rounded-lg ${isExpanded
+          ? 'bg-zinc-900/50 text-zinc-50'
           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30'
           } ${headerClassName}`}
       >

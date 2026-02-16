@@ -95,7 +95,7 @@ export default function ForceChangePasswordPage() {
               <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-400" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">¡Contraseña Actualizada!</h1>
+              <h1 className="text-2xl font-bold text-zinc-50 mb-2">¡Contraseña Actualizada!</h1>
               <p className="text-zinc-400 mb-6">
                 Tu contraseña ha sido cambiada exitosamente.
               </p>
@@ -140,7 +140,7 @@ export default function ForceChangePasswordPage() {
           {agent && (
             <div className="text-center mb-6">
               <p className="text-zinc-400">
-                Hola <span className="text-white font-medium">{agent.name}</span>
+                Hola <span className="text-zinc-50 font-medium">{agent.name}</span>
               </p>
               <p className="text-zinc-500 text-sm">{agent.email}</p>
             </div>
@@ -240,7 +240,7 @@ export default function ForceChangePasswordPage() {
             <button
               type="submit"
               disabled={isSubmitting || !newPassword || !confirmPassword}
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isSubmitting ? (
                 <>

@@ -61,7 +61,7 @@ export function SidebarNotes({ userId, sessionId, notesCount, latestNote, onNote
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('¿Eliminar nota?')) return;
+    // if (!confirm('¿Eliminar nota?')) return;
     setPendingDeletes(prev => new Set(prev).add(noteId));
     try { await deleteNote(noteId); setAllNotes(prev => prev.filter(n => n.id !== noteId)); onNoteAdded(); } 
     catch { toast.error('Error al eliminar'); } 
@@ -94,7 +94,7 @@ export function SidebarNotes({ userId, sessionId, notesCount, latestNote, onNote
           />
           <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-zinc-800">
             <button onClick={() => setIsAdding(false)} className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Cancelar</button>
-            <button onClick={handleAddNote} disabled={!newNote.trim()} className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-sm disabled:opacity-50 transition-all flex items-center gap-1.5">
+            <button onClick={handleAddNote} disabled={!newNote.trim()} className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-lg shadow-sm disabled:opacity-50 transition-all flex items-center gap-1.5">
               Guardar <Send className="w-3 h-3"/>
             </button>
           </div>

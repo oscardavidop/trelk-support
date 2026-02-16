@@ -60,7 +60,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>
+                  <div className={`text-sm font-bold ${isSelected ? 'text-zinc-50' : 'text-zinc-300 group-hover:text-zinc-50'}`}>
                     {label}
                   </div>
                   <div className="text-[10px] text-zinc-500 truncate">
@@ -87,7 +87,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
                 type="text"
                 value={triggerConfig.command || ''}
                 onChange={(e) => updateConfig('command', e.target.value.replace(/^\//, '').toLowerCase())}
-                className="w-full pl-6 pr-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white font-mono text-sm focus:border-cyan-500 outline-none"
+                className="w-full pl-6 pr-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 font-mono text-sm focus:border-cyan-500 outline-none"
                 placeholder="start"
               />
             </div>
@@ -115,7 +115,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
                  type="text" 
                  value={triggerConfig.commandParam || ''} 
                  onChange={e => updateConfig('commandParam', e.target.value)}
-                 className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-sm focus:border-cyan-500 outline-none mt-2" 
+                 className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 text-sm focus:border-cyan-500 outline-none mt-2" 
                  placeholder="Valor esperado..." 
                />
             )}
@@ -134,7 +134,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
                       onClick={() => updateConfig('keywordMatchType', opt)}
                       className={`px-2 py-0.5 text-[10px] rounded ${
                         (triggerConfig.keywordMatchType || 'contains') === opt 
-                        ? 'bg-purple-500 text-white' 
+                        ? 'bg-purple-500 text-zinc-50' 
                         : 'text-zinc-500 hover:text-zinc-300'
                       }`}
                     >
@@ -148,7 +148,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
              value={(triggerConfig.keywords || []).join('\n')}
              onChange={(e) => updateConfig('keywords', e.target.value.split('\n'))}
              rows={4}
-             className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-sm font-mono focus:border-purple-500 outline-none resize-none"
+             className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 text-sm font-mono focus:border-purple-500 outline-none resize-none"
              placeholder="Una palabra por línea..."
            />
            
@@ -173,7 +173,7 @@ const renderTriggerConfig = (config: TriggerConfig, updateConfig: (key: string, 
                     value={triggerConfig.inactivityMinutes || 5}
                     onChange={e => updateConfig('inactivityMinutes', parseInt(e.target.value))}
                     min={1}
-                    className="w-16 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-center text-white focus:border-orange-500 outline-none"
+                    className="w-16 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-center text-zinc-50 focus:border-orange-500 outline-none"
                   />
                   <span className="text-sm text-zinc-400">minutos sin respuesta</span>
                </div>

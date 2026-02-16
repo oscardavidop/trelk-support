@@ -109,7 +109,7 @@ export function CopilotSection({ sessionId }: CopilotSectionProps) {
               <p className="pl-2 leading-relaxed">{latestResponse.content}</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <button className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-pink-600 hover:bg-pink-500 text-white text-xs font-medium rounded-lg shadow-lg shadow-pink-900/20 transition-all active:scale-95">
+              <button className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-pink-600 hover:bg-pink-500 text-zinc-50 text-xs font-medium rounded-lg shadow-lg shadow-pink-900/20 transition-all active:scale-95">
                  <ArrowRight className="w-3 h-3" /> Insertar
               </button>
               <button className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-300 text-xs font-medium rounded-lg transition-all">
@@ -187,7 +187,7 @@ export function CopilotSection({ sessionId }: CopilotSectionProps) {
             )}
             
             {latestCloseReady.closeReady?.ready && (
-              <button className="w-full py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-1.5">
+              <button className="w-full py-2 text-xs font-bold text-zinc-50 bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Cerrar Ticket Ahora
               </button>
             )}
@@ -242,7 +242,7 @@ function SuggestionCard({
           <button 
             onClick={onAction} 
             disabled={loading}
-            className="text-zinc-500 hover:text-white transition-colors p-1 rounded hover:bg-zinc-800"
+            className="text-zinc-500 hover:text-zinc-50 transition-colors p-1 rounded hover:bg-zinc-800"
             title="Regenerar"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin text-pink-500' : ''}`} />

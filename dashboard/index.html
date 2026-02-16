@@ -1,51 +1,44 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
 
-    <title>Support Dashboard - Trelk Bot</title>
-    <script>
-      // Prevent flash of wrong theme - apply before CSS loads
-      (function () {
-        try {
-          var stored = localStorage.getItem("trelk-theme");
-          var theme = "dark"; // default
-          if (stored) {
-            var parsed = JSON.parse(stored);
-            theme = parsed.state?.theme || "dark";
-          }
-          if (theme === "system") {
-            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
-          }
-          document.documentElement.setAttribute("data-theme", theme);
-        } catch (e) {
-          document.documentElement.setAttribute("data-theme", "dark");
+<head>
+  <meta charset="UTF-8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <title>Support Dashboard - Trelk Bot</title>
+  <script>
+    // Prevent flash of wrong theme - apply before CSS loads
+    (function () {
+      try {
+        var stored = localStorage.getItem("trelk-theme");
+        var theme = "dark"; // default
+        if (stored) {
+          var parsed = JSON.parse(stored);
+          theme = parsed.state?.theme || "dark";
         }
-      })();
-    </script>
-    <script src="https://s.trelk.site/api/widget/trelk-chat.js"></script>
-<script>
-  TrelkChat.init({
-    projectId: "proj_f42a6e75",
-    // Optional: Pre-fill user info
-    // user: { name: "User Name", email: "user@example.com" }
-  });
-</script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+        if (theme === "system") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  </script>
+</body>
+
 </html>

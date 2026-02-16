@@ -85,7 +85,7 @@ export function ScheduledTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
             <Timer className="w-5 h-5 text-amber-500" />
             Mensajes Programados
           </h2>

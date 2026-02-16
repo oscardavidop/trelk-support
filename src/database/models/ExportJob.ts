@@ -6,7 +6,7 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export type ExportType = 'session' | 'sessions' | 'analytics' | 'audit';
-export type ExportFormat = 'pdf' | 'json' | 'csv';
+export type ExportFormat = 'pdf' | 'json' | 'csv' | 'xlsx' | 'zip';
 export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface IExportFilters {
@@ -27,6 +27,18 @@ export interface IExportInclude {
   transfers: boolean;
   ratings: boolean;
   userInfo: boolean;
+  media: boolean;
+  scheduledMessages: boolean;
+  whispers: boolean;
+  contactHistory: boolean;
+  qaReview: boolean;
+  disposition: boolean;
+}
+
+export interface IExportAdvanced {
+  redactPII?: boolean;
+  gdprMode?: boolean;
+  autoExportOnClose?: boolean;
 }
 
 export interface IPdfOptions {
@@ -59,6 +71,9 @@ export interface IExportJob extends Document {
   
   // PDF options
   pdfOptions?: IPdfOptions;
+
+  // Advanced options
+  advanced?: IExportAdvanced;
   
   // Status tracking
   status: ExportStatus;
@@ -117,10 +132,16 @@ const ExportJobSchema = new Schema<IExportJob>(
       transfers: { type: Boolean, default: true },
       ratings: { type: Boolean, default: true },
       userInfo: { type: Boolean, default: true },
+      media: { type: Boolean, default: false },
+      scheduledMessages: { type: Boolean, default: false },
+      whispers: { type: Boolean, default: false },
+      contactHistory: { type: Boolean, default: false },
+      qaReview: { type: Boolean, default: false },
+      disposition: { type: Boolean, default: true },
     },
     format: {
       type: String,
-      enum: ['pdf', 'json', 'csv'],
+      enum: ['pdf', 'json', 'csv', 'xlsx', 'zip'],
       required: true,
     },
     pdfOptions: {
@@ -131,6 +152,11 @@ const ExportJobSchema = new Schema<IExportJob>(
       footerText: String,
       pageSize: { type: String, enum: ['A4', 'Letter'], default: 'A4' },
       orientation: { type: String, enum: ['portrait', 'landscape'], default: 'portrait' },
+    },
+    advanced: {
+      redactPII: { type: Boolean, default: false },
+      gdprMode: { type: Boolean, default: false },
+      autoExportOnClose: { type: Boolean, default: false },
     },
     status: {
       type: String,

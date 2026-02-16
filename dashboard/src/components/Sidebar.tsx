@@ -8,7 +8,7 @@ import {
   ChevronDown, MessageSquare, Wifi, WifiOff, Loader2, Eye, Activity,
   Download, GitBranch, ChevronLeft, ChevronRight, User, Sliders, Bell,
   Shield, History, ListChecks, Server, Languages, Contact, Megaphone,
-  KeyRound, Radio, Globe
+  KeyRound, Radio, Globe, HardDrive, ClipboardCheck
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
@@ -98,45 +98,47 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
     section: string;
     items: NavItem[];
   }[] = [
-    {
-      section: t('sidebar.sections.principal'),
-      items: [
-        { path: '/dashboard', icon: LayoutDashboard, label: t('sidebar.nav.overview'), permission: null },
-        { path: '/dashboard/chat', icon: MessageCircle, label: t('sidebar.nav.chat'), permission: 'chats.read' },
-        { path: '/dashboard/contacts', icon: Contact, label: t('sidebar.nav.contacts'), permission: 'contacts.read' },
-      ]
-    },
-    {
-      section: t('sidebar.sections.operations'),
-      items: [
-        { path: '/dashboard/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
-        { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios'), permission: 'system.admin' },
-        { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
-        { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
-        { path: '/dashboard/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
-      ]
-    },
-    {
-      section: t('sidebar.sections.management'),
-      items: [
-        { path: '/dashboard/agents', icon: Users, label: t('sidebar.nav.agents'), permission: 'agents.read' },
-        { path: '/dashboard/saved-replies', icon: MessageSquare, label: t('sidebar.nav.replies'), permission: 'replies.write' },
-        { path: '/dashboard/custom-fields', icon: ListChecks, label: t('sidebar.nav.fields'), permission: 'customFields.read' },
-        { path: '/dashboard/texts', icon: Languages, label: t('sidebar.nav.texts'), permission: 'settings.write' },
-      ]
-    },
-    {
-      section: t('sidebar.sections.system'),
-      items: [
-        { path: '/dashboard/audit', icon: Activity, label: t('sidebar.nav.activity'), permission: 'system.audit' },
-        { path: '/dashboard/exports', icon: Download, label: t('sidebar.nav.exports'), permission: 'exports.create' },
-        { path: '/dashboard/system', icon: Server, label: t('sidebar.nav.monitor'), permission: 'system.read' },
-        { path: '/dashboard/system-control', icon: Sliders, label: t('sidebar.nav.control'), permission: 'system.admin' },
-        { path: '/dashboard/permissions', icon: KeyRound, label: t('sidebar.nav.permissions'), permission: 'agents.permissions' },
-        { path: '/dashboard/settings', icon: Settings, label: t('sidebar.nav.settings'), permission: 'settings.read' },
-      ]
-    }
-  ];
+      {
+        section: t('sidebar.sections.principal'),
+        items: [
+          { path: '/dashboard', icon: LayoutDashboard, label: t('sidebar.nav.overview'), permission: null },
+          { path: '/dashboard/chat', icon: MessageCircle, label: t('sidebar.nav.chat'), permission: 'chats.read' },
+          { path: '/dashboard/contacts', icon: Contact, label: t('sidebar.nav.contacts'), permission: 'contacts.read' },
+        ]
+      },
+      {
+        section: t('sidebar.sections.operations'),
+        items: [
+          { path: '/dashboard/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
+          { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios'), permission: 'system.admin' },
+          { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
+          { path: '/dashboard/qa', icon: ClipboardCheck, label: t('sidebar.nav.qa', 'QA & Coaching'), permission: 'supervisor.monitor' },
+          { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
+          { path: '/dashboard/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
+        ]
+      },
+      {
+        section: t('sidebar.sections.management'),
+        items: [
+          { path: '/dashboard/agents', icon: Users, label: t('sidebar.nav.agents'), permission: 'agents.read' },
+          { path: '/dashboard/saved-replies', icon: MessageSquare, label: t('sidebar.nav.replies'), permission: 'replies.write' },
+          { path: '/dashboard/custom-fields', icon: ListChecks, label: t('sidebar.nav.fields'), permission: 'customFields.read' },
+          { path: '/dashboard/texts', icon: Languages, label: t('sidebar.nav.texts'), permission: 'settings.write' },
+        ]
+      },
+      {
+        section: t('sidebar.sections.system'),
+        items: [
+          { path: '/dashboard/audit', icon: Activity, label: t('sidebar.nav.activity'), permission: 'system.audit' },
+          { path: '/dashboard/exports', icon: Download, label: t('sidebar.nav.exports'), permission: 'exports.create' },
+          { path: '/dashboard/system', icon: Server, label: t('sidebar.nav.monitor'), permission: 'system.read' },
+          { path: '/dashboard/system-control', icon: Sliders, label: t('sidebar.nav.control'), permission: 'system.admin' },
+          { path: '/dashboard/media', icon: HardDrive, label: t('sidebar.nav.media', 'Media'), permission: 'system.manage' },
+          { path: '/dashboard/permissions', icon: KeyRound, label: t('sidebar.nav.permissions'), permission: 'agents.permissions' },
+          { path: '/dashboard/settings', icon: Settings, label: t('sidebar.nav.settings'), permission: 'settings.read' },
+        ]
+      }
+    ];
 
   // Helper colors
   const statusConfig = {
@@ -160,23 +162,23 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       {/* Toggle Button */}
       <button
         onClick={toggleCollapse}
-        className="absolute -right-3 top-11 z-50 w-6 h-6 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shadow-lg"
+        className="absolute -right-3 top-11 z-50 w-6 h-6 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none transition-all duration-300"
       >
         {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
 
       {/* 1. Header & Logo (RESTAURADO) */}
-      <div className="h-[56px] flex items-center px-4 border-b border-zinc-800/50 bg-zinc-950">
-        <div className={`flex items-center gap-3 w-full ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+      <div className="h-[56px] flex items-center px-4 border-b border-zinc-800/50 bg-zinc-950 transition-all duration-200">
+        <div className={`flex items-center gap-3 w-full transition-all duration-300 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {isCollapsed ? (
-            <img src="/assets/img/logo-small-dark.png" alt="Logo" className="w-8 h-8 rounded-sm object-contain" />
+            <img src="/assets/img/logo-small-dark.png" alt="Logo" className="w-8 h-8 rounded-sm object-contain transition-all duration-200" />
           ) : (
-            <div className="flex items-center gap-2 text-white font-semibold">
-              <img src="/assets/img/logo-dark.png" alt="Logo" className="rounded-sm object-contain h-8 w-auto" />
+            <div className="flex items-center gap-2 text-zinc-50 font-semibold  duration-200">
+              <img src="/assets/img/logo-dark.png" alt="Logo" className="rounded-sm object-contain h-8 w-auto transition-all duration-200" />
               <span className="font-bold text-zinc-100 text-sm ">Support</span>
             </div>
           )}
-          
+
           {/* Notification Center Bell */}
           <div className={isCollapsed ? 'hidden' : ''}>
             <NotificationCenter />
@@ -185,40 +187,76 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       </div>
 
       {/* 2. Connection Status (RESTAURADO & ESTILIZADO) */}
-      <div className="">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center flex-col gap-2' : 'justify-between'} text-xs bg-zinc-900/50 p-2`}>
-
-          {/* Connection Icon/Text */}
-          <div className="flex items-center gap-2" title={connectionStatus === 'ready' ? 'System Connected' : 'Disconnected'}>
-            {connectionStatus === 'ready' ? (
+      <div>
+        <div
+          className={`flex items-center ${isCollapsed
+              ? "justify-center flex gap-1"
+              : "justify-between"
+            } text-[10px] bg-zinc-900/40 px-2 py-1`}
+        >
+          {/* Connection Status */}
+          <div
+            className="flex items-center gap-1.5"
+            title={
+              connectionStatus === "ready"
+                ? "System Connected"
+                : "Disconnected"
+            }
+          >
+            {connectionStatus === "ready" ? (
               <>
-                <Wifi className="w-3.5 h-3.5 text-emerald-500" />
-                {!isCollapsed && <span className="text-emerald-500 font-medium">Conectado</span>}
+                <Wifi className="w-3 h-3 text-emerald-500" />
+                {!isCollapsed && (
+                  <span className="text-emerald-500 font-medium">
+                    Conectado
+                  </span>
+                )}
               </>
-            ) : connectionStatus === 'reconnecting' ? (
+            ) : connectionStatus === "reconnecting" ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                {!isCollapsed && <span className="text-amber-500 font-medium">Reconectando...</span>}
+                <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
+                {!isCollapsed && (
+                  <span className="text-amber-500 font-medium">
+                    Reconectando…
+                  </span>
+                )}
               </>
             ) : (
               <>
-                <WifiOff className="w-3.5 h-3.5 text-red-500" />
-                {!isCollapsed && <span className="text-red-500 font-medium">Sin Conexión</span>}
+                <WifiOff className="w-3 h-3 text-red-500" />
+                {!isCollapsed && (
+                  <span className="text-red-500 font-medium">
+                    Sin conexión
+                  </span>
+                )}
               </>
             )}
           </div>
 
-          {/* Availability Status (Only visible when expanded or via dot when collapsed) */}
+          {/* Availability */}
           {agent && (
             isCollapsed ? (
-              // Collapsed: Small dot indicating agent availability
-              <div className={`w-2 h-2 rounded-full ${availabilityStatus === 'available' ? 'bg-emerald-500' : availabilityStatus === 'busy' ? 'bg-amber-500' : 'bg-zinc-600'}`} title={availabilityStatus} />
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${availabilityStatus === "available"
+                    ? "bg-emerald-500"
+                    : availabilityStatus === "busy"
+                      ? "bg-amber-500"
+                      : "bg-zinc-600"
+                  }`}
+                title={availabilityStatus}
+              />
             ) : (
-              // Expanded: Full Text
-              <div className={`flex items-center gap-1.5 ${availabilityColors[availabilityStatus]}`}>
-                <span className="font-medium capitalize">{availabilityStatus}</span>
-                {availabilityStatus === 'busy' && (
-                  <span className="text-zinc-500">({agent.activeChats || 0}/{MAX_CONCURRENT_CHATS})</span>
+              <div
+                className={`flex items-center gap-1 ${availabilityColors[availabilityStatus]}`}
+              >
+                <span className="font-medium capitalize leading-none">
+                  {availabilityStatus}
+                </span>
+
+                {availabilityStatus === "busy" && (
+                  <span className="text-zinc-500 text-[10px]">
+                    {agent.activeChats || 0}/{MAX_CONCURRENT_CHATS}
+                  </span>
                 )}
               </div>
             )
@@ -226,9 +264,10 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
         </div>
       </div>
 
+
       {/* 3. Navigation */}
       {/* only show scrollbar on hover */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-hover">
+      <nav className="flex-1 overflow-y-auto space-y-4 scrollbar-hover pl-[6px] pr-[5px]">
         {navItems.map((group, groupIdx) => {
           const visibleItems = group.items.filter(item => item.permission === null || can(item.permission));
           if (visibleItems.length === 0) return null;
@@ -253,7 +292,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
                       className={`
                         relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group
                         ${isActive
-                          ? 'bg-zinc-800/80 text-white shadow-inner'
+                          ? 'bg-zinc-800/80 text-zinc-50 shadow-inner'
                           : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
                         }
                         ${isCollapsed ? 'justify-center' : ''}
@@ -271,7 +310,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
                         <div className={`
                           flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold 
                           ${isCollapsed ? 'absolute -top-1 -right-1 border border-zinc-950' : 'ml-auto'}
-                          bg-indigo-500 text-white
+                          bg-indigo-500 text-zinc-50
                         `}>
                           {item.badge}
                         </div>
@@ -286,7 +325,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       </nav>
 
       {/* 4. User Profile Footer */}
-      <div className="p-3 border-t border-zinc-800 bg-zinc-950" ref={dropdownRef}>
+      <div className="p-1 border-t border-zinc-800 bg-zinc-950" ref={dropdownRef}>
         <div className="relative">
           <button
             onClick={() => setShowStatusMenu(!showStatusMenu)}
@@ -368,7 +407,7 @@ function StatusButton({ status, label, active, onClick, color }: { status: strin
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${active ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${active ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
         }`}
     >
       <div className={`w-2.5 h-2.5 rounded-full ${color} ${active ? 'ring-2 ring-white/10' : ''}`} />

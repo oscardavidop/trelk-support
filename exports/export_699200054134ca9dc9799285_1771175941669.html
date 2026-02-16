@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Export — Trelk Support</title>
+  <style>
+    :root { --primary: #4F46E5; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); padding: 30px; line-height: 1.6; }
+    .report-header { text-align: center; padding: 30px 0; border-bottom: 3px solid var(--primary); margin-bottom: 30px; }
+    .report-header h1 { color: var(--primary); font-size: 28px; }
+    .report-header .subtitle { color: var(--muted); margin-top: 6px; }
+    .session-card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 24px; margin-bottom: 30px; }
+    .session-header { margin-bottom: 20px; }
+    .session-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .session-title h2 { font-size: 16px; font-family: monospace; color: var(--muted); }
+    .channel-badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .channel-telegram { background: #E0F2FE; color: #0369A1; }
+    .channel-web { background: #F0FDF4; color: #166534; }
+    .channel-whatsapp { background: #ECFDF5; color: #047857; }
+    .status-badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-open { background: #DCFCE7; color: #166534; }
+    .status-closed { background: #F1F5F9; color: #475569; }
+    .status-pending, .status-waiting { background: #FEF3C7; color: #92400E; }
+    .status-sent { background: #DBEAFE; color: #1E40AF; }
+    .status-cancelled, .status-failed { background: #FEE2E2; color: #991B1B; }
+    .session-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+    .meta-item { font-size: 13px; }
+    .meta-item .label { font-weight: 600; color: var(--muted); }
+    .section { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+    .section h3 { color: var(--primary); font-size: 15px; margin-bottom: 12px; }
+    .chat-container { max-width: 100%; }
+    .chat-msg { margin: 6px 0; }
+    .bubble { display: inline-block; max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 13px; }
+    .msg-user .bubble { background: #E0E7FF; border-bottom-left-radius: 4px; text-align: left; }
+    .msg-agent .bubble { background: #DCFCE7; border-bottom-right-radius: 4px; }
+    .msg-bot .bubble { background: #FEF3C7; border-bottom-left-radius: 4px; text-align: left; }
+    .bubble .sender { font-weight: 700; font-size: 11px; color: var(--primary); margin-bottom: 2px; }
+    .bubble .content { word-break: break-word; }
+    .bubble .time { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .media-indicator { font-size: 11px; color: #7C3AED; padding: 2px 0; }
+    .note-item { background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 10px 14px; border-radius: 6px; margin: 6px 0; }
+    .note-item p { margin-top: 4px; font-size: 13px; }
+    .transfer-item, .whisper-item, .scheduled-item { padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .whisper-item { background: #F0F9FF; padding: 8px 12px; border-radius: 6px; margin: 4px 0; }
+    .tags-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .tag { background: #EEF2FF; color: #4338CA; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .disposition-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 13px; }
+    .dispo-comment { color: var(--muted); font-style: italic; margin-top: 6px; }
+    .timeline { border-left: 3px solid #E2E8F0; padding-left: 20px; }
+    .tl-item { position: relative; padding: 8px 0; }
+    .tl-dot { position: absolute; left: -27px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+    .tl-content { font-size: 13px; }
+    .time { color: var(--muted); font-size: 11px; }
+    .qa-section { background: #F5F3FF; border-radius: 8px; padding: 16px; }
+    .qa-bar { width: 100%; height: 8px; background: #E2E8F0; border-radius: 4px; margin: 8px 0; }
+    .qa-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width .3s; }
+    .qa-comment { font-style: italic; color: var(--muted); margin-top: 8px; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .history-table th { background: #F1F5F9; padding: 8px; text-align: left; font-weight: 600; }
+    .history-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+    .page-break { page-break-after: always; margin: 40px 0; border-top: 2px dashed #E2E8F0; }
+    footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 2px solid var(--primary); }
+    @media print { body { padding: 10px; } .session-card { box-shadow: none; border: 1px solid #e2e8f0; } .page-break { page-break-after: always; } }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    
+    <h1>Trelk Support</h1>
+    <div class="subtitle">Chat Export Report — 1 sesión(es) — 15 feb 2026, 17:19</div>
+  </div>
+  
+    <div class="session-card">
+      <div class="session-header">
+        <div class="session-title">
+          <span class="channel-badge channel-telegram">telegram</span>
+          <h2>CS-6KVZ-7A5A88</h2>
+          <span class="status-badge status-closed">closed</span>
+        </div>
+        <div class="session-meta">
+          <div class="meta-item"><span class="label">Usuario:</span> Esteban</div>
+          <div class="meta-item"><span class="label">Agente:</span> Oscar</div>
+          <div class="meta-item"><span class="label">Categoría:</span> N/A</div>
+          <div class="meta-item"><span class="label">Prioridad:</span> medium</div>
+          <div class="meta-item"><span class="label">Creado:</span> 8 feb 2026, 1:22</div>
+          <div class="meta-item"><span class="label">Cerrado:</span> 8 feb 2026, 1:58</div>
+          <div class="meta-item"><span class="label">⏱ Duración:</span> <strong>35m</strong></div>
+          
+          <div class="meta-item"><span class="label">Cerrado por:</span> Oscar (admin)</div>
+          <div class="meta-item"><span class="label">Motivo:</span> admin_force</div>
+          <div class="meta-item"><span class="label">Reaperturas:</span> 1</div>
+          <div class="meta-item"><span class="label">Rating:</span> ★★★★★</div>
+          
+          <div class="meta-item"><span class="label">Mensajes:</span> 18</div>
+        </div>
+      </div>
+
+      
+
+      
+
+      <div class="section">
+        <h3>💬 Mensajes (18)</h3>
+        <div class="chat-container">
+          
+              <div class="chat-msg msg-bot" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Bot</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">User requested human support via flow automation</div>
+                  <div class="time">8 feb 2026, 1:22</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">Agent Oscar joined the conversation</div>
+                  <div class="time">8 feb 2026, 1:22</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">444</div>
+                  <div class="time">8 feb 2026, 1:22</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:22</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:22</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:23</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:23</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:23</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:23</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">4</div>
+                  <div class="time">8 feb 2026, 1:23</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-bot" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Bot</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">Se envió una advertencia de inactividad.</div>
+                  <div class="time">8 feb 2026, 1:28</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-user" style="text-align:left">
+                <div class="bubble">
+                  <div class="sender">Esteban</div>
+                  
+                  <div class="content">3</div>
+                  <div class="time">8 feb 2026, 1:29</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-bot" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Bot</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">Se envió una advertencia de inactividad.</div>
+                  <div class="time">8 feb 2026, 1:34</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-bot" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Bot</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">Se ha cerrado el chat por inactividad.</div>
+                  <div class="time">8 feb 2026, 1:39</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-bot" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Bot</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">Chat reopened by Oscar</div>
+                  <div class="time">8 feb 2026, 1:57</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  <div class="media-indicator">📎 system</div>
+                  <div class="content">Agent Oscar joined the conversation</div>
+                  <div class="time">8 feb 2026, 1:57</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">3333333333333</div>
+                  <div class="time">8 feb 2026, 1:57</div>
+                </div>
+              </div>
+              <div class="chat-msg msg-agent" style="text-align:right">
+                <div class="bubble">
+                  <div class="sender">Oscar</div>
+                  
+                  <div class="content">222222</div>
+                  <div class="time">8 feb 2026, 1:57</div>
+                </div>
+              </div>
+        </div>
+      </div>
+
+      
+
+      
+
+      
+
+      
+
+      
+        <div class="section">
+          <h3>📊 Línea de Tiempo</h3>
+          <div class="timeline">
+            
+              <div class="tl-item">
+                <div class="tl-dot"></div>
+                <div class="tl-content">
+                  <strong>session_created</strong> — Session started by Esteban
+                  <span class="time">8 feb 2026, 1:22</span>
+                </div>
+              </div>
+            
+              <div class="tl-item">
+                <div class="tl-dot"></div>
+                <div class="tl-content">
+                  <strong>session_assigned</strong> — Assigned to Oscar
+                  <span class="time">8 feb 2026, 1:22</span>
+                </div>
+              </div>
+            
+              <div class="tl-item">
+                <div class="tl-dot"></div>
+                <div class="tl-content">
+                  <strong>session_closed</strong> — Session closed: Closed due to inactivity
+                  <span class="time">8 feb 2026, 1:39</span>
+                </div>
+              </div>
+            
+              <div class="tl-item">
+                <div class="tl-dot"></div>
+                <div class="tl-content">
+                  <strong>session_assigned</strong> — Assigned to Oscar
+                  <span class="time">8 feb 2026, 1:57</span>
+                </div>
+              </div>
+            
+          </div>
+        </div>
+      
+
+      
+        <div class="section qa-section">
+          <h3>✅ QA Review — Score: 50/100</h3>
+          <div class="qa-bar"><div class="qa-fill" style="width:50%"></div></div>
+          <p>Revisor: Oscar | Estado: completed | Coaching: none</p>
+          <p class="qa-comment">cumple</p>
+        </div>
+      
+
+      
+
+      
+    </div>
+  
+  <footer>Generado por Trelk Support el 15 feb 2026, 17:19 — Confidencial</footer>
+</body>
+</html>

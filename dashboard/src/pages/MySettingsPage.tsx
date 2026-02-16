@@ -4,14 +4,16 @@ import { useAuthStore } from '../stores/authStore';
 import {
   User, Sliders, Bell, Shield, History, Save, Loader2, Monitor, Smartphone, Tablet, Globe, Trash2,
   AlertTriangle, Check, X, Volume2, VolumeX, Moon, Sun, Eye, EyeOff, LogOut, RefreshCw, Camera, Upload,
-  ChevronRight, Mail, Hash, MapPin, Laptop, Layout, Keyboard, MessageSquare, Zap
+  ChevronRight, Mail, Hash, MapPin, Laptop, Layout, Keyboard, MessageSquare, Zap, ClipboardCheck, TrendingUp, TrendingDown, Minus, Star, AlertCircle, ExternalLink
 } from 'lucide-react';
 import type { AgentPreferences, AgentSession, AgentActivity } from '../types';
 import * as settingsService from '../services/settings.service';
+import * as qaService from '../services/qa.service';
+import type { AgentQAPerformance, QAReview } from '../services/qa.service';
 import { useTheme, type Theme } from '../hooks/useTheme';
 import MFASettingsSection from '../components/MFASettingsSection';
 
-type TabType = 'account' | 'preferences' | 'notifications' | 'security' | 'activity';
+type TabType = 'account' | 'preferences' | 'notifications' | 'security' | 'activity' | 'quality';
 
 const TABS = [
   { id: 'account', label: 'Mi Cuenta', icon: User, desc: 'Perfil personal y avatar' },
@@ -19,6 +21,7 @@ const TABS = [
   { id: 'notifications', label: 'Notificaciones', icon: Bell, desc: 'Alertas y correos' },
   { id: 'security', label: 'Seguridad', icon: Shield, desc: 'Accesos y contraseñas' },
   { id: 'activity', label: 'Actividad', icon: History, desc: 'Registro de eventos' },
+  { id: 'quality', label: 'Calidad QA', icon: ClipboardCheck, desc: 'Rendimiento y evaluaciones' },
 ] as const;
 
 export default function MySettingsPage() {
@@ -40,7 +43,7 @@ export default function MySettingsPage() {
       {/* LEFT SIDEBAR */}
       <div className="w-72 bg-zinc-900 border-r border-zinc-800 flex flex-col shrink-0 z-20 h-full">
         <div className="p-6 border-b border-zinc-800/50">
-          <h1 className="text-xl font-bold text-white tracking-tight">Configuración</h1>
+          <h1 className="text-xl font-bold text-zinc-50 tracking-tight">Configuración</h1>
           <p className="text-sm text-zinc-500 mt-1">Administra tu experiencia</p>
         </div>
         
@@ -62,7 +65,7 @@ export default function MySettingsPage() {
                     <t.icon className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className={`block text-sm font-medium ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                    <span className={`block text-sm font-medium ${isActive ? 'text-zinc-50' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
                       {t.label}
                     </span>
                   </div>
@@ -76,11 +79,11 @@ export default function MySettingsPage() {
         {/* Sidebar Footer Info */}
         <div className="p-6 border-t border-zinc-800 bg-zinc-900/50">
             <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-zinc-50 font-bold text-xs shadow-lg">
                     {agent?.name?.[0] || 'U'}
                 </div>
                 <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium text-white truncate">{agent?.name}</p>
+                    <p className="text-sm font-medium text-zinc-50 truncate">{agent?.name}</p>
                     <p className="text-xs text-zinc-500 truncate">{agent?.email}</p>
                 </div>
             </div>
@@ -97,7 +100,7 @@ export default function MySettingsPage() {
               {activeTabInfo && <activeTabInfo.icon className="w-6 h-6 text-indigo-500" />}
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white tracking-tight">{activeTabInfo?.label}</h2>
+              <h2 className="text-2xl font-bold text-zinc-50 tracking-tight">{activeTabInfo?.label}</h2>
               <p className="text-sm text-zinc-400">{activeTabInfo?.desc}</p>
             </div>
           </div>
@@ -111,6 +114,7 @@ export default function MySettingsPage() {
             {currentTab === 'notifications' && <NotificationsContent />}
             {currentTab === 'security' && <SecurityContent />}
             {currentTab === 'activity' && <ActivityContent />}
+            {currentTab === 'quality' && <QualityContent />}
           </div>
         </div>
       </div>
@@ -185,16 +189,16 @@ function AccountContent({ agent, updateAgentFields }: { agent: any; updateAgentF
               ) : (
                 <span className="text-3xl font-bold text-zinc-500">{formData.name.charAt(0).toUpperCase()}</span>
               )}
-              {uploadingAvatar && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-white"/></div>}
+              {uploadingAvatar && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-50"/></div>}
             </div>
-            <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg border-2 border-zinc-900 transition-all hover:scale-110" disabled={uploadingAvatar}>
+            <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-full shadow-lg border-2 border-zinc-900 transition-all hover:scale-110" disabled={uploadingAvatar}>
               <Camera className="w-4 h-4" />
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
           </div>
           <div>
             <div className="flex gap-3">
-               <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg border border-zinc-700 transition-colors">
+               <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 text-sm font-medium rounded-lg border border-zinc-700 transition-colors">
                  Subir nueva foto
                </button>
                {formData.avatar && (
@@ -299,7 +303,7 @@ function PreferencesContent() {
             <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-zinc-900 rounded-lg text-zinc-400"><Volume2 className="w-5 h-5"/></div>
-                    <div><p className="text-white font-medium text-sm">Activar Sonidos</p><p className="text-xs text-zinc-500">Silenciar todas las alertas</p></div>
+                    <div><p className="text-zinc-50 font-medium text-sm">Activar Sonidos</p><p className="text-xs text-zinc-500">Silenciar todas las alertas</p></div>
                 </div>
                 <ToggleSwitch checked={prefs.sounds?.enabled || false} onChange={v => setPrefs({...prefs, sounds: {...prefs.sounds!, enabled: v}})} />
             </div>
@@ -476,7 +480,7 @@ function SecurityContent() {
 
        <SectionCard title="Sesiones Activas" description="Dispositivos donde has iniciado sesión.">
           <div className="flex justify-end mb-4 gap-2">
-             <button onClick={loadSessions} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"><RefreshCw className="w-4 h-4"/></button>
+             <button onClick={loadSessions} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50 transition-colors"><RefreshCw className="w-4 h-4"/></button>
              {sessions.length > 1 && <button onClick={handleRevokeAll} className="text-xs text-red-400 hover:text-red-300 hover:underline">Cerrar todas las demás</button>}
           </div>
           {loading ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-500"/> : (
@@ -489,7 +493,7 @@ function SecurityContent() {
                      </div>
                      <div>
                         <div className="flex items-center gap-2">
-                           <span className={`text-sm font-medium ${s.isCurrent ? 'text-white' : 'text-zinc-200'}`}>{s.os} • {s.browser}</span>
+                           <span className={`text-sm font-medium ${s.isCurrent ? 'text-zinc-50' : 'text-zinc-200'}`}>{s.os} • {s.browser}</span>
                            {s.isCurrent && <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20">Actual</span>}
                         </div>
                         <p className="text-xs text-zinc-500 mt-0.5">{s.ip} • {new Date(s.lastSeenAt).toLocaleString()}</p>
@@ -532,7 +536,7 @@ function ActivityContent() {
   return (
     <div className="space-y-6">
         <SectionCard title="Historial de Actividad" description="Registro reciente de acciones en tu cuenta.">
-            <div className="flex justify-end mb-4"><button onClick={() => loadActivity(page)} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded"><RefreshCw className="w-4 h-4"/></button></div>
+            <div className="flex justify-end mb-4"><button onClick={() => loadActivity(page)} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded"><RefreshCw className="w-4 h-4"/></button></div>
             {loading ? <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-indigo-500 animate-spin"/></div> : (
                 <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden">
                     <div className="divide-y divide-zinc-800">
@@ -570,13 +574,192 @@ function ActivityContent() {
   );
 }
 
+// ============= 6. QUALITY QA CONTENT =============
+
+const COACHING_TAG_LABELS: Record<string, string> = {
+  tone_issue: 'Tono inadecuado',
+  slow_response: 'Respuesta lenta',
+  wrong_category: 'Categorización incorrecta',
+  policy_violation: 'Violación de política',
+  other: 'Otro',
+};
+
+function QualityContent() {
+  const [performance, setPerformance] = useState<AgentQAPerformance | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadPerformance();
+  }, []);
+
+  const loadPerformance = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await qaService.getMyPerformance();
+      setPerformance(data);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar datos de calidad');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+        <span className="ml-3 text-zinc-400">Cargando rendimiento...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <SectionCard title="Error" description="No se pudieron cargar los datos">
+        <div className="flex items-center gap-3 text-red-400">
+          <AlertTriangle className="w-5 h-5" />
+          <span className="text-sm">{error}</span>
+        </div>
+        <button onClick={loadPerformance} className="mt-4 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm text-zinc-300 transition-colors">
+          Reintentar
+        </button>
+      </SectionCard>
+    );
+  }
+
+  if (!performance) return null;
+
+  const scoreColor = performance.avgScore >= 90 ? 'text-emerald-400' : performance.avgScore >= 70 ? 'text-blue-400' : performance.avgScore >= 50 ? 'text-amber-400' : 'text-red-400';
+  const scoreBg = performance.avgScore >= 90 ? 'bg-emerald-500/10 border-emerald-500/20' : performance.avgScore >= 70 ? 'bg-blue-500/10 border-blue-500/20' : performance.avgScore >= 50 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20';
+
+  // Trend direction
+  const trend = performance.weeklyTrend;
+  const lastTwo = trend.length >= 2 ? trend.slice(-2) : [];
+  const trendDir = lastTwo.length === 2 ? (lastTwo[1] > lastTwo[0] ? 'up' : lastTwo[1] < lastTwo[0] ? 'down' : 'flat') : 'flat';
+
+  return (
+    <div className="space-y-6">
+      {/* Score Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`${scoreBg} border rounded-2xl p-6 text-center`}>
+          <p className="text-xs font-bold text-zinc-400 uppercase  mb-2">Puntaje Promedio</p>
+          <p className={`text-4xl font-black ${scoreColor}`}>{performance.avgScore.toFixed(1)}</p>
+          <div className="flex items-center justify-center gap-1 mt-2">
+            {trendDir === 'up' && <TrendingUp className="w-4 h-4 text-emerald-400" />}
+            {trendDir === 'down' && <TrendingDown className="w-4 h-4 text-red-400" />}
+            {trendDir === 'flat' && <Minus className="w-4 h-4 text-zinc-500" />}
+            <span className={`text-xs ${trendDir === 'up' ? 'text-emerald-400' : trendDir === 'down' ? 'text-red-400' : 'text-zinc-500'}`}>
+              {trendDir === 'up' ? 'Mejorando' : trendDir === 'down' ? 'Declinando' : 'Estable'}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
+          <p className="text-xs font-bold text-zinc-400 uppercase  mb-2">Evaluaciones</p>
+          <p className="text-4xl font-black text-zinc-50">{performance.totalReviews}</p>
+          <p className="text-xs text-zinc-500 mt-2">{performance.recentReviews.length} recientes</p>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
+          <p className="text-xs font-bold text-zinc-400 uppercase  mb-2">Pendientes</p>
+          <p className={`text-4xl font-black ${performance.pendingAcknowledgements > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            {performance.pendingAcknowledgements}
+          </p>
+          <p className="text-xs text-zinc-500 mt-2">
+            {performance.pendingAcknowledgements > 0 ? 'Requieren reconocimiento' : 'Todo al día'}
+          </p>
+        </div>
+      </div>
+
+      {/* Weekly Trend */}
+      {trend.length > 0 && (
+        <SectionCard title="Tendencia Semanal" description="Tu puntaje promedio por semana (últimas 4 semanas)">
+          <div className="flex items-end gap-3 h-32">
+            {trend.map((score, i) => {
+              const height = Math.max(10, (score / 100) * 100);
+              const barColor = score >= 90 ? 'bg-emerald-500' : score >= 70 ? 'bg-blue-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500';
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-400">{score.toFixed(0)}</span>
+                  <div className={`w-full rounded-t-lg ${barColor} transition-all duration-500 opacity-80`} style={{ height: `${height}%` }} />
+                  <span className="text-[10px] text-zinc-600">S{i + 1}</span>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Recent Reviews */}
+      <SectionCard title="Evaluaciones Recientes" description="Tus últimas evaluaciones de calidad">
+        {performance.recentReviews.length === 0 ? (
+          <div className="text-center py-8 text-zinc-500">
+            <ClipboardCheck className="w-8 h-8 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">No tienes evaluaciones aún</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {performance.recentReviews.map((review: QAReview) => {
+              const rScoreColor = review.totalScore >= 90 ? 'text-emerald-400 bg-emerald-500/10' : review.totalScore >= 70 ? 'text-blue-400 bg-blue-500/10' : review.totalScore >= 50 ? 'text-amber-400 bg-amber-500/10' : 'text-red-400 bg-red-500/10';
+              const reviewer = typeof review.reviewedBy === 'object' ? review.reviewedBy : null;
+              return (
+                <div key={review._id} className="flex items-center gap-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors">
+                  <div className={`px-3 py-2 rounded-xl font-black text-lg ${rScoreColor}`}>
+                    {review.totalScore}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-zinc-200 truncate">
+                        Sesión {typeof review.sessionId === 'string' ? review.sessionId.substring(0, 8) : ''}...
+                      </span>
+                      {review.escalated && (
+                        <span className="px-1.5 py-0.5 bg-red-500/10 text-red-400 text-[10px] font-bold rounded">ESCALADA</span>
+                      )}
+                      {!review.agentAcknowledged && (
+                        <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded">PENDIENTE</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      {reviewer && <span className="text-xs text-zinc-500">por {reviewer.name}</span>}
+                      <span className="text-xs text-zinc-600">{new Date(review.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    {review.coachingTags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {review.coachingTags?.map((tag, idx) => (
+                          <span key={idx} className="px-1.5 py-0.5 bg-zinc-800 text-zinc-400 text-[10px] rounded">
+                            {COACHING_TAG_LABELS[tag] || tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {review.agentAcknowledged ? (
+                      <Check className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+
 // ============= UI HELPERS (Premium Zinc) =============
 
 function SectionCard({ title, description, children }: any) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-sm">
       <div className="mb-6">
-        <h3 className="text-lg font-bold text-white tracking-tight">{title}</h3>
+        <h3 className="text-lg font-bold text-zinc-50 tracking-tight">{title}</h3>
         <p className="text-sm text-zinc-400 mt-1">{description}</p>
       </div>
       {children}
@@ -632,7 +815,7 @@ function SaveButton({ onClick, loading, saved, label = 'Guardar Cambios' }: any)
         <button 
             onClick={onClick} 
             disabled={loading}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:transform-none ${saved ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:transform-none ${saved ? 'bg-emerald-600 text-zinc-50' : 'bg-indigo-600 hover:bg-indigo-500 text-zinc-50 shadow-indigo-900/20'}`}
         >
             {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : saved ? <Check className="w-4 h-4"/> : <Save className="w-4 h-4"/>}
             {saved ? 'Guardado' : label}

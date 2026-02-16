@@ -96,7 +96,7 @@ export function CopilotPanel({ sessionId, onApplySuggestion }: Props) {
       {/* Toggle button */}
       <button
         onClick={togglePanel}
-        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-l-lg shadow-lg hover:from-indigo-600 hover:to-purple-600 transition-colors ${
+        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-zinc-50 rounded-l-lg shadow-lg hover:from-indigo-600 hover:to-purple-600 transition-colors ${
           isPanelOpen ? '-translate-x-80' : ''
         }`}
         title="AI Copilot"
@@ -112,12 +112,12 @@ export function CopilotPanel({ sessionId, onApplySuggestion }: Props) {
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-zinc-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white">AI Copilot</h3>
+                <h3 className="text-sm font-semibold text-zinc-50">AI Copilot</h3>
                 <p className="text-xs text-gray-400">Asistencia inteligente</p>
               </div>
             </div>
@@ -201,7 +201,7 @@ function ActionButton({
     <button
       onClick={onClick}
       disabled={loading}
-      className="flex items-center gap-2 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+      className="flex items-center gap-2 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-zinc-50 transition-colors disabled:opacity-50"
     >
       {loading ? (
         <svg className="w-4 h-4 animate-spin text-purple-400" fill="none" viewBox="0 0 24 24">
@@ -302,7 +302,7 @@ function SuggestionCard({
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
           <button
             onClick={(e) => { e.stopPropagation(); onApply(); }}
-            className="flex-1 py-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors"
+            className="flex-1 py-1.5 bg-purple-500 hover:bg-purple-600 text-zinc-50 text-sm rounded-lg transition-colors"
           >
             Usar respuesta
           </button>

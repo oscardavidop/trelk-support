@@ -67,11 +67,11 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
               <Bookmark className="w-5 h-5 text-indigo-500" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Guardar Respuesta</h2>
+              <h2 className="text-lg font-bold text-zinc-50">Guardar Respuesta</h2>
               <p className="text-xs text-zinc-400">Crear nuevo atajo de texto</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -83,7 +83,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
               <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
                 <Check className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1">¡Guardado!</h3>
+              <h3 className="text-xl font-bold text-zinc-50 mb-1">¡Guardado!</h3>
               <p className="text-zinc-500 text-sm">La respuesta está lista para usarse.</p>
             </div>
           ) : (
@@ -107,7 +107,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Ej: Bienvenida"
-                    className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
                     autoFocus
                   />
                 </div>
@@ -120,7 +120,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
                       value={shortcut}
                       onChange={(e) => setShortcut(e.target.value.replace(/\s/g, '').toLowerCase())}
                       placeholder="hola"
-                      className="w-full pl-7 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-mono"
+                      className="w-full pl-7 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -138,7 +138,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
                       onClick={() => setCategory(cat)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all border ${
                         category === cat
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                          ? 'bg-indigo-600 text-zinc-50 border-indigo-500 shadow-sm'
                           : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
                       }`}
                     >
@@ -151,7 +151,7 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="O escribe una nueva..."
-                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
                 />
               </div>
 
@@ -172,14 +172,14 @@ export default function SaveReplyModal({ content, onSave, onClose }: SaveReplyMo
             <button
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all"
+              className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all"
             >
               Cancelar
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving || !title.trim()}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Guardar Respuesta

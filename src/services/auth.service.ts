@@ -24,6 +24,11 @@ import {
 } from "../database/models/AgentSession.js";
 import { logger } from "./logger.js";
 import type { IAgent } from "../database/index.js";
+import {
+  evaluateLoginPolicy,
+  type PolicyContext,
+  type PolicyResult,
+} from "./policy-engine.service.js";
 
 export interface TokenPayload {
   agentId: string;
@@ -52,6 +57,23 @@ export interface AuthResult {
   mfaPreferredMethod?: "telegram" | "totp";
   mfaSelectedMethod?: "telegram" | "totp";
   mfaPendingMethodSelection?: boolean;
+  // Policy Engine fields
+  policyResult?: PolicyResult;
+  redirect?: string;
+  readOnlyMode?: boolean;
+  globalAlert?: {
+    enabled: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'warning' | 'critical';
+    requireAcknowledge: boolean;
+    showFullScreen: boolean;
+  };
+  policyAcceptanceRequired?: boolean;
+  profileIncomplete?: boolean;
+  maintenanceMode?: boolean;
+  maintenanceMessage?: string;
+  warnings?: string[];
 }
 
 /**
@@ -72,7 +94,6 @@ function hashToken(token: string): string {
 function requiresTelegramLink(agent: IAgent): boolean {
   // Already has Telegram linked
   if (agent.telegramId) {
-    console.log("[requiresTelegramLink] Telegram already linked for agent:", agent);
     return false;
   }
 
@@ -145,7 +166,7 @@ export async function loginAgent(
     browser?: string;
     os?: string;
     ip: string;
-    location?: string;
+    country?: string;
   },
   options?: {
     skipMFA?: boolean; // For internal calls after MFA verification
@@ -235,9 +256,8 @@ export async function loginAgent(
       await createSession(agent._id.toString(), tokenHash, { ip: "unknown" });
     }
 
-    // Update last login and set online
+    // Update last login (status will be set by policy engine)
     await updateLastLogin(agent._id.toString());
-    await updateAgentStatus(agent._id.toString(), "online");
 
     // Return agent without password
     const agentData = await findAgentById(agent._id.toString());
@@ -254,6 +274,93 @@ export async function loginAgent(
     // Check if MFA setup is required by policy but not configured
     const mfaSetupRequired = await requiresMFASetup(agentData!);
 
+    // ============= POLICY ENGINE EVALUATION =============
+    // Evaluate login policies after successful authentication
+    const policyContext: PolicyContext = {
+      agent: {
+        id: agent._id.toString(),
+        email: agent.email,
+        role: agent.role,
+        telegramId: agent.telegramId,
+        mfaEnabled: agent.security?.mfa?.enabled,
+        displayName: agent.name,
+        avatar: agent.avatar,
+        suspended: !agent.isActive,
+      },
+      device: {
+        fingerprint: options?.deviceFingerprint,
+        ip: deviceInfo?.ip || 'unknown',
+        userAgent: deviceInfo?.browser,
+        country: deviceInfo?.country || 'unknown',
+        isNewDevice: false, // Will be determined by TrustedDevice check
+      },
+      session: {
+        createdAt: new Date(),
+      },
+      timestamp: new Date(),
+    };
+
+    // Check if this is a new device
+    if (options?.deviceFingerprint) {
+      try {
+        const { TrustedDevice } = await import('../database/models/TrustedDevice.js');
+        const existingDevice = await TrustedDevice.findOne({
+          agentId: agent._id,
+          deviceFingerprint: options.deviceFingerprint,
+          isActive: true,
+        });
+        policyContext.device.isNewDevice = !existingDevice;
+      } catch {
+        // TrustedDevice model might not exist yet
+        policyContext.device.isNewDevice = false;
+      }
+    }
+
+    const policyResult = await evaluateLoginPolicy(policyContext);
+
+    // Check if login is blocked by policy
+    if (policyResult.blocked) {
+      logger.warn('auth', {
+        action: 'login_blocked_by_policy',
+        agentId: agent._id.toString(),
+        reason: policyResult.blockReason,
+        rules: policyResult.appliedRules,
+      });
+      return {
+        success: false,
+        error: policyResult.blockReason || 'Acceso denegado por política de seguridad',
+      };
+    }
+
+    // Execute policy actions
+    let statusSet = false;
+    console.log('[Auth] Processing policy actions:', policyResult.actions);
+    for (const action of policyResult.actions) {
+      switch (action.type) {
+        case 'set_status':
+          if (action.data?.status) {
+            const status = action.data.status as string;
+            console.log('[Auth] Setting agent status from policy:', status);
+            // Only apply valid OnlineStatus values
+            if (['online', 'away', 'offline'].includes(status)) {
+              await updateAgentStatus(agent._id.toString(), status as 'online' | 'away' | 'offline');
+              statusSet = true;
+            }
+          }
+          break;
+        case 'force_logout_existing':
+          // Already handled by session limit enforcement above
+          break;
+        // Other actions are handled by the frontend
+      }
+    }
+    
+    // Default to online if no status action was executed
+    if (!statusSet) {
+      console.log('[Auth] No status set by policy, defaulting to online');
+      await updateAgentStatus(agent._id.toString(), 'online');
+    }
+
     return {
       success: true,
       agent: agentData!,
@@ -263,6 +370,23 @@ export async function loginAgent(
       forcePasswordChange,
       telegramLinkRequired,
       mfaSetupRequired,
+      // Policy results for frontend
+      policyResult,
+      redirect: policyResult.redirect,
+      readOnlyMode: policyResult.flags.readOnlyMode,
+      globalAlert: policyResult.globalAlert ? {
+        enabled: true,
+        title: policyResult.globalAlert.title,
+        message: policyResult.globalAlert.message,
+        type: policyResult.globalAlert.type,
+        requireAcknowledge: policyResult.globalAlert.requireAcknowledge,
+        showFullScreen: policyResult.globalAlert.showFullScreen,
+      } : undefined,
+      policyAcceptanceRequired: policyResult.flags.requirePolicyAcceptance,
+      profileIncomplete: policyResult.flags.requireProfileCompletion,
+      maintenanceMode: policyResult.flags.readOnlyMode,
+      maintenanceMessage: policyResult.flags.readOnlyMode ? 'Sistema en modo mantenimiento' : undefined,
+      warnings: policyResult.warnings,
     };
   } catch (error) {
     console.error("Login error:", error);
@@ -326,7 +450,7 @@ export async function completeLoginAfterMFA(
     browser?: string;
     os?: string;
     ip: string;
-    location?: string;
+    country?: string;
   },
 ): Promise<AuthResult> {
   try {
@@ -361,9 +485,8 @@ export async function completeLoginAfterMFA(
       await createSession(agentId, tokenHash, { ip: "unknown" });
     }
 
-    // Update last login and set online
+    // Update last login (status will be set by policy engine)
     await updateLastLogin(agentId);
-    await updateAgentStatus(agentId, "online");
 
     // Get effective permissions
     const permissions = await getEffectivePermissions(agentId);
@@ -377,9 +500,66 @@ export async function completeLoginAfterMFA(
     // Check if MFA setup is required by policy but not configured
     const mfaSetupRequired = await requiresMFASetup(agent);
 
+    // ============= POLICY ENGINE EVALUATION =============
+    const policyContext: PolicyContext = {
+      agent: {
+        id: agentId,
+        email: agent.email,
+        role: agent.role,
+        telegramId: agent.telegramId,
+        mfaEnabled: agent.security?.mfa?.enabled,
+        displayName: agent.name,
+        avatar: agent.avatar,
+        suspended: !agent.isActive,
+      },
+      device: {
+        ip: deviceInfo?.ip || 'unknown',
+        userAgent: deviceInfo?.browser,
+        country: deviceInfo?.country || 'unknown',
+        isNewDevice: false,
+      },
+      session: {
+        createdAt: new Date(),
+      },
+      timestamp: new Date(),
+    };
+
+    const policyResult = await evaluateLoginPolicy(policyContext);
+
+    if (policyResult.blocked) {
+      logger.warn('auth', {
+        action: 'mfa_login_blocked_by_policy',
+        agentId,
+        reason: policyResult.blockReason,
+      });
+      return {
+        success: false,
+        error: policyResult.blockReason || 'Acceso denegado por política de seguridad',
+      };
+    }
+
+    // Execute policy actions
+    let statusSet = false;
+    for (const action of policyResult.actions) {
+      if (action.type === 'set_status' && action.data?.status) {
+        const status = action.data.status as string;
+        // Only apply valid OnlineStatus values
+        if (['online', 'away', 'offline'].includes(status)) {
+          await updateAgentStatus(agentId, status as 'online' | 'away' | 'offline');
+          statusSet = true;
+        }
+      }
+    }
+    
+    // Default to online if no status action was executed
+    if (!statusSet) {
+      await updateAgentStatus(agentId, 'online');
+    }
+
     logger.info("auth", {
       action: "mfa_login_completed",
       agentId,
+      appliedRules: policyResult.appliedRules,
     });
 
     return {
@@ -391,6 +571,22 @@ export async function completeLoginAfterMFA(
       forcePasswordChange,
       telegramLinkRequired,
       mfaSetupRequired,
+      policyResult,
+      redirect: policyResult.redirect,
+      readOnlyMode: policyResult.flags.readOnlyMode,
+      globalAlert: policyResult.globalAlert ? {
+        enabled: true,
+        title: policyResult.globalAlert.title,
+        message: policyResult.globalAlert.message,
+        type: policyResult.globalAlert.type,
+        requireAcknowledge: policyResult.globalAlert.requireAcknowledge,
+        showFullScreen: policyResult.globalAlert.showFullScreen,
+      } : undefined,
+      policyAcceptanceRequired: policyResult.flags.requirePolicyAcceptance,
+      profileIncomplete: policyResult.flags.requireProfileCompletion,
+      maintenanceMode: policyResult.flags.readOnlyMode,
+      maintenanceMessage: policyResult.flags.readOnlyMode ? 'Sistema en modo mantenimiento' : undefined,
+      warnings: policyResult.warnings,
     };
   } catch (error) {
     logger.error("auth", {

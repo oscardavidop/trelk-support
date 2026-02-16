@@ -337,13 +337,13 @@
 //             <Send className="w-5 h-5 text-violet-400" />
 //           </div>
 //           <div>
-//             <h2 className="text-lg font-semibold text-white">Nuevo Broadcast</h2>
+//             <h2 className="text-lg font-semibold text-zinc-50">Nuevo Broadcast</h2>
 //             <p className="text-xs text-gray-500">Mensaje masivo a usuarios</p>
 //           </div>
 //         </div>
 //         <button
 //           onClick={onClose}
-//           className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+//           className="p-2 text-gray-400 hover:text-zinc-50 hover:bg-gray-800 rounded-lg transition-colors"
 //         >
 //           <X className="w-5 h-5" />
 //         </button>
@@ -369,7 +369,7 @@
 //             value={formData.title}
 //             onChange={(e) => updateField('title', e.target.value)}
 //             placeholder="Ej: Promoción Enero 2025"
-//             className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
+//             className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-zinc-50 placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
 //           />
 //         </div>
 
@@ -392,7 +392,7 @@
 //                 <div className={`mb-2 ${formData.messageType === type ? 'text-violet-400' : 'text-gray-400'}`}>
 //                   {icon}
 //                 </div>
-//                 <div className={`text-sm font-medium ${formData.messageType === type ? 'text-white' : 'text-gray-300'}`}>
+//                 <div className={`text-sm font-medium ${formData.messageType === type ? 'text-zinc-50' : 'text-gray-300'}`}>
 //                   {label}
 //                 </div>
 //               </button>
@@ -419,19 +419,19 @@
 //               {formData.parseMode && (
 //                 <>
 //                   <div className="w-px h-5 bg-gray-700 mx-1" />
-//                   <button onClick={() => insertFormatting('bold')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white" title="Negrita">
+//                   <button onClick={() => insertFormatting('bold')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-zinc-50" title="Negrita">
 //                     <Bold className="w-4 h-4" />
 //                   </button>
-//                   <button onClick={() => insertFormatting('italic')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white" title="Cursiva">
+//                   <button onClick={() => insertFormatting('italic')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-zinc-50" title="Cursiva">
 //                     <Italic className="w-4 h-4" />
 //                   </button>
-//                   <button onClick={() => insertFormatting('strike')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white" title="Tachado">
+//                   <button onClick={() => insertFormatting('strike')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-zinc-50" title="Tachado">
 //                     <Strikethrough className="w-4 h-4" />
 //                   </button>
-//                   <button onClick={() => insertFormatting('code')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white" title="Código">
+//                   <button onClick={() => insertFormatting('code')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-zinc-50" title="Código">
 //                     <Code className="w-4 h-4" />
 //                   </button>
-//                   <button onClick={() => insertFormatting('link')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white" title="Enlace">
+//                   <button onClick={() => insertFormatting('link')} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-zinc-50" title="Enlace">
 //                     <Link className="w-4 h-4" />
 //                   </button>
 //                 </>
@@ -456,7 +456,7 @@
 //                         onClick={() => insertVariable(v.path)}
 //                         className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
 //                       >
-//                         <div className="text-sm text-white">{v.label}</div>
+//                         <div className="text-sm text-zinc-50">{v.label}</div>
 //                         <div className="text-xs text-gray-500 font-mono">{`{{${v.path}}}`}</div>
 //                       </button>
 //                     ))}
@@ -474,7 +474,7 @@
 //                 onFocus={() => setActiveTextField('text')}
 //                 placeholder="Escribe tu mensaje aquí..."
 //                 rows={8}
-//                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none resize-none font-mono text-sm"
+//                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-zinc-50 placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none resize-none font-mono text-sm"
 //               />
 //               <div className="flex justify-end mt-1">
 //                 <span className="text-xs text-gray-500">{formData.text.length}/4096</span>
@@ -534,7 +534,7 @@
 //                   onFocus={() => setActiveTextField('caption')}
 //                   placeholder="Añade un caption..."
 //                   rows={3}
-//                   className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none resize-none text-sm"
+//                   className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-zinc-50 placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none resize-none text-sm"
 //                 />
 //                 <div className="flex justify-end">
 //                   <span className="text-xs text-gray-500">{formData.caption.length}/1024</span>
@@ -557,7 +557,7 @@
 //                 value={formData.pollQuestion}
 //                 onChange={(e) => updateField('pollQuestion', e.target.value.slice(0, 300))}
 //                 placeholder="¿Cuál es tu opción favorita?"
-//                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
+//                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-zinc-50 placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
 //               />
 //               <div className="flex justify-end mt-1">
 //                 <span className="text-xs text-gray-500">{formData.pollQuestion.length}/300</span>
@@ -578,7 +578,7 @@
 //                       value={option.text}
 //                       onChange={(e) => updatePollOption(index, e.target.value.slice(0, 100))}
 //                       placeholder={`Opción ${index + 1}`}
-//                       className="flex-1 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-violet-500 outline-none text-sm"
+//                       className="flex-1 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-zinc-50 placeholder-gray-500 focus:border-violet-500 outline-none text-sm"
 //                     />
 //                     {formData.pollOptions.length > 2 && (
 //                       <button
@@ -594,7 +594,7 @@
 //                 {formData.pollOptions.length < 10 && (
 //                   <button
 //                     onClick={addPollOption}
-//                     className="flex items-center gap-2 w-full px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 border border-dashed border-gray-700 rounded-lg transition-colors text-sm"
+//                     className="flex items-center gap-2 w-full px-4 py-2 text-gray-400 hover:text-zinc-50 hover:bg-gray-800 border border-dashed border-gray-700 rounded-lg transition-colors text-sm"
 //                   >
 //                     <Plus className="w-4 h-4" />
 //                     Añadir opción
@@ -642,7 +642,7 @@
 //               }`}
 //             >
 //               <Users className={`w-5 h-5 mb-2 ${formData.targetType === 'all' ? 'text-violet-400' : 'text-gray-400'}`} />
-//               <div className={`text-sm font-medium ${formData.targetType === 'all' ? 'text-white' : 'text-gray-300'}`}>
+//               <div className={`text-sm font-medium ${formData.targetType === 'all' ? 'text-zinc-50' : 'text-gray-300'}`}>
 //                 Todos los usuarios
 //               </div>
 //               <div className="text-xs text-gray-500 mt-1">Toda la base de datos</div>
@@ -656,7 +656,7 @@
 //               }`}
 //             >
 //               <Target className={`w-5 h-5 mb-2 ${formData.targetType === 'segment' ? 'text-violet-400' : 'text-gray-400'}`} />
-//               <div className={`text-sm font-medium ${formData.targetType === 'segment' ? 'text-white' : 'text-gray-300'}`}>
+//               <div className={`text-sm font-medium ${formData.targetType === 'segment' ? 'text-zinc-50' : 'text-gray-300'}`}>
 //                 Segmento
 //               </div>
 //               <div className="text-xs text-gray-500 mt-1">Usuarios filtrados</div>
@@ -668,7 +668,7 @@
 //               <select
 //                 value={formData.segmentId}
 //                 onChange={(e) => updateField('segmentId', e.target.value)}
-//                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-violet-500 outline-none"
+//                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-zinc-50 focus:border-violet-500 outline-none"
 //               >
 //                 <option value="">Selecciona un segmento...</option>
 //                 {segments.filter(s => s.isActive).map(seg => (
@@ -706,7 +706,7 @@
 //                     onChange={(e) => updateField('batchSize', Math.min(30, Math.max(1, parseInt(e.target.value) || 1)))}
 //                     min={1}
 //                     max={30}
-//                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
+//                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-zinc-50 text-sm"
 //                   />
 //                   <p className="text-[10px] text-gray-500 mt-1">Máx: 30 (límite Telegram)</p>
 //                 </div>
@@ -719,7 +719,7 @@
 //                     min={100}
 //                     max={5000}
 //                     step={100}
-//                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
+//                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-zinc-50 text-sm"
 //                   />
 //                   <p className="text-[10px] text-gray-500 mt-1">100-5000ms recomendado</p>
 //                 </div>
@@ -746,7 +746,7 @@
 //                     value={formData.scheduledAt}
 //                     onChange={(e) => updateField('scheduledAt', e.target.value)}
 //                     min={new Date().toISOString().slice(0, 16)}
-//                     className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
+//                     className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-zinc-50 text-sm"
 //                   />
 //                 )}
 //               </div>
@@ -768,14 +768,14 @@
 //       <div className="flex items-center justify-between p-6 border-t border-gray-800 bg-gray-950">
 //         <button
 //           onClick={onClose}
-//           className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+//           className="px-4 py-2 text-gray-400 hover:text-zinc-50 transition-colors"
 //         >
 //           Cancelar
 //         </button>
 //         <button
 //           onClick={handleCreate}
 //           disabled={creating || !isValid() || (formData.targetType === 'segment' && !formData.segmentId)}
-//           className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-medium transition-all shadow-lg shadow-violet-500/25"
+//           className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-zinc-50 font-medium transition-all shadow-lg shadow-violet-500/25"
 //         >
 //           {creating ? (
 //             <Loader2 className="w-4 h-4 animate-spin" />
@@ -1021,11 +1021,11 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
               <Send className="w-5 h-5 text-violet-500" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Nuevo Broadcast</h2>
+              <h2 className="text-lg font-bold text-zinc-50 tracking-tight">Nuevo Broadcast</h2>
               <p className="text-xs text-zinc-400">Configura tu campaña masiva</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-900 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1051,7 +1051,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
                   value={formData.title}
                   onChange={(e) => updateField('title', e.target.value)}
                   placeholder="Ej: Newsletter Enero 2026"
-                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all"
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all"
                 />
               </div>
             </div>
@@ -1179,7 +1179,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
                       value={formData.pollQuestion}
                       onChange={(e) => updateField('pollQuestion', e.target.value.slice(0, 300))}
                       placeholder="Pregunta de la encuesta..."
-                      className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-violet-500"
+                      className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 focus:outline-none focus:border-violet-500"
                     />
                     <div className="space-y-2">
                       {formData.pollOptions.map((opt, i) => (
@@ -1254,7 +1254,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
             <div className="border-t border-zinc-800 pt-4">
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               >
                 <Settings className="w-4 h-4" />
                 Configuración Avanzada
@@ -1271,7 +1271,7 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.scheduleEnabled ? 'bg-violet-600 border-violet-600' : 'border-zinc-600'}`}>
-                        {formData.scheduleEnabled && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                        {formData.scheduleEnabled && <CheckCircle2 className="w-3.5 h-3.5 text-zinc-50" />}
                       </div>
                       <input type="checkbox" checked={formData.scheduleEnabled} onChange={e => updateField('scheduleEnabled', e.target.checked)} className="hidden" />
                       <div className="flex-1">
@@ -1300,13 +1300,13 @@ export function BroadcastCreateSidebar({ isOpen, onClose, onCreated, segments }:
         {/* Footer */}
         <div className="p-6 border-t border-zinc-800 bg-zinc-950">
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-5 py-3 text-zinc-400 font-medium hover:text-white hover:bg-zinc-900 rounded-xl transition-colors">
+            <button onClick={onClose} className="px-5 py-3 text-zinc-400 font-medium hover:text-zinc-50 hover:bg-zinc-900 rounded-xl transition-colors">
               Cancelar
             </button>
             <button
               onClick={handleCreate}
               disabled={creating || !isValid() || (formData.targetType === 'segment' && !formData.segmentId)}
-              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-medium rounded-xl shadow-lg shadow-violet-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-violet-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               <span>{formData.scheduleEnabled ? 'Programar' : 'Crear Broadcast'}</span>
@@ -1335,7 +1335,7 @@ const TargetBtn = ({ active, onClick, icon: Icon, title, subtitle }: { active: b
     }`}
   >
     <div className={`mb-2 ${active ? 'text-violet-400' : 'text-zinc-500'}`}><Icon className="w-5 h-5" /></div>
-    <div className={`text-sm font-medium ${active ? 'text-white' : 'text-zinc-300'}`}>{title}</div>
+    <div className={`text-sm font-medium ${active ? 'text-zinc-50' : 'text-zinc-300'}`}>{title}</div>
     <div className="text-[10px] text-zinc-500 mt-0.5">{subtitle}</div>
   </button>
 );

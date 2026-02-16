@@ -35,7 +35,7 @@ export function AdminDashboard() {
         </div>
         <p className="text-lg font-medium text-zinc-300">No se pudieron cargar las métricas</p>
         <p className="text-sm mt-1 mb-6 text-zinc-500">{error || 'Error de conexión con el servidor de métricas'}</p>
-        <button onClick={refresh} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all shadow-lg shadow-indigo-900/20">
+        <button onClick={refresh} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl font-medium transition-all shadow-lg shadow-indigo-900/20">
           Reintentar Conexión
         </button>
       </div>
@@ -90,7 +90,7 @@ export function AdminDashboard() {
             />
             <div className="mt-4 text-center">
                 <p className="text-zinc-400 text-sm">Tiempo promedio de respuesta</p>
-                <p className="text-xl font-bold text-white font-mono">1m 45s</p>
+                <p className="text-xl font-bold text-zinc-50 font-mono">1m 45s</p>
             </div>
           </div>
         </DashboardSection>
@@ -183,7 +183,7 @@ export function AdminDashboard() {
                 return (
                   <div key={i} className="group">
                     <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">{flow.name}</span>
+                        <span className="text-sm font-medium text-zinc-300 group-hover:text-zinc-50 transition-colors">{flow.name}</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-zinc-500">{flow.executions} execs</span>
                             <span className={`text-xs font-bold ${successRate >= 90 ? 'text-emerald-400' : successRate >= 70 ? 'text-amber-400' : 'text-red-400'}`}>{successRate}% éxito</span>

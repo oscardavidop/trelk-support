@@ -26,7 +26,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           onChange={(e) => onChange?.(e.target.value)}
           className={`
-            w-full px-4 py-2.5 bg-gray-800 border rounded-xl text-white
+            w-full px-4 py-2.5 bg-gray-800 border rounded-xl text-zinc-50
             focus:outline-none focus:ring-2 transition-colors appearance-none
             ${error 
               ? 'border-red-500/50 focus:ring-red-500/30 focus:border-red-500' 

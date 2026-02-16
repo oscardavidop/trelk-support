@@ -164,11 +164,11 @@ export default function ResetPasswordPage() {
               <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-8 h-8 text-red-400" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">Enlace Inválido</h1>
+              <h1 className="text-2xl font-bold text-zinc-50 mb-2">Enlace Inválido</h1>
               <p className="text-zinc-400 mb-6">{tokenValidation?.error}</p>
               <button
                 onClick={() => navigate('/login')}
-                className="w-full py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl transition-all"
+                className="w-full py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 font-medium rounded-xl transition-all"
               >
                 Volver al Login
               </button>
@@ -198,19 +198,19 @@ export default function ResetPasswordPage() {
               <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-400" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">¡Contraseña Actualizada!</h1>
+              <h1 className="text-2xl font-bold text-zinc-50 mb-2">¡Contraseña Actualizada!</h1>
               <p className="text-zinc-400 mb-2">Tu contraseña ha sido cambiada exitosamente.</p>
               <p className="text-zinc-500 text-sm mb-6">
                 Todas tus sesiones anteriores han sido cerradas.
               </p>
               <div className="bg-zinc-800/50 rounded-lg p-4 mb-6">
                 <p className="text-zinc-400 text-sm">
-                  Redirigiendo al login en <span className="text-white font-bold">{countdown}</span> segundos...
+                  Redirigiendo al login en <span className="text-zinc-50 font-bold">{countdown}</span> segundos...
                 </p>
               </div>
               <button
                 onClick={() => navigate('/login')}
-                className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl transition-all"
+                className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-zinc-50 font-medium rounded-xl transition-all"
               >
                 Ir al Login Ahora
               </button>
@@ -234,7 +234,7 @@ export default function ResetPasswordPage() {
           <div className="inline-flex items-center justify-center mb-6">
             <img src="/assets/img/logo-dark.png" alt="Trelk Logo" className="h-20 w-auto" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Nueva Contraseña</h1>
+          <h1 className="text-3xl font-bold text-zinc-50 tracking-tight mb-2">Nueva Contraseña</h1>
           {tokenValidation.agentName && (
             <p className="text-zinc-400 text-sm">
               Hola <span className="text-indigo-400 font-medium">{tokenValidation.agentName}</span>, crea tu nueva contraseña
@@ -345,7 +345,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isSubmitting || !newPassword || !confirmPassword}
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isSubmitting ? (
                 <>

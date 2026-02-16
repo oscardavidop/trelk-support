@@ -226,7 +226,7 @@ export default function SavedRepliesPage() {
                 <MessageSquare className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Respuestas Rápidas</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Respuestas Rápidas</h1>
                 <p className="text-sm text-zinc-400">Plantillas y atajos para el chat</p>
               </div>
             </div>
@@ -243,14 +243,14 @@ export default function SavedRepliesPage() {
               <button 
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
               
               <button
                 onClick={() => openFormModal()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus className="w-5 h-5" />
                 <span>Nueva Respuesta</span>
@@ -280,7 +280,7 @@ export default function SavedRepliesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por título o contenido..."
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
               />
             </div>
 
@@ -427,8 +427,8 @@ function ReplyCard({ reply, onEdit, onDelete, onCopy, isCopied }: any) {
             onClick={onCopy}
             className={`absolute bottom-2 right-2 p-1.5 rounded-lg border shadow-sm transition-all ${
               isCopied 
-                ? 'bg-green-500 text-white border-green-600' 
-                : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500'
+                ? 'bg-green-500 text-zinc-50 border-green-600' 
+                : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-zinc-50 hover:border-zinc-500'
             }`}
           >
             {isCopied ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -463,9 +463,9 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
             <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
               {isEditing ? <Edit3 className="w-5 h-5 text-blue-500" /> : <Plus className="w-5 h-5 text-blue-500" />}
             </div>
-            <h2 className="text-lg font-bold text-white">{isEditing ? 'Editar Respuesta' : 'Nueva Respuesta'}</h2>
+            <h2 className="text-lg font-bold text-zinc-50">{isEditing ? 'Editar Respuesta' : 'Nueva Respuesta'}</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -479,7 +479,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ej: Saludo inicial"
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
             </div>
 
@@ -493,7 +493,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Hola {userName}, ¿en qué puedo ayudarte hoy?"
                 rows={5}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none font-mono text-sm"
+                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none font-mono text-sm"
               />
             </div>
 
@@ -508,7 +508,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     placeholder="Ej: Soporte"
                     list="categories"
-                    className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                   <datalist id="categories">
                     {categories.map((cat: string) => <option key={cat} value={cat} />)}
@@ -525,7 +525,7 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
                     value={formData.shortcut}
                     onChange={(e) => setFormData({ ...formData, shortcut: e.target.value.replace(/\s/g, '') })}
                     placeholder="saludo"
-                    className="w-full pl-7 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                    className="w-full pl-7 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                   />
                 </div>
               </div>
@@ -553,11 +553,11 @@ function FormModal({ isEditing, formData, setFormData, categories, isSaving, onS
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800">
-          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
+          <button onClick={onClose} className="px-5 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all font-medium">Cancelar</button>
           <button
             onClick={onSubmit}
             disabled={isSaving || !formData.title || !formData.content}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             <span>{isEditing ? 'Guardar Cambios' : 'Crear Respuesta'}</span>
@@ -575,9 +575,9 @@ function DeleteModal({ reply, isSaving, onDelete, onClose }: any) {
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
           <Trash2 className="w-8 h-8 text-red-500" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Eliminar Respuesta</h2>
+        <h2 className="text-xl font-bold text-zinc-50 mb-2">Eliminar Respuesta</h2>
         <p className="text-zinc-400 mb-6">
-          ¿Eliminar la respuesta "<span className="text-white font-medium">{reply.title}</span>"? <br/>
+          ¿Eliminar la respuesta "<span className="text-zinc-50 font-medium">{reply.title}</span>"? <br/>
           Esta acción no se puede deshacer.
         </p>
         <div className="flex gap-3">
@@ -585,7 +585,7 @@ function DeleteModal({ reply, isSaving, onDelete, onClose }: any) {
           <button 
             onClick={onDelete} 
             disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             <span>Eliminar</span>
@@ -621,11 +621,11 @@ function PlaceholdersModal({ onClose }: { onClose: () => void }) {
               <Code className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h2 className="font-bold text-white">Variables Dinámicas</h2>
+              <h2 className="font-bold text-zinc-50">Variables Dinámicas</h2>
               <p className="text-xs text-zinc-400">Haz clic para copiar e insertar en tus respuestas</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -647,7 +647,7 @@ function PlaceholdersModal({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
               <div className={`p-2 rounded-lg transition-all ${
-                copiedKey === key ? 'text-green-400 bg-green-500/10' : 'text-zinc-500 group-hover:text-white group-hover:bg-zinc-700'
+                copiedKey === key ? 'text-green-400 bg-green-500/10' : 'text-zinc-500 group-hover:text-zinc-50 group-hover:bg-zinc-700'
               }`}>
                 {copiedKey === key ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </div>

@@ -15,6 +15,8 @@ import * as redis from './redis.js';
 import { logger } from './logger.js';
 import { findAgentByTelegramId, findAgentById } from './agent.service.js';
 import { completeLoginAfterMFA } from './auth.service.js';
+import { isMFARequired, getAgentMFAMethods, initiateMFA } from './mfa.service.js';
+import { isDeviceTrusted } from '../database/models/TrustedDevice.js';
 import { getSecuritySettings } from './settings-cache.service.js';
 import type { IAgent } from '../database/index.js';
 
@@ -59,6 +61,10 @@ export interface QRStatusResult {
   remainingSeconds?: number;
   agentName?: string;
   error?: string;
+  // When MFA is required after QR approval
+  mfaRequired?: boolean;
+  mfaLoginToken?: string;
+  mfaMethods?: string[];
   // Only present when status is 'approved' and consumed
   loginResult?: {
     token: string;
@@ -336,18 +342,66 @@ export async function getQRStatus(
   const remainingMs = session.expiresAt - Date.now();
   const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
 
-  // If approved, consume and complete login
+  // If approved, check MFA requirements before completing login
   if (session.status === 'approved' && session.userId) {
     // Atomically mark as consumed to prevent replay
     session.status = 'consumed';
     await redis.set(key, JSON.stringify(session), 5); // Short TTL for consumed
 
-    // Complete login
+    // Load agent to check MFA status
+    const agent = await findAgentById(session.userId);
+    if (!agent) {
+      return { success: false, error: 'Agent no encontrado.' };
+    }
+
+    // Check if agent has MFA enabled and device is not trusted
+    const mfaRequired = await isMFARequired(agent, clientIp);
+    let deviceTrusted = false;
+
+    if (mfaRequired && deviceInfo?.deviceFingerprint) {
+      const { trusted } = await isDeviceTrusted(agent._id, deviceInfo.deviceFingerprint);
+      deviceTrusted = trusted;
+    }
+
+    if (mfaRequired && !deviceTrusted) {
+      // MFA required — create MFA session and return to frontend for verification
+      const mfaMethods = await getAgentMFAMethods(agent);
+
+      if (mfaMethods.length > 0) {
+        const mfaResult = await initiateMFA(agent, {
+          ip: clientIp,
+          userAgent: session.userAgent,
+          deviceFingerprint: deviceInfo?.deviceFingerprint,
+        });
+
+        if (mfaResult.required && mfaResult.loginToken) {
+          logger.info('qr-login', {
+            action: 'mfa_required_after_qr',
+            token: token.substring(0, 8) + '...',
+            userId: session.userId,
+            methods: mfaMethods,
+          });
+
+          await redis.del(key);
+
+          return {
+            success: true,
+            status: 'approved',
+            agentName: session.agentName,
+            mfaRequired: true,
+            mfaLoginToken: mfaResult.loginToken,
+            mfaMethods: mfaResult.availableMethods || mfaMethods,
+          };
+        }
+      }
+    }
+
+    // No MFA required or device trusted — complete login directly
     const loginResult = await completeLoginAfterMFA(session.userId, {
       deviceType: deviceInfo?.deviceType || session.deviceType,
       browser: deviceInfo?.browser || session.browser,
       os: deviceInfo?.os || session.os,
-      ip: clientIp,
+      ip: clientIp
     });
 
     if (!loginResult.success) {

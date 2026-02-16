@@ -1,0 +1,203 @@
+{
+  "exportedAt": "2026-02-15T20:25:39.635Z",
+  "exportedBy": "6962dc472ba9a76efed78395",
+  "format": "json",
+  "version": "2.0",
+  "totalSessions": 1,
+  "sessions": [
+    {
+      "session": {
+        "id": "CS-6KVZ-7A5A88",
+        "status": "closed",
+        "channel": "telegram",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-02-08T01:22:45.696Z",
+        "closedAt": "2026-02-08T01:58:15.505Z",
+        "closedByType": "admin",
+        "closedByName": "Oscar",
+        "closeReason": "admin_force",
+        "rating": 5,
+        "reopenCount": 1,
+        "duration": "35m",
+        "durationMinutes": 35
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Oscar",
+        "email": "admin@trelk.site"
+      },
+      "messages": [
+        {
+          "id": "6987e56590f55143ed20d202",
+          "content": "User requested human support via flow automation",
+          "sender": "bot",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:22:45.919Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e56c90f55143ed20d242",
+          "content": "Agent Oscar joined the conversation",
+          "sender": "agent",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:22:52.875Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57090f55143ed20d268",
+          "content": "444",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:22:56.681Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57190f55143ed20d276",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:22:57.826Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57290f55143ed20d283",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:22:58.997Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57490f55143ed20d291",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:23:00.063Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57590f55143ed20d29e",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:23:01.221Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57690f55143ed20d2ab",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:23:02.067Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57790f55143ed20d2b8",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:23:03.236Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e57890f55143ed20d2c5",
+          "content": "4",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:23:04.198Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e6a490f55143ed20d376",
+          "content": "Se envió una advertencia de inactividad.",
+          "sender": "bot",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:28:04.603Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e70090f55143ed20d39e",
+          "content": "3",
+          "sender": "user",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:29:36.459Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e82d90f55143ed20d4f2",
+          "content": "Se envió una advertencia de inactividad.",
+          "sender": "bot",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:34:37.473Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987e95990f55143ed20d5ab",
+          "content": "Se ha cerrado el chat por inactividad.",
+          "sender": "bot",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:39:37.368Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987ed7184ea63f1637d2faa",
+          "content": "Chat reopened by Oscar",
+          "sender": "bot",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:57:05.099Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987ed7984ea63f1637d3032",
+          "content": "Agent Oscar joined the conversation",
+          "sender": "agent",
+          "messageType": "system",
+          "createdAt": "2026-02-08T01:57:13.963Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987ed9484ea63f1637d3127",
+          "content": "3333333333333",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:57:40.901Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "6987eda084ea63f1637d3138",
+          "content": "222222",
+          "sender": "agent",
+          "messageType": "text",
+          "createdAt": "2026-02-08T01:57:52.487Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        }
+      ],
+      "notes": [],
+      "transfers": []
+    }
+  ]
+}

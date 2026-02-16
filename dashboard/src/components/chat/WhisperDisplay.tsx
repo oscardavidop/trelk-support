@@ -93,7 +93,7 @@ function WhisperCard({ whisper, onDismiss, onRead }: WhisperCardProps) {
         </div>
         <button
           onClick={onDismiss}
-          className="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+          className="p-1 text-gray-400 hover:text-zinc-50 hover:bg-gray-700 rounded transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

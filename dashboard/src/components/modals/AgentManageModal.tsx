@@ -488,7 +488,7 @@ export function AgentManageModal({
                 {agent.avatar ? (
                   <img src={agent.avatar} alt={agent.name} className="w-16 h-16 rounded-full bg-zinc-800 object-cover" />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600/50 flex items-center justify-center text-xl font-bold text-white">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600/50 flex items-center justify-center text-xl font-bold text-zinc-50">
                     {agent.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -496,7 +496,7 @@ export function AgentManageModal({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white truncate">{agent.name}</h3>
+                  <h3 className="text-lg font-semibold text-zinc-50 truncate">{agent.name}</h3>
                   {isCurrentUser && (
                     <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30 font-medium">TÚ</span>
                   )}
@@ -520,17 +520,17 @@ export function AgentManageModal({
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-zinc-800/30 rounded-xl border border-zinc-700/50 text-center">
                 <MessageSquare className="w-5 h-5 text-blue-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{agent.activeChats || 0}</div>
+                <div className="text-2xl font-bold text-zinc-50">{agent.activeChats || 0}</div>
                 <div className="text-xs text-zinc-500">Chats Activos</div>
               </div>
               <div className="p-4 bg-zinc-800/30 rounded-xl border border-zinc-700/50 text-center">
                 <Star className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{agent.metrics?.averageRating?.toFixed(1) || '-'}</div>
+                <div className="text-2xl font-bold text-zinc-50">{agent.metrics?.averageRating?.toFixed(1) || '-'}</div>
                 <div className="text-xs text-zinc-500">Rating</div>
               </div>
               <div className="p-4 bg-zinc-800/30 rounded-xl border border-zinc-700/50 text-center">
                 <Clock className="w-5 h-5 text-emerald-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{agent.avgResponseTime || '-'}</div>
+                <div className="text-2xl font-bold text-zinc-50">{agent.avgResponseTime || '-'}</div>
                 <div className="text-xs text-zinc-500">Tiempo Resp.</div>
               </div>
             </div>
@@ -544,7 +544,7 @@ export function AgentManageModal({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${statusColors[status]}`}></div>
-                  <span className="text-white font-medium capitalize">{statusLabels[status]}</span>
+                  <span className="text-zinc-50 font-medium capitalize">{statusLabels[status]}</span>
                 </div>
               </div>
               <div className="p-4 bg-zinc-800/30 rounded-xl border border-zinc-700/50">
@@ -610,7 +610,7 @@ export function AgentManageModal({
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
                   placeholder="Nombre completo"
                 />
               </div>
@@ -620,7 +620,7 @@ export function AgentManageModal({
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
                   placeholder="correo@ejemplo.com"
                 />
               </div>
@@ -632,7 +632,7 @@ export function AgentManageModal({
                 <select
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
                 >
                   <option value="junior">Junior</option>
                   <option value="support">Agente</option>
@@ -646,7 +646,7 @@ export function AgentManageModal({
                   type="text"
                   value={editForm.department}
                   onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
                   placeholder="Departamento"
                 />
               </div>
@@ -658,7 +658,7 @@ export function AgentManageModal({
                 type="number"
                 value={editForm.maxConcurrentChats}
                 onChange={(e) => setEditForm({ ...editForm, maxConcurrentChats: parseInt(e.target.value) || 5 })}
-                className="w-32 px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                className="w-32 px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
                 min={1}
                 max={20}
               />
@@ -673,12 +673,12 @@ export function AgentManageModal({
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                  className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500/50"
+                  className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
                   placeholder="Agregar habilidad..."
                 />
                 <button
                   onClick={addSkill}
-                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl text-sm transition-colors"
+                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-50 rounded-xl text-sm transition-colors"
                 >
                   Agregar
                 </button>
@@ -721,13 +721,13 @@ export function AgentManageModal({
                     type="text"
                     value={telegramInput}
                     onChange={(e) => setTelegramInput(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500/50"
+                    className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-blue-500/50"
                     placeholder="ID de Telegram..."
                   />
                   <button
                     onClick={handleLinkTelegram}
                     disabled={telegramStatus === 'linking' || !telegramInput.trim()}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-zinc-50 rounded-xl text-sm transition-colors disabled:opacity-50"
                   >
                     {telegramStatus === 'linking' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Vincular'}
                   </button>
@@ -741,7 +741,7 @@ export function AgentManageModal({
               <button
                 onClick={handleSaveEdit}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 rounded-xl font-medium transition-colors disabled:opacity-50"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 Guardar cambios
@@ -759,9 +759,9 @@ export function AgentManageModal({
               <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
                 <Key className="w-8 h-8 text-indigo-500" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-1">Restablecer Contraseña</h3>
+              <h3 className="text-lg font-bold text-zinc-50 mb-1">Restablecer Contraseña</h3>
               <p className="text-zinc-400 text-sm">
-                <span className="text-white font-medium">{agent.name}</span>
+                <span className="text-zinc-50 font-medium">{agent.name}</span>
                 {hasTelegram ? (
                   <span className="ml-2 text-emerald-400 text-xs">✓ Telegram vinculado</span>
                 ) : (
@@ -784,7 +784,7 @@ export function AgentManageModal({
                     } ${!hasTelegram && 'opacity-50 cursor-not-allowed'}`}
                   >
                     <MessageSquare className={`w-5 h-5 mb-2 ${passwordMode === 'link' ? 'text-indigo-400' : 'text-zinc-500'}`} />
-                    <p className={`font-medium ${passwordMode === 'link' ? 'text-white' : 'text-zinc-300'}`}>
+                    <p className={`font-medium ${passwordMode === 'link' ? 'text-zinc-50' : 'text-zinc-300'}`}>
                       Enviar enlace
                     </p>
                     <p className="text-xs text-zinc-500 mt-1">El agente elige su contraseña</p>
@@ -798,7 +798,7 @@ export function AgentManageModal({
                     }`}
                   >
                     <Key className={`w-5 h-5 mb-2 ${passwordMode === 'generate' ? 'text-amber-400' : 'text-zinc-500'}`} />
-                    <p className={`font-medium ${passwordMode === 'generate' ? 'text-white' : 'text-zinc-300'}`}>
+                    <p className={`font-medium ${passwordMode === 'generate' ? 'text-zinc-50' : 'text-zinc-300'}`}>
                       Generar temporal
                     </p>
                     <p className="text-xs text-zinc-500 mt-1">Contraseña aleatoria</p>
@@ -822,7 +822,7 @@ export function AgentManageModal({
                     passwordMode === 'link'
                       ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'
                       : 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20'
-                  } text-white disabled:opacity-50`}
+                  } text-zinc-50 disabled:opacity-50`}
                 >
                   {passwordResetLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -851,7 +851,7 @@ export function AgentManageModal({
                   )}
                 </div>
 
-                <h4 className="text-lg font-bold text-white mb-2 tracking-tight">
+                <h4 className="text-lg font-bold text-zinc-50 mb-2 tracking-tight">
                   {passwordResult.success ? '¡Operación Exitosa!' : 'Algo salió mal'}
                 </h4>
 
@@ -863,7 +863,7 @@ export function AgentManageModal({
 
                 <button
                   onClick={() => setPasswordResult(null)}
-                  className="w-full px-6 py-2.5 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-white rounded-xl transition-all font-medium text-xs uppercase"
+                  className="w-full px-6 py-2.5 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-zinc-50 rounded-xl transition-all font-medium text-xs uppercase"
                 >
                   Realizar otra operación
                 </button>
@@ -966,7 +966,7 @@ export function AgentManageModal({
                         <select
                           value={bypassDays}
                           onChange={(e) => setBypassDays(Number(e.target.value))}
-                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white"
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-50"
                         >
                           <option value={1}>24 Horas</option>
                           <option value={3}>3 Días</option>
@@ -981,18 +981,18 @@ export function AgentManageModal({
                           value={bypassReason}
                           onChange={(e) => setBypassReason(e.target.value)}
                           placeholder="Ej: Pérdida de dispositivo"
-                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600"
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-50 placeholder-zinc-600"
                         />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => setShowBypassForm(false)} className="px-3 py-1.5 text-zinc-400 hover:text-white text-sm">
+                      <button onClick={() => setShowBypassForm(false)} className="px-3 py-1.5 text-zinc-400 hover:text-zinc-50 text-sm">
                         Cancelar
                       </button>
                       <button
                         onClick={handleMfaGrantBypass}
                         disabled={mfaActionLoading || !bypassReason.trim()}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm disabled:opacity-50"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-lg text-sm disabled:opacity-50"
                       >
                         {mfaActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar'}
                       </button>
@@ -1005,7 +1005,7 @@ export function AgentManageModal({
                       <button
                         onClick={handleMfaForceEnable}
                         disabled={mfaActionLoading || !agent.telegramId}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 rounded-xl text-sm font-medium disabled:opacity-50"
                       >
                         {mfaActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                         Forzar Activación
@@ -1023,7 +1023,7 @@ export function AgentManageModal({
                     <button
                       onClick={() => setShowBypassForm(true)}
                       disabled={mfaActionLoading || !mfaStatus?.enabled}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 rounded-xl text-sm font-medium disabled:opacity-50"
                     >
                       <Clock className="w-4 h-4" />
                       Otorgar Bypass
@@ -1032,7 +1032,7 @@ export function AgentManageModal({
                       <button
                         onClick={handleMfaRevokeTrustedDevices}
                         disabled={mfaActionLoading}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 rounded-xl text-sm font-medium disabled:opacity-50"
                       >
                         <Smartphone className="w-4 h-4" />
                         Revocar Dispositivos ({mfaStatus.trustedDevicesCount})
@@ -1086,7 +1086,7 @@ export function AgentManageModal({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-white truncate">{session.browser} • {session.os}</span>
+                            <span className="text-sm text-zinc-50 truncate">{session.browser} • {session.os}</span>
                             {session.isCurrent && (
                               <span className="px-1.5 py-0.5 text-[9px] bg-green-500/20 text-green-400 rounded border border-green-500/30">Actual</span>
                             )}
@@ -1117,7 +1117,7 @@ export function AgentManageModal({
               {isOnline && (
                 <button
                   onClick={onForceLogout}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-sm font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-zinc-50 rounded-xl text-sm font-medium"
                 >
                   <LogOut className="w-4 h-4" />
                   Forzar cierre
@@ -1126,7 +1126,7 @@ export function AgentManageModal({
               {sessions.length > 0 && (
                 <button
                   onClick={onInvalidateAll}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl text-sm font-medium"
                 >
                   <Trash2 className="w-4 h-4" />
                   Cerrar todas
@@ -1152,7 +1152,7 @@ export function AgentManageModal({
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-white">{isLocked ? 'Sesión Bloqueada' : 'Bloquear Sesión'}</p>
+                  <p className="text-sm font-medium text-zinc-50">{isLocked ? 'Sesión Bloqueada' : 'Bloquear Sesión'}</p>
                   <p className="text-xs text-zinc-400 mt-1">
                     {isLocked 
                       ? 'La sesión del agente está bloqueada. No puede operar hasta que se desbloquee.'
@@ -1163,8 +1163,8 @@ export function AgentManageModal({
                     onClick={() => setConfirmDialog({ type: isLocked ? 'unlock' : 'lock', open: true })}
                     className={`mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isLocked 
-                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        : 'bg-amber-600 hover:bg-amber-500 text-white'
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-zinc-50'
+                        : 'bg-amber-600 hover:bg-amber-500 text-zinc-50'
                     }`}
                   >
                     {isLocked ? 'Desbloquear sesión' : 'Bloquear sesión'}
@@ -1186,7 +1186,7 @@ export function AgentManageModal({
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-white">{isActive ? 'Desactivar Cuenta' : 'Cuenta Desactivada'}</p>
+                  <p className="text-sm font-medium text-zinc-50">{isActive ? 'Desactivar Cuenta' : 'Cuenta Desactivada'}</p>
                   <p className="text-xs text-zinc-400 mt-1">
                     {isActive 
                       ? 'El agente no podrá acceder al sistema mientras la cuenta esté desactivada.'
@@ -1198,7 +1198,7 @@ export function AgentManageModal({
                     className={`mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive 
                         ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-zinc-50'
                     }`}
                   >
                     {isActive ? 'Desactivar cuenta' : 'Activar cuenta'}
@@ -1215,13 +1215,13 @@ export function AgentManageModal({
                     <Send className="w-5 h-5 text-blue-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-white">Enviar Notificación</p>
+                    <p className="text-sm font-medium text-zinc-50">Enviar Notificación</p>
                     <p className="text-xs text-zinc-400 mt-1">
                       Envía un mensaje directo al agente. Se mostrará en su panel de notificaciones.
                     </p>
                     <button
                       onClick={onSendNotification}
-                      className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-zinc-50 rounded-lg text-sm font-medium transition-colors"
                     >
                       Enviar notificación
                     </button>
@@ -1243,7 +1243,7 @@ export function AgentManageModal({
                   </p>
                   <button
                     onClick={() => setConfirmDialog({ type: 'delete', open: true })}
-                    className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-lg text-sm font-medium transition-colors"
                   >
                     Eliminar agente
                   </button>
@@ -1270,12 +1270,12 @@ export function AgentManageModal({
                 {agent.avatar ? (
                   <img src={agent.avatar} alt={agent.name} className="w-10 h-10 rounded-full bg-zinc-800 object-cover" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-50">
                     {agent.name.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{agent.name}</p>
+                  <p className="text-sm font-medium text-zinc-50 truncate">{agent.name}</p>
                   <p className="text-xs text-zinc-500 truncate">{agent.email}</p>
                 </div>
               </div>
@@ -1297,7 +1297,7 @@ export function AgentManageModal({
                           : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                         : tab.danger
                           ? 'text-zinc-500 hover:text-red-400 hover:bg-red-500/5'
-                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                          : 'text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800/50'
                     }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
@@ -1311,7 +1311,7 @@ export function AgentManageModal({
             <div className="p-3 border-t border-zinc-800">
               <button
                 onClick={onClose}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl text-sm transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl text-sm transition-colors"
               >
                 <X className="w-4 h-4" />
                 Cerrar
@@ -1323,7 +1323,7 @@ export function AgentManageModal({
           <div className="flex-1 flex flex-col min-w-0">
             {/* Content Header */}
             <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/50 shrink-0 h-[66px]">
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-zinc-50">
                 {visibleTabs.find(t => t.id === currentTab)?.label || 'Gestión'}
               </h2>
             </div>
@@ -1352,7 +1352,7 @@ export function AgentManageModal({
                 {confirmDialog.type === 'unlock' && <Unlock className="w-6 h-6 text-emerald-400" />}
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">
+                <h3 className="text-lg font-semibold text-zinc-50">
                   {confirmDialog.type === 'delete' && '¿Eliminar agente?'}
                   {confirmDialog.type === 'deactivate' && (isActive ? '¿Desactivar cuenta?' : '¿Activar cuenta?')}
                   {confirmDialog.type === 'lock' && '¿Bloquear sesión?'}
@@ -1372,7 +1372,7 @@ export function AgentManageModal({
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setConfirmDialog({ type: null, open: false })}
-                className="px-4 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl text-sm font-medium transition-colors"
+                className="px-4 py-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl text-sm font-medium transition-colors"
               >
                 Cancelar
               </button>
@@ -1381,8 +1381,8 @@ export function AgentManageModal({
                 disabled={confirmLoading}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                   confirmDialog.type === 'delete' || (confirmDialog.type === 'deactivate' && isActive) || confirmDialog.type === 'lock'
-                    ? 'bg-red-600 hover:bg-red-500 text-white'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    ? 'bg-red-600 hover:bg-red-500 text-zinc-50'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-zinc-50'
                 }`}
               >
                 {confirmLoading && <Loader2 className="w-4 h-4 animate-spin" />}

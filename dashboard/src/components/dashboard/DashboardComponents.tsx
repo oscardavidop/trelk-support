@@ -171,7 +171,7 @@ export function MetricCard({ card, size = 'md', animate = true }: MetricCardProp
       
       {/* Main Value */}
       <div className="relative z-10">
-        <p className={`font-bold text-white tracking-tight leading-none ${sizeClasses.value}`}>
+        <p className={`font-bold text-zinc-50 tracking-tight leading-none ${sizeClasses.value}`}>
           {typeof card.value === 'number' ? card.value.toLocaleString() : card.value}
         </p>
         
@@ -260,7 +260,7 @@ export function DashboardSection({
             </div>
           )}
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight leading-none">{title}</h3>
+            <h3 className="text-base font-bold text-zinc-50 tracking-tight leading-none">{title}</h3>
             {subtitle && <p className="text-xs text-zinc-500 mt-1.5 font-medium">{subtitle}</p>}
           </div>
         </div>
@@ -358,7 +358,7 @@ export function SystemHealthCard({ health }: SystemHealthCardProps) {
               </div>
               
               <div>
-                <h4 className="text-sm font-bold text-white leading-none">{service.name}</h4>
+                <h4 className="text-sm font-bold text-zinc-50 leading-none">{service.name}</h4>
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <div className="relative flex h-2 w-2">
                     {service.status === 'healthy' && (
@@ -583,8 +583,8 @@ export function AgentStatusTable({ agents, onAction, showActions = false }: Agen
                 {showActions && (
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => onAction?.('whisper', agent.agentId)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white" title="Mensaje"><MessageSquare className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => onAction?.('reassign', agent.agentId)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white" title="Reasignar"><ArrowRight className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => onAction?.('whisper', agent.agentId)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-50" title="Mensaje"><MessageSquare className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => onAction?.('reassign', agent.agentId)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-50" title="Reasignar"><ArrowRight className="w-3.5 h-3.5" /></button>
                     </div>
                   </td>
                 )}
@@ -643,7 +643,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
           onClick={() => onChange(opt.value)}
           className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
             value === opt.value
-              ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
+              ? 'bg-zinc-800 text-zinc-50 shadow-sm border border-zinc-700'
               : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
           }`}
         >

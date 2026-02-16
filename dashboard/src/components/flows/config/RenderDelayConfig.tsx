@@ -43,7 +43,7 @@ const RenderDelayConfig = (config: DelayConfig, updateConfig: (field: string, va
                             onChange={(e) => updateConfig('delayMinutes', parseInt(e.target.value))}
                             disabled={readOnly}
                             min={1}
-                            className="w-15 px-3 py-0 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-center font-mono text-lg focus:border-violet-500 outline-none transition-all"
+                            className="w-15 px-3 py-0 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 text-center font-mono text-lg focus:border-violet-500 outline-none transition-all"
                         />
                         <span className="text-sm text-zinc-400 font-medium">minutos</span>
                     </div>
@@ -64,7 +64,7 @@ const RenderDelayConfig = (config: DelayConfig, updateConfig: (field: string, va
                                 onChange={(e) => updateConfig('maxWaitMinutes', parseInt(e.target.value))}
                                 disabled={readOnly}
                                 min={1}
-                                className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-center font-mono focus:border-indigo-500 outline-none"
+                                className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 text-center font-mono focus:border-indigo-500 outline-none"
                             />
                             <span className="text-sm text-zinc-400">minutos máx.</span>
                         </div>
@@ -95,7 +95,7 @@ const RenderDelayConfig = (config: DelayConfig, updateConfig: (field: string, va
                     </div>
                     
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
+                        <span className="text-sm font-medium text-zinc-300 group-hover:text-zinc-50 transition-colors">
                             Cancelar si el usuario escribe
                         </span>
                         <span className="text-xs text-zinc-500">
@@ -115,7 +115,7 @@ const RenderDelayConfig = (config: DelayConfig, updateConfig: (field: string, va
                         />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
+                        <span className="text-sm font-medium text-zinc-300 group-hover:text-zinc-50 transition-colors">
                             Cancelar al cerrar chat
                         </span>
                         <span className="text-xs text-zinc-500">

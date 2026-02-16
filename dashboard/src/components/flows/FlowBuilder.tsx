@@ -11,6 +11,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
+import { useThemeStore } from '../../hooks/useTheme';
 import type { FlowNode, FlowEdge, Flow, NodeType } from '../../types/flow';
 import { NODE_COLORS } from '../../types/flow';
 import TriggerNode from './nodes/TriggerNode';
@@ -37,11 +38,15 @@ const nodeTypes: NodeTypes = {
 
 const edgeTypes: EdgeTypes = { deletable: DeletableEdge };
 
+const EDGE_COLORS = { dark: '#52525b', light: '#94a3b8' };
+const DOT_COLORS = { dark: '#3f3f46', light: '#cbd5e1' };
+const MASK_COLORS = { dark: 'rgba(9, 9, 11, 0.8)', light: 'rgba(241, 245, 249, 0.8)' };
+
 const defaultEdgeOptions = {
-  type: 'deletable',
+  type: 'deletable' as const,
   animated: false,
-  style: { strokeWidth: 2, stroke: '#52525b' }, // Zinc-600
-  markerEnd: { type: MarkerType.ArrowClosed, color: '#52525b' },
+  style: { strokeWidth: 2, stroke: EDGE_COLORS.dark },
+  markerEnd: { type: MarkerType.ArrowClosed, color: EDGE_COLORS.dark },
 };
 
 interface FlowBuilderProps {
@@ -104,6 +109,16 @@ function FlowBuilderInner({
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [availableFlows, setAvailableFlows] = useState<{ id: string; name: string }[]>([]);
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const edgeColor = EDGE_COLORS[resolvedTheme];
+  const dotColor = DOT_COLORS[resolvedTheme];
+  const maskColor = MASK_COLORS[resolvedTheme];
+  const themedEdgeOptions = useMemo(() => ({
+    type: 'deletable' as const,
+    animated: false,
+    style: { strokeWidth: 2, stroke: edgeColor },
+    markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
+  }), [edgeColor]);
 
   // Load flows for config
   useEffect(() => {
@@ -185,8 +200,8 @@ function FlowBuilderInner({
   // Flow Handlers
   const onConnect = useCallback((params: Connection) => {
     if (readOnly) return;
-    setEdges(eds => addEdge({ ...params, id: `edge-${Date.now()}`, ...defaultEdgeOptions }, eds));
-  }, [setEdges, readOnly]);
+    setEdges(eds => addEdge({ ...params, id: `edge-${Date.now()}`, ...themedEdgeOptions }, eds));
+  }, [setEdges, readOnly, themedEdgeOptions]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => { setSelectedNode(node); setIsConfigOpen(true); }, []);
   const onPaneClick = useCallback(() => { setSelectedNode(null); setIsConfigOpen(false); }, []);
@@ -278,7 +293,7 @@ function FlowBuilderInner({
             onDrop={onDrop}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            defaultEdgeOptions={defaultEdgeOptions}
+            defaultEdgeOptions={themedEdgeOptions}
             fitView
             snapToGrid
             snapGrid={[15, 15]}
@@ -292,11 +307,11 @@ function FlowBuilderInner({
           >
             <Controls className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden [&>button]:border-b [&>button]:border-zinc-800 [&>button]:bg-zinc-900 [&>button]:fill-zinc-400 [&>button:hover]:bg-zinc-800" showInteractive={!readOnly} />
             <MiniMap 
-              nodeColor={n => NODE_COLORS[n.type as NodeType] || '#52525b'} 
-              maskColor="rgba(9, 9, 11, 0.8)" 
+              nodeColor={n => NODE_COLORS[n.type as NodeType] || edgeColor} 
+              maskColor={maskColor} 
               className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl" 
             />
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#3f3f46" />
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={dotColor} />
 
             {nodes.length === 0 && (
               <Panel position="top-center" className="mt-32">
@@ -304,7 +319,7 @@ function FlowBuilderInner({
                   <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
                     <MousePointerClick className="w-8 h-8 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Lienzo vacío</h3>
+                  <h3 className="text-xl font-bold text-zinc-50 mb-2">Lienzo vacío</h3>
                   <p className="text-zinc-400 mb-6 leading-relaxed">
                     Arrastra nodos desde el panel izquierdo para comenzar a diseñar tu flujo conversacional.
                   </p>

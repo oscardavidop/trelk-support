@@ -39,7 +39,7 @@ const AVAILABLE_VARIABLES = [
 ];
 
 // Estilo base para inputs
-const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder-zinc-600";
+const inputBase = "bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder-zinc-600";
 
 const DataCollectionEditor: React.FC<DataCollectionEditorProps> = ({
   config,

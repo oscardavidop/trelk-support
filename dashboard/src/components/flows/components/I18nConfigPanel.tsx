@@ -158,7 +158,7 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
                     onChange={(e) => updateI18nConfig({ customFieldName: e.target.value })}
                     placeholder="Ej: preferred_lang"
                     disabled={readOnly}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-50 placeholder-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
@@ -204,7 +204,7 @@ const I18nConfigPanel: React.FC<I18nConfigProps> = ({ config, onChange, detected
                     value={i18nConfig.fixedLanguage || 'es'}
                     onChange={(e) => updateI18nConfig({ fixedLanguage: e.target.value })}
                     disabled={readOnly}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none cursor-pointer appearance-none"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {SUPPORTED_LANGUAGES.map(lang => (

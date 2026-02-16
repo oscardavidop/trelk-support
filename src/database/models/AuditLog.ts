@@ -16,7 +16,9 @@ export type AuditCategory =
   | 'user'
   | 'auth'
   | 'authentication'
-  | 'communication';
+  | 'communication'
+  | 'chat'
+  | 'disposition';
 
 export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -69,7 +71,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
     },
     category: {
       type: String,
-      enum: ['message', 'session', 'agent', 'rule', 'settings', 'export', 'security', 'user', 'auth', 'authentication', 'communication'],
+      enum: ['message', 'session', 'agent', 'rule', 'settings', 'export', 'security', 'user', 'auth', 'authentication', 'communication', 'chat', 'disposition'],
       required: true,
       index: true,
     },
@@ -96,7 +98,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
     actorUserAgent: String,
     targetType: {
       type: String,
-      enum: ['message', 'session', 'user', 'agent', 'rule', 'setting', 'export'],
+      enum: ['message', 'session', 'user', 'agent', 'rule', 'setting', 'export', 'system', 'device', 'disposition', 'chat_session'],
       required: true,
     },
     targetId: {

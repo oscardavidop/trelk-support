@@ -100,7 +100,7 @@ export function DialogContent({ children, className = '', showCloseButton = true
         {showCloseButton && (
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-700"
+            className="absolute right-4 top-4 p-1 rounded-lg text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-700"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Cerrar</span>
@@ -128,7 +128,7 @@ export function DialogHeader({ children, className = '' }: DialogHeaderProps) {
 
 export function DialogTitle({ children, className = '' }: DialogTitleProps) {
   return (
-    <h2 className={`text-lg font-bold leading-none tracking-tight text-white ${className}`}>
+    <h2 className={`text-lg font-bold leading-none tracking-tight text-zinc-50 ${className}`}>
       {children}
     </h2>
   );

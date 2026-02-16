@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { usePermissionStore } from "../stores/permissionStore";
+import { usePolicyStore } from "../stores/policyStore";
 import {
   Lock,
   Mail,
@@ -20,19 +21,52 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 
 // Helper to generate device fingerprint
+// Get or create a persistent random device ID
+// In incognito mode or after clearing cookies, a NEW id is generated
+// which ensures the fingerprint is unique per storage context
+const getOrCreateDeviceId = (): string => {
+  const KEY = "trelk_device_id";
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    id = Array.from(arr)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    try {
+      localStorage.setItem(KEY, id);
+    } catch {
+      // localStorage not available (incognito in some browsers)
+    }
+  }
+  return id;
+};
+
 const getDeviceFingerprint = async (): Promise<string> => {
+  const deviceId = getOrCreateDeviceId();
   const data = [
     navigator.userAgent,
     navigator.language,
     screen.width + "x" + screen.height,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
+    deviceId, // unique per browser storage context
   ].join("|");
 
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(data);
   const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const fingerprint = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  // Also store for QR polling
+  try {
+    localStorage.setItem("deviceFingerprint", fingerprint);
+  } catch {
+    // ignore
+  }
+  return fingerprint;
 };
 
 export default function LoginPage() {
@@ -126,9 +160,24 @@ export default function LoginPage() {
             );
         }
 
-        // Redirect based on password change requirement
+        // Store policy results
+        usePolicyStore.getState().setLoginPolicyResults({
+          redirect: data.redirect,
+          profileIncomplete: data.profileIncomplete,
+          globalAlert: data.globalAlert,
+          policyAcceptanceRequired: data.policyAcceptanceRequired,
+          readOnlyMode: data.readOnlyMode,
+          maintenanceMode: data.maintenanceMode,
+          maintenanceMessage: data.maintenanceMessage,
+          warnings: data.warnings,
+        });
+
+        // Redirect based on password change requirement or policy redirect
         if (data.forcePasswordChange) {
           navigate("/force-change-password", { replace: true });
+        } else if (data.redirect) {
+          // Use policy-defined redirect
+          navigate(data.redirect, { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
         }
@@ -251,9 +300,27 @@ export default function LoginPage() {
         setQrStatus(data.status);
 
         // Handle terminal states
-        if (data.status === "approved" && data.agent) {
+        if (data.status === "approved") {
           stopPolling();
           stopCountdown();
+
+          // Check if MFA is required after QR approval
+          if (data.mfaRequired && data.mfaLoginToken) {
+            setTimeout(() => {
+              navigate("/mfa-verify", {
+                state: {
+                  loginToken: data.mfaLoginToken,
+                  methods: data.mfaMethods || ['telegram'],
+                  agentName: data.agentName,
+                  fromQR: true,
+                },
+                replace: true,
+              });
+            }, 500);
+            return;
+          }
+
+          if (!data.agent) return;
 
           // Update auth store
           useAuthStore.setState({
@@ -382,7 +449,7 @@ export default function LoginPage() {
             </div>
             {!showForgotPassword && (
               <>
-                <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
+                <h1 className="text-3xl font-bold text-zinc-50 tracking-tight mb-2">
                   Bienvenido de nuevo
                 </h1>
                 <p className="text-zinc-400 text-sm">
@@ -400,7 +467,7 @@ export default function LoginPage() {
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500/20 rounded-full mb-4">
                     <CheckCircle2 className="w-8 h-8 text-green-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">
+                  <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                     ¡Solicitud enviada!
                   </h3>
                   <p className="text-zinc-400 text-sm mb-6">
@@ -415,7 +482,7 @@ export default function LoginPage() {
                   </div>
                   <button
                     onClick={resetForgotPassword}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 font-medium rounded-xl transition-all"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Volver al inicio de sesión
@@ -428,7 +495,7 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-500/20 rounded-full mb-4">
                       <KeyRound className="w-7 h-7 text-indigo-400" />
                     </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">
+                    <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                       ¿Olvidaste tu contraseña?
                     </h3>
                     <p className="text-zinc-400 text-sm">
@@ -474,7 +541,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {forgotLoading ? (
                       <>
@@ -493,7 +560,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={resetForgotPassword}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-zinc-400 hover:text-white text-sm transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-3 text-zinc-400 hover:text-zinc-50 text-sm transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Volver al inicio de sesión
@@ -569,7 +636,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isLoading ? (
                   <>
@@ -611,7 +678,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={startQRLogin}
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 hover:text-white font-medium rounded-xl transition-all group"
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 hover:text-zinc-50 font-medium rounded-xl transition-all group"
               >
                 <QrCode className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300" />
                 <span>Iniciar sesión con Telegram</span>
@@ -639,19 +706,19 @@ export default function LoginPage() {
             {/* Close button */}
             <button
               onClick={closeQRModal}
-              className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors z-10"
+              className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-zinc-50 rounded-xl hover:bg-zinc-800 transition-colors z-10"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Scrollable Content */}
-            <div className="overflow-y-auto p-6scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+            <div className="overflow-y-auto p-6 scrollbar-thumb-zinc-800 scrollbar-track-transparent">
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
                   <Smartphone className="w-8 h-8 text-indigo-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white tracking-tight mb-2">
+                <h3 className="text-xl font-bold text-zinc-50 tracking-tight mb-2">
                   Iniciar sesión con Telegram
                 </h3>
                 <p className="text-zinc-400 text-sm max-w-[260px] mx-auto leading-relaxed">
@@ -706,7 +773,7 @@ export default function LoginPage() {
                         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-white">
+                    <p className="text-lg font-bold text-zinc-50">
                       {qrAgentName ? `¡Hola, ${qrAgentName}!` : "QR Detectado"}
                     </p>
                     <p className="text-sm text-indigo-300/80 mt-1">
@@ -722,7 +789,7 @@ export default function LoginPage() {
                     <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
                       <CheckCircle2 className="w-10 h-10 text-emerald-400" />
                     </div>
-                    <p className="text-lg font-bold text-white">
+                    <p className="text-lg font-bold text-zinc-50">
                       ¡Acceso Autorizado!
                     </p>
                     <p className="text-sm text-zinc-400 mt-1">
@@ -764,7 +831,7 @@ export default function LoginPage() {
 
                     <button
                       onClick={regenerateQR}
-                      className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
+                      className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
                     >
                       <RefreshCw className="w-4 h-4" /> Generar Nuevo
                     </button>

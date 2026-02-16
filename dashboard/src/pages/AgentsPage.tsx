@@ -566,7 +566,7 @@ export default function AgentsPage() {
                 <Users className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">
                   Equipo de Soporte
                 </h1>
                 <p className="text-sm text-zinc-400">
@@ -579,7 +579,7 @@ export default function AgentsPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw
                   className={`w-5 h-5 ${refreshing ? "animate-spin" : "group-hover:rotate-180 transition-transform"}`}
@@ -588,7 +588,7 @@ export default function AgentsPage() {
 
               <button
                 onClick={() => openFormModal()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-medium rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus className="w-5 h-5" />
                 <span>Nuevo Agente</span>
@@ -640,7 +640,7 @@ export default function AgentsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar agente..."
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
               />
             </div>
 
@@ -904,7 +904,7 @@ function AgentRow({
               className="w-10 h-10 rounded-full bg-zinc-800 object-cover"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 flex items-center justify-center text-sm font-bold text-white shadow-inner">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700/50 flex items-center justify-center text-sm font-bold text-zinc-50 shadow-inner">
               {agent.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -1014,7 +1014,7 @@ function AgentRow({
         )}
         <button
           onClick={() => onOpenManage("overview")}
-          className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/50 transition-all duration-200 group-hover:bg-zinc-800/50"
+          className="p-2 rounded-lg text-zinc-400 hover:text-zinc-50 hover:bg-zinc-700/50 transition-all duration-200 group-hover:bg-zinc-800/50"
           title="Gestionar agente"
         >
           <Eye className="w-4 h-4" />
@@ -1056,7 +1056,7 @@ function AgentCard({
                   className="w-12 h-12 rounded-4xl"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-4xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-white shadow-inner">
+                <div className="w-12 h-12 rounded-4xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-lg font-bold text-zinc-50 shadow-inner">
                   {agent.name.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -1103,7 +1103,7 @@ function AgentCard({
                   activeDropdown === agent._id ? null : agent._id,
                 );
               }}
-              className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors ${activeDropdown === agent._id ? "bg-white/10 text-white" : ""}`}
+              className={`p-1.5 rounded-lg text-zinc-500 hover:text-zinc-50 hover:bg-white/5 transition-colors ${activeDropdown === agent._id ? "bg-white/10 text-zinc-50" : ""}`}
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -1189,7 +1189,7 @@ const MetricItem = ({
   icon: Icon,
   value,
   label,
-  color = "text-white",
+  color = "text-zinc-50",
 }: any) => (
   <div className="py-3 flex flex-col items-center justify-center hover:bg-white/[0.02] transition-colors">
     <span className={`text-sm font-semibold ${color}`}>{value}</span>
@@ -1206,7 +1206,7 @@ const DropdownItem = ({ icon: Icon, label, onClick, danger }: any) => (
     className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
       danger
         ? "text-red-400 hover:bg-red-500/10"
-        : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
+        : "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50"
     }`}
   >
     <Icon className="w-4 h-4" />
@@ -1267,7 +1267,7 @@ function DropdownMenu({
           e.stopPropagation();
           setActiveDropdown(activeDropdown === agent._id ? null : agent._id);
         }}
-        className={`p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? "bg-zinc-700 text-white" : ""}`}
+        className={`p-1.5 rounded-lg text-zinc-500 hover:text-zinc-50 hover:bg-zinc-700 transition-colors ${activeDropdown === agent._id ? "bg-zinc-700 text-zinc-50" : ""}`}
       >
         <MoreVertical className="w-4 h-4" />
       </button>
@@ -1471,13 +1471,13 @@ function FormModal({
                 <Plus className="w-5 h-5 text-emerald-500" />
               )}
             </div>
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-zinc-50">
               {isEditing ? "Editar Agente" : "Nuevo Agente"}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1518,7 +1518,7 @@ function FormModal({
                   onChange={(e) =>
                     setFormData({ ...formData, role: e.target.value })
                   }
-                  className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 >
                   <option value="support">Agente</option>
                   <option value="supervisor">Supervisor</option>
@@ -1567,11 +1567,11 @@ function FormModal({
                     e.key === "Enter" && (e.preventDefault(), onAddSkill())
                   }
                   placeholder="Agregar skill..."
-                  className="flex-1 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="flex-1 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
                 <button
                   onClick={onAddSkill}
-                  className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-white transition-colors"
+                  className="px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 hover:text-zinc-50 transition-colors"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -1586,7 +1586,7 @@ function FormModal({
                     {skill}
                     <button
                       onClick={() => onRemoveSkill(skill)}
-                      className="hover:text-white"
+                      className="hover:text-zinc-50"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1615,7 +1615,7 @@ function FormModal({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-zinc-50">
                           Telegram Vinculado
                         </span>
                         <CheckCircle2 className="w-4 h-4 text-sky-400" />
@@ -1670,7 +1670,7 @@ function FormModal({
                         value={telegramInput}
                         onChange={(e) => setTelegramInput(e.target.value)}
                         placeholder="ID de Telegram (ej: 123456789)"
-                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-sm"
                       />
                     </div>
                     <button
@@ -1678,7 +1678,7 @@ function FormModal({
                       disabled={
                         telegramStatus === "linking" || !telegramInput.trim()
                       }
-                      className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-zinc-50 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {telegramStatus === "linking" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -1712,14 +1712,14 @@ function FormModal({
         <div className="flex justify-end gap-3 px-6 py-4 bg-zinc-900/50 border-t border-zinc-800 shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all font-medium"
+            className="px-5 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-all font-medium"
           >
             Cancelar
           </button>
           <button
             onClick={onSubmit}
             disabled={isSaving || !formData.name || !formData.email}
-            className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 font-medium rounded-xl shadow-lg shadow-emerald-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1754,7 +1754,7 @@ function InputGroup({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+          className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
         />
       </div>
     </div>
@@ -1768,10 +1768,10 @@ function DeleteModal({ agent, isSaving, onDelete, onClose }: any) {
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
           <Trash2 className="w-8 h-8 text-red-500" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Eliminar Agente</h2>
+        <h2 className="text-xl font-bold text-zinc-50 mb-2">Eliminar Agente</h2>
         <p className="text-zinc-400 mb-6">
           ¿Estás seguro de que deseas eliminar a{" "}
-          <span className="text-white font-medium">{agent.name}</span>? <br />
+          <span className="text-zinc-50 font-medium">{agent.name}</span>? <br />
           Esta acción es irreversible.
         </p>
         <div className="flex gap-3">
@@ -1784,7 +1784,7 @@ function DeleteModal({ agent, isSaving, onDelete, onClose }: any) {
           <button
             onClick={onDelete}
             disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-zinc-50 rounded-xl transition-all font-medium shadow-lg shadow-red-900/20"
           >
             {isSaving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1874,11 +1874,11 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
           <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
             <Key className="w-8 h-8 text-indigo-500" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">
+          <h2 className="text-xl font-bold text-zinc-50 mb-2">
             Restablecer Contraseña
           </h2>
           <p className="text-zinc-400 text-sm">
-            <span className="text-white font-medium">{agent.name}</span>
+            <span className="text-zinc-50 font-medium">{agent.name}</span>
             {hasTelegram ? (
               <span className="ml-2 text-emerald-400 text-xs">
                 ✓ Telegram vinculado
@@ -1908,7 +1908,7 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
                   className={`w-5 h-5 mb-2 ${mode === "link" ? "text-indigo-400" : "text-zinc-500"}`}
                 />
                 <p
-                  className={`font-medium ${mode === "link" ? "text-white" : "text-zinc-300"}`}
+                  className={`font-medium ${mode === "link" ? "text-zinc-50" : "text-zinc-300"}`}
                 >
                   Enviar enlace
                 </p>
@@ -1928,7 +1928,7 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
                   className={`w-5 h-5 mb-2 ${mode === "generate" ? "text-amber-400" : "text-zinc-500"}`}
                 />
                 <p
-                  className={`font-medium ${mode === "generate" ? "text-white" : "text-zinc-300"}`}
+                  className={`font-medium ${mode === "generate" ? "text-zinc-50" : "text-zinc-300"}`}
                 >
                   Generar temporal
                 </p>
@@ -1968,7 +1968,7 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
                   mode === "link"
                     ? "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20"
                     : "bg-amber-600 hover:bg-amber-500 shadow-amber-900/20"
-                } text-white disabled:opacity-50`}
+                } text-zinc-50 disabled:opacity-50`}
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -2003,7 +2003,7 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
             </div>
 
             {/* 2. Status Title */}
-            <h3 className="text-lg font-bold text-white mb-2 tracking-tight">
+            <h3 className="text-lg font-bold text-zinc-50 mb-2 tracking-tight">
               {result.success ? "¡Operación Exitosa!" : "Algo salió mal"}
             </h3>
 
@@ -2017,7 +2017,7 @@ function ResetPasswordModal({ agent, isSaving, onReset, onClose }: any) {
             {/* 4. Action Button */}
             <button
               onClick={onClose}
-              className="w-full px-6 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl transition-all font-medium text-xs uppercase r shadow-sm"
+              className="w-full px-6 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-zinc-50 rounded-xl transition-all font-medium text-xs uppercase r shadow-sm"
             >
               Cerrar
             </button>
@@ -2035,13 +2035,13 @@ function DesactivateModal({ agent, isSaving, onConfirm, onClose }: any) {
         <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
           <UserX className="w-8 h-8 text-yellow-500" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">
+        <h2 className="text-xl font-bold text-zinc-50 mb-2">
           {agent.isActive ? "Desactivar Agente" : "Activar Agente"}
         </h2>
         <p className="text-zinc-400 mb-6">
           ¿Estás seguro de que deseas{" "}
           {agent.isActive ? "desactivar" : "activar"} a{" "}
-          <span className="text-white font-medium">{agent.name}</span>? <br />
+          <span className="text-zinc-50 font-medium">{agent.name}</span>? <br />
           {agent.isActive
             ? "El agente no podrá iniciar sesión ni atender chats hasta que sea reactivado."
             : "El agente podrá iniciar sesión y atender chats nuevamente."}
@@ -2056,7 +2056,7 @@ function DesactivateModal({ agent, isSaving, onConfirm, onClose }: any) {
           <button
             onClick={() => onConfirm(agent)}
             disabled={isSaving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl transition-all font-medium shadow-lg shadow-yellow-900/20"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 hover:bg-yellow-500 text-zinc-50 rounded-xl transition-all font-medium shadow-lg shadow-yellow-900/20"
           >
             {isSaving ? (
               <Loader2 className="w-4 h-4 animate-spin" />

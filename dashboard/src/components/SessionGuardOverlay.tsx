@@ -58,7 +58,7 @@ export function TabBlockedOverlay({ isBlocked, onClose }: TabBlockedOverlayProps
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-3">Chat abierto en otra pestaña</h2>
+        <h2 className="text-2xl font-bold text-zinc-50 mb-3">Chat abierto en otra pestaña</h2>
         <p className="text-gray-300 mb-8 leading-relaxed">
           Para evitar conflictos y pérdida de mensajes, el chat solo puede estar activo en una pestaña a la vez.
         </p>
@@ -75,7 +75,7 @@ export function TabBlockedOverlay({ isBlocked, onClose }: TabBlockedOverlayProps
 
         <button
           onClick={handleClose}
-          className="px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold rounded-lg shadow-lg shadow-red-500/25 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          className="px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-zinc-50 font-semibold rounded-lg shadow-lg shadow-red-500/25 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
         >
           Cerrar esta pestaña
         </button>
@@ -140,7 +140,7 @@ export function SessionReplacedOverlay({ isShown, device, ip }: SessionReplacedO
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-3">Sesión cerrada</h2>
+        <h2 className="text-2xl font-bold text-zinc-50 mb-3">Sesión cerrada</h2>
         <p className="text-gray-300 mb-4 leading-relaxed">
           Se ha iniciado sesión en otro dispositivo. Solo puedes tener una sesión activa a la vez.
         </p>
@@ -169,7 +169,7 @@ export function SessionReplacedOverlay({ isShown, device, ip }: SessionReplacedO
 
         <button
           onClick={handleLogin}
-          className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-zinc-50 font-semibold rounded-lg shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
         >
           Iniciar sesión de nuevo
         </button>

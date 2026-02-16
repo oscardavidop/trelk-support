@@ -221,7 +221,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                         onChange(node.id, label, newConfig);
                       }}
                       disabled={readOnly}
-                      className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-center font-mono focus:border-violet-500 outline-none"
+                      className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 text-center font-mono focus:border-violet-500 outline-none"
                     />
                     <span className="text-sm text-zinc-400">minutos sin respuesta del usuario</span>
                   </div>
@@ -252,7 +252,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                       onChange(node.id, label, newConfig);
                     }}
                     disabled={readOnly}
-                    className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono focus:border-violet-500 outline-none appearance-none"
+                    className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono focus:border-violet-500 outline-none appearance-none"
                   />
                   <p className="text-[10px] text-zinc-500">Variables soportadas: <code className="text-zinc-300">{`{{date.tomorrow}}`}</code></p>
                 </div>
@@ -363,7 +363,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                         onChange(node.id, label, newConfig);
                       }}
                       disabled={readOnly}
-                      className="w-16 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-center text-xs text-white focus:border-red-500 outline-none"
+                      className="w-16 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-center text-xs text-zinc-50 focus:border-red-500 outline-none"
                     />
                     <span className="text-xs text-zinc-500">horas antes de descartar</span>
                   </div>
@@ -410,7 +410,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={actionConfig.tagName || ''}
                   onChange={(e) => updateConfig('tagName', e.target.value)}
                   disabled={readOnly}
-                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                   placeholder="Ej: vip_customer"
                 />
               </div>
@@ -445,7 +445,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <span className="text-[10px] text-zinc-500 uppercase font-bold">Vista Previa</span>
               <div className="flex gap-2">
                 <span
-                  className="px-2.5 py-1 rounded-full text-xs font-medium text-white shadow-sm flex items-center gap-1.5 transition-all"
+                  className="px-2.5 py-1 rounded-full text-xs font-medium text-zinc-50 shadow-sm flex items-center gap-1.5 transition-all"
                   style={{ backgroundColor: actionConfig.actionType === 'add_tag' ? (actionConfig.tagColor || '#3B82F6') : '#52525b' }}
                 >
                   <Tag className="w-3 h-3 fill-current opacity-20" />
@@ -508,7 +508,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={actionConfig.webhookUrl || ''}
                   onChange={(e) => updateConfig('webhookUrl', e.target.value)}
                   disabled={readOnly}
-                  className="flex-1 px-3 py-2.5 bg-transparent text-sm text-white font-mono placeholder-zinc-700 outline-none min-w-0"
+                  className="flex-1 px-3 py-2.5 bg-transparent text-sm text-zinc-50 font-mono placeholder-zinc-700 outline-none min-w-0"
                   placeholder="https://api.mi-sistema.com/hook"
                 />
               </div>
@@ -622,7 +622,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={actionConfig.targetAgentId || ''}
                   onChange={(e) => updateConfig('targetAgentId', e.target.value)}
                   disabled={readOnly}
-                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                   placeholder="Ej: agent_452"
                 />
               </div>
@@ -728,7 +728,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   onChange={(e) => updateConfig('blockDurationHours', parseInt(e.target.value))}
                   disabled={readOnly}
                   min={1}
-                  className="w-full pl-9 pr-12 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                  className="w-full pl-9 pr-12 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 font-medium">Horas</span>
               </div>
@@ -744,7 +744,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={actionConfig.blockReason || ''}
                   onChange={(e) => updateConfig('blockReason', e.target.value)}
                   disabled={readOnly}
-                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
                   placeholder="Ej: Spam, lenguaje ofensivo..."
                 />
               </div>
@@ -912,7 +912,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 value={actionConfig.customFieldValue || ''}
                 onChange={(e) => updateConfig('customFieldValue', e.target.value)}
                 disabled={readOnly}
-                className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                 placeholder="Ej: premium, true, 100"
               />
               <div className="flex flex-wrap gap-2 mt-1">
@@ -986,7 +986,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     value={(actionConfig as any).editMessageConfig?.messageIdVariable || ''}
                     onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, messageIdVariable: e.target.value })}
                     disabled={readOnly}
-                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
                     placeholder="saved_message_id"
                   />
                 </div>
@@ -1004,7 +1004,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     value={(actionConfig as any).editMessageConfig?.messageId || ''}
                     onChange={(e) => updateConfig('editMessageConfig', { ...(actionConfig as any).editMessageConfig, messageId: e.target.value })}
                     disabled={readOnly}
-                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
                     placeholder="msg_12345"
                   />
                 </div>
@@ -1078,7 +1078,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     value={(actionConfig as any).deleteMessageConfig?.messageIdVariable || ''}
                     onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, messageIdVariable: e.target.value })}
                     disabled={readOnly}
-                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
                     placeholder="message_id_var"
                   />
                 </div>
@@ -1095,7 +1095,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     value={(actionConfig as any).deleteMessageConfig?.messageId || ''}
                     onChange={(e) => updateConfig('deleteMessageConfig', { ...(actionConfig as any).deleteMessageConfig, messageId: e.target.value })}
                     disabled={readOnly}
-                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all"
                     placeholder="msg_123456789"
                   />
                 </div>
@@ -1157,7 +1157,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     disabled={readOnly}
                     min={0}
                     max={60}
-                    className="w-full pl-8 pr-2 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono text-center focus:border-blue-500 outline-none transition-all"
+                    className="w-full pl-8 pr-2 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono text-center focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <span className="text-sm text-zinc-400">segundos</span>
@@ -1203,7 +1203,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                     disabled={readOnly}
                     min={1}
                     max={300}
-                    className="w-full pl-3 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all text-center"
+                    className="w-full pl-3 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all text-center"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 font-bold select-none">s</span>
                 </div>
@@ -1432,7 +1432,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={(actionConfig as any).locationConfig?.latitude || ''}
                   onChange={(e) => updateConfig('locationConfig', { ...(actionConfig as any).locationConfig, latitude: e.target.value })}
                   disabled={readOnly}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 outline-none transition-all"
                   placeholder="40.7128"
                 />
               </div>
@@ -1443,7 +1443,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={(actionConfig as any).locationConfig?.longitude || ''}
                   onChange={(e) => updateConfig('locationConfig', { ...(actionConfig as any).locationConfig, longitude: e.target.value })}
                   disabled={readOnly}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white font-mono placeholder-zinc-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 font-mono placeholder-zinc-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 outline-none transition-all"
                   placeholder="-74.0060"
                 />
               </div>
@@ -1487,7 +1487,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={(actionConfig as any).contactConfig?.phoneNumber || ''}
                   onChange={(e) => updateConfig('contactConfig', { ...(actionConfig as any).contactConfig, phoneNumber: e.target.value })}
                   disabled={readOnly}
-                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all font-mono"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all font-mono"
                   placeholder="+57 300 123 4567"
                 />
               </div>
@@ -1502,7 +1502,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={(actionConfig as any).contactConfig?.firstName || ''}
                   onChange={(e) => updateConfig('contactConfig', { ...(actionConfig as any).contactConfig, firstName: e.target.value })}
                   disabled={readOnly}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                   placeholder="Juan"
                 />
               </div>
@@ -1513,7 +1513,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   value={(actionConfig as any).contactConfig?.lastName || ''}
                   onChange={(e) => updateConfig('contactConfig', { ...(actionConfig as any).contactConfig, lastName: e.target.value })}
                   disabled={readOnly}
-                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
                   placeholder="Pérez"
                 />
               </div>
@@ -1580,7 +1580,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-0.5">
                     <ArrowRightLeft className="w-3.5 h-3.5 text-zinc-400" />
-                    <span className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">Compartir Contexto</span>
+                    <span className="text-xs font-medium text-zinc-300 group-hover:text-zinc-50 transition-colors">Compartir Contexto</span>
                   </div>
                   <p className="text-[10px] text-zinc-500 leading-relaxed">
                     El sub-flujo tendrá acceso a todas las variables y datos del usuario actual.
@@ -1602,7 +1602,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-0.5">
                     <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                    <span className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">Ejecución Síncrona</span>
+                    <span className="text-xs font-medium text-zinc-300 group-hover:text-zinc-50 transition-colors">Ejecución Síncrona</span>
                   </div>
                   <p className="text-[10px] text-zinc-500 leading-relaxed">
                     Este flujo se pausará hasta que el sub-flujo termine. Si se desactiva, ambos correrán en paralelo.
@@ -1779,13 +1779,13 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               boxShadow: `0 0 10px ${color}40`
             }}
           />
-          <span className="text-lg font-bold text-white tracking-tight">
+          <span className="text-lg font-bold text-zinc-50 tracking-tight">
             {typeLabel}
           </span>
         </div>
         <button
           onClick={onClose}
-          className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1810,7 +1810,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               }
             }}
             disabled={readOnly}
-            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
             placeholder="Nombre descriptivo"
           />
         </div>
@@ -1828,13 +1828,13 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
         <div className="p-2 border-t border-zinc-800 bg-zinc-950 flex gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl font-medium transition-all"
+            className="flex-1 px-4 py-2.5 border border-zinc-800 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl font-medium transition-all"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all"
+            className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all"
           >
             Guardar
           </button>

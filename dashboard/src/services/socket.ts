@@ -920,6 +920,38 @@ export function initializeSocket(): Socket {
     );
   });
 
+  // ============= QA COACHING EVENTS =============
+
+  socket.on('qa:review:new' as any, (data: { reviewId: string; totalScore: number; sessionId: string }) => {
+    console.log('📋 New QA review received:', data.reviewId);
+    toast.warning(
+      'Nueva Evaluación QA',
+      `Se ha registrado una evaluación con puntaje ${data.totalScore}. Revisa tu panel de calidad.`,
+      { groupKey: `qa:review:${data.reviewId}`, duration: 8000 }
+    );
+    // Dispatch custom event for QACoachingModal to re-check
+    window.dispatchEvent(new CustomEvent('qa:review:new', { detail: data }));
+  });
+
+  socket.on('qa:review:edited' as any, (data: { reviewId: string; totalScore: number; requiresReack: boolean }) => {
+    console.log('📋 QA review edited:', data.reviewId);
+    if (data.requiresReack) {
+      toast.warning(
+        'Evaluación QA Modificada',
+        `Una evaluación ha sido editada (nuevo puntaje: ${data.totalScore}). Requiere re-confirmación.`,
+        { groupKey: `qa:edit:${data.reviewId}`, duration: 8000 }
+      );
+    } else {
+      toast.info(
+        'Evaluación QA Actualizada',
+        `Una evaluación ha sido actualizada. Nuevo puntaje: ${data.totalScore}`,
+        { groupKey: `qa:edit:${data.reviewId}`, duration: 5000 }
+      );
+    }
+    // Dispatch custom event for QACoachingModal to re-check
+    window.dispatchEvent(new CustomEvent('qa:review:edited', { detail: data }));
+  });
+
   return socket;
 }
 
@@ -946,9 +978,15 @@ export function acceptSession(
 export function closeSession(
   sessionId: string, 
   reason?: string,
-  callback?: (result: { ok: boolean; error?: string }) => void
+  disposition?: {
+    categoryId: string;
+    subcategoryId?: string;
+    comment?: string;
+    tags?: string[];
+  },
+  callback?: (result: { ok: boolean; error?: string; code?: string }) => void
 ): void {
-  socket?.emit('session:close', { sessionId, reason }, callback || (() => {}));
+  socket?.emit('session:close', { sessionId, reason, disposition }, callback || (() => {}));
 }
 
 export function sendMessage(

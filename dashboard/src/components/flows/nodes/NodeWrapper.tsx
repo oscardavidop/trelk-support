@@ -140,21 +140,21 @@ const NodeWrapper: React.FC<NodeWrapperProps> = ({
       
       <button
         onMouseDown={handleDuplicate}
-        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
       >
         <CopyPlus className="w-3.5 h-3.5 text-zinc-500" /> Duplicar
       </button>
 
       <button
         onMouseDown={handleCopy}
-        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
       >
         <Copy className="w-3.5 h-3.5 text-zinc-500" /> Copiar
       </button>
 
       <button
         onMouseDown={handleCenter}
-        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-zinc-300 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
       >
         <Scan className="w-3.5 h-3.5 text-zinc-500" /> Centrar Vista
       </button>
@@ -187,7 +187,7 @@ const NodeWrapper: React.FC<NodeWrapperProps> = ({
             {/* Botón Copiar */}
             <button
               onMouseDown={handleCopy}
-              className="nodrag nopan w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 shadow-lg flex items-center justify-center transition-all"
+              className="nodrag nopan w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-zinc-50 hover:border-zinc-500 hover:bg-zinc-800 shadow-lg flex items-center justify-center transition-all"
               title="Copiar"
             >
               <Copy className="w-2.5 h-2.5" />

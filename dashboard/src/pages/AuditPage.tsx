@@ -141,7 +141,7 @@ export default function AuditPage() {
                 <Activity className="w-6 h-6 text-indigo-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Registro de Actividad</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Registro de Actividad</h1>
                 <p className="text-sm text-zinc-400">Monitoreo y auditoría del sistema</p>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function AuditPage() {
               <button
                 onClick={fetchLogs}
                 disabled={loading}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
@@ -171,7 +171,7 @@ export default function AuditPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={activeTab === 'activity' ? "Buscar actividad..." : "Buscar cambios..."}
-                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
               />
             </div>
 
@@ -228,7 +228,7 @@ function TabButton({ active, onClick, icon: Icon, label }: any) {
     <button
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${active
-        ? 'bg-zinc-800 text-white shadow-sm'
+        ? 'bg-zinc-800 text-zinc-50 shadow-sm'
         : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
         }`}
     >

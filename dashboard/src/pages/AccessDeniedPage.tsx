@@ -214,7 +214,7 @@ export default function AccessDeniedPage({
             <ShieldAlert className="w-10 h-10 text-red-600 dark:text-red-500" strokeWidth={1.5} />
           </div>
           
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-zinc-50">
             Acceso Restringido
           </h1>
           
@@ -270,7 +270,7 @@ export default function AccessDeniedPage({
           </button>
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-full py-3 px-6 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black hover:opacity-90 text-sm font-medium transition-opacity flex items-center justify-center gap-2"
+            className="w-full py-3 px-6 rounded-xl bg-gray-900 dark:bg-white text-zinc-50 dark:text-black hover:opacity-90 text-sm font-medium transition-opacity flex items-center justify-center gap-2"
           >
             <Home className="w-4 h-4" />
             Dashboard
@@ -310,7 +310,7 @@ export default function AccessDeniedPage({
                     <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-3">
                       <ShieldBan className="w-6 h-6 text-red-500" />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-50 mb-1">
                       Solicitudes Bloqueadas
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
@@ -329,7 +329,7 @@ export default function AccessDeniedPage({
                     <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-3">
                       <Ban className="w-6 h-6 text-red-500" />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-50 mb-1">
                       Permisos Denegados
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
@@ -348,7 +348,7 @@ export default function AccessDeniedPage({
                     <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-3">
                       <Clock className="w-6 h-6 text-amber-500" />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-50 mb-1">
                       Solicitud en Revisión
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
@@ -402,7 +402,7 @@ export default function AccessDeniedPage({
                       <button
                         onClick={handleSubmit}
                         disabled={isSubmitting || reason.length < 10}
-                        className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-full text-xs font-medium transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="bg-red-600 hover:bg-red-700 text-zinc-50 px-5 py-2 rounded-full text-xs font-medium transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                         Enviar
@@ -427,7 +427,7 @@ function StatusMessage({ icon: Icon, iconColor, bgColor, title, desc }: any) {
             <div className={`w-12 h-12 rounded-full ${bgColor} flex items-center justify-center mb-3`}>
                 <Icon className={`w-6 h-6 ${iconColor}`} />
             </div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-50 mb-1">{title}</h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px]">{desc}</p>
         </div>
     );

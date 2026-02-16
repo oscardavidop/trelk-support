@@ -8,7 +8,7 @@ export { Role, type IRole, initializeSystemRoles, ALL_PERMISSIONS, PERMISSION_CA
 export { AgentPreferences, type IAgentPreferences, getOrCreatePreferences } from './models/AgentPreferences.js';
 export { AgentSession, type IAgentSession, createSession, getActiveSessions, invalidateSession, invalidateAllSessionsExcept, invalidateAllAgentSessions } from './models/AgentSession.js';
 export { AgentActivity, type IAgentActivity, type ActivityType, logActivity, getRecentActivities } from './models/AgentActivity.js';
-export { ChatSession, type IChatSession, type SessionStatus, type SatisfactionLevel, type IPostChatSurvey, type ClosedByType } from './models/ChatSession.js';
+export { ChatSession, type IChatSession, type SessionStatus, type SatisfactionLevel, type IPostChatSurvey, type ClosedByType, type IChatDisposition } from './models/ChatSession.js';
 export { Message, type IMessage, type MessageSender, type MessageType } from './models/Message.js';
 export { Settings, type ISettings, type IBotSettings, type IChatSettings, type IAgentRules, type ISecuritySettings, type INotificationSettings } from './models/Settings.js';
 export { SavedReply, type ISavedReply } from './models/SavedReply.js';
@@ -99,4 +99,66 @@ export {
   hasTOTPEnabled,
 } from './models/TOTPSecret.js';
 export { WebVisitor, type IWebVisitor } from './models/WebVisitor.js';
+
+// Chat Dispositions (Tipificaciones)
+export {
+  DispositionCategory,
+  DispositionTag,
+  DispositionSettings,
+  type IDispositionCategory,
+  type IDispositionSubcategory,
+  type IDispositionTag,
+  type IDispositionSettings,
+  getActiveCategories,
+  getActiveTags,
+  getDispositionSettings,
+  clearDispositionCache,
+  validateDisposition,
+  incrementCategoryUsage,
+  incrementTagUsage,
+  initializeDefaultCategories,
+} from './models/ChatDisposition.js';
+
+// Login Policy & Rules Engine
+export {
+  LoginPolicy,
+  type ILoginPolicy,
+  type PolicyContext,
+  type PolicyResult,
+  type ChatActionContext,
+  type ChatActionResult,
+  type IChatActionRule,
+  type IGlobalAlert,
+  type ITimeRange,
+  type IRoleRedirect,
+  type ILocationRestriction,
+  type IDeviceTrust,
+  type ISessionPolicy,
+  type IProfileRequirements,
+  type IAutoStatus,
+  type IAutoQueueAssignment,
+  type IMaintenanceMode,
+  type ISupervisorAlerts,
+  type IPolicyAcceptance,
+} from './models/LoginPolicy.js';
+
+// QA & Coaching System
+export {
+  QACheckItem,
+  QASettings,
+  type IQACheckItem,
+  type IQASettings,
+  type QACheckCategory,
+} from './models/QAConfig.js';
+export {
+  QAReview,
+  type IQAReview,
+  type IQACheckEval,
+  type IQAEditLog,
+  type QACheckResult,
+  type QAReviewStatus,
+  type CoachingStatus,
+  type CoachingTag,
+} from './models/QAReview.js';
+
 export { connectDatabase, disconnectDatabase } from './connection.js';

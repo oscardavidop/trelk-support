@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Shield, MessageSquare, Workflow, Database, Clock, Users, Activity, AlertTriangle,
   Lock, Trash2, Power, RefreshCw, PlayCircle, PauseCircle, UserX, UserCheck, FileText,
-  Server, HardDrive, Cpu, Wifi, WifiOff, LogOut, Settings, ChevronRight, X, Check, Eye, EyeOff, LayoutDashboard
+  Server, HardDrive, Cpu, Wifi, WifiOff, LogOut, Settings, ChevronRight, X, Check, Eye, EyeOff, LayoutDashboard, Search
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../services/api';
@@ -68,7 +68,7 @@ function ConfirmModal({ isOpen, title, message, severity, confirmPhrase, require
             <div className={`p-3 rounded-full bg-black/40 border border-white/5 ${theme.icon}`}>
                <AlertTriangle className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold text-white">{title}</h3>
+            <h3 className="text-xl font-bold text-zinc-50">{title}</h3>
           </div>
 
           <p className="text-zinc-300 mb-6 leading-relaxed">{message}</p>
@@ -91,7 +91,7 @@ function ConfirmModal({ isOpen, title, message, severity, confirmPhrase, require
                   type="text"
                   value={phrase}
                   onChange={(e) => setPhrase(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-black/40 border border-zinc-700 rounded-xl text-white focus:border-red-500 focus:outline-none transition-all placeholder-zinc-600"
+                  className="w-full px-4 py-2.5 bg-black/40 border border-zinc-700 rounded-xl text-zinc-50 focus:border-red-500 focus:outline-none transition-all placeholder-zinc-600"
                   placeholder="Confirmar frase..."
                   autoComplete="off"
                 />
@@ -106,7 +106,7 @@ function ConfirmModal({ isOpen, title, message, severity, confirmPhrase, require
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-black/40 border border-zinc-700 rounded-xl text-white focus:border-red-500 focus:outline-none transition-all pr-10"
+                    className="w-full px-4 py-2.5 bg-black/40 border border-zinc-700 rounded-xl text-zinc-50 focus:border-red-500 focus:outline-none transition-all pr-10"
                     placeholder="••••••••"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
@@ -119,8 +119,8 @@ function ConfirmModal({ isOpen, title, message, severity, confirmPhrase, require
         </div>
 
         <div className="px-6 py-4 bg-black/20 border-t border-white/5 flex justify-end gap-3">
-          <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-zinc-400 hover:text-white font-medium transition-colors">Cancelar</button>
-          <button onClick={() => onConfirm(password)} disabled={!canConfirm || loading} className={`px-6 py-2 rounded-xl text-white font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${theme.btn}`}>
+          <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-zinc-400 hover:text-zinc-50 font-medium transition-colors">Cancelar</button>
+          <button onClick={() => onConfirm(password)} disabled={!canConfirm || loading} className={`px-6 py-2 rounded-xl text-zinc-50 font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${theme.btn}`}>
             {loading ? <RefreshCw className="animate-spin w-4 h-4" /> : <Check className="w-4 h-4" />} Confirmar
           </button>
         </div>
@@ -136,7 +136,7 @@ function ActionButton({ label, icon: Icon, severity, onClick, disabled, loading 
     info: 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20',
     warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
     danger: 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20',
-    critical: 'bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-red-900/20 shadow-lg',
+    critical: 'bg-red-600 text-zinc-50 border-red-700 hover:bg-red-700 shadow-red-900/20 shadow-lg',
   }[severity as string];
 
   return (
@@ -154,7 +154,7 @@ function StatCard({ label, value, icon: Icon, color }: any) {
         <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+        <p className="text-2xl font-bold text-zinc-50 tracking-tight">{value}</p>
         <p className="text-xs font-medium text-zinc-500 ">{label}</p>
       </div>
     </div>
@@ -173,6 +173,7 @@ export default function SystemControlPage() {
   const [chatStats, setChatStats] = useState<ChatStats | null>(null);
   const [flowStats, setFlowStats] = useState<FlowStats | null>(null);
   const [collections, setCollections] = useState<CollectionStat[]>([]);
+  const [collectionSearch, setCollectionSearch] = useState('');
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
@@ -245,10 +246,10 @@ export default function SystemControlPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3"><MessageSquare className="text-blue-500 w-8 h-8" /> Control de Chats</h2>
+            <h2 className="text-2xl font-bold text-zinc-50 flex items-center gap-3"><MessageSquare className="text-blue-500 w-8 h-8" /> Control de Chats</h2>
             <p className="text-zinc-400 mt-1">Gestión masiva de conversaciones</p>
         </div>
-        <button onClick={loadChatStats} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"><RefreshCw size={20}/></button>
+        <button onClick={loadChatStats} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50 transition-colors"><RefreshCw size={20}/></button>
       </div>
 
       {chatStats && (
@@ -278,7 +279,7 @@ export default function SystemControlPage() {
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs">{a.agentName.charAt(0)}</div>
                         <div>
-                            <span className="text-white block font-medium">{a.agentName}</span>
+                            <span className="text-zinc-50 block font-medium">{a.agentName}</span>
                             <span className="text-xs text-zinc-500">{a.count} conversaciones</span>
                         </div>
                     </div>
@@ -297,8 +298,8 @@ export default function SystemControlPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Same structure, Zinc styles */}
         <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3"><Workflow className="text-purple-500 w-8 h-8"/> Control de Flows</h2>
-            <button onClick={loadFlowStats} className="text-zinc-400 hover:text-white p-2 hover:bg-zinc-800 rounded-lg"><RefreshCw size={20}/></button>
+            <h2 className="text-2xl font-bold text-zinc-50 flex items-center gap-3"><Workflow className="text-purple-500 w-8 h-8"/> Control de Flows</h2>
+            <button onClick={loadFlowStats} className="text-zinc-400 hover:text-zinc-50 p-2 hover:bg-zinc-800 rounded-lg"><RefreshCw size={20}/></button>
         </div>
         
         {flowStats && (
@@ -317,7 +318,7 @@ export default function SystemControlPage() {
                 </div>
                 {/* List of flows with simpler design */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="px-6 py-4 border-b border-zinc-800"><h3 className="font-semibold text-white">Detalle de Flows</h3></div>
+                    <div className="px-6 py-4 border-b border-zinc-800"><h3 className="font-semibold text-zinc-50">Detalle de Flows</h3></div>
                     <div className="divide-y divide-zinc-800">
                         {flowStats.flows.map(f => (
                             <div key={f._id} className="px-6 py-3 flex justify-between items-center hover:bg-zinc-800/30">
@@ -338,8 +339,8 @@ export default function SystemControlPage() {
   const renderSystemSection = () => (
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex justify-between items-center">
-             <h2 className="text-2xl font-bold text-white flex gap-3"><Activity className="text-cyan-500 w-8 h-8"/> Estado del Sistema</h2>
-             <button onClick={loadSystemStats} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white"><RefreshCw size={20}/></button>
+             <h2 className="text-2xl font-bold text-zinc-50 flex gap-3"><Activity className="text-cyan-500 w-8 h-8"/> Estado del Sistema</h2>
+             <button onClick={loadSystemStats} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50"><RefreshCw size={20}/></button>
           </div>
 
           {systemStats && (
@@ -355,19 +356,19 @@ export default function SystemControlPage() {
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Database className="text-zinc-400"/>
-                            <div><div className="text-white font-medium">MongoDB</div><div className={`text-xs ${systemStats.mongoConnected ? 'text-emerald-400' : 'text-red-400'}`}>{systemStats.mongoConnected ? 'Conectado' : 'Error'}</div></div>
+                            <div><div className="text-zinc-50 font-medium">MongoDB</div><div className={`text-xs ${systemStats.mongoConnected ? 'text-emerald-400' : 'text-red-400'}`}>{systemStats.mongoConnected ? 'Conectado' : 'Error'}</div></div>
                         </div>
                     </div>
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Server className="text-zinc-400"/>
-                            <div><div className="text-white font-medium">Redis</div><div className={`text-xs ${systemStats.redisConnected ? 'text-emerald-400' : 'text-red-400'}`}>{systemStats.redisConnected ? 'Conectado' : 'Error'}</div></div>
+                            <div><div className="text-zinc-50 font-medium">Redis</div><div className={`text-xs ${systemStats.redisConnected ? 'text-emerald-400' : 'text-red-400'}`}>{systemStats.redisConnected ? 'Conectado' : 'Error'}</div></div>
                         </div>
                     </div>
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <LayoutDashboard className="text-zinc-400"/>
-                            <div><div className="text-white font-medium">Node Version</div><div className="text-xs text-zinc-500">{systemStats.nodeVersion}</div></div>
+                            <div><div className="text-zinc-50 font-medium">Node Version</div><div className="text-xs text-zinc-500">{systemStats.nodeVersion}</div></div>
                         </div>
                     </div>
                 </div>
@@ -394,8 +395,8 @@ export default function SystemControlPage() {
   const renderSessionsSection = () => (
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex justify-between items-center">
-             <h2 className="text-2xl font-bold text-white flex gap-3"><Users className="text-green-500 w-8 h-8"/> Sesiones</h2>
-             <button onClick={loadSessionStats} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white"><RefreshCw size={20}/></button>
+             <h2 className="text-2xl font-bold text-zinc-50 flex gap-3"><Users className="text-green-500 w-8 h-8"/> Sesiones</h2>
+             <button onClick={loadSessionStats} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50"><RefreshCw size={20}/></button>
           </div>
           {sessionStats && (
               <>
@@ -411,7 +412,7 @@ export default function SystemControlPage() {
                     </div>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="px-6 py-4 border-b border-zinc-800"><h3 className="font-semibold text-white">Usuarios ({sessionStats.agents.length})</h3></div>
+                    <div className="px-6 py-4 border-b border-zinc-800"><h3 className="font-semibold text-zinc-50">Usuarios ({sessionStats.agents.length})</h3></div>
                     <div className="divide-y divide-zinc-800 max-h-96 overflow-y-auto custom-scrollbar">
                         {sessionStats.agents.map(a => (
                             <div key={a.id} className="px-6 py-3 flex justify-between items-center hover:bg-zinc-800/30">
@@ -439,8 +440,8 @@ export default function SystemControlPage() {
   const renderAuditSection = () => (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex justify-between items-center">
-             <h2 className="text-2xl font-bold text-white flex gap-3"><FileText className="text-zinc-400 w-8 h-8"/> Logs de Auditoría</h2>
-             <button onClick={() => loadAuditLogs(auditPage)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white"><RefreshCw size={20}/></button>
+             <h2 className="text-2xl font-bold text-zinc-50 flex gap-3"><FileText className="text-zinc-400 w-8 h-8"/> Logs de Auditoría</h2>
+             <button onClick={() => loadAuditLogs(auditPage)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50"><RefreshCw size={20}/></button>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <table className="w-full text-left text-sm text-zinc-400">
@@ -451,7 +452,7 @@ export default function SystemControlPage() {
                       {auditLogs.map(log => (
                           <tr key={log._id} className="hover:bg-zinc-800/30">
                               <td className="px-6 py-3">{new Date(log.createdAt).toLocaleString()}</td>
-                              <td className="px-6 py-3 text-white">{log.adminName}</td>
+                              <td className="px-6 py-3 text-zinc-50">{log.adminName}</td>
                               <td className="px-6 py-3"><span className={`px-2 py-0.5 rounded text-xs border ${log.severity === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{log.action}</span></td>
                               <td className="px-6 py-3 font-mono text-xs">{log.target}</td>
                               <td className="px-6 py-3 text-xs">{log.result === 'success' ? <span className="text-emerald-400">Exitosa</span> : <span className="text-red-400">Fallida</span>}</td>
@@ -460,9 +461,9 @@ export default function SystemControlPage() {
                   </tbody>
               </table>
               <div className="px-6 py-3 border-t border-zinc-800 flex justify-between items-center text-xs">
-                  <button disabled={auditPage <= 1} onClick={() => loadAuditLogs(auditPage - 1)} className="hover:text-white disabled:opacity-50">Anterior</button>
+                  <button disabled={auditPage <= 1} onClick={() => loadAuditLogs(auditPage - 1)} className="hover:text-zinc-50 disabled:opacity-50">Anterior</button>
                   <span>Página {auditPage}</span>
-                  <button disabled={auditLogs.length < 20} onClick={() => loadAuditLogs(auditPage + 1)} className="hover:text-white disabled:opacity-50">Siguiente</button>
+                  <button disabled={auditLogs.length < 20} onClick={() => loadAuditLogs(auditPage + 1)} className="hover:text-zinc-50 disabled:opacity-50">Siguiente</button>
               </div>
           </div>
       </div>
@@ -474,12 +475,12 @@ export default function SystemControlPage() {
       {/* Sidebar */}
       <div className="w-72 bg-zinc-900/30 border-r border-zinc-800 flex flex-col shrink-0 z-20">
         <div className="p-6 border-b border-zinc-800/50">
-            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-3"><Shield className="text-red-500"/> Panel Admin</h1>
+            <h1 className="text-xl font-bold text-zinc-50 tracking-tight flex items-center gap-3"><Shield className="text-red-500"/> Panel Admin</h1>
             <p className="text-sm text-zinc-500 mt-1 pl-9">Control DevOps</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
             {SECTIONS.map(s => (
-                <button key={s.id} onClick={() => setActiveSection(s.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all ${activeSection === s.id ? 'bg-zinc-800 text-white shadow-lg shadow-black/20' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}`}>
+                <button key={s.id} onClick={() => setActiveSection(s.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all ${activeSection === s.id ? 'bg-zinc-800 text-zinc-50 shadow-lg shadow-black/20' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}`}>
                     <s.icon className={`w-5 h-5 ${activeSection === s.id ? s.color : 'text-zinc-500'}`} />
                     <span className="text-sm font-medium">{s.label}</span>
                     {activeSection === s.id && <ChevronRight className="w-4 h-4 ml-auto text-zinc-600"/>}
@@ -502,8 +503,8 @@ export default function SystemControlPage() {
             {activeSection === 'database' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-white flex gap-3"><Database className="text-red-500 w-8 h-8"/> Base de Datos</h2>
-                        <button onClick={loadCollections} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white"><RefreshCw size={20}/></button>
+                        <h2 className="text-2xl font-bold text-zinc-50 flex gap-3"><Database className="text-red-500 w-8 h-8"/> Base de Datos</h2>
+                        <button onClick={loadCollections} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50"><RefreshCw size={20}/></button>
                     </div>
                     <div className="bg-red-950/20 border border-red-900/50 p-6 rounded-2xl flex gap-4 items-start">
                         <AlertTriangle className="text-red-500 w-6 h-6 shrink-0"/>
@@ -512,8 +513,19 @@ export default function SystemControlPage() {
                             <p className="text-red-300/70 text-sm">Las acciones aquí eliminan datos permanentemente. Asegúrate de tener backups.</p>
                         </div>
                     </div>
+                    {/* Search bar for collections */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"/>
+                        <input
+                            type="text"
+                            value={collectionSearch}
+                            onChange={(e) => setCollectionSearch(e.target.value)}
+                            placeholder="Buscar colecciones..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500/50 transition-all"
+                        />
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {collections.map(c => (
+                        {collections.filter(c => c.name.toLowerCase().includes(collectionSearch.toLowerCase())).map(c => (
                             <div key={c.name} className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl hover:border-zinc-700 transition-colors">
                                 <div className="flex justify-between items-start mb-4">
                                     <div><h4 className="font-bold text-zinc-200">{c.name}</h4><div className="text-xs text-zinc-500 mt-1">{c.count.toLocaleString()} docs • {c.size}</div></div>
@@ -531,8 +543,8 @@ export default function SystemControlPage() {
             {activeSection === 'cache' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-white flex gap-3"><Server className="text-orange-500 w-8 h-8"/> Cache & Colas</h2>
-                        <button onClick={() => {loadCacheStats(); loadQueueStats();}} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white"><RefreshCw size={20}/></button>
+                        <h2 className="text-2xl font-bold text-zinc-50 flex gap-3"><Server className="text-orange-500 w-8 h-8"/> Cache & Colas</h2>
+                        <button onClick={() => {loadCacheStats(); loadQueueStats();}} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-50"><RefreshCw size={20}/></button>
                     </div>
                     {cacheStats && (
                         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
@@ -554,7 +566,7 @@ export default function SystemControlPage() {
                             {Object.entries(queueStats).map(([qName, qStats]) => (
                                 <div key={qName} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
                                     <div className="flex justify-between items-center mb-4">
-                                        <h4 className="font-bold text-white capitalize">{qName.replace('Queue', '')}</h4>
+                                        <h4 className="font-bold text-zinc-50 capitalize">{qName.replace('Queue', '')}</h4>
                                         <div className="flex gap-1">
                                             <button onClick={() => executeAction('/api/admin-control/queue/pause', { queueName: qName.replace('Queue', '') }, { title: 'Pausar Cola', message: 'Detener procesamiento.', severity: 'warning' })} className="p-1.5 hover:bg-zinc-800 rounded text-yellow-500"><PauseCircle size={16}/></button>
                                             <button onClick={() => executeAction('/api/admin-control/queue/resume', { queueName: qName.replace('Queue', '') }, { title: 'Reanudar Cola', message: 'Continuar procesamiento.', severity: 'info' })} className="p-1.5 hover:bg-zinc-800 rounded text-green-500"><PlayCircle size={16}/></button>

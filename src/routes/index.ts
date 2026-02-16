@@ -35,6 +35,11 @@ import { registerTelegramLinkRoutes } from './telegram-link.routes.js';
 import internalNotificationsRoutes from './internal-notifications.routes.js';
 import internalBroadcastRoutes from './internal-broadcast.routes.js';
 import webchatRoutes from './webchat.routes.js';
+import { registerPolicyRoutes } from './policy.routes.js';
+import dispositionRoutes from './disposition.routes.js';
+import { mediaAdminRoutes } from './media-admin.routes.js';
+import { replayRoutes } from './replay.routes.js';
+import { qaRoutes } from './qa.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -163,4 +168,21 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // WebChat / Omnichannel routes (widget config + project management)
   await fastify.register(webchatRoutes, { prefix: '/api/webchat' });
+
+  // Login Policy / Agent Rules routes (policy engine configuration)
+  await fastify.register(async (policyRoutes) => {
+    await registerPolicyRoutes(policyRoutes);
+  }, { prefix: '/api' });
+
+  // Chat Disposition / Tipificación routes (enterprise feature)
+  await fastify.register(dispositionRoutes);
+
+  // Media Admin routes (enterprise storage management - admin/supervisor only)
+  await fastify.register(mediaAdminRoutes, { prefix: '/api/media-admin' });
+
+  // Chat Replay / Playback routes (enterprise QA feature - admin/supervisor only)
+  await fastify.register(replayRoutes);
+
+  // QA & Coaching routes (enterprise quality assurance system)
+  await fastify.register(qaRoutes);
 }

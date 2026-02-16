@@ -67,7 +67,7 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
         size={size}
         onClick={() => setIsDialogOpen(true)}
         disabled={disabled || isLoading}
-        className={`relative group border-zinc-700 hover:bg-zinc-800 hover:text-white transition-all ${className}`}
+        className={`relative group border-zinc-700 hover:bg-zinc-800 hover:text-zinc-50 transition-all ${className}`}
         title="Reactivar conversación"
       >
         <RotateCcw className={`w-4 h-4 ${reopenCount > 0 && size !== 'icon' ? 'mr-2' : ''} group-hover:-rotate-90 transition-transform duration-300`} />
@@ -96,8 +96,8 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
                <RotateCcw className="w-6 h-6 text-emerald-500" />
             </div>
             
-            <DialogTitle className="text-lg font-bold text-white text-center">
-              Reactivar Conversación
+            <DialogTitle className="text-lg font-bold text-zinc-50 text-center">
+              Reabrir Conversación
             </DialogTitle>
             
             <DialogDescription className="text-center text-zinc-400 text-sm mt-1 max-w-[280px]">
@@ -141,7 +141,7 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
               variant="ghost"
               onClick={() => setIsDialogOpen(false)}
               disabled={isLoading}
-              className="w-full sm:w-auto text-zinc-400 hover:text-white hover:bg-zinc-800"
+              className="w-full sm:w-auto text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800"
             >
               Cancelar
             </Button>
@@ -149,7 +149,7 @@ export const ReopenChatButton: React.FC<ReopenChatButtonProps> = ({
             <Button
               onClick={handleReopen}
               disabled={isLoading}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/20"
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-zinc-50 border-0 shadow-lg shadow-emerald-900/20"
             >
               {isLoading ? (
                 <>

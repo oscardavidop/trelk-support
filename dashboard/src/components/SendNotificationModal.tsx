@@ -134,7 +134,7 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -148,7 +148,7 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
               <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20 mb-4 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
                 <Send className="w-8 h-8 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1">¡Enviado!</h3>
+              <h3 className="text-xl font-bold text-zinc-50 mb-1">¡Enviado!</h3>
               <p className="text-zinc-400">El agente recibirá la notificación al instante.</p>
             </div>
           ) : (
@@ -156,13 +156,13 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
               
               {/* Agent Select */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Destinatario</label>
+                <label className="text-xs font-bold text-zinc-500 uppercase r">Destinatario</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <select
                     value={selectedAgentId}
                     onChange={(e) => setSelectedAgentId(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none appearance-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none appearance-none transition-all"
                   >
                     <option value="">Seleccionar agente...</option>
                     {agents.map((agent) => (
@@ -179,7 +179,7 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
 
               {/* Type Grid */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Tipo de Aviso</label>
+                <label className="text-xs font-bold text-zinc-500 uppercase r">Tipo de Aviso</label>
                 <div className="grid grid-cols-3 gap-2">
                   {NOTIFICATION_TYPES.map(({ value, label, icon: Icon }) => (
                     <button
@@ -202,19 +202,19 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
               {/* Message Content */}
               <div className="space-y-4 pt-2 border-t border-zinc-800">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Contenido</label>
+                  <label className="text-xs font-bold text-zinc-500 uppercase r">Contenido</label>
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Título (Opcional)"
-                    className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 outline-none transition-all"
                   />
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Escribe el mensaje aquí..."
                     rows={4}
-                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-indigo-500 outline-none resize-none transition-all"
+                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-50 placeholder-zinc-600 focus:border-indigo-500 outline-none resize-none transition-all"
                   />
                 </div>
               </div>
@@ -223,7 +223,7 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-zinc-800">
                 {/* Priority */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Prioridad</label>
+                  <label className="text-xs font-bold text-zinc-500 uppercase r">Prioridad</label>
                   <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800">
                     {(['normal', 'urgent'] as const).map(p => (
                       <button
@@ -232,7 +232,7 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                         onClick={() => setPriority(p)}
                         className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-md transition-all ${
                           priority === p 
-                            ? p === 'urgent' ? 'bg-red-500/20 text-red-400 shadow-sm' : 'bg-zinc-800 text-white shadow-sm'
+                            ? p === 'urgent' ? 'bg-red-500/20 text-red-400 shadow-sm' : 'bg-zinc-800 text-zinc-50 shadow-sm'
                             : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                       >
@@ -244,10 +244,10 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
 
                 {/* Telegram Toggle */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Canales</label>
+                  <label className="text-xs font-bold text-zinc-500 uppercase r">Canales</label>
                   <label className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${sendTelegram ? 'bg-blue-500/10 border-blue-500/30' : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700'}`}>
                     <input type="checkbox" checked={sendTelegram} onChange={e => setSendTelegram(e.target.checked)} className="hidden" />
-                    <div className={`p-1 rounded ${sendTelegram ? 'bg-blue-500 text-white' : 'bg-zinc-800 text-zinc-600'}`}>
+                    <div className={`p-1 rounded ${sendTelegram ? 'bg-blue-500 text-zinc-50' : 'bg-zinc-800 text-zinc-600'}`}>
                       <Send className="w-3.5 h-3.5 rotate-45" />
                     </div>
                     <div className="flex-1">
@@ -271,14 +271,14 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                         value={actionUrl}
                         onChange={e => setActionUrl(e.target.value)}
                         placeholder="URL (/chat/123)"
-                        className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 outline-none"
+                        className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 outline-none"
                       />
                     </div>
                     <input
                       value={actionLabel}
                       onChange={e => setActionLabel(e.target.value)}
                       placeholder="Texto del botón"
-                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white focus:border-indigo-500 outline-none"
+                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 outline-none"
                     />
                   </div>
                 )}
@@ -293,13 +293,13 @@ export const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
 
               {/* Footer Actions */}
               <div className="pt-2 flex justify-end gap-3 border-t border-zinc-800">
-                <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors uppercase tracking-wide">
+                <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-xl transition-colors uppercase ">
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wide rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-xs font-bold uppercase  rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Enviar Ahora

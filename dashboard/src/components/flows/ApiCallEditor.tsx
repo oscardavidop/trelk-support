@@ -94,7 +94,7 @@
 //   }[cfg.method];
 
 //   // --- Estilos Comunes para Inputs ---
-//   const inputBase = "bg-zinc-900 border border-zinc-700 rounded-lg text-xs text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-600";
+//   const inputBase = "bg-zinc-900 border border-zinc-700 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-600";
 
 //   return (
 //     <div className="flex flex-col h-full w-full max-w-full overflow-hidden">
@@ -117,13 +117,13 @@
 //             value={cfg.url}
 //             onChange={(e) => update({ url: e.target.value })}
 //             placeholder="https://api.ejemplo.com/v1"
-//             className="flex-1 bg-transparent px-3 py-2 text-sm text-white font-mono placeholder-zinc-600 outline-none min-w-0"
+//             className="flex-1 bg-transparent px-3 py-2 text-sm text-zinc-50 font-mono placeholder-zinc-600 outline-none min-w-0"
 //           />
 //         </div>
 //         <button
 //           onClick={() => setShowPlayground(!showPlayground)}
 //           className={`px-3 rounded-lg flex items-center justify-center transition-all border shrink-0 ${
-//             showPlayground ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500'
+//             showPlayground ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-indigo-600 border-indigo-500 text-zinc-50 hover:bg-indigo-500'
 //           }`}
 //         >
 //           {showPlayground ? <ChevronUp className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
@@ -164,7 +164,7 @@
 //             onClick={() => setActiveTab(tab.id as any)}
 //             className={`
 //               flex-1 flex items-center justify-center gap-2 px-2 py-1.5 text-[11px] font-medium rounded-md transition-all whitespace-nowrap
-//               ${activeTab === tab.id ? 'bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}
+//               ${activeTab === tab.id ? 'bg-zinc-800 text-zinc-50 shadow-sm ring-1 ring-zinc-700' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}
 //             `}
 //           >
 //             <tab.icon className="w-3.5 h-3.5" />
@@ -305,7 +305,7 @@
 //                   key={t} onClick={() => update({ bodyType: t as any })}
 //                   className={`text-[10px] px-2 py-1 rounded border whitespace-nowrap transition-colors ${
 //                     cfg.bodyType === t 
-//                     ? 'bg-zinc-800 border-zinc-700 text-white' 
+//                     ? 'bg-zinc-800 border-zinc-700 text-zinc-50' 
 //                     : 'bg-transparent border-transparent text-zinc-500 hover:text-zinc-300'
 //                   }`}
 //                 >
@@ -388,7 +388,7 @@
 //                         <input 
 //                            value={cfg.saveResponseTo} onChange={e => update({ saveResponseTo: e.target.value })}
 //                            placeholder="ej: api_response_full"
-//                            className="bg-transparent text-xs text-white w-full outline-none placeholder-zinc-700 min-w-0"
+//                            className="bg-transparent text-xs text-zinc-50 w-full outline-none placeholder-zinc-700 min-w-0"
 //                         />
 //                      </div>
 //                   </div>
@@ -399,7 +399,7 @@
 //                         <input 
 //                            value={cfg.saveStatusCodeTo} onChange={e => update({ saveStatusCodeTo: e.target.value })}
 //                            placeholder="ej: api_status"
-//                            className="bg-transparent text-xs text-white w-full outline-none placeholder-zinc-700 min-w-0"
+//                            className="bg-transparent text-xs text-zinc-50 w-full outline-none placeholder-zinc-700 min-w-0"
 //                         />
 //                      </div>
 //                   </div>
@@ -420,15 +420,15 @@
 //               <div className="grid grid-cols-3 gap-3">
 //                 <div className="bg-zinc-900 border border-zinc-800 rounded p-2">
 //                   <span className="text-[10px] text-zinc-500 block mb-1">Timeout (s)</span>
-//                   <input type="number" value={cfg.timeout} onChange={e => update({ timeout: parseInt(e.target.value) })} className="bg-transparent text-sm text-white w-full outline-none font-bold text-center"/>
+//                   <input type="number" value={cfg.timeout} onChange={e => update({ timeout: parseInt(e.target.value) })} className="bg-transparent text-sm text-zinc-50 w-full outline-none font-bold text-center"/>
 //                 </div>
 //                 <div className="bg-zinc-900 border border-zinc-800 rounded p-2">
 //                   <span className="text-[10px] text-zinc-500 block mb-1">Reintentos</span>
-//                   <input type="number" value={cfg.retryCount} onChange={e => update({ retryCount: parseInt(e.target.value) })} className="bg-transparent text-sm text-white w-full outline-none font-bold text-center"/>
+//                   <input type="number" value={cfg.retryCount} onChange={e => update({ retryCount: parseInt(e.target.value) })} className="bg-transparent text-sm text-zinc-50 w-full outline-none font-bold text-center"/>
 //                 </div>
 //                 <div className="bg-zinc-900 border border-zinc-800 rounded p-2">
 //                   <span className="text-[10px] text-zinc-500 block mb-1">Delay (s)</span>
-//                   <input type="number" value={cfg.retryDelay} onChange={e => update({ retryDelay: parseInt(e.target.value) })} className="bg-transparent text-sm text-white w-full outline-none font-bold text-center"/>
+//                   <input type="number" value={cfg.retryDelay} onChange={e => update({ retryDelay: parseInt(e.target.value) })} className="bg-transparent text-sm text-zinc-50 w-full outline-none font-bold text-center"/>
 //                 </div>
 //               </div>
 //             </div>
@@ -476,7 +476,7 @@
 //                        <select 
 //                           value={cfg.errorNodeId || ''} 
 //                           onChange={e => update({ errorNodeId: e.target.value })}
-//                           className="w-full bg-zinc-950 border border-zinc-700 rounded pl-8 pr-8 py-2 text-xs text-white outline-none cursor-pointer appearance-none"
+//                           className="w-full bg-zinc-950 border border-zinc-700 rounded pl-8 pr-8 py-2 text-xs text-zinc-50 outline-none cursor-pointer appearance-none"
 //                        >
 //                           <option value="">Seleccionar...</option>
 //                           {flowNodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
@@ -658,7 +658,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
     DELETE: 'text-red-400', PATCH: 'text-violet-400'
   }[cfg.method];
 
-  const inputBase = "bg-zinc-900 border border-zinc-700 rounded-lg text-xs text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-600";
+  const inputBase = "bg-zinc-900 border border-zinc-700 rounded-lg text-xs text-zinc-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all placeholder-zinc-600";
 
   return (
     <div className="flex flex-col h-full w-full max-w-full overflow-hidden">
@@ -681,13 +681,13 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
             value={cfg.url}
             onChange={(e) => update({ url: e.target.value })}
             placeholder="https://api.ejemplo.com/v1"
-            className="flex-1 bg-transparent px-3 py-2 text-sm text-white font-mono placeholder-zinc-600 outline-none min-w-0"
+            className="flex-1 bg-transparent px-3 py-2 text-sm text-zinc-50 font-mono placeholder-zinc-600 outline-none min-w-0"
           />
         </div>
         <button
           onClick={() => setShowPlayground(!showPlayground)}
           className={`px-3 rounded-lg flex items-center justify-center transition-all border shrink-0 ${
-            showPlayground ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500'
+            showPlayground ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-indigo-600 border-indigo-500 text-zinc-50 hover:bg-indigo-500'
           }`}
         >
           {showPlayground ? <ChevronUp className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
@@ -703,7 +703,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
             </span>
             <div className="flex items-center gap-2">
                {playgroundResult?.body && (
-                  <button onClick={() => copyToClipboard(JSON.stringify(playgroundResult.body, null, 2))} className="text-zinc-500 hover:text-white transition-colors">
+                  <button onClick={() => copyToClipboard(JSON.stringify(playgroundResult.body, null, 2))} className="text-zinc-500 hover:text-zinc-50 transition-colors">
                      {copied ? <Check className="w-3 h-3 text-emerald-500"/> : <Copy className="w-3 h-3"/>}
                   </button>
                )}
@@ -775,7 +775,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
             onClick={() => setActiveTab(tab.id as any)}
             className={`
               flex-1 flex items-center justify-center gap-2 px-2 py-1.5 text-[11px] font-medium rounded-md transition-all whitespace-nowrap
-              ${activeTab === tab.id ? 'bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}
+              ${activeTab === tab.id ? 'bg-zinc-800 text-zinc-50 shadow-sm ring-1 ring-zinc-700' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}
             `}
           >
             <tab.icon className="w-3.5 h-3.5" />
@@ -863,7 +863,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                   key={t} onClick={() => update({ bodyType: t as any })}
                   className={`text-[10px] px-2 py-1 rounded border whitespace-nowrap transition-colors ${
                     cfg.bodyType === t 
-                    ? 'bg-zinc-800 border-zinc-700 text-white' 
+                    ? 'bg-zinc-800 border-zinc-700 text-zinc-50' 
                     : 'bg-transparent border-transparent text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
@@ -926,7 +926,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                      <input 
                         value={cfg.saveResponseTo} onChange={e => update({ saveResponseTo: e.target.value })}
                         placeholder="ej: api_response_full"
-                        className="bg-transparent text-xs text-white w-full outline-none placeholder-zinc-700 min-w-0"
+                        className="bg-transparent text-xs text-zinc-50 w-full outline-none placeholder-zinc-700 min-w-0"
                      />
                   </div>
                   <div className="bg-zinc-900 border border-zinc-800 rounded px-3 py-2">
@@ -934,7 +934,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                      <input 
                         value={cfg.saveStatusCodeTo} onChange={e => update({ saveStatusCodeTo: e.target.value })}
                         placeholder="ej: api_status"
-                        className="bg-transparent text-xs text-white w-full outline-none placeholder-zinc-700 min-w-0"
+                        className="bg-transparent text-xs text-zinc-50 w-full outline-none placeholder-zinc-700 min-w-0"
                      />
                   </div>
                </div>
@@ -952,15 +952,15 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-zinc-900 border border-zinc-800 rounded p-2">
                   <span className="text-[10px] text-zinc-500 block mb-1">Timeout (s)</span>
-                  <input type="number" value={cfg.timeout} onChange={e => update({ timeout: parseInt(e.target.value) })} className="bg-transparent text-sm text-white w-full outline-none font-bold text-center"/>
+                  <input type="number" value={cfg.timeout} onChange={e => update({ timeout: parseInt(e.target.value) })} className="bg-transparent text-sm text-zinc-50 w-full outline-none font-bold text-center"/>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded p-2">
                   <span className="text-[10px] text-zinc-500 block mb-1">Reintentos</span>
-                  <input type="number" value={cfg.retryCount} onChange={e => update({ retryCount: parseInt(e.target.value) })} className="bg-transparent text-sm text-white w-full outline-none font-bold text-center"/>
+                  <input type="number" value={cfg.retryCount} onChange={e => update({ retryCount: parseInt(e.target.value) })} className="bg-transparent text-sm text-zinc-50 w-full outline-none font-bold text-center"/>
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 rounded p-2">
                   <span className="text-[10px] text-zinc-500 block mb-1">Delay (s)</span>
-                  <input type="number" value={cfg.retryDelay} onChange={e => update({ retryDelay: parseInt(e.target.value) })} className="bg-transparent text-sm text-white w-full outline-none font-bold text-center"/>
+                  <input type="number" value={cfg.retryDelay} onChange={e => update({ retryDelay: parseInt(e.target.value) })} className="bg-transparent text-sm text-zinc-50 w-full outline-none font-bold text-center"/>
                 </div>
               </div>
             </div>
@@ -1004,7 +1004,7 @@ export default function ApiCallEditor({ config, onChange, flowNodes = [] }: ApiC
                        <select 
                           value={cfg.errorNodeId || ''} 
                           onChange={e => update({ errorNodeId: e.target.value })}
-                          className="w-full bg-zinc-900 border border-zinc-700 rounded pl-8 pr-8 py-2 text-xs text-white outline-none cursor-pointer appearance-none"
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded pl-8 pr-8 py-2 text-xs text-zinc-50 outline-none cursor-pointer appearance-none"
                        >
                           <option value="">Seleccionar...</option>
                           {flowNodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}

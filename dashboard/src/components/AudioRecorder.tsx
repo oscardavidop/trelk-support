@@ -197,7 +197,7 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
              'Preparando...'}
           </span>
         </div>
-        <span className="text-lg font-mono text-white">{formatDuration(duration)}</span>
+        <span className="text-lg font-mono text-zinc-50">{formatDuration(duration)}</span>
       </div>
 
       {/* Error message */}
@@ -244,7 +244,7 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
             <>
               <button
                 onClick={togglePause}
-                className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="p-2 bg-gray-800 hover:bg-gray-700 text-zinc-50 rounded-lg transition-colors"
                 title={state === 'recording' ? 'Pausar' : 'Reanudar'}
               >
                 {state === 'recording' ? (
@@ -255,7 +255,7 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
               </button>
               <button
                 onClick={stopRecording}
-                className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="p-2 bg-red-600 hover:bg-red-700 text-zinc-50 rounded-lg transition-colors"
                 title="Detener"
               >
                 <Square className="w-5 h-5" />
@@ -265,7 +265,7 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
             <>
               <button
                 onClick={togglePlayback}
-                className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="p-2 bg-gray-800 hover:bg-gray-700 text-zinc-50 rounded-lg transition-colors"
                 title={isPlaying ? 'Pausar' : 'Reproducir'}
               >
                 {isPlaying ? (
@@ -289,14 +289,14 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
         <div className="flex items-center gap-2">
           <button
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-zinc-50 text-sm rounded-lg transition-colors"
           >
             Cancelar
           </button>
           {state === 'stopped' && audioBlob && (
             <button
               onClick={handleSend}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-zinc-50 text-sm font-medium rounded-lg transition-colors"
             >
               <Send className="w-4 h-4" />
               Enviar

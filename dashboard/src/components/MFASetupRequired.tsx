@@ -60,7 +60,7 @@ export function MFASetupRequired({ onSetupComplete }: MFASetupRequiredProps) {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-2xl mb-4">
               <Shield className="w-8 h-8 text-purple-400" />
             </div>
-            <h1 className="text-xl font-bold text-white mb-2">Configuración de MFA Requerida</h1>
+            <h1 className="text-xl font-bold text-zinc-50 mb-2">Configuración de MFA Requerida</h1>
             <p className="text-sm text-zinc-400">
               Tu organización requiere autenticación de dos factores. Configura un método para continuar.
             </p>
@@ -90,7 +90,7 @@ export function MFASetupRequired({ onSetupComplete }: MFASetupRequiredProps) {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-white">Telegram</h3>
+                    <h3 className="font-semibold text-zinc-50">Telegram</h3>
                     {hasTelegram && (
                       <span className="px-2 py-0.5 text-[10px] font-medium bg-emerald-500/20 text-emerald-400 rounded-full">
                         Recomendado
@@ -125,7 +125,7 @@ export function MFASetupRequired({ onSetupComplete }: MFASetupRequiredProps) {
                   }`} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white">App Autenticadora</h3>
+                  <h3 className="font-semibold text-zinc-50">App Autenticadora</h3>
                   <p className="text-sm text-zinc-400 mt-0.5">
                     Google Authenticator, Authy, etc.
                   </p>

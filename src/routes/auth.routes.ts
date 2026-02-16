@@ -70,12 +70,18 @@ function extractDeviceInfo(request: FastifyRequest, bodyDeviceInfo?: LoginBody['
   else if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) os = 'Linux';
   else if (/android/i.test(userAgent)) os = 'Android';
   else if (/iphone|ipad|ipod/i.test(userAgent)) os = 'iOS';
+
+  // Get country from Cloudflare header (handle array case)
+  const cfCountry = request.headers['cf-ipcountry'];
+  const country = Array.isArray(cfCountry) ? cfCountry[0] : (cfCountry || 'Unknown');
   
+  console.log('Extracted device info:', { deviceType, browser, os, ip, country }, request.headers);
   return {
     deviceType: bodyDeviceInfo?.deviceType || deviceType,
     browser: bodyDeviceInfo?.browser || browser,
     os: bodyDeviceInfo?.os || os,
     ip,
+    country,
   };
 }
 
@@ -172,6 +178,15 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
       forcePasswordChange: result.forcePasswordChange,
       telegramLinkRequired: result.telegramLinkRequired,
       mfaSetupRequired: result.mfaSetupRequired,
+      // Policy engine results
+      redirect: result.redirect,
+      profileIncomplete: result.profileIncomplete,
+      globalAlert: result.globalAlert,
+      policyAcceptanceRequired: result.policyAcceptanceRequired,
+      readOnlyMode: result.readOnlyMode,
+      maintenanceMode: result.maintenanceMode,
+      maintenanceMessage: result.maintenanceMessage,
+      warnings: result.warnings,
     };
   });
 
@@ -273,6 +288,15 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
         forcePasswordChange: result.forcePasswordChange,
         telegramLinkRequired: result.telegramLinkRequired,
         mfaSetupRequired: result.mfaSetupRequired,
+        // Policy engine results
+        redirect: result.redirect,
+        profileIncomplete: result.profileIncomplete,
+        globalAlert: result.globalAlert,
+        policyAcceptanceRequired: result.policyAcceptanceRequired,
+        readOnlyMode: result.readOnlyMode,
+        maintenanceMode: result.maintenanceMode,
+        maintenanceMessage: result.maintenanceMessage,
+        warnings: result.warnings,
       };
     }
   );
@@ -488,6 +512,18 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
           forcePasswordChange: result.loginResult.forcePasswordChange,
           telegramLinkRequired: result.loginResult.telegramLinkRequired,
           mfaSetupRequired: result.loginResult.mfaSetupRequired,
+        };
+      }
+
+      // If MFA is required after QR approval
+      if (result.status === 'approved' && result.mfaRequired) {
+        return {
+          ok: true,
+          status: 'approved',
+          mfaRequired: true,
+          mfaLoginToken: result.mfaLoginToken,
+          mfaMethods: result.mfaMethods,
+          agentName: result.agentName,
         };
       }
 

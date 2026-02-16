@@ -11,14 +11,16 @@ import { ToastContainer } from '../components/ToastContainer';
 import { SupervisorPanel, WhisperNotifications } from '../components/supervisor';
 import { CommandPalette } from '../components/CommandPalette';
 import { KeyboardShortcutsModal } from '../components/KeyboardShortcutsModal';
-import { FocusModeIndicator, useFocusModeStore } from '../hooks/useFocusMode';
+import { FocusModeIndicator } from '../components/FocusModeIndicator';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { TelegramLinkRequired } from '../components/TelegramLinkRequired';
 import { MFASetupRequired } from '../components/MFASetupRequired';
 import AutoLockProvider from '../components/AutoLockProvider';
 import BroadcastBanner from '../components/BroadcastBanner';
+import QACoachingModal from '../components/QACoachingModal';
 import { initNotificationSocket, cleanupNotificationSocket } from '../stores/notificationStore';
 import { Loader2 } from 'lucide-react';
+import useFocusModeStore from '../hooks/useFocusMode';
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
@@ -26,11 +28,13 @@ export default function DashboardLayout() {
   const stats = useChatStore((state) => state.stats);
   const { showSupervisorPanel, toggleSupervisorPanel } = useSupervisorStore();
   const { isEnabled: isFocusMode, toggleFocusMode, disableFocusMode } = useFocusModeStore();
-  
+
   // UI State
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  
+  const [qaGatePassed, setQaGatePassed] = useState(false);
+  const [qaGateChecked, setQaGateChecked] = useState(false);
+
   // Check if user can access supervisor features
   const canSupervise = agent?.role === 'admin' || agent?.role === 'supervisor';
 
@@ -38,11 +42,11 @@ export default function DashboardLayout() {
   const handleToggleShortcutsHelp = useCallback(() => {
     setShowShortcutsHelp(prev => !prev);
   }, []);
-  
+
   const handleToggleCommandPalette = useCallback(() => {
     setShowCommandPalette(prev => !prev);
   }, []);
-  
+
   const handleEscape = useCallback(() => {
     if (showCommandPalette) {
       setShowCommandPalette(false);
@@ -52,7 +56,7 @@ export default function DashboardLayout() {
       disableFocusMode();
     }
   }, [showCommandPalette, showShortcutsHelp, isFocusMode, disableFocusMode]);
-  
+
   // Register keyboard shortcuts
   useKeyboardShortcuts({
     shortcuts: [
@@ -120,15 +124,15 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (isAuthenticated && agent) {
       const socket = initializeSocket();
-      
+
       // Initialize notification socket events
       initNotificationSocket();
-      
+
       // Set agent online when connected (only on initial connect)
       const handleConnect = () => {
         updateAgentStatus('online');
       };
-      
+
       socket.on('connect', handleConnect);
 
       return () => {
@@ -137,7 +141,7 @@ export default function DashboardLayout() {
         disconnectSocket();
       };
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]); // Only depend on isAuthenticated, not agent
 
   // Handle visibility change - set away when tab is hidden
@@ -155,6 +159,21 @@ export default function DashboardLayout() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
+  // Re-trigger QA gate when a new review or edited review arrives via socket
+  useEffect(() => {
+    if (!isAuthenticated || !agent) return;
+    const handleQaEvent = () => {
+      // Reset the gate so modal re-checks pending reviews
+      setQaGatePassed(false);
+    };
+    window.addEventListener('qa:review:new', handleQaEvent);
+    window.addEventListener('qa:review:edited', handleQaEvent);
+    return () => {
+      window.removeEventListener('qa:review:new', handleQaEvent);
+      window.removeEventListener('qa:review:edited', handleQaEvent);
+    };
+  }, [isAuthenticated, agent]);
 
   // Handle Telegram link completion
   const handleTelegramLinkComplete = useCallback(() => {
@@ -181,7 +200,7 @@ export default function DashboardLayout() {
     return null;
   }
 
-  
+
   // Show Telegram link required screen (blocking)
   console.log("telegramLinkRequired", telegramLinkRequired);
   if (telegramLinkRequired) {
@@ -197,55 +216,62 @@ export default function DashboardLayout() {
   return (
     <AutoLockProvider>
       <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        {/* QA Coaching Gate — blocking modal for unacknowledged reviews */}
+        {isAuthenticated && agent && !qaGatePassed && (
+          <QACoachingModal
+            agentId={agent._id}
+            onAllAcknowledged={() => { setQaGatePassed(true); setQaGateChecked(true); }}
+          />
+        )}
         {/* Connection status banner (shows when disconnected/reconnecting) */}
         <ConnectionBanner />
-        
+
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar - hidden in focus mode if configured */}
-          {!isFocusMode && (
-            <Sidebar agent={agent} stats={stats} />
-          )}
-          
+          {/* {isFocusMode  && ( */}
+          <Sidebar agent={agent} stats={stats} />
+          {/* )} */}
+
           <main className="flex-1 overflow-hidden flex flex-col">
             {/* Broadcast Banners (internal announcements) */}
             <BroadcastBanner />
-            
+
             {/* Main content */}
             <div className="flex-1 overflow-auto">
               <Outlet />
             </div>
           </main>
         </div>
-        
+
         {/* Toast notifications */}
         <ToastContainer />
-        
+
         {/* Whisper notifications (for agents receiving whispers from supervisors) */}
         <WhisperNotifications />
-        
+
         {/* Supervisor Panel */}
         {canSupervise && (
-          <SupervisorPanel 
-            isOpen={showSupervisorPanel} 
-            onClose={toggleSupervisorPanel} 
+          <SupervisorPanel
+            isOpen={showSupervisorPanel}
+            onClose={toggleSupervisorPanel}
           />
         )}
-        
+
         {/* Command Palette (Ctrl+K) */}
-        <CommandPalette 
-          isOpen={showCommandPalette} 
+        <CommandPalette
+          isOpen={showCommandPalette}
           onClose={() => setShowCommandPalette(false)}
           onShowShortcuts={() => setShowShortcutsHelp(true)}
         />
-        
+
         {/* Keyboard shortcuts help modal */}
-        <KeyboardShortcutsModal 
-          isOpen={showShortcutsHelp} 
-          onClose={() => setShowShortcutsHelp(false)} 
+        <KeyboardShortcutsModal
+          isOpen={showShortcutsHelp}
+          onClose={() => setShowShortcutsHelp(false)}
         />
-        
+
         {/* Focus mode indicator */}
-        <FocusModeIndicator />
+        {!canSupervise && <FocusModeIndicator />}
       </div>
     </AutoLockProvider>
   );

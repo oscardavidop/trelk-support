@@ -127,7 +127,7 @@ export default function QuickReplyDropdown({
             >
               <div className="flex justify-between items-start mb-1">
                 <div className="flex items-center gap-2 overflow-hidden">
-                  <span className={`text-sm font-medium truncate ${index === selectedIndex ? 'text-white' : 'text-zinc-300'}`}>
+                  <span className={`text-sm font-medium truncate ${index === selectedIndex ? 'text-zinc-50' : 'text-zinc-300'}`}>
                     {reply.title}
                   </span>
                   {reply.shortcut && (

@@ -113,7 +113,7 @@ const NotificationItem: React.FC<{
       {/* Hover Actions */}
       <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 bg-zinc-950/80 backdrop-blur-sm p-1 rounded-lg border border-zinc-800 shadow-xl">
         {!notification.read && (
-          <button onClick={() => onMarkRead(notification._id)} className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors" title="Marcar como leído">
+          <button onClick={() => onMarkRead(notification._id)} className="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded transition-colors" title="Marcar como leído">
             <Check className="w-3.5 h-3.5" />
           </button>
         )}
@@ -151,7 +151,7 @@ export const NotificationCenter: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className={`
           relative p-2.5 rounded-xl transition-all duration-200 border border-transparent
-          ${isOpen ? 'bg-zinc-800 text-white border-zinc-700' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}
+          ${isOpen ? 'bg-zinc-800 text-zinc-50 border-zinc-700' : 'text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900'}
         `}
       >
         <Bell className="w-5 h-5" />
@@ -190,7 +190,7 @@ export const NotificationCenter: React.FC = () => {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                className="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

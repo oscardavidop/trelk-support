@@ -437,7 +437,7 @@ export default function BroadcastPage() {
                 <Megaphone className="w-6 h-6 text-violet-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Campañas de Difusión</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Campañas de Difusión</h1>
                 <p className="text-sm text-zinc-400">Envío masivo de mensajes y segmentación</p>
               </div>
             </div>
@@ -446,14 +446,14 @@ export default function BroadcastPage() {
               <button
                 onClick={() => { fetchBroadcasts(); fetchStats(); }}
                 disabled={loading}
-                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all"
+                className="group p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-50 transition-all"
               >
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
               </button>
 
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-medium rounded-xl shadow-lg shadow-violet-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-zinc-50 font-medium rounded-xl shadow-lg shadow-violet-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Send className="w-4 h-4" />
                 <span>Nuevo Broadcast</span>
@@ -536,9 +536,9 @@ export default function BroadcastPage() {
               <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
                 <Send className="w-8 h-8 text-amber-500 ml-1" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">Confirmar Envío</h2>
+              <h2 className="text-xl font-bold text-zinc-50 mb-2">Confirmar Envío</h2>
               <p className="text-zinc-400">
-                Estás a punto de enviar mensajes a <strong className="text-white">{formatNumber(showConfirm.progress.total)}</strong> usuarios.
+                Estás a punto de enviar mensajes a <strong className="text-zinc-50">{formatNumber(showConfirm.progress.total)}</strong> usuarios.
                 <br /><span className="text-xs text-zinc-500">Esta acción iniciará el proceso inmediatamente.</span>
               </p>
             </div>
@@ -559,7 +559,7 @@ export default function BroadcastPage() {
               </button>
               <button
                 onClick={() => handleStartBroadcast(showConfirm._id)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl text-white font-medium transition-colors shadow-lg shadow-violet-900/20"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl text-zinc-50 font-medium transition-colors shadow-lg shadow-violet-900/20"
               >
                 <Play className="w-4 h-4 fill-current" />
                 Iniciar
@@ -688,7 +688,7 @@ function BroadcastRow({ broadcast, onView, onStart, onPause, onResume, onCancel,
           <IconButton onClick={onResume} icon={Play} color="text-emerald-400 hover:text-emerald-300" bg="hover:bg-emerald-500/10" title="Reanudar" />
         )}
 
-        <IconButton onClick={onView} icon={Eye} color="text-zinc-400 hover:text-white" bg="hover:bg-zinc-700" title="Ver Detalles" />
+        <IconButton onClick={onView} icon={Eye} color="text-zinc-400 hover:text-zinc-50" bg="hover:bg-zinc-700" title="Ver Detalles" />
 
         {['draft', 'completed', 'cancelled', 'failed'].includes(broadcast.status) && (
           <IconButton onClick={onDelete} icon={Trash2} color="text-zinc-600 hover:text-red-400" bg="hover:bg-red-500/10" title="Eliminar" />
@@ -846,7 +846,7 @@ function BroadcastDetailModal({ broadcast, recipients, recipientsTotal, recipien
         <div className="flex items-start justify-between px-8 py-6 border-b border-zinc-800 bg-zinc-900">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-xl font-bold text-white">{broadcast.title}</h2>
+              <h2 className="text-xl font-bold text-zinc-50">{broadcast.title}</h2>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${status.bg} ${status.color} ${status.border}`}>{status.label}</span>
             </div>
             <p className="text-sm text-zinc-400 flex items-center gap-2">
@@ -855,9 +855,9 @@ function BroadcastDetailModal({ broadcast, recipients, recipientsTotal, recipien
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onRefresh} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"><RefreshCw className="w-5 h-5" /></button>
+            <button onClick={onRefresh} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg"><RefreshCw className="w-5 h-5" /></button>
             <div className="w-px h-6 bg-zinc-800 mx-1" />
-            <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"><X className="w-5 h-5" /></button>
+            <button onClick={onClose} className="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg"><X className="w-5 h-5" /></button>
           </div>
         </div>
 
@@ -994,7 +994,7 @@ function StatCard({ label, value, icon: Icon, color, bg }: any) {
   return (
     <div className={`flex flex-col items-center justify-center p-4 rounded-xl border border-zinc-800/50 ${bg} bg-opacity-5`}>
       <Icon className={`w-5 h-5 mb-2 ${color} opacity-80`} />
-      <span className="text-2xl font-bold text-white tracking-tight">{formatNumber(value)}</span>
+      <span className="text-2xl font-bold text-zinc-50 tracking-tight">{formatNumber(value)}</span>
       <span className="text-[10px] font-bold text-zinc-500mt-1">{label}</span>
     </div>
   );

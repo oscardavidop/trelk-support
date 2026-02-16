@@ -30,7 +30,7 @@ export default function ContactProfileHeader({ contactInfo }: ContactProfileHead
                 <div className="relative shrink-0">
                     <div
                         className={`w-14 h-14 rounded-full flex items-center justify-center
-            text-white text-lg font-bold border border-zinc-800 shadow-xl overflow-hidden
+            text-zinc-50 text-lg font-bold border border-zinc-800 shadow-xl overflow-hidden
             ${contactInfo.user?.photoFileId
                                 ? 'bg-zinc-900'
                                 : 'bg-gradient-to-br from-indigo-600 to-purple-700'
@@ -61,7 +61,7 @@ export default function ContactProfileHeader({ contactInfo }: ContactProfileHead
 
                 {/* User Info */}
                 <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-bold text-white truncate leading-tight group-hover:text-indigo-200 transition-colors">
+                    <h3 className="text-base font-bold text-zinc-50 truncate leading-tight group-hover:text-indigo-200 transition-colors">
                         {contactInfo.user.firstName} {contactInfo.user.lastName}
                     </h3>
 
@@ -160,7 +160,7 @@ function DetailRow({ icon: Icon, label, value, copyable }: { icon: any, label: s
                 <Icon className="w-3.5 h-3.5" />
                 <span>{label}</span>
             </div>
-            <span className={`font-mono text-zinc-300 ${copyable ? 'group-hover:text-white group-hover:bg-zinc-800 px-1.5 rounded transition-all' : ''}`}>
+            <span className={`font-mono text-zinc-300 ${copyable ? 'group-hover:text-zinc-50 group-hover:bg-zinc-800 px-1.5 rounded transition-all' : ''}`}>
                 {value}
             </span>
         </div>

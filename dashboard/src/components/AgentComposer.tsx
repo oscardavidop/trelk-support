@@ -39,7 +39,6 @@ import {
   sendImage,
   sendFile,
   sendVoice,
-  closeSession,
   startTyping,
   stopTyping
 } from '../services/socket';
@@ -66,6 +65,7 @@ interface AgentComposerProps {
   placeholder?: string;
   replyTo?: { _id: string; sender: string; senderAgent?: { name: string }; content: string } | null;
   onCancelReply?: () => void;
+  onRequestClose?: () => void; // Callback to request closing with disposition modal
 }
 
 // Constantes originales
@@ -110,7 +110,8 @@ export default function AgentComposer({
   disabled = false,
   placeholder = 'Escribe un mensaje o usa / para respuestas rápidas…',
   replyTo,
-  onCancelReply
+  onCancelReply,
+  onRequestClose
 }: AgentComposerProps) {
   const agent = useAuthStore((state) => state.agent);
   const token = useAuthStore((state) => state.token);
@@ -251,15 +252,15 @@ export default function AgentComposer({
 
   // ============= FUNCTIONS (Tu lógica original) =============
 
-const scrollToBottom = () => {
-  const container = containerRef.current;
-  if (container) {
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: 'smooth' // Esto hace la transición fluida
-    });
-  }
-};
+  const scrollToBottom = () => {
+    const container = containerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth' // Esto hace la transición fluida
+      });
+    }
+  };
 
   const loadSavedReplies = async () => {
     setIsLoadingReplies(true);
@@ -290,7 +291,7 @@ const scrollToBottom = () => {
     if (!message.trim() || sendStatus === 'sending') return;
 
     // Si quiere cerrar pero no tiene permiso, solo enviar sin cerrar
-    const shouldClose = closeAfter && canClose;
+    const shouldClose = closeAfter && canClose && onRequestClose;
 
     const processedMessage = replacePlaceholders(message.trim(), getPlaceholderContext());
 
@@ -307,9 +308,9 @@ const scrollToBottom = () => {
           onCancelReply?.();
           // Re-focus textarea after sending
           setTimeout(() => { textareaRef.current?.focus(); scrollToBottom(); scrollToBottom(); }, 50);
-          // añade auto scroll to bottom could be handled by parent component on new message event:
+          // Request close via disposition modal (parent handles the modal)
           if (shouldClose) {
-            closeSession(session.sessionId, 'Agent closed conversation');
+            onRequestClose();
           }
 
         } else {
@@ -602,21 +603,36 @@ const scrollToBottom = () => {
     >
       {/* --- ZONA 1: Contexto y Previsualizaciones --- */}
 
-      {/* Reply Preview */}
+      {/* Reply Preview (Telegram Style) */}
       {replyTo && (
-        <div className="px-4 pt-3 pb-1 animate-in slide-in-from-bottom-2 fade-in duration-200">
-          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-zinc-800/60 border-l-4 border-primary rounded-r-lg">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs font-bold text-primary">
-                  ↪ Respondiendo a {replyTo.sender === 'user' ? 'Usuario' : replyTo.senderAgent?.name || 'Agente'}
+        <div className="px-4 pt-2 pb-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="relative flex items-start justify-between gap-3 group">
+
+            {/* The Accent Line & Content Wrapper */}
+            <div className="relative flex-1 min-w-0 pl-3.5 py-0.5">
+
+              {/* Vertical Accent Bar */}
+              <div className="absolute left-0 top-0.5 bottom-0.5 w-[3px] bg-indigo-500 rounded-full" />
+
+              <div className="flex flex-col">
+                {/* Sender Name */}
+                <span className="text-xs font-bold text-indigo-400 truncate mb-0.5">
+                  {replyTo.sender === 'user'
+                    ? session?.user?.firstName || 'Usuario'
+                    : replyTo.senderAgent?.name || 'Agente'}
                 </span>
+
+                {/* Message Content */}
+                <p className="text-sm text-zinc-300/90 truncate leading-snug">
+                  {replyTo.content}
+                </p>
               </div>
-              <p className="text-sm text-gray-300 truncate opacity-90">{replyTo.content}</p>
             </div>
+
+            {/* Close Button */}
             <button
               onClick={onCancelReply}
-              className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700/50 rounded-full transition-colors"
+              className="mt-1 p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-full transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -624,87 +640,109 @@ const scrollToBottom = () => {
         </div>
       )}
 
-      {/* Image/File Preview Container */}
+      {/* Media/File Upload Preview Container - Premium Zinc */}
       {(previewImage || pendingFile) && (
-        <div className="px-4 pt-3 pb-1 animate-in zoom-in-95 duration-200">
-          <div className="relative group flex items-start gap-4 p-3 bg-gray-800 rounded-xl border border-gray-700/50">
+        <div className="px-4 pt-4 pb-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="relative group flex flex-col md:flex-row items-stretch gap-4 p-4 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl">
 
-            {/* Image Preview */}
+            {/* === IMAGE PREVIEW === */}
             {previewImage && (
-              <div className="relative shrink-0">
-                <img
-                  src={previewImage.url}
-                  alt="Preview"
-                  className="w-24 h-24 object-cover rounded-lg border border-gray-600 shadow-sm"
-                />
+              <div className="relative shrink-0 self-start">
+                <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-zinc-700 shadow-lg group-hover:border-zinc-500 transition-colors">
+                  <img
+                    src={previewImage.url}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Overlay Gradient for better visibility */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                </div>
+
                 <button
                   onClick={() => setPreviewImage(null)}
-                  className="absolute -top-2 -right-2 p-1 bg-gray-900 text-white rounded-full border border-gray-600 hover:bg-red-500 hover:border-red-500 transition-colors shadow-md z-10"
+                  className="absolute -top-2 -right-2 p-1.5 bg-zinc-800 text-zinc-400 hover:text-zinc-50 hover:bg-red-500 rounded-full border border-zinc-700 hover:border-red-500 shadow-md transition-all z-10"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
 
-            {/* File Preview */}
+            {/* === FILE PREVIEW === */}
             {pendingFile && (
-              <div className="relative flex items-center gap-3 bg-gray-900/50 p-3 rounded-lg border border-gray-700 w-full max-w-md">
-                <div className="p-2 bg-primary/10 text-primary rounded-lg">
+              <div className="relative flex items-center gap-3 bg-zinc-900 border border-zinc-800 p-3 rounded-xl w-full max-w-sm hover:border-zinc-700 transition-colors">
+                <div className="p-2.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg">
                   <FileText className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{pendingFile.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(pendingFile.size)}</p>
+                  <p className="text-sm font-medium text-zinc-200 truncate">{pendingFile.name}</p>
+                  <p className="text-xs text-zinc-500 font-mono mt-0.5">{formatFileSize(pendingFile.size)}</p>
                 </div>
                 <button
                   onClick={() => setPendingFile(null)}
-                  className="p-1.5 hover:bg-gray-700 rounded-full text-gray-400 hover:text-red-400 transition-colors"
+                  className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             )}
 
-            {/* Upload Progress Bar */}
+            {/* === UPLOAD PROGRESS OVERLAY === */}
             {uploadProgress && (
-              <div className="absolute inset-0 bg-gray-900/80 rounded-xl flex flex-col items-center justify-center gap-2 z-20">
-                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                <span className="text-sm font-medium text-white">Subiendo {uploadProgress.progress}%</span>
-                <div className="w-32 h-1 bg-gray-700 rounded-full overflow-hidden">
+              <div className="absolute inset-0 bg-zinc-950/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center gap-3 z-30">
+                <div className="relative">
+                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                  <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-sm font-medium text-zinc-200">Subiendo archivo...</span>
+                  <span className="text-xs text-zinc-500 font-mono">{uploadProgress.progress}%</span>
+                </div>
+                <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary transition-all duration-300"
+                    className="h-full bg-indigo-500 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                     style={{ width: `${uploadProgress.progress}%` }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Caption Input for attachments (only if image/file present and no upload in progress) */}
+            {/* === CAPTION & SEND ACTION === */}
             {!uploadProgress && (previewImage || pendingFile) && (
-              <div className="flex-1 mt-1 self-center">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Añadir un comentario..."
-                  className="w-full bg-transparent border-b border-gray-700 focus:border-primary px-0 py-1 text-sm text-white placeholder-gray-500 focus:outline-none transition-colors"
-                  autoFocus
-                />
+              <div className="flex-1 flex flex-col justify-center gap-3 min-w-0">
+
+                {/* Caption Input */}
+                <div className="relative group/input">
+                  <input
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Añadir un comentario..."
+                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Action Bar */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={previewImage ? handleSendImage : handleSendFile}
+                    disabled={sendStatus === 'sending'}
+                    className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendStatus === 'sending' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
+                      </>
+                    ) : (
+                      <>
+                        Enviar <Send className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Send Button for Attachment Mode */}
-            {!uploadProgress && (
-              <div className="self-end ml-auto">
-                <button
-                  onClick={previewImage ? handleSendImage : handleSendFile}
-                  disabled={sendStatus === 'sending'}
-                  className="p-2 bg-primary hover:bg-primary-dark text-white rounded-lg shadow-lg transition-all"
-                >
-                  {sendStatus === 'sending' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -713,14 +751,24 @@ const scrollToBottom = () => {
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
       <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.zip,.xlsx,.xls,.txt,.csv" onChange={handleFileSelect} className="hidden" />
 
-      {/* Drag Overlay */}
+      {/* Drag & Drop Overlay - Premium Zinc */}
       {isDragging && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-900/90 backdrop-blur-sm rounded-t-xl border-t border-primary/30">
-          <div className="flex flex-col items-center animate-bounce-slow">
-            <div className="p-4 bg-primary/20 rounded-full mb-3 text-primary">
-              <Upload className="w-8 h-8" />
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950/95 backdrop-blur-md rounded-t-2xl border-2 border-dashed border-indigo-500/30 animate-in fade-in duration-300">
+          <div className="flex flex-col items-center pointer-events-none">
+            {/* Animated Icon Wrapper */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full animate-pulse" />
+              <div className="relative w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center shadow-2xl ring-1 ring-indigo-500/20">
+                <Upload className="w-8 h-8 text-indigo-400 animate-bounce" />
+              </div>
             </div>
-            <p className="text-lg font-medium text-white">Suelta tus archivos aquí</p>
+            {/* Text Content */}
+            <h3 className="text-xl font-bold text-zinc-50 tracking-tight drop-shadow-md">
+              Suelta tus archivos aquí
+            </h3>
+            <p className="text-sm text-zinc-500 mt-2 font-medium">
+              Se adjuntarán automáticamente al chat
+            </p>
           </div>
         </div>
       )}
@@ -743,7 +791,7 @@ const scrollToBottom = () => {
               disabled={disabled || sendStatus === 'sending'}
               placeholder={placeholder}
               rows={1}
-              className="w-full px-4 py-3 bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none max-h-64 overflow-y-auto scrollbar-thin"
+              className="w-full px-4 py-3 bg-transparent text-zinc-50 placeholder-gray-500 resize-none focus:outline-none max-h-64 overflow-y-auto scrollbar-thin"
               style={{ minHeight: '56px' }}
             />
 
@@ -773,33 +821,47 @@ const scrollToBottom = () => {
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   active={showEmojiPicker}
                 />
-                {/* Variables Dropdown */}
+                {/* Variables Dropdown - Premium Zinc */}
                 <div className="relative group">
+                  {/* Trigger Button */}
                   <button
                     type="button"
-                    className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-400 hover:text-primary hover:bg-primary/10 rounded-md transition-all"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all"
                   >
-                    <span className="font-mono text-[10px] font-bold">{'{ }'}</span>
-                    <span>Vars</span>
+                    <span className="font-mono text-[11px] bg-zinc-800/50 px-1.5 py-0.5 rounded border border-zinc-700/50 text-zinc-400 group-hover:border-indigo-500/30 group-hover:text-indigo-400 group-hover:bg-indigo-500/5 transition-all">
+                      {'{ }'}
+                    </span>
+                    <span>Variables</span>
                   </button>
-                  <div className="absolute bottom-full left-0 mb-2 w-60 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-900/50 border-b border-gray-700 text-[10px] font-semibold text-gray-500 ">
-                      Insertar variable
+
+                  {/* Dropdown Menu */}
+                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0 z-50 overflow-hidden">
+
+                    {/* Header */}
+                    <div className="px-4 py-2.5 bg-zinc-900/50 border-b border-zinc-800 text-[10px] font-bold text-zinc-500 uppercase  flex items-center gap-2">
+                      Insertar Variable Dinámica
                     </div>
-                    <div className="max-h-48 overflow-y-auto">
+
+                    {/* Variables List */}
+                    <div className="max-h-48 overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                       {PLACEHOLDERS.map(p => (
                         <button
                           key={p.key}
                           type="button"
-                          // Usamos onMouseDown para evitar que el botón pierda foco antes del click
+                          // onMouseDown evita que el input pierda foco antes del click
                           onMouseDown={(e) => { e.preventDefault(); insertPlaceholder(p.key); }}
-                          className="w-full text-left px-3 py-2 hover:bg-primary/10 border-l-2 border-transparent hover:border-primary transition-colors"
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-zinc-900 transition-all group/item border border-transparent hover:border-zinc-800"
                         >
-                          <div className="text-xs font-mono text-primary font-medium">{p.key}</div>
-                          <div className="text-[10px] text-gray-400 truncate">{p.description}</div>
+                          <div className="text-xs font-mono font-bold text-indigo-400 group-hover/item:text-indigo-300 mb-0.5">
+                            {p.key}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 group-hover/item:text-zinc-400 line-clamp-1 leading-tight">
+                            {p.description}
+                          </div>
                         </button>
                       ))}
                     </div>
+
                   </div>
                 </div>
 
@@ -810,37 +872,41 @@ const scrollToBottom = () => {
                   disabled={!message.trim()}
                 />
 
-                {/* Footer Hints */}
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-4 text-[12px] text-gray-500">
-                    <span className="hidden sm:inline"><b>Enter</b> enviar</span>
-                    <span className="hidden sm:inline"><b>Shift+Enter</b> línea</span>
-                    <span className="hidden sm:inline"><b>Ctrl+Enter</b> enviar y cerrar</span>
 
-                    <div className="flex items-center gap-2 ml-4">
-                      <SendStatusIndicator status={sendStatus} />
-                    </div>
-                  </div>
-                  {
-                    can('scheduled.write') && (
-                      <button
-                        onClick={() => setShowScheduleModal(true)}
-                        className={`flex items-center gap-1 text-[12px] ${showScheduleModal ? 'text-primary' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
-                      >
-                        <Clock className="w-3 h-3" />
-                        Programar envío
-                      </button>
-                    )
-                  }
-                </div>
               </div>
 
+
+            </div>
+            {/* Footer Hints */}
+            <div className="flex justify-between items-center px-3 pb-2">
+              <div className="flex gap-4 text-[12px] text-gray-500">
+                <span className="hidden sm:inline"><b>Enter</b> enviar</span>
+                <span className="hidden sm:inline"><b>Shift+Enter</b> línea</span>
+                <span className="hidden sm:inline"><b>Ctrl+Enter</b> enviar y cerrar</span>
+
+                <div className="flex items-center gap-2 ml-4">
+                  <SendStatusIndicator status={sendStatus} />
+                </div>
+              </div>
               {/* Right Actions (Send) */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+
+                {/* Character Count */}
                 {message.trim().length > 0 && (
-                  <span className="text-[12px] text-gray-500 font-medium mr-2 hidden sm:inline-block">
-                    {message.length} chars
+                  <span className="text-[12px] text-zinc-500 font-mono mr-2 hidden sm:inline-block">
+                    {message.length}
                   </span>
+                )}
+
+                {/* Schedule Action */}
+                {can('scheduled.write') && (
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    title="Programar envío"
+                    className="p-2 text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-colors"
+                  >
+                    <Clock className="w-5 h-5" />
+                  </button>
                 )}
 
                 {/* Secondary Action: Send & Close */}
@@ -848,7 +914,7 @@ const scrollToBottom = () => {
                   onClick={() => handleSend(true)}
                   disabled={!hasContent || disabled}
                   title="Enviar y cerrar ticket"
-                  className="p-2 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30"
+                  className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
                 >
                   <XCircle className="w-5 h-5" />
                 </button>
@@ -858,17 +924,17 @@ const scrollToBottom = () => {
                   onClick={() => handleSend(false)}
                   disabled={!hasContent || disabled || sendStatus === 'sending'}
                   className={`
-                    flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium text-white transition-all shadow-lg
-                    ${hasContent
-                      ? 'bg-primary hover:bg-primary-dark shadow-primary/20 hover:shadow-primary/40 transform active:scale-95'
-                      : 'bg-gray-700 text-gray-400 cursor-not-allowed'}
+                    flex items-center justify-center gap-2 ml-1 px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 outline-none border border-transparent
+                    ${hasContent && !disabled && sendStatus !== 'sending'
+                      ? 'bg-indigo-600 hover:bg-indigo-500 text-zinc-50 shadow-lg shadow-indigo-500/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-95'
+                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'}
                   `}
                 >
                   {sendStatus === 'sending' ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <span>Enviar</span>
+                      <span className="hidden outline-none sm:inline">Enviar</span>
                       <SendHorizontal className="w-4 h-4" />
                     </>
                   )}
@@ -923,7 +989,6 @@ const scrollToBottom = () => {
         isOpen={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}
         onCreated={() => {
-          // Could refresh a scheduled messages list here
         }}
         defaultText={message}
       />
@@ -1026,14 +1091,14 @@ function QuickReplyDropdown({ isLoading, replies, selectedIndex, onSelect }: Qui
               key={reply._id}
               onClick={() => onSelect(reply)}
               className={`w-full text-left px-4 py-3 border-l-2 transition-all duration-150 group ${index === selectedIndex
-                  ? 'bg-zinc-800 border-indigo-500'
-                  : 'hover:bg-zinc-800/50 border-transparent'
+                ? 'bg-zinc-800 border-indigo-500'
+                : 'hover:bg-zinc-800/50 border-transparent'
                 }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-sm font-medium truncate ${index === selectedIndex ? 'text-white' : 'text-zinc-300'}`}>
+                    <span className={`text-sm font-medium truncate ${index === selectedIndex ? 'text-zinc-50' : 'text-zinc-300'}`}>
                       {reply.title}
                     </span>
                     {reply.shortcut && (

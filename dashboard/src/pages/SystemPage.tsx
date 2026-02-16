@@ -134,7 +134,7 @@ export default function SystemPage() {
                 <Activity className="w-6 h-6 text-purple-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Monitor del Sistema</h1>
+                <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">Monitor del Sistema</h1>
                 <div className="flex items-center gap-2 text-sm text-zinc-400">
                   <span className={`w-2 h-2 rounded-full ${health?.status === 'healthy' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
                   {health?.status === 'healthy' ? 'Sistema Operativo' : 'Problemas Detectados'}
@@ -150,7 +150,7 @@ export default function SystemPage() {
                 onClick={() => setAutoRefresh(!autoRefresh)}
                 className={`p-2.5 rounded-xl border transition-all ${autoRefresh
                   ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
-                  : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-50'
                   }`}
                 title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
               >
@@ -160,7 +160,7 @@ export default function SystemPage() {
               <button
                 onClick={loadHealth}
                 disabled={loading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl text-white font-medium transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-50 font-medium transition-all"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 <span>Actualizar</span>
@@ -227,7 +227,7 @@ function OverviewContent({ health, loading, error }: OverviewContentProps) {
           <AlertTriangle className="w-8 h-8 text-red-500" />
         </div>
         <div className="text-center">
-          <p className="text-white font-medium text-lg">Error de conexión</p>
+          <p className="text-zinc-50 font-medium text-lg">Error de conexión</p>
           <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
@@ -357,14 +357,14 @@ function ServiceCard({ name, icon: Icon, status, latency, description }: Service
         <div className={`p-2.5 rounded-xl ${isUp ? 'bg-zinc-800 group-hover:bg-emerald-500/10' : 'bg-red-500/10'}`}>
           <Icon className={`w-5 h-5 ${isUp ? 'text-zinc-400 group-hover:text-emerald-400' : 'text-red-500'}`} />
         </div>
-        <div className={`flex items-center gap-1.5 text-xs font-bold uppercasepx-2 py-1 rounded-full ${isUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+        <div className={`flex items-center gap-1.5 text-xs font-bold uppercase px-2 py-1 rounded-full ${isUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
           }`}>
           {isUp ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
           {isUp ? 'ONLINE' : 'OFFLINE'}
         </div>
       </div>
       <div>
-        <h3 className="text-lg font-bold text-white mb-1">{name}</h3>
+        <h3 className="text-lg font-bold text-zinc-50 mb-1">{name}</h3>
         <p className="text-sm text-zinc-500 mb-3">{description}</p>
         {latency !== undefined && (
           <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 bg-zinc-950/50 w-fit px-2 py-1 rounded border border-zinc-800">
@@ -395,7 +395,7 @@ function MetricCard({ title, value, icon: Icon, color, description, alert }: Met
         </div>
         {alert && <div className="animate-pulse w-2 h-2 bg-red-500 rounded-full" />}
       </div>
-      <div className="text-3xl font-bold text-white tracking-tight mb-1">{value?.toLocaleString() || 0}</div>
+      <div className="text-3xl font-bold text-zinc-50 tracking-tight mb-1">{value?.toLocaleString() || 0}</div>
       <div className="text-sm font-medium text-zinc-300">{title}</div>
       <div className="text-xs text-zinc-500 mt-1">{description}</div>
     </div>
@@ -409,10 +409,10 @@ function QuickAction({ icon: Icon, label, description, onClick }: QuickActionPro
       className="flex flex-col items-center gap-3 p-5 bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-2xl transition-all group text-center"
     >
       <div className="p-3 bg-zinc-950 rounded-full border border-zinc-800 group-hover:border-zinc-600 transition-colors">
-        <Icon className="w-5 h-5 text-zinc-400 group-hover:text-white" />
+        <Icon className="w-5 h-5 text-zinc-400 group-hover:text-zinc-50" />
       </div>
       <div>
-        <div className="text-sm font-medium text-white mb-0.5">{label}</div>
+        <div className="text-sm font-medium text-zinc-50 mb-0.5">{label}</div>
         <div className="text-[10px] text-zinc-500">{description}</div>
       </div>
     </button>

@@ -83,13 +83,13 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: ShortcutsModalProps)
               <Keyboard className="w-6 h-6 text-indigo-500" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Atajos de Teclado</h2>
+              <h2 className="text-xl font-bold text-zinc-50 tracking-tight">Atajos de Teclado</h2>
               <p className="text-sm text-zinc-400">Optimiza tu flujo de trabajo</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -110,7 +110,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: ShortcutsModalProps)
                       key={shortcut.description}
                       className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-zinc-800/50 transition-colors group"
                     >
-                      <span className="text-sm text-zinc-300 group-hover:text-white transition-colors font-medium">
+                      <span className="text-sm text-zinc-300 group-hover:text-zinc-50 transition-colors font-medium">
                         {shortcut.description}
                       </span>
                       <div className="flex items-center gap-1.5">

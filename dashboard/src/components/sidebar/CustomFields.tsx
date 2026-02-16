@@ -142,9 +142,9 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
             <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
               <Settings className="w-5 h-5 text-indigo-400" />
             </div>
-            <h2 className="text-base font-bold text-white">Gestor de Campos</h2>
+            <h2 className="text-base font-bold text-zinc-50">Gestor de Campos</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -155,7 +155,7 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-zinc-200">{editingField ? 'Editar Campo' : 'Nuevo Campo Personalizado'}</h3>
-                <button onClick={resetForm} className="text-xs flex items-center gap-1 text-zinc-500 hover:text-white transition-colors">
+                <button onClick={resetForm} className="text-xs flex items-center gap-1 text-zinc-500 hover:text-zinc-50 transition-colors">
                   <ArrowLeft className="w-3 h-3"/> Volver a la lista
                 </button>
               </div>
@@ -163,7 +163,7 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-zinc-500 uppercase">Nombre</label>
-                  <input type="text" value={formData.name} onChange={e => handleNameChange(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-sm focus:border-indigo-500 outline-none" placeholder="Ej: ID Cliente" />
+                  <input type="text" value={formData.name} onChange={e => handleNameChange(e.target.value)} className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-50 text-sm focus:border-indigo-500 outline-none" placeholder="Ej: ID Cliente" />
                 </div>
                 {!editingField && (
                   <div className="space-y-2">
@@ -182,7 +182,7 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
                   <div className="grid grid-cols-4 gap-2">
                     {FIELD_TYPES.map((ft) => (
                       <button key={ft.type} onClick={() => setFormData(prev => ({...prev, type: ft.type}))}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${formData.type === ft.type ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:border-zinc-700'}`}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${formData.type === ft.type ? 'bg-indigo-600 border-indigo-500 text-zinc-50 shadow-md' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:border-zinc-700'}`}
                       >
                         <FieldTypeIcon type={ft.type} className="w-3.5 h-3.5"/> {ft.label}
                       </button>
@@ -196,8 +196,8 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
                 <div className="space-y-3 p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl">
                   <label className="text-xs font-bold text-zinc-500 uppercase">Opciones de Lista</label>
                   <div className="flex gap-2">
-                    <input type="text" value={newOption} onChange={e => setNewOption(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addOption())} className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-sm focus:border-indigo-500 outline-none" placeholder="Nueva opción..." />
-                    <button onClick={addOption} className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg border border-zinc-700"><Plus className="w-4 h-4"/></button>
+                    <input type="text" value={newOption} onChange={e => setNewOption(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addOption())} className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-50 text-sm focus:border-indigo-500 outline-none" placeholder="Nueva opción..." />
+                    <button onClick={addOption} className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-50 rounded-lg border border-zinc-700"><Plus className="w-4 h-4"/></button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.options.map((opt, i) => (
@@ -210,7 +210,7 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
               )}
 
               <div className="flex justify-end pt-4 border-t border-zinc-800">
-                <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50">
+                <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl font-medium transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50">
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
                   {editingField ? 'Guardar Cambios' : 'Crear Campo'}
                 </button>
@@ -221,9 +221,9 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
               <div className="flex gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
-                  <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm focus:border-indigo-500 outline-none placeholder-zinc-600" placeholder="Buscar campos..." />
+                  <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-50 text-sm focus:border-indigo-500 outline-none placeholder-zinc-600" placeholder="Buscar campos..." />
                 </div>
-                <button onClick={() => setShowNewForm(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-900/20">
+                <button onClick={() => setShowNewForm(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-900/20">
                   <Plus className="w-4 h-4"/> Nuevo
                 </button>
               </div>
@@ -246,12 +246,12 @@ function FieldsManagerModal({ isOpen, onClose, onFieldsChanged }: { isOpen: bool
                             <FieldTypeIcon type={field.type} />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white">{field.name}</p>
+                            <p className="text-sm font-medium text-zinc-50">{field.name}</p>
                             <code className="text-[10px] text-zinc-500 font-mono">${field.key}</code>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => { setEditingField(field); setFormData({ ...field, options: field.options || [], defaultValue: field.defaultValue?.toString() || '', description: field.description ?? '' }); setShowNewForm(true); }} className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"><Edit2 className="w-3.5 h-3.5"/></button>
+                          <button onClick={() => { setEditingField(field); setFormData({ ...field, options: field.options || [], defaultValue: field.defaultValue?.toString() || '', description: field.description ?? '' }); setShowNewForm(true); }} className="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg"><Edit2 className="w-3.5 h-3.5"/></button>
                           <button onClick={() => handleArchive(field)} className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"><Archive className="w-3.5 h-3.5"/></button>
                         </div>
                       </div>
@@ -354,7 +354,7 @@ export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFi
               {isEditing ? (
                 <div className="flex items-center gap-2 mt-1 animate-in fade-in duration-200">
                    {field.type === 'boolean' ? (
-                      <select value={editValue} onChange={e => setEditValue(e.target.value)} className="flex-1 h-7 text-xs bg-zinc-950 border border-zinc-700 rounded px-2 text-white focus:border-indigo-500 outline-none">
+                      <select value={editValue} onChange={e => setEditValue(e.target.value)} className="flex-1 h-7 text-xs bg-zinc-950 border border-zinc-700 rounded px-2 text-zinc-50 focus:border-indigo-500 outline-none">
                          <option value="true">Sí</option>
                          <option value="false">No</option>
                       </select>
@@ -363,11 +363,11 @@ export function SidebarCustomFields({ userId, fields, onFieldUpdated }: CustomFi
                         type={field.type === 'number' ? 'number' : 'text'} 
                         value={editValue} 
                         onChange={e => setEditValue(e.target.value)} 
-                        className="flex-1 h-7 text-xs bg-zinc-950 border border-zinc-700 rounded px-2 text-white focus:border-indigo-500 outline-none"
+                        className="flex-1 h-7 text-xs bg-zinc-950 border border-zinc-700 rounded px-2 text-zinc-50 focus:border-indigo-500 outline-none"
                         autoFocus
                       />
                    )}
-                   <button onClick={() => handleSave(field)} disabled={isSaving} className="h-7 w-7 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded"><Check className="w-3 h-3"/></button>
+                   <button onClick={() => handleSave(field)} disabled={isSaving} className="h-7 w-7 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-zinc-50 rounded"><Check className="w-3 h-3"/></button>
                    <button onClick={() => setEditingField(null)} className="h-7 w-7 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded"><X className="w-3 h-3"/></button>
                 </div>
               ) : (

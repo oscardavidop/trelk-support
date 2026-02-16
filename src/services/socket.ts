@@ -75,6 +75,7 @@ import {
 import { triggerEventMessages } from './scheduledMessage.service.js';
 import { telegramErrorHandler } from './telegram-error-handler.js';
 import { hasPermission } from './permission.service.js';
+import { evaluateChatAction } from './policy-engine.service.js';
 import type { ChatCategory, IChatSession } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
@@ -168,7 +169,7 @@ export interface ServerToClientEvents {
   'session:force_logout': (data: {
     reason: string;
   }) => void;
-  
+
   // Auto-lock events
   'session:locked': (data: {
     reason: 'inactivity' | 'remote' | 'manual' | 'security';
@@ -494,6 +495,27 @@ export interface ServerToClientEvents {
   }) => void;
   'broadcast.cancelled': (data: { id: string }) => void;
 
+  // Policy Engine events
+  'policy:updated': (data: {
+    updatedBy?: string;
+    timestamp: string;
+    changes?: string[];
+    globalAlert?: {
+      enabled: boolean;
+      message?: string;
+      level?: string;
+    };
+    maintenanceMode?: {
+      enabled: boolean;
+      message?: string;
+    };
+  }) => void;
+  'force_logout': (data: {
+    reason: string;
+    time: string;
+    message?: string;
+  }) => void;
+
   // Errors
   'error': (error: { message: string }) => void;
 }
@@ -515,7 +537,7 @@ interface TagData {
 export interface ClientToServerEvents {
   // Session actions
   'session:accept': (sessionId: string, callback: (result: ResultData) => void) => void;
-  'session:close': (data: { sessionId: string; reason?: string }, callback: (result: ResultData) => void) => void;
+  'session:close': (data: { sessionId: string; reason?: string; disposition?: { categoryId: string; subcategoryId?: string; comment?: string; tags?: string[] } }, callback: (result: ResultData) => void) => void;
   'session:join': (sessionId: string) => void;
   'session:leave': (sessionId: string) => void;
   'session:transfer': (data: { sessionId: string; toAgentId: string; reason: string }, callback?: (result: ResultData) => void) => void;
@@ -579,6 +601,7 @@ interface SocketData {
 interface SessionData {
   sessionId: string;
   user: {
+    _id: string;
     telegramId: number;
     username?: string;
     firstName: string;
@@ -674,6 +697,7 @@ interface NotificationData {
 interface ResultData {
   ok: boolean;
   error?: string;
+  code?: string;
   data?: unknown;
 }
 
@@ -931,26 +955,26 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
             // Return specific error for blocked user so agent knows what happened
             const errorMsg = reason === 'bot_blocked'
               ? 'El usuario bloqueó el bot. El chat ha sido cerrado automáticamente.'
-            : reason === 'user_deactivated'
-              ? 'La cuenta del usuario fue desactivada. El chat ha sido cerrado automáticamente.'
-              : 'No se puede contactar al usuario. El chat ha sido cerrado automáticamente.';
+              : reason === 'user_deactivated'
+                ? 'La cuenta del usuario fue desactivada. El chat ha sido cerrado automáticamente.'
+                : 'No se puede contactar al usuario. El chat ha sido cerrado automáticamente.';
 
-          logger.warn('api', {
-            action: 'session_accept_user_blocked',
-            sessionId,
-            telegramChatId: assignedSession.telegramChatId,
-            reason
-          });
+            logger.warn('api', {
+              action: 'session_accept_user_blocked',
+              sessionId,
+              telegramChatId: assignedSession.telegramChatId,
+              reason
+            });
 
-          return callback({
-            ok: false,
-            error: errorMsg,
-            data: { code: 'USER_BLOCKED', reason, sessionClosed: true },
-          });
-        }
+            return callback({
+              ok: false,
+              error: errorMsg,
+              data: { code: 'USER_BLOCKED', reason, sessionClosed: true },
+            });
+          }
 
-        // Re-throw if not a blocking error
-        throw telegramError;
+          // Re-throw if not a blocking error
+          throw telegramError;
         }
       }
 
@@ -962,8 +986,8 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     }
   });
 
-  // Close session
-  socket.on('session:close', async ({ sessionId, reason }, callback) => {
+  // Close session with disposition (tipificación)
+  socket.on('session:close', async ({ sessionId, reason, disposition }, callback) => {
     try {
       // Permission check: chats.close
       const canClose = await hasPermission(agentId, 'chats.close');
@@ -971,16 +995,117 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         return callback({ ok: false, error: 'No tienes permiso para cerrar chats (chats.close)' });
       }
 
+      // ============= DISPOSITION VALIDATION =============
+      try {
+        const { getDispositionSettings, validateDisposition } = await import('../database/index.js');
+        const settings = await getDispositionSettings();
+
+        if (settings.requireDisposition) {
+          if (!disposition || !disposition.categoryId) {
+            return callback({
+              ok: false,
+              error: 'La tipificación es obligatoria para cerrar el chat',
+              code: 'DISPOSITION_REQUIRED',
+            });
+          }
+
+          // Validate disposition data
+          const validation = await validateDisposition(
+            disposition.categoryId,
+            disposition.subcategoryId,
+            disposition.comment,
+            disposition.tags
+          );
+
+          if (!validation.valid) {
+            return callback({
+              ok: false,
+              error: validation.error,
+              code: 'INVALID_DISPOSITION',
+            });
+          }
+        }
+      } catch (error) {
+        logger.warn('sessions', { action: 'disposition_validation_error', sessionId, error: String(error) });
+      }
+
+      try {
+        const { evaluateChatAction } = await import('../services/policy-engine.service.js');
+        const { Note } = await import('../database/models/Note.js');
+        const session = await getSessionById(sessionId);
+
+        if (session) {
+          // Get notes for this session
+          const notes = await Note.find({ session: session._id }).lean();
+          const lastNote = notes.length > 0 ? notes[notes.length - 1] : null;
+
+          // Evaluate policy
+          const actionResult = await evaluateChatAction({
+            agent: { id: agentId, role: agent.role },
+            chat: {
+              id: sessionId,
+              hasNote: notes.length > 0,
+              noteLength: lastNote ? (lastNote.content?.length || 0) : 0,
+              tags: session.tags || [],
+              status: session.status,
+            },
+            action: 'close_chat',
+            timestamp: new Date(),
+          });
+
+          console.log('Policy Engine Result for close_chat:', actionResult);
+
+          if (!actionResult.allowed) {
+              return callback({
+                ok: false,
+                error: actionResult.errorMessage || 'Acción no permitida por política',
+                data: {
+                  ruleId: actionResult.ruleId,
+                  requiresApproval: actionResult.requiresApproval,
+                },
+              });
+          }
+        }
+      } catch (error) {
+        // On policy check error, log but allow action
+        logger.warn('sessions', { action: 'policy_check_error', sessionId, error: String(error) });
+      }
+
       const session = await closeSessionDetailed(
         sessionId,
         'agent',
         'manual',
         agentId,
-        reason
+        reason,
+        disposition
       );
 
       if (!session) {
         return callback({ ok: false, error: 'Session not found' });
+      }
+
+      // Audit log for disposition
+      if (disposition) {
+        const { logAudit } = await import('../services/audit-log.service.js');
+        const clientIp = socket.handshake.headers['x-forwarded-for']?.toString()?.split(',')[0] || socket.handshake.address || 'unknown';
+        await logAudit({
+          action: 'chat_closed_with_disposition',
+          category: 'chat',
+          actorType: 'agent',
+          actorId: agent._id,
+          actorName: agent.name,
+          targetType: 'chat_session',
+          targetId: sessionId,
+          severity: 'low',
+          ip: clientIp,
+          userAgent: socket.handshake.headers['user-agent'],
+          metadata: {
+            categoryId: disposition.categoryId,
+            subcategoryId: disposition.subcategoryId,
+            tags: disposition.tags,
+            hasComment: !!disposition.comment,
+          },
+        });
       }
 
       // Trigger flow: chat closed
@@ -1015,11 +1140,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (session.channel === 'web') {
         // ========== WEBCHAT CHANNEL ==========
         const visitorId = session.externalChatId || session.channelMetadata?.visitorId;
-        
+
         if (visitorId) {
           // Close chat in widget (sends close event + shows survey)
           await webChatAdapter.closeChat(visitorId, '✅ El chat ha sido cerrado. ¡Gracias por contactarnos!');
-          
+
           // Send survey to visitor
           await webChatAdapter.sendSurvey(visitorId, {
             question: '¿Cómo calificarías tu experiencia?',
@@ -1029,61 +1154,61 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         }
       } else {
         // ========== TELEGRAM CHANNEL ==========
-      // Notify user via Telegram - remove keyboard
-      const lang = session.user && 'language' in session.user
-        ? (session.user as unknown as { language: string }).language
-        : 'en';
-      const userMessage = lang === 'es'
-        ? '✅ Hemos cerrado esta conversación. ¡Gracias por escribirnos! Si necesitas algo más, aquí estaremos 😊'
-        : '✅ We’ve closed this conversation. Thanks for reaching out! If you need anything else, we’ll be here 😊';
+        // Notify user via Telegram - remove keyboard
+        const lang = session.user && 'language' in session.user
+          ? (session.user as unknown as { language: string }).language
+          : 'en';
+        const userMessage = lang === 'es'
+          ? '✅ Hemos cerrado esta conversación. ¡Gracias por escribirnos! Si necesitas algo más, aquí estaremos 😊'
+          : '✅ We’ve closed this conversation. Thanks for reaching out! If you need anything else, we’ll be here 😊';
 
-      await sendTelegramMessage(session.telegramChatId!, userMessage, {
-        replyMarkup: { remove_keyboard: true },
-      });
+        await sendTelegramMessage(session.telegramChatId!, userMessage, {
+          replyMarkup: { remove_keyboard: true },
+        });
 
-      // Send survey request
-      const surveyMessage = lang === 'es'
-        ? '📊 ¿Nos cuentas cómo te fue? Tu experiencia nos ayuda a mejorar 💙'
-        : '📊 Would you like to tell us how it went? Your experience helps us improve 💙';
+        // Send survey request
+        const surveyMessage = lang === 'es'
+          ? '📊 ¿Nos cuentas cómo te fue? Tu experiencia nos ayuda a mejorar 💙'
+          : '📊 Would you like to tell us how it went? Your experience helps us improve 💙';
 
-      await sendTelegramMessage(session.telegramChatId!, surveyMessage, {
-        replyMarkup: {
-          inline_keyboard: [
-            [
-              { text: '⭐', callback_data: 'survey:1' },
-              { text: '⭐⭐', callback_data: 'survey:2' },
-              { text: '⭐⭐⭐', callback_data: 'survey:3' },
+        await sendTelegramMessage(session.telegramChatId!, surveyMessage, {
+          replyMarkup: {
+            inline_keyboard: [
+              [
+                { text: '⭐', callback_data: 'survey:1' },
+                { text: '⭐⭐', callback_data: 'survey:2' },
+                { text: '⭐⭐⭐', callback_data: 'survey:3' },
+              ],
+              [
+                { text: '⭐⭐⭐⭐', callback_data: 'survey:4' },
+                { text: '⭐⭐⭐⭐⭐', callback_data: 'survey:5' }
+              ]
             ],
-            [
-              { text: '⭐⭐⭐⭐', callback_data: 'survey:4' },
-              { text: '⭐⭐⭐⭐⭐', callback_data: 'survey:5' }
-            ]
-          ],
-        },
-      });
-
-      await broadcastStats();
-
-      // Auto-assign next session from queue to this agent
-      const nextSession = await autoAssignFromQueue(agentId);
-      if (nextSession) {
-        // Notify this agent about new assignment
-        socket.emit('session:assigned', {
-          sessionId: nextSession.sessionId,
-          agentId,
-          agentName: agent?.name || 'Agent',
+          },
         });
-        socket.emit('session:updated', formatSessionData(nextSession));
 
-        // Notify other agents that this session is no longer in queue
-        socket.broadcast.emit('session:unassigned', { sessionId: nextSession.sessionId });
+        await broadcastStats();
 
-        logger.info('chat', {
-          action: 'auto_assigned_from_queue',
-          sessionId: nextSession.sessionId,
-          agentId
-        });
-      }
+        // Auto-assign next session from queue to this agent
+        const nextSession = await autoAssignFromQueue(agentId);
+        if (nextSession) {
+          // Notify this agent about new assignment
+          socket.emit('session:assigned', {
+            sessionId: nextSession.sessionId,
+            agentId,
+            agentName: agent?.name || 'Agent',
+          });
+          socket.emit('session:updated', formatSessionData(nextSession));
+
+          // Notify other agents that this session is no longer in queue
+          socket.broadcast.emit('session:unassigned', { sessionId: nextSession.sessionId });
+
+          logger.info('chat', {
+            action: 'auto_assigned_from_queue',
+            sessionId: nextSession.sessionId,
+            agentId
+          });
+        }
       }
 
       callback({ ok: true });
@@ -1285,7 +1410,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         // ========== WEBCHAT CHANNEL ==========
         // Get visitor ID from session metadata or externalChatId
         const visitorId = session.externalChatId || session.channelMetadata?.visitorId;
-        
+
         if (!visitorId) {
           return callback({ ok: false, error: 'No visitor ID found for this session' });
         }
@@ -1301,7 +1426,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         if (!message) {
           return callback({ ok: false, error: 'Failed to save message to database' });
         }
-        
+
         // Start inactivity timer for webchat - use 0 as chatId since we identify by sessionId/visitorId
         await startInactivityTimer(sessionId, 0);
 
@@ -1780,7 +1905,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         senderAgentId: agentId,
         messageType: 'system',
       });
-      
+
       const messageData = {
         _id: addMessageResult && addMessageResult._id ? addMessageResult._id.toString() : '',
         session: sessionId,
@@ -1789,7 +1914,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         messageType: 'system' as const,
         createdAt: addMessageResult && addMessageResult.createdAt ? addMessageResult.createdAt : new Date(),
       };
-      
+
       io.to(`session:${sessionId}`).emit('message:new', messageData);
 
       if (pinForUser && message && message.telegramMessageId) {
@@ -1798,7 +1923,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
           await pinChatMessage(session.telegramChatId!, message?.telegramMessageId);
         }
       }
-      
+
       logger.info('chat', { action: 'message_pinned', messageId, agentId });
       callback?.({ ok: true });
     } catch (error) {
@@ -1898,6 +2023,33 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         return;
       }
 
+      // Policy engine check: chat action rules
+      const transferringAgent = await findAgentById(agentId);
+      if (transferringAgent) {
+        const session = await getSessionById(sessionId);
+        const agentNotes = (session as any)?.agentNotes;
+        const policyResult = await evaluateChatAction({
+          agent: {
+            id: agentId,
+            role: transferringAgent.role || 'agent',
+          },
+          chat: {
+            id: sessionId,
+            hasNote: !!(agentNotes && agentNotes.length > 0),
+            noteLength: agentNotes?.[0]?.content?.length || 0,
+            tags: session?.tags || [],
+            status: session?.status,
+          },
+          action: 'transfer_chat',
+          timestamp: new Date(),
+        });
+
+        if (!policyResult.allowed) {
+          callback?.({ ok: false, error: policyResult.errorMessage || 'Acción no permitida por las reglas del agente' });
+          return;
+        }
+      }
+
       const result = await transferSession({
         sessionId,
         fromAgentId: agentId,
@@ -1910,13 +2062,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         return;
       }
 
-      const fromAgent = await findAgentById(agentId);
+      const senderAgent = await findAgentById(agentId);
       const toAgent = await findAgentById(toAgentId);
 
       // Notify all agents about transfer
       io.emit('session:transferred', {
         sessionId,
-        fromAgent: { id: agentId, name: fromAgent?.name || 'Agent' },
+        fromAgent: { id: agentId, name: senderAgent?.name || 'Agent' },
         toAgent: { id: toAgentId, name: toAgent?.name || 'Agent' },
         reason,
       });
@@ -1927,7 +2079,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         targetSocket.emit('notification', {
           type: 'info',
           title: 'Chat Transferred',
-          message: `${fromAgent?.name || 'An agent'} transferred a chat to you. Reason: ${reason}`,
+          message: `${senderAgent?.name || 'An agent'} transferred a chat to you. Reason: ${reason}`,
         });
       }
 
@@ -1961,6 +2113,33 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       if (!canReopen) {
         callback?.({ ok: false, error: 'No tienes permiso para reabrir chats (chats.reopen)' });
         return;
+      }
+
+      // Policy engine check: chat action rules
+      const reopenAgent = await findAgentById(agentId);
+      if (reopenAgent) {
+        const existingSession = await getSessionById(sessionId);
+        const agentNotes = (existingSession as any)?.agentNotes;
+        const policyResult = await evaluateChatAction({
+          agent: {
+            id: agentId,
+            role: reopenAgent.role || 'agent',
+          },
+          chat: {
+            id: sessionId,
+            hasNote: !!(agentNotes && agentNotes.length > 0),
+            noteLength: agentNotes?.[0]?.content?.length || 0,
+            tags: existingSession?.tags || [],
+            status: existingSession?.status,
+          },
+          action: 'reopen_chat',
+          timestamp: new Date(),
+        });
+
+        if (!policyResult.allowed) {
+          callback?.({ ok: false, error: policyResult.errorMessage || 'Acción no permitida por las reglas del agente' });
+          return;
+        }
       }
 
       const { role } = socket.data;
@@ -2018,6 +2197,29 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
   socket.on('user:block', async ({ telegramId, blockType, reason, durationHours }, callback?) => {
     try {
+      // Policy engine check: chat action rules
+      const blockingAgent = await findAgentById(agentId);
+      if (blockingAgent) {
+        const policyResult = await evaluateChatAction({
+          agent: {
+            id: agentId,
+            role: blockingAgent.role || 'agent',
+          },
+          chat: {
+            id: telegramId.toString(),
+            hasNote: false,
+            tags: [],
+          },
+          action: 'block_user',
+          timestamp: new Date(),
+        });
+
+        if (!policyResult.allowed) {
+          callback?.({ ok: false, error: policyResult.errorMessage || 'Acción no permitida por las reglas del agente' });
+          return;
+        }
+      }
+
       const block = await blockUser({
         telegramId,
         blockType,
@@ -2148,9 +2350,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         // 2. Different socket
         // 3. DIFFERENT browserSessionId (different browser/device, not just different tab)
         if (
-          s.data.agentId === agentId && 
+          s.data.agentId === agentId &&
           s.id !== socket.id &&
-          s.data.browserSessionId && 
+          s.data.browserSessionId &&
           s.data.browserSessionId !== browserSessionId
         ) {
           oldSocketToDisconnect = s as typeof socket;
@@ -2306,6 +2508,7 @@ function formatSessionData(session: any): SessionData {
   return {
     sessionId: session.sessionId,
     user: {
+      _id: session.user?._id.toString(),
       telegramId: session.user?.telegramId || session.telegramChatId!,
       username: session.user?.username,
       firstName: session.user?.firstName || 'Unknown',
@@ -2828,7 +3031,7 @@ export async function emitPermissionsUpdated(
   }
 ): Promise<void> {
   if (!io) return;
-  
+
   const eventData = {
     agentId,
     permissions: data.permissions,
@@ -2837,16 +3040,16 @@ export async function emitPermissionsUpdated(
     updatedBy: data.updatedBy,
     timestamp: new Date().toISOString(),
   };
-  
+
   // Find the agent's socket by their agentId in socket.data
   const sockets = await io.fetchSockets();
   const agentSocket = sockets.find(s => s.data.agentId === agentId);
-  
+
   if (agentSocket) {
     // Emit directly to the agent's socket
     agentSocket.emit('permissions:updated', eventData);
   }
-  
+
   // Also emit to admin room for monitoring
   io.to('admin').emit('permissions:updated', eventData);
 }
@@ -2866,7 +3069,7 @@ export async function emitRoleChanged(
   }
 ): Promise<void> {
   if (!io) return;
-  
+
   const eventData = {
     agentId,
     oldRole: data.oldRole,
@@ -2876,16 +3079,16 @@ export async function emitRoleChanged(
     updatedBy: data.updatedBy,
     timestamp: new Date().toISOString(),
   };
-  
+
   // Find the agent's socket by their agentId in socket.data
   const sockets = await io.fetchSockets();
   const agentSocket = sockets.find(s => s.data.agentId === agentId);
-  
+
   if (agentSocket) {
     // Emit directly to the agent's socket
     agentSocket.emit('permissions:role_changed', eventData);
   }
-  
+
   // Also emit to admin room for monitoring
   io.to('admin').emit('permissions:role_changed', eventData);
 }

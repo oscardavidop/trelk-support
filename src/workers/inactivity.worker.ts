@@ -34,13 +34,13 @@ async function processInactivityJob(job: Job<InactivityJob>): Promise<any> {
     switch (type) {
       case 'warning':
         return await handleWarning(sessionId, chatId, remainingMinutes || 5);
-      
+
       case 'close':
         return await handleClose(sessionId, chatId);
-      
+
       case 'queued_close':
         return await handleQueuedClose(sessionId, chatId);
-      
+
       default:
         logger.warn('worker:inactivity', {
           action: 'unknown_type',
@@ -87,12 +87,12 @@ async function handleWarning(
     return { skipped: true, reason: 'not_with_agent' };
   }
 
-  const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.\n\n⚠️ This chat will close automatically in ${remainingMinutes} minutes due to inactivity.`;
+  const warningMessage = `⚠️ Este chat se cerrará automáticamente en ${remainingMinutes} minutos por inactividad.`;
 
   try {
     // Send message based on channel
     const channel = session.channel || 'telegram';
-    
+
     if (channel === 'web') {
       // Send to WebChat via Socket.IO
       const visitorId = session.channelMetadata?.visitorId || sessionId;
@@ -101,12 +101,12 @@ async function handleWarning(
       // Send to Telegram
       await sendTelegramMessage(chatId, warningMessage);
     }
-    
+
     // Save message in database
     const savedMessage = await addMessage(sessionId, 'bot', 'Se envió una advertencia de inactividad.', {
       messageType: 'system',
     });
-    
+
     // Emit message:new event so it shows in real-time in the dashboard
     const io = getIO();
     if (io) {
@@ -120,7 +120,7 @@ async function handleWarning(
       };
       io.to(`session:${sessionId}`).emit('message:new', messageData);
     }
-    
+
     // Emit warning event for UI notification
     emitChatWarning(sessionId, remainingMinutes);
 
@@ -134,24 +134,24 @@ async function handleWarning(
     return { success: true, type: 'warning' };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // Check if this is a blocking error (user blocked bot - Telegram only)
     const { isBlocking } = isBlockingError(errorMessage);
-    
+
     if (isBlocking && session.channel !== 'web') {
       logger.warn('worker:inactivity', {
         action: 'warning_blocked_user',
         sessionId,
         chatId,
       });
-      
+
       // Handle the blocking error - this will close the session and notify
       await telegramErrorHandler.handleError(error as Error, chatId, sessionId);
-      
+
       // Return success since we handled it appropriately
       return { success: true, type: 'warning', userBlocked: true };
     }
-    
+
     logger.error('worker:inactivity', {
       action: 'warning_failed',
       sessionId,
@@ -163,7 +163,7 @@ async function handleWarning(
 
 async function handleClose(sessionId: string, chatId: number): Promise<any> {
   const session = await getSessionById(sessionId);
-  
+
   if (!session || session.status === 'closed') {
     logger.info('worker:inactivity', {
       action: 'close_skipped_already_closed',
@@ -189,7 +189,7 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
     const savedMessage = await addMessage(sessionId, 'bot', 'Se ha cerrado el chat por inactividad.', {
       messageType: 'system',
     });
-    
+
     // Emit message:new event so it shows in real-time in the dashboard
     const io = getIO();
     if (io) {
@@ -203,13 +203,19 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
       };
       io.to(`session:${sessionId}`).emit('message:new', messageData);
     }
-    
+
     const agentId = session.assignedAgent?._id?.toString() || null;
-    await closeSession(sessionId, agentId, 'Closed due to inactivity', 'system');
+    await closeSession(sessionId, agentId, 'Closed due to inactivity', 'system', "Inactivity Worker", {
+      disposition: {
+        categoryId: '698a992d0fbc993f70698d2e',
+        categoryName: 'Cerrado por Inactividad',
+        categoryCode: 'inactivity_auto_closed',
+      }
+    });
 
     // Send message based on channel
     const channel = session.channel || 'telegram';
-    
+
     if (channel === 'web') {
       const visitorId = session.channelMetadata?.visitorId || sessionId;
       await webChatAdapter.sendMessage(visitorId, closeMessage);
@@ -228,6 +234,8 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
       channel,
     });
 
+
+
     return { success: true, type: 'close' };
   } catch (error) {
     logger.error('worker:inactivity', {
@@ -241,7 +249,7 @@ async function handleClose(sessionId: string, chatId: number): Promise<any> {
 
 async function handleQueuedClose(sessionId: string, chatId: number): Promise<any> {
   const session = await getSessionById(sessionId);
-  
+
   if (!session) {
     logger.info('worker:inactivity', {
       action: 'queued_close_skipped_no_session',
@@ -267,7 +275,7 @@ async function handleQueuedClose(sessionId: string, chatId: number): Promise<any
     const savedMessage = await addMessage(sessionId, 'bot', closeMessage, {
       messageType: 'system',
     });
-    
+
     // Emit message:new event so it shows in real-time in the dashboard
     const io = getIO();
     if (io) {
@@ -282,12 +290,12 @@ async function handleQueuedClose(sessionId: string, chatId: number): Promise<any
       // For queued sessions, emit to all (they're visible to all agents)
       io.emit('message:new', messageData);
     }
-    
+
     await closeSession(sessionId, null, 'Closed due to inactivity in queue', 'system');
 
     // Send message based on channel
     const channel = session.channel || 'telegram';
-    
+
     if (channel === 'web') {
       const visitorId = session.channelMetadata?.visitorId || sessionId;
       await webChatAdapter.sendMessage(visitorId, closeMessage);

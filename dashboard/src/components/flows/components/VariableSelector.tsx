@@ -105,7 +105,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-900 group transition-all flex items-center justify-between border border-transparent hover:border-zinc-800"
                                 >
                                     <div>
-                                        <div className="text-xs font-medium text-zinc-300 group-hover:text-white flex items-center gap-1.5">
+                                        <div className="text-xs font-medium text-zinc-300 group-hover:text-zinc-50 flex items-center gap-1.5">
                                             {v.label}
                                         </div>
                                         <div className="text-[10px] text-zinc-500 font-mono mt-0.5 group-hover:text-indigo-400/80">
@@ -131,7 +131,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                                 value={customTextKey}
                                                 onChange={(e) => setCustomTextKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
                                                 placeholder="EJ_BIENVENIDA"
-                                                className="w-full pl-8 pr-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded-md text-[10px] text-white font-mono uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder-zinc-700"
+                                                className="w-full pl-8 pr-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded-md text-[10px] text-zinc-50 font-mono uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all placeholder-zinc-700"
                                                 autoFocus
                                             />
                                         </div>
@@ -145,7 +145,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                                 }
                                             }}
                                             disabled={!customTextKey}
-                                            className="px-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-white rounded-md flex items-center justify-center transition-colors shadow-sm"
+                                            className="px-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-zinc-50 rounded-md flex items-center justify-center transition-colors shadow-sm"
                                         >
                                             <Plus className="w-4 h-4" />
                                         </button>
@@ -168,7 +168,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect }) 
                                             className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-900 group transition-all flex items-center justify-between border border-transparent hover:border-zinc-800"
                                         >
                                             <div>
-                                                <div className="text-xs font-medium text-zinc-300 group-hover:text-white">
+                                                <div className="text-xs font-medium text-zinc-300 group-hover:text-zinc-50">
                                                     {t.description}
                                                 </div>
                                                 <div className="text-[10px] text-zinc-500 font-mono group-hover:text-purple-400">
