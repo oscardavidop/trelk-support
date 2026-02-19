@@ -28,7 +28,10 @@ import {
   Upload,
   Clock,
   Lock,
-  Tag
+  Tag,
+  Globe,
+  Languages,
+  Eye
 } from 'lucide-react';
 
 // Tus imports originales intactos
@@ -47,6 +50,13 @@ import EmojiPicker from './EmojiPicker';
 import SaveReplyModal from './SaveReplyModal';
 import AudioRecorder from './AudioRecorder';
 import { ScheduleMessageModal } from './scheduled';
+import TranslateDropdown from './translation/TranslateDropdown';
+import {
+  getOutgoingConfig,
+  previewOutgoingTranslation,
+  updateSessionTranslation,
+  type OutgoingConfig,
+} from '../services/translation.service';
 
 // Types originales
 type SendStatus = 'idle' | 'sending' | 'sent' | 'error';
@@ -141,6 +151,13 @@ export default function AgentComposer({
   // State NUEVO solo para UI (foco del borde)
   const [isFocused, setIsFocused] = useState(false);
 
+  // === Auto-Translate Outgoing State ===
+  const [outgoingConfig, setOutgoingConfig] = useState<OutgoingConfig | null>(null);
+  const [translationPreview, setTranslationPreview] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [showTranslationPreview, setShowTranslationPreview] = useState(false);
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Refs originales
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -202,6 +219,58 @@ export default function AgentComposer({
       return () => clearTimeout(timer);
     }
   }, [session.sessionId, disabled]);
+
+  // Listen for playbook:insertText events to inject template text into the composer
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent).detail?.text;
+      if (typeof text === 'string' && text) {
+        setMessage(prev => prev ? prev + '\n' + text : text);
+        setTimeout(() => textareaRef.current?.focus(), 50);
+      }
+    };
+    window.addEventListener('playbook:insertText', handler);
+    return () => window.removeEventListener('playbook:insertText', handler);
+  }, []);
+
+  // ─── Load outgoing translation config when session changes ───
+  useEffect(() => {
+    let cancelled = false;
+    setOutgoingConfig(null);
+    setTranslationPreview(null);
+    setShowTranslationPreview(false);
+    getOutgoingConfig(session.sessionId)
+      .then(cfg => { if (!cancelled) setOutgoingConfig(cfg); })
+      .catch(() => { /* silent */ });
+    return () => { cancelled = true; };
+  }, [session.sessionId]);
+
+  // ─── Debounced translation preview ───
+  useEffect(() => {
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+
+    if (!outgoingConfig?.enabled || !outgoingConfig.showPreview || !message.trim() || !showTranslationPreview) {
+      setTranslationPreview(null);
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    previewTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await previewOutgoingTranslation(message.trim(), session.sessionId);
+        if (result.shouldTranslate) {
+          setTranslationPreview(result.translatedContent);
+        } else {
+          setTranslationPreview(null);
+        }
+      } catch {
+        setTranslationPreview(null);
+      }
+      setIsPreviewLoading(false);
+    }, 800);
+
+    return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current); };
+  }, [message, outgoingConfig?.enabled, outgoingConfig?.showPreview, showTranslationPreview, session.sessionId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -777,6 +846,86 @@ export default function AgentComposer({
       {/* Solo se muestra si no estamos en modo "Solo Preview" (con botones dedicados) */}
       {!previewImage && !pendingFile && (
         <div className="">
+          {/* Auto-Translate Outgoing Banner + Preview */}
+          {outgoingConfig?.enabled && (
+            <div className="border-b border-zinc-800/50">
+              {/* Status badge row */}
+              <div className="flex items-center justify-between px-4 py-1.5 bg-indigo-500/5">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-[11px] font-bold text-indigo-400">
+                    Auto-Translate → {outgoingConfig.targetLang?.toUpperCase() || '??'}
+                  </span>
+                  {outgoingConfig.deliveryMode === 'both' && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 font-mono">both</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {outgoingConfig.showPreview && (
+                    <button
+                      onClick={() => setShowTranslationPreview(p => !p)}
+                      className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${showTranslationPreview ? 'bg-indigo-500/20 text-indigo-300' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                      <Eye className="w-3 h-3 inline mr-1" />Preview
+                    </button>
+                  )}
+                  {outgoingConfig.agentOverrideAllowed && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await updateSessionTranslation(session.sessionId, { outgoingEnabled: false });
+                          setOutgoingConfig(prev => prev ? { ...prev, enabled: false } : prev);
+                        } catch { /* silent */ }
+                      }}
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 font-bold transition-colors"
+                    >
+                      Desactivar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Live preview */}
+              {showTranslationPreview && message.trim() && (
+                <div className="px-4 py-2 bg-zinc-900/50 border-t border-zinc-800/30">
+                  {isPreviewLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Traduciendo…</span>
+                    </div>
+                  ) : translationPreview ? (
+                    <div className="flex items-start gap-2">
+                      <Languages className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                      <p className="text-xs text-zinc-300 leading-relaxed">{translationPreview}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-600 italic">Sin traducción disponible</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Re-enable button when auto-translate was disabled for this chat */}
+          {outgoingConfig && !outgoingConfig.enabled && outgoingConfig.agentOverrideAllowed && outgoingConfig.targetLang && (
+            <div className="flex items-center justify-between px-4 py-1.5 bg-zinc-900/30 border-b border-zinc-800/50">
+              <span className="text-[11px] text-zinc-600">
+                <Globe className="w-3 h-3 inline mr-1" />Auto-Translate desactivado para este chat
+              </span>
+              <button
+                onClick={async () => {
+                  try {
+                    await updateSessionTranslation(session.sessionId, { outgoingEnabled: true });
+                    setOutgoingConfig(prev => prev ? { ...prev, enabled: true } : prev);
+                  } catch { /* silent */ }
+                }}
+                className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800 text-indigo-400 hover:bg-indigo-500/10 font-bold transition-colors"
+              >
+                Reactivar
+              </button>
+            </div>
+          )}
+
           <div className={`relative flex flex-col bg-zinc-800/50 transition-all duration-200 ${isFocused ? 'border-zinc/50 bg-zinc-800' : ''
             }`}>
 
@@ -870,6 +1019,15 @@ export default function AgentComposer({
                   tooltip="Guardar respuesta"
                   onClick={() => setShowSaveModal(true)}
                   disabled={!message.trim()}
+                />
+
+                {/* Translation Dropdown */}
+                <div className="w-px h-4 bg-gray-700 mx-1" />
+                <TranslateDropdown
+                  message={message}
+                  onReplace={(text) => setMessage(text)}
+                  sessionId={session.sessionId}
+                  disabled={disabled}
                 />
 
 

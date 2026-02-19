@@ -3,10 +3,12 @@ import {
   X, User, MessageSquare, Clock, Tag, StickyNote, Settings, History,
   ChevronDown, ChevronRight, Loader2, AlertCircle, Activity, Timer, Bot,
   SquareDashedMousePointerIcon,
-  MessageCircle, ClipboardCheck, Paperclip, Download
+  MessageCircle, ClipboardCheck, Paperclip, Download, BookOpen,
+  Globe, Languages
 } from 'lucide-react';
 import type { ContactInfo } from '../types';
 import { getContactInfo } from '../services/contactApi';
+import { getOutgoingConfig, updateSessionTranslation, type OutgoingConfig, getIncomingConfig, updateSessionIncomingTranslation, type IncomingConfig } from '../services/translation.service';
 
 // Sub-components imports (Mantenemos la lógica de importación existente)
 import { SidebarConversationStatus } from './sidebar/ConversationStatus';
@@ -22,6 +24,7 @@ import { ScheduledMessagesList } from './scheduled/ScheduledMessagesList';
 import { CopilotSection } from './sidebar/Copilot';
 import { SidebarDisposition } from './sidebar/Disposition';
 import { SidebarMedia } from './sidebar/Media';
+import { SidebarPlaybook } from './sidebar/SidebarPlaybook';
 import ContactProfileHeader from './0';
 import QAReviewPanel from './QAReviewPanel';
 import ExportPanel from './sidebar/ExportPanel';
@@ -38,6 +41,8 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   const [error, setError] = useState<string | null>(null);
   const [scheduledCount, setScheduledCount] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status']));
+  const [outgoingCfg, setOutgoingCfg] = useState<OutgoingConfig | null>(null);
+  const [incomingCfg, setIncomingCfg] = useState<IncomingConfig | null>(null);
 
   const fetchContactInfo = useCallback(async () => {
     if (!sessionId) {
@@ -64,6 +69,36 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   useEffect(() => {
     fetchContactInfo();
   }, [fetchContactInfo]);
+
+  // Load outgoing translation config for this session
+  useEffect(() => {
+    if (!sessionId) { setOutgoingCfg(null); return; }
+    getOutgoingConfig(sessionId).then(setOutgoingCfg).catch(() => setOutgoingCfg(null));
+  }, [sessionId]);
+
+  // Load incoming translation config for this session
+  useEffect(() => {
+    if (!sessionId) { setIncomingCfg(null); return; }
+    getIncomingConfig(sessionId).then(setIncomingCfg).catch(() => setIncomingCfg(null));
+  }, [sessionId]);
+
+  // Re-fetch contactInfo when session updates (disposition, tags, category changes)
+  useEffect(() => {
+    if (!sessionId) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.sessionId === sessionId) {
+        fetchContactInfo();
+      }
+    };
+    // Listen for session updates from socket and disposition saves
+    window.addEventListener('session:updated', handler);
+    window.addEventListener('disposition:saved', handler);
+    return () => {
+      window.removeEventListener('session:updated', handler);
+      window.removeEventListener('disposition:saved', handler);
+    };
+  }, [sessionId, fetchContactInfo]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -155,6 +190,16 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
                 disposition={contactInfo.session.disposition}
                 sessionStatus={contactInfo.session.status}
               />
+            </SidebarSection>
+
+            <SidebarSection
+              title="Playbook"
+              icon={<BookOpen className="w-4 h-4 text-indigo-400" />}
+              isExpanded={expandedSections.has('playbook')}
+              onToggle={() => toggleSection('playbook')}
+              headerClassName="hover:bg-indigo-500/10"
+            >
+              {sessionId && contactInfo && <SidebarPlaybook sessionId={sessionId} contactInfo={contactInfo} />}
             </SidebarSection>
 
             <SidebarSection
@@ -285,6 +330,30 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               </SidebarSection>
             )}
 
+            {/* Translation Section */}
+            {sessionId && outgoingCfg && (
+              <SidebarSection
+                title="Traducción"
+                icon={<Globe className="w-4 h-4 text-indigo-400" />}
+                isExpanded={expandedSections.has('translation')}
+                onToggle={() => toggleSection('translation')}
+                headerClassName="hover:bg-indigo-500/10"
+              >
+                <SidebarTranslation
+                  sessionId={sessionId}
+                  config={outgoingCfg}
+                  onConfigChange={setOutgoingCfg}
+                />
+                {incomingCfg && (
+                  <SidebarIncomingTranslation
+                    sessionId={sessionId}
+                    config={incomingCfg}
+                    onConfigChange={setIncomingCfg}
+                  />
+                )}
+              </SidebarSection>
+            )}
+
             {/* Meta Data Divider */}
             <div className="pt-6 pb-2 px-2">
               <p className="text-[12px] font-bold text-zinc-600 st">Información Técnica</p>
@@ -333,6 +402,180 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 }
 
 // ============= HELPER COMPONENTS =============
+
+function SidebarTranslation({ sessionId, config, onConfigChange }: {
+  sessionId: string;
+  config: OutgoingConfig;
+  onConfigChange: (cfg: OutgoingConfig) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [targetLang, setTargetLang] = useState(config.targetLang || '');
+
+  const toggleEnabled = async () => {
+    setSaving(true);
+    try {
+      const next = !config.enabled;
+      await updateSessionTranslation(sessionId, { outgoingEnabled: next, outgoingTargetLang: targetLang || undefined });
+      onConfigChange({ ...config, enabled: next });
+      // Notify composer to refresh its config
+      window.dispatchEvent(new CustomEvent('translation:sessionUpdated', { detail: { sessionId } }));
+    } catch { /* silent */ }
+    setSaving(false);
+  };
+
+  const handleLangChange = async (lang: string) => {
+    setTargetLang(lang);
+    setSaving(true);
+    try {
+      await updateSessionTranslation(sessionId, { outgoingEnabled: config.enabled, outgoingTargetLang: lang });
+      onConfigChange({ ...config, targetLang: lang });
+      window.dispatchEvent(new CustomEvent('translation:sessionUpdated', { detail: { sessionId } }));
+    } catch { /* silent */ }
+    setSaving(false);
+  };
+
+  return (
+    <div className="px-4 pb-3 space-y-3 pt-4">
+      {/* Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Languages className="w-4 h-4 text-indigo-400" />
+          <span className="text-sm text-zinc-200 font-medium">Auto-Translate saliente</span>
+        </div>
+        <button
+          onClick={toggleEnabled}
+          disabled={saving || !config.agentOverrideAllowed}
+          className={`relative w-10 h-5 rounded-full transition-colors ${config.enabled ? 'bg-indigo-600' : 'bg-zinc-700'} ${!config.agentCanOverride ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </button>
+      </div>
+      {!config.agentOverrideAllowed && (
+        <p className="text-[13px] text-zinc-600">Controlado por el admin — no puedes cambiar esto</p>
+      )}
+
+      {/* Target language override */}
+      {config.agentOverrideAllowed && (
+        <div>
+          <label className="block text-[12px] text-zinc-500 mb-1 font-bold">Idioma destino (este chat)</label>
+          <select
+            value={targetLang}
+            onChange={e => handleLangChange(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+          >
+            <option value="">Auto-detectar</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+            <option value="ru">Русский</option>
+            <option value="zh">中文</option>
+            <option value="ar">العربية</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      )}
+
+      {/* Info */}
+      <div className="text-[11px] text-zinc-500">
+        {config.enabled
+          ? `Los mensajes salientes se traducirán a ${config.targetLang?.toUpperCase() || 'auto'} antes de enviarse al usuario.`
+          : 'La traducción automática está desactivada para este chat.'}
+        {config.deliveryMode === 'both' && config.enabled && (
+          <span className="block mt-1 text-indigo-400/70">Modo: Original + Traducción</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SidebarIncomingTranslation({ sessionId, config, onConfigChange }: {
+  sessionId: string;
+  config: IncomingConfig;
+  onConfigChange: (cfg: IncomingConfig) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [targetLang, setTargetLang] = useState('');
+
+  const toggleEnabled = async () => {
+    if (!config.agentOverrideAllowed) return;
+    setSaving(true);
+    try {
+      const next = !config.enabled;
+      await updateSessionIncomingTranslation(sessionId, { incomingEnabled: next });
+      onConfigChange({ ...config, enabled: next });
+    } catch { /* silent */ }
+    setSaving(false);
+  };
+
+  const handleLangChange = async (lang: string) => {
+    setTargetLang(lang);
+    setSaving(true);
+    try {
+      await updateSessionIncomingTranslation(sessionId, { incomingTargetLang: lang || undefined });
+      onConfigChange({ ...config, targetLang: lang || config.targetLang });
+    } catch { /* silent */ }
+    setSaving(false);
+  };
+
+  return (
+    <div className="px-4 pb-3 space-y-3 pt-2 border-t border-zinc-800/50">
+      {/* Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Languages className="w-4 h-4 text-cyan-400" />
+          <span className="text-sm text-zinc-200 font-medium">Auto-Translate entrante</span>
+        </div>
+        <button
+          onClick={toggleEnabled}
+          disabled={saving || !config.agentOverrideAllowed}
+          className={`relative w-10 h-5 rounded-full transition-colors ${config.enabled ? 'bg-cyan-600' : 'bg-zinc-700'} ${!config.agentOverrideAllowed ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </button>
+      </div>
+      {!config.agentOverrideAllowed && (
+        <p className="text-[13px] text-zinc-600">Controlado por el admin — no puedes cambiar esto</p>
+      )}
+
+      {/* Target language override */}
+      {config.agentOverrideAllowed && (
+        <div>
+          <label className="block text-[12px] text-zinc-500 mb-1 font-bold">Idioma destino entrante (este chat)</label>
+          <select
+            value={targetLang}
+            onChange={e => handleLangChange(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:border-cyan-500 focus:outline-none"
+          >
+            <option value="">Usar default del sistema</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+            <option value="ru">Русский</option>
+            <option value="zh">中文</option>
+            <option value="ar">العربية</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      )}
+
+      {/* Info */}
+      <div className="text-[11px] text-zinc-500">
+        {config.enabled
+          ? `Los mensajes del usuario se traducirán a ${config.targetLang?.toUpperCase() || 'auto'} en tiempo real.`
+          : 'La traducción entrante está desactivada para este chat.'}
+        {config.showOriginal && config.enabled && (
+          <span className="block mt-1 text-cyan-400/70">Se mostrará el mensaje original junto a la traducción.</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 
 interface SidebarSectionProps {

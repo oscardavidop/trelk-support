@@ -286,7 +286,7 @@ export async function getVisibleSessionsForAgent(agentId: string, isAdmin = fals
 export async function getQueuedSessions(): Promise<IChatSession[]> {
   return ChatSession.find({
     status: { $in: ['queued', 'waiting'] },
-    assignedAgent: { $exists: false },
+    // assignedAgent: { $exists: false },
   })
     .populate('user')
     .sort({ createdAt: 1 }); // FIFO - oldest first
@@ -576,6 +576,16 @@ export async function addMessage(
     messageType?: 'text' | 'image' | 'document' | 'file' | 'sticker' | 'voice' | 'audio' | 'system';
     mediaUrl?: string;
     replyToMessageId?: string;
+    translation?: {
+      isTranslated: boolean;
+      originalContent: string;
+      sourceLang: string;
+      targetLang: string;
+      provider: string;
+      latencyMs: number;
+      deliveryMode: 'translated_only' | 'both';
+      translatedAt: Date;
+    };
   }
 ): Promise<IMessage> {
   const session = await ChatSession.findOne({ sessionId });
@@ -592,10 +602,13 @@ export async function addMessage(
     telegramMessageId: options?.telegramMessageId,
     senderAgent: options?.senderAgentId ? new Types.ObjectId(options.senderAgentId) : undefined,
     replyTo: options?.replyToMessageId ? new Types.ObjectId(options.replyToMessageId) : undefined,
+    ...(options?.translation ? { translation: options.translation } : {}),
   });
 
   // Update session's updatedAt
   session.updatedAt = new Date();
+  session.lastMessage = content;
+  session.lastMessageAt = new Date();
   await session.save();
 
   return message;

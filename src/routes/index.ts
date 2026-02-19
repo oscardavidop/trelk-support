@@ -40,6 +40,8 @@ import dispositionRoutes from './disposition.routes.js';
 import { mediaAdminRoutes } from './media-admin.routes.js';
 import { replayRoutes } from './replay.routes.js';
 import { qaRoutes } from './qa.routes.js';
+import { playbookRoutes } from './playbook.routes.js';
+import { translationRoutes } from './translation.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -185,4 +187,10 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // QA & Coaching routes (enterprise quality assurance system)
   await fastify.register(qaRoutes);
+
+  // Playbook / Guided Scripts routes (enterprise agent guidance system)
+  await fastify.register(playbookRoutes, { prefix: '/api' });
+
+  // Translation System routes (multi-provider translation engine)
+  await fastify.register(translationRoutes, { prefix: '/api/translation' });
 }

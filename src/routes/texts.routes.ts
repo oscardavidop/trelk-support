@@ -369,7 +369,7 @@ export async function textsRoutes(fastify: FastifyInstance): Promise<void> {
       }
       
       const result = await detectLanguage(text);
-      return { success: result.success, data: result };
+      return { success: result.language !== 'unknown', data: result };
     } catch (error) {
       return reply.status(500).send({ success: false, error: 'Language detection failed' });
     }
@@ -487,12 +487,15 @@ export async function textsRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(500).send({ success: false, error: result.error || 'Translation failed' });
       }
       
+      // Map provider to legacy source type for text registry
+      const sourceType = (['google', 'azure'].includes(result.provider) ? result.provider : result.provider === 'free' ? 'google' : 'manual') as 'manual' | 'google' | 'azure' | 'ai';
+      
       // Save the translation
       const updated = await updateTextLanguage(
         key,
         lang as SupportedLanguage,
         result.translatedText,
-        result.provider,
+        sourceType,
         agent.id
       );
       

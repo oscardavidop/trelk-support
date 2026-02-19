@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import * as qaService from '../services/qa.service';
+import * as playbookApi from '../services/playbook.service';
+import type { PlaybookQAData } from '../services/playbook.service';
 import type { QACheckItem, QACheckResult, QAReview, QASettings, CoachingTag } from '../services/qa.service';
 
 // ============= UTILS =============
@@ -101,6 +103,7 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
   const [settings, setSettings] = useState<QASettings | null>(null);
   const [checks, setChecks] = useState<CheckState[]>([]);
   const [comment, setComment] = useState('');
+  const [playbookQA, setPlaybookQA] = useState<PlaybookQAData | null>(null);
   const [existingReview, setExistingReview] = useState<QAReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -131,6 +134,11 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
           qaService.getQASettings().catch(() => null),
           qaService.getReviewBySession(sessionId),
         ]);
+        // Fetch playbook compliance data
+        try {
+          const pbData = await playbookApi.getPlaybookQAData(sessionId);
+          setPlaybookQA(pbData);
+        } catch { /* no playbook data */ }
         setChecklist(items || []); setSettings(qaSettings);
 
         if (existing && existing.checks) {
@@ -252,7 +260,7 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
         </div>
         {viewMode && (
           <div className="flex flex-col items-end gap-1.5">
-            <span className="px-2 py-1 rounded bg-zinc-900/50 border border-zinc-700/50 text-[10px] text-zinc-400 font-medium uppercase tracking-wide flex items-center gap-1">
+            <span className="px-2 py-1 rounded bg-zinc-900/50 border border-zinc-700/50 text-[10px] text-zinc-400 font-medium uppercase  flex items-center gap-1">
               <Eye className="w-3 h-3" /> {editMode ? 'Editando' : 'Solo Lectura'}
             </span>
             {existingReview?.status === 'completed' && !editMode && <span className="text-[10px] text-emerald-500 mt-1 flex items-center gap-1"><Check className="w-3 h-3" /> Completado</span>}
@@ -260,6 +268,20 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
           </div>
         )}
       </div>
+
+      {/* Playbook Compliance Card */}
+      {playbookQA && (
+        <PlaybookComplianceCard data={playbookQA} />
+      )}
+      {!playbookQA && (
+        <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <p className="text-xs font-medium text-amber-300">Sin playbook ejecutado</p>
+          </div>
+          <p className="text-[10px] text-zinc-500 mt-1">No se ejecutó ningún playbook durante esta conversación.</p>
+        </div>
+      )}
 
       {/* Categories List */}
       <div className="space-y-6">
@@ -782,7 +804,7 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
 
 //         {viewMode && (
 //           <div className="flex flex-col items-end gap-1.5 relative z-10">
-//             <span className={`px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 ${editMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
+//             <span className={`px-3 py-1 rounded-full border text-[10px] font-bold uppercase  flex items-center gap-1.5 ${editMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
 //               {editMode ? <Pencil className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
 //               {editMode ? 'Modo Edición' : 'Solo Lectura'}
 //             </span>
@@ -924,7 +946,7 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
 //             <div>
 //               <button
 //                 onClick={() => setShowAuditLog(!showAuditLog)}
-//                 className="flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-zinc-400 transition-colors uppercase tracking-wide"
+//                 className="flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-zinc-400 transition-colors uppercase "
 //               >
 //                 {showAuditLog ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
 //                 <History className="w-3 h-3" /> Historial de Cambios ({existingReview.editHistory.length})
@@ -1035,3 +1057,87 @@ export default function QAReviewPanel({ sessionId, agentId, compact = false, onR
 //     </div>
 //   );
 // }
+
+// ─── Playbook Compliance Card (for QA) ──────────────────────
+
+function PlaybookComplianceCard({ data }: { data: PlaybookQAData }) {
+  const isGood = data.wasCompleted && data.completionPercent >= 80;
+  const isWarning = data.wasAbandoned || (data.isMandatory && !data.wasCompleted);
+  const isBad = data.isMandatory && data.wasAbandoned;
+
+  const borderColor = isBad ? 'border-red-500/30' : isWarning ? 'border-amber-500/30' : isGood ? 'border-emerald-500/30' : 'border-zinc-800';
+  const bgColor = isBad ? 'bg-red-500/5' : isWarning ? 'bg-amber-500/5' : isGood ? 'bg-emerald-500/5' : 'bg-zinc-900/50';
+
+  return (
+    <div className={`p-3 rounded-xl border ${borderColor} ${bgColor} space-y-2`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookOpen className={`w-4 h-4 ${isBad ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400'}`} />
+          <span className="text-xs font-bold text-zinc-200">{data.playbookName}</span>
+        </div>
+        {data.isMandatory && (
+          <span className="text-[10px] font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 rounded border border-red-500/20">Obligatorio</span>
+        )}
+      </div>
+
+      {/* Status */}
+      <div className="flex items-center gap-2">
+        {data.wasCompleted ? (
+          <span className="text-[10px] font-medium text-emerald-400 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Completado
+          </span>
+        ) : data.wasAbandoned ? (
+          <span className="text-[10px] font-medium text-red-400 flex items-center gap-1">
+            <XCircle className="w-3 h-3" /> Abandonado
+          </span>
+        ) : (
+          <span className="text-[10px] font-medium text-amber-400 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Incompleto
+          </span>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="bg-zinc-900/50 rounded-lg p-1.5">
+          <p className="text-[10px] text-zinc-500">Pasos</p>
+          <p className="text-xs font-bold text-zinc-200">{data.completedSteps}/{data.totalSteps}</p>
+        </div>
+        <div className="bg-zinc-900/50 rounded-lg p-1.5">
+          <p className="text-[10px] text-zinc-500">Saltados</p>
+          <p className="text-xs font-bold text-zinc-200">{data.skippedSteps}</p>
+        </div>
+        <div className="bg-zinc-900/50 rounded-lg p-1.5">
+          <p className="text-[10px] text-zinc-500">Críticos</p>
+          <p className="text-xs font-bold text-zinc-200">{data.criticalCompleted}/{data.criticalTotal}</p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div>
+        <div className="flex items-center justify-between mb-0.5">
+          <span className="text-[10px] text-zinc-500">Cumplimiento</span>
+          <span className={`text-[10px] font-bold ${data.completionPercent >= 80 ? 'text-emerald-400' : data.completionPercent >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+            {data.completionPercent}%
+          </span>
+        </div>
+        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${data.completionPercent >= 80 ? 'bg-emerald-500' : data.completionPercent >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+            style={{ width: `${data.completionPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Warning message for mandatory + incomplete */}
+      {data.isMandatory && !data.wasCompleted && (
+        <div className="flex items-start gap-1.5 pt-1">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 flex-shrink-0" />
+          <p className="text-[10px] text-red-300">
+            Este playbook era obligatorio y {data.wasAbandoned ? 'fue abandonado' : 'no se completó'}. Considerar en la evaluación.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -18,7 +18,7 @@ export interface IUser extends Document {
   username?: string;
   firstName: string;
   lastName?: string;
-  language: 'en' | 'es';
+  language: string;
   isSubscriber: boolean;
   isBlocked: boolean;           // Blocked by admin
   blockExpiresAt?: Date;
@@ -56,7 +56,6 @@ const UserSchema = new Schema<IUser>(
     photoFileId: String,
     language: {
       type: String,
-      enum: ['en', 'es'],
       default: 'en',
     },
     isSubscriber: {

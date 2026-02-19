@@ -2,9 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Lock, AlertCircle, Loader2, CheckCircle2, ArrowRight, Shield, Eye, EyeOff } from 'lucide-react';
+import { useTheme } from '../hooks';
 
 export default function ForceChangePasswordPage() {
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
   const { agent, setForcePasswordChange, logout } = useAuthStore();
 
   // States
@@ -86,7 +88,7 @@ export default function ForceChangePasswordPage() {
         <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center mb-6">
-              <img src="/assets/img/logo-dark.png" alt="Trelk Logo" className="h-20 w-auto" />
+              <img src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`} alt="Trelk Logo" className="h-20 w-auto" />
             </div>
           </div>
 

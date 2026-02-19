@@ -27,6 +27,8 @@ import AgentRulesPage from './pages/AgentRulesPage';
 import DispositionsPage from './pages/DispositionsPage';
 import MediaPage from './pages/MediaPage';
 import QAPage from './pages/QAPage';
+import PlaybooksPage from './pages/PlaybooksPage';
+import TranslationSettingsPage from './pages/TranslationSettingsPage';
 import { lazy } from 'react';
 
 // // Páginas de Autenticación
@@ -243,6 +245,20 @@ export default function App() {
             <Route path="qa" element={
               <ProtectedRoute permission="supervisor.monitor">
                 <QAPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Playbooks - requiere playbooks.read */}
+            <Route path="playbooks" element={
+              <ProtectedRoute permission="playbooks.read">
+                <PlaybooksPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Translation Settings - requiere settings.read (admin/supervisor) */}
+            <Route path="translation" element={
+              <ProtectedRoute permission="settings.read">
+                <TranslationSettingsPage />
               </ProtectedRoute>
             } />
           </Route>

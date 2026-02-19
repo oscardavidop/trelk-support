@@ -161,4 +161,36 @@ export {
   type CoachingTag,
 } from './models/QAReview.js';
 
+// Playbooks / Guided Scripts
+export { Playbook, type IPlaybook, type IPlaybookStep, type IPlaybookTrigger, type PlaybookStepType, type PlaybookStepAction, type PlaybookTriggerType } from './models/Playbook.js';
+export { PlaybookProgress, type IPlaybookProgress, type IStepProgress, type StepStatus } from './models/PlaybookProgress.js';
+
+// Translation System
+export {
+  TranslationSettings,
+  type ITranslationSettings,
+  type IProviderConfig,
+  type ITranslationRule,
+  type IProxyConfig,
+  type ProxyProtocol,
+  type IAgentTranslationPrefs,
+  type AgentTranslateOverride,
+  type TranslationProvider,
+  type TranslationMode,
+  type OutgoingDeliveryMode,
+  type TargetLangStrategy,
+  type IOutgoingTranslateConfig,
+  type IIncomingTranslateConfig,
+  getTranslationSettings,
+  updateTranslationSettings,
+  SUPPORTED_LANGUAGES,
+} from './models/TranslationSettings.js';
+export {
+  TranslationLog,
+  type ITranslationLog,
+  logTranslation,
+  getTranslationLogs,
+  getTranslationStats,
+} from './models/TranslationLog.js';
+
 export { connectDatabase, disconnectDatabase } from './connection.js';

@@ -211,7 +211,7 @@ export default function ExportPanel({ sessionId }: ExportPanelProps) {
             </button>
 
             {showIncludes && (
-              <div className="p-2 pt-0 grid grid-cols-2 gap-1 bg-zinc-900/50 border-t border-zinc-800">
+              <div className="p-2 pt-3 grid grid-cols-2 gap-1 bg-zinc-900/50 border-t border-zinc-800 py-3 animate-in fade-in slide-in-from-top-2">
                 {INCLUDE_OPTIONS.map(opt => (
                   <label key={opt.key} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-zinc-800 transition-colors group">
                     <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${include[opt.key] ? 'bg-indigo-500 border-indigo-500' : 'border-zinc-600 group-hover:border-zinc-500'}`}>
@@ -263,7 +263,7 @@ export default function ExportPanel({ sessionId }: ExportPanelProps) {
           {/* Action Button */}
           <button
             onClick={handleExport}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-xs font-bold uppercase tracking-wide rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:translate-y-[-1px] active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-xs font-bold uppercase  rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:translate-y-[-1px] active:scale-[0.98]"
           >
             <Download className="w-3.5 h-3.5" /> Generar Exportación
           </button>
@@ -304,7 +304,7 @@ export default function ExportPanel({ sessionId }: ExportPanelProps) {
 
           <button
             onClick={handleDownload}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 text-xs font-bold uppercase tracking-wide rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-50 text-xs font-bold uppercase  rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
           >
             <Download className="w-3.5 h-3.5" /> {
               isExporting ? 'Descargando...' : `Descargar ${FORMAT_LABELS[selectedFormat].label.split(' ')[0]}`

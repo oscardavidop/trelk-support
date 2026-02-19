@@ -113,6 +113,14 @@ export interface IChatSession extends Document {
   // First response tracking
   firstResponseAt?: Date;
   firstResponseBy?: Types.ObjectId;
+  // Translation per-session override
+  translationOverride?: {
+    outgoingEnabled?: boolean;
+    outgoingTargetLang?: string;
+    incomingEnabled?: boolean;
+    incomingTargetLang?: string;
+  };
+  detectedUserLang?: string;
   // Last message preview
   lastMessage?: string;
   lastMessageAt?: Date;
@@ -184,7 +192,7 @@ const ChatSessionSchema = new Schema<IChatSession>(
     },
     category: {
       type: String,
-      enum: ['support', 'billing', 'bug', 'feedback', 'other'],
+      enum: ['support', 'billing', 'bug', 'feedback', 'other', 'refund'],
       index: true,
     },
     priority: {
@@ -272,6 +280,15 @@ const ChatSessionSchema = new Schema<IChatSession>(
       type: Schema.Types.ObjectId,
       ref: 'Agent',
     },
+    // Translation per-session override
+    translationOverride: {
+      outgoingEnabled: { type: Boolean },
+      outgoingTargetLang: { type: String },
+      incomingEnabled: { type: Boolean },
+      incomingTargetLang: { type: String },
+    },
+    // Detected user language (from Telegram language_code, browser, etc.)
+    detectedUserLang: { type: String },
     // Last message preview (for inbox display)
     lastMessage: String,
     lastMessageAt: Date,

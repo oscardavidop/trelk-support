@@ -45,10 +45,13 @@
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
     "fastify": "^5.0.0",
+    "http-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.6",
     "ioredis": "^5.9.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.21.1",
     "socket.io": "^4.7.5",
+    "socks-proxy-agent": "^8.0.5",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

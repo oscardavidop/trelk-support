@@ -19,6 +19,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useTheme, useThemeStore } from "../hooks";
 
 // Helper to generate device fingerprint
 // Get or create a persistent random device ID
@@ -71,6 +72,7 @@ const getDeviceFingerprint = async (): Promise<string> => {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -442,7 +444,7 @@ export default function LoginPage() {
           <div className="text-center mb-5">
             <div className="inline-flex items-center justify-center">
               <img
-                src="/assets/img/logo-dark.png"
+                src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
                 alt="Trelk Logo"
                 className="h-20 w-auto"
               />

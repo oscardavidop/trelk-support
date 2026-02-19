@@ -81,6 +81,8 @@ import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
 import { webChatAdapter } from '../channels/webchat.adapter.js';
 import { addAgentWebMessage } from './webchat.service.js';
+import { translateOutgoing } from './outgoing-translation.service.js';
+import { translateIncoming } from './incoming-translation.service.js';
 
 // Helper to get telegram chat ID safely (returns 0 for non-telegram channels)
 const getTelegramChatId = (session: IChatSession | { telegramChatId?: number }): number => {
@@ -518,6 +520,25 @@ export interface ServerToClientEvents {
 
   // Errors
   'error': (error: { message: string }) => void;
+
+  // Playbook events
+  'playbook:progress': (data: { sessionId: string; progress: unknown }) => void;
+  'playbook:started': (data: { sessionId: string; playbookName: string; agentId: string }) => void;
+  'playbook:updated': (data: { playbookId: string; playbook: unknown }) => void;
+  'playbook:deleted': (data: { playbookId: string }) => void;
+
+  // Incoming translation events
+  'message:translation': (data: {
+    messageId: string;
+    sessionId: string;
+    translatedContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider?: string;
+    latencyMs: number;
+    cached: boolean;
+    showOriginal: boolean;
+  }) => void;
 }
 
 // Contact data types
@@ -643,6 +664,13 @@ interface MessageData {
     username?: string;
     firstName: string;
     photoFileId?: string;
+  };
+  translation?: {
+    isTranslated: boolean;
+    originalContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider?: string;
   };
 }
 
@@ -1405,6 +1433,46 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
       let message;
 
+      // ═══ OUTGOING AUTO-TRANSLATE ═══
+      let contentToSend = content;
+      let translationMeta: {
+        isTranslated: boolean;
+        originalContent: string;
+        sourceLang: string;
+        targetLang: string;
+        provider: string;
+        latencyMs: number;
+        deliveryMode: 'translated_only' | 'both';
+        translatedAt: Date;
+      } | undefined;
+
+      try {
+        const txResult = await translateOutgoing({
+          content,
+          sessionId,
+          agentId,
+          agentName: agent?.name,
+          channel: session.channel || 'telegram',
+        });
+
+        if (txResult.shouldTranslate && !txResult.error) {
+          contentToSend = txResult.translatedContent;
+          translationMeta = {
+            isTranslated: true,
+            originalContent: content,
+            sourceLang: txResult.sourceLang,
+            targetLang: txResult.targetLang,
+            provider: txResult.provider || 'unknown',
+            latencyMs: txResult.latencyMs,
+            deliveryMode: txResult.deliveryMode as 'translated_only' | 'both',
+            translatedAt: new Date(),
+          };
+        }
+      } catch (txErr) {
+        // Translation failure must NEVER block message sending
+        logger.warn('api', { action: 'outgoing_translate_failed', sessionId, error: String(txErr) });
+      }
+
       // Handle based on channel type
       if (session.channel === 'web') {
         // ========== WEBCHAT CHANNEL ==========
@@ -1416,13 +1484,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         }
 
         // Send to visitor via WebChat adapter (Socket.IO)
-        const result = await webChatAdapter.sendMessage(visitorId, content);
+        const result = await webChatAdapter.sendMessage(visitorId, contentToSend);
         if (!result.success) {
           return callback({ ok: false, error: result.error || 'Failed to send message to visitor' });
         }
 
         // Save message to DB
-        message = await addAgentWebMessage(sessionId, agentId, agent?.name || 'Agent', content);
+        message = await addAgentWebMessage(sessionId, agentId, agent?.name || 'Agent', contentToSend);
         if (!message) {
           return callback({ ok: false, error: 'Failed to save message to database' });
         }
@@ -1435,7 +1503,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         // Send to user via Telegram FIRST to get the telegram message ID
         let telegramMessageId: number | null = null;
         try {
-          telegramMessageId = await sendMessageWithId(session.telegramChatId!, content, {
+          telegramMessageId = await sendMessageWithId(session.telegramChatId!, contentToSend, {
             reply_to_message_id: telegramReplyToMessageId,
           });
         } catch (telegramError) {
@@ -1460,10 +1528,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         }
 
         // Save message to DB with telegram message ID (needed for edit/delete)
-        message = await addMessage(sessionId, 'agent', content, {
+        message = await addMessage(sessionId, 'agent', contentToSend, {
           senderAgentId: agentId,
           replyToMessageId,
           telegramMessageId: telegramMessageId || undefined,
+          translation: translationMeta,
         });
 
         // Start/restart inactivity timer - agent sent message, waiting for user response
@@ -1492,13 +1561,21 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         session: sessionId,
         sender: 'agent',
         senderAgent: { name: agent?.name || 'Agent' },
-        content,
+        content: contentToSend,
         createdAt: message.createdAt,
         replyToMessage,
+        translation: translationMeta ? {
+          isTranslated: true,
+          originalContent: translationMeta.originalContent,
+          sourceLang: translationMeta.sourceLang,
+          targetLang: translationMeta.targetLang,
+          provider: translationMeta.provider,
+        } : undefined,
       });
 
       callback({ ok: true, data: message });
     } catch (error) {
+      // console.error('Error in message:send handler:', error);
       logger.error('api', { action: 'message_send_error', error: String(error) });
       callback({ ok: false, error: error instanceof Error ? error.message : 'Failed to send message' });
     }
@@ -2615,6 +2692,36 @@ export async function notifyNewMessage(sessionId: string, content: string, teleg
   } else if (session.status === 'waiting' || session.status === 'queued') {
     io.emit('message:new', messageData);
   }
+
+  // Async incoming auto-translate (non-blocking)
+  translateIncoming({
+    messageId: message._id.toString(),
+    content,
+    sessionId,
+    channel: session.channel || 'telegram',
+    messageType: 'text',
+  }).then(txResult => {
+    if (txResult.shouldTranslate && io) {
+      const translationPayload = {
+        messageId: message._id.toString(),
+        sessionId,
+        translatedContent: txResult.translatedContent,
+        sourceLang: txResult.sourceLang,
+        targetLang: txResult.targetLang,
+        provider: txResult.provider,
+        latencyMs: txResult.latencyMs,
+        cached: txResult.cached,
+        showOriginal: txResult.showOriginal,
+      };
+      if (session.status === 'human') {
+        io.to(`session:${sessionId}`).emit('message:translation', translationPayload);
+      } else {
+        io.emit('message:translation', translationPayload);
+      }
+    }
+  }).catch(err => {
+    logger.error('translation', { type: 'incoming_async_failed', sessionId, error: err?.message });
+  });
 }
 
 /**
@@ -2659,6 +2766,38 @@ export async function notifyNewMediaMessage(
     io.to(`session:${sessionId}`).emit('message:new', messageData);
   } else if (session.status === 'waiting' || session.status === 'queued') {
     io.emit('message:new', messageData);
+  }
+
+  // Async incoming auto-translate for media with captions (non-blocking)
+  if (options.content && options.content.trim().length > 0) {
+    translateIncoming({
+      messageId: message._id.toString(),
+      content: options.content,
+      sessionId,
+      channel: session.channel || 'telegram',
+      messageType: options.messageType,
+    }).then(txResult => {
+      if (txResult.shouldTranslate && io) {
+        const translationPayload = {
+          messageId: message._id.toString(),
+          sessionId,
+          translatedContent: txResult.translatedContent,
+          sourceLang: txResult.sourceLang,
+          targetLang: txResult.targetLang,
+          provider: txResult.provider,
+          latencyMs: txResult.latencyMs,
+          cached: txResult.cached,
+          showOriginal: txResult.showOriginal,
+        };
+        if (session.status === 'human') {
+          io.to(`session:${sessionId}`).emit('message:translation', translationPayload);
+        } else {
+          io.emit('message:translation', translationPayload);
+        }
+      }
+    }).catch(err => {
+      logger.error('translation', { type: 'incoming_media_async_failed', sessionId, error: err?.message });
+    });
   }
 }
 
@@ -3091,4 +3230,41 @@ export async function emitRoleChanged(
 
   // Also emit to admin room for monitoring
   io.to('admin').emit('permissions:role_changed', eventData);
+}
+
+// ─── PLAYBOOK EVENTS ────────────────────────────────────────
+
+/**
+ * Emit playbook progress update to the agent handling the chat
+ */
+export function emitPlaybookProgress(sessionId: string, progress: any): void {
+  if (!io) return;
+  io.to(`session:${sessionId}`).emit('playbook:progress', { sessionId, progress });
+  io.to('admin').to('supervisor').emit('playbook:progress', { sessionId, progress });
+}
+
+/**
+ * Emit when a playbook is started on a chat
+ */
+export function emitPlaybookStarted(sessionId: string, playbookName: string, agentId: string): void {
+  if (!io) return;
+  io.to(`session:${sessionId}`).emit('playbook:started', { sessionId, playbookName, agentId });
+  io.to('admin').to('supervisor').emit('playbook:started', { sessionId, playbookName, agentId });
+}
+
+/**
+ * Emit when a playbook definition is updated (admin action)
+ * All agents with active chats should refresh
+ */
+export function emitPlaybookUpdated(playbookId: string, playbook: any): void {
+  if (!io) return;
+  io.emit('playbook:updated', { playbookId, playbook });
+}
+
+/**
+ * Emit when a playbook is deleted
+ */
+export function emitPlaybookDeleted(playbookId: string): void {
+  if (!io) return;
+  io.emit('playbook:deleted', { playbookId });
 }

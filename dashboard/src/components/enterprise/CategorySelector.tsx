@@ -26,6 +26,7 @@ const CATEGORY_OPTIONS: { value: ChatCategory; label: string; icon: React.ReactN
   { value: 'support', label: 'Soporte', icon: <HelpCircle className="w-4 h-4" />, color: 'text-blue-500' },
   { value: 'billing', label: 'Facturación', icon: <CreditCard className="w-4 h-4" />, color: 'text-green-500' },
   { value: 'bug', label: 'Bug/Error', icon: <Bug className="w-4 h-4" />, color: 'text-red-500' },
+  { value: 'refund', label: 'Reembolso', icon: <CreditCard className="w-4 h-4" />, color: 'text-yellow-500' },
   { value: 'feedback', label: 'Feedback', icon: <MessageSquare className="w-4 h-4" />, color: 'text-purple-500' },
   { value: 'other', label: 'Otro', icon: <MoreHorizontal className="w-4 h-4" />, color: 'text-gray-500' },
 ];

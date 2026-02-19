@@ -223,21 +223,6 @@ select {
   --color-neutral-50: #0a0a0a;
 }
 
-/* ===== Preserve white text/fill on saturated colored backgrounds ===== */
-[data-theme="light"] :is(
-  [class*="bg-blue-"], [class*="bg-red-"], [class*="bg-green-"],
-  [class*="bg-emerald-"], [class*="bg-indigo-"], [class*="bg-purple-"],
-  [class*="bg-cyan-"], [class*="bg-amber-"], [class*="bg-yellow-"],
-  [class*="bg-orange-"], [class*="bg-rose-"], [class*="bg-teal-"],
-  [class*="bg-violet-"], [class*="bg-fuchsia-"], [class*="bg-pink-"],
-  [class*="bg-lime-"], [class*="bg-sky-"]) {
-  --color-zinc-50: #fafafa;
-  --color-zinc-100: #f4f4f5;
-  --color-zinc-200: #e4e4e7;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-}
-
 /* ===== Translucent overlays adapt for light mode ===== */
 [data-theme="light"] .bg-white\/5 { background-color: rgba(0, 0, 0, 0.03); }
 [data-theme="light"] .bg-white\/10 { background-color: rgba(0, 0, 0, 0.05); }
@@ -290,18 +275,11 @@ html.theme-transitioning *::after {
    ===================================================== */
 
 /* --- Text Colors: Zinc --- */
-/* Regla general (la que ya tienes) */
+/* --- Text zinc-50/100: Dark text on light backgrounds --- */
+
 [data-theme="light"] .text-zinc-50,
 [data-theme="light"] .text-zinc-100 {
   color: #0f172a !important;
-}
-
-/* NUEVA REGLA: Excepción para botones */
-[data-theme="light"] button .text-zinc-50,
-[data-theme="light"] button .text-zinc-100,
-[data-theme="light"] button.text-zinc-50,    /* Por si la clase está en el botón mismo */
-[data-theme="light"] button.text-zinc-100 {
-  color: #ffffff !important;
 }
 
 [data-theme="light"] .text-zinc-200 {
@@ -372,6 +350,8 @@ html.theme-transitioning *::after {
 [data-theme="light"] .bg-black\/40 { background-color: rgba(0, 0, 0, 0.15) !important; }
 [data-theme="light"] .bg-black\/50 { background-color: rgba(0, 0, 0, 0.2) !important; }
 [data-theme="light"] .bg-black\/60 { background-color: rgba(0, 0, 0, 0.25) !important; }
+[data-theme="light"] .bg-black\/70 { background-color: rgba(0, 0, 0, 0.35) !important; }
+[data-theme="light"] .bg-black\/80 { background-color: rgba(0, 0, 0, 0.45) !important; }
 
 /* --- Border Colors --- */
 [data-theme="light"] .border-zinc-800 { border-color: #e2e8f0 !important; }
@@ -476,6 +456,22 @@ html.theme-transitioning *::after {
 [data-theme="light"] .focus\:border-zinc-600:focus { border-color: #94a3b8 !important; }
 [data-theme="light"] .focus\:border-zinc-700:focus { border-color: #cbd5e1 !important; }
 
+/* --- Global input/textarea/select focus ring for light mode --- */
+[data-theme="light"] input:focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] select:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  outline: none !important;
+}
+[data-theme="light"] input:focus-visible,
+[data-theme="light"] textarea:focus-visible,
+[data-theme="light"] select:focus-visible {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  outline: none !important;
+}
+
 /* =====================================================
    LIGHT MODE — Additional background overrides
    ===================================================== */
@@ -521,6 +517,158 @@ html.theme-transitioning *::after {
 [data-theme="light"] .shadow-lg { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important; }
 [data-theme="light"] .shadow-2xl { box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 10px 15px -6px rgba(0, 0, 0, 0.06) !important; }
 [data-theme="light"] .shadow-xl { box-shadow: 0 12px 28px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important; }
+
+/* =====================================================
+   LIGHT MODE — Warning / Amber / Yellow text contrast
+   ===================================================== */
+[data-theme="light"] .text-amber-200 { color: #78350f !important; }
+[data-theme="light"] .text-amber-300 { color: #92400e !important; }
+[data-theme="light"] .text-amber-400 { color: #b45309 !important; }
+[data-theme="light"] .text-amber-500 { color: #d97706 !important; }
+[data-theme="light"] .text-yellow-200 { color: #854d0e !important; }
+[data-theme="light"] .text-yellow-300 { color: #a16207 !important; }
+[data-theme="light"] .text-yellow-400 { color: #ca8a04 !important; }
+[data-theme="light"] .text-yellow-500 { color: #eab308 !important; }
+[data-theme="light"] .text-orange-200 { color: #9a3412 !important; }
+[data-theme="light"] .text-orange-300 { color: #c2410c !important; }
+[data-theme="light"] .text-orange-400 { color: #ea580c !important; }
+
+/* =====================================================
+   LIGHT MODE — Other accent text contrast fixes
+   ===================================================== */
+[data-theme="light"] .text-emerald-200 { color: #047857 !important; }
+[data-theme="light"] .text-emerald-300 { color: #059669 !important; }
+[data-theme="light"] .text-blue-200 { color: #1e40af !important; }
+[data-theme="light"] .text-blue-300 { color: #2563eb !important; }
+[data-theme="light"] .text-red-200 { color: #b91c1c !important; }
+[data-theme="light"] .text-red-300 { color: #dc2626 !important; }
+[data-theme="light"] .text-indigo-200 { color: #3730a3 !important; }
+[data-theme="light"] .text-indigo-300 { color: #4f46e5 !important; }
+[data-theme="light"] .text-purple-200 { color: #6b21a8 !important; }
+[data-theme="light"] .text-purple-300 { color: #7c3aed !important; }
+[data-theme="light"] .text-violet-200 { color: #5b21b6 !important; }
+[data-theme="light"] .text-violet-300 { color: #7c3aed !important; }
+[data-theme="light"] .text-cyan-200 { color: #0e7490 !important; }
+[data-theme="light"] .text-cyan-300 { color: #0891b2 !important; }
+[data-theme="light"] .text-teal-200 { color: #0f766e !important; }
+[data-theme="light"] .text-teal-300 { color: #0d9488 !important; }
+[data-theme="light"] .text-rose-200 { color: #be123c !important; }
+[data-theme="light"] .text-rose-300 { color: #e11d48 !important; }
+
+/* =====================================================
+   LIGHT MODE — Chat session sidebar active item
+   ===================================================== */
+[data-theme="light"] .bg-zinc-900.border-indigo-500,
+[data-theme="light"] .border-indigo-500.bg-zinc-900 {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  border-left-color: #6366f1 !important;
+}
+
+/* =====================================================
+   LIGHT MODE — Active tab badges (bg-zinc-200 text-zinc-900)
+   These get swapped — need to keep them legible
+   ===================================================== */
+[data-theme="light"] .bg-zinc-200.text-zinc-900 {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* =====================================================
+   LIGHT MODE — Modal & Backdrop improvements
+   ===================================================== */
+[data-theme="light"] .backdrop-blur-sm {
+  --tw-backdrop-blur: blur(8px);
+}
+
+/* =====================================================
+   LIGHT MODE — Preserve white text on colored backgrounds
+   COMPOUND selectors only (same element must have both
+   bg-color and text class). Avoids false-matching child
+   text on transparent/light colored backgrounds.
+   MUST come AFTER safety-net overrides to win by specificity.
+   ===================================================== */
+
+/* --- Compound: same element has colored bg + text class --- */
+/* NOTE: Use specific from-COLOR- selectors, NOT generic from- which catches
+   animation classes like slide-in-from-bottom-4, slide-in-from-top-2, etc. */
+/* [data-theme="light"] :is(
+  [class*="bg-blue-"], [class*="bg-red-"], [class*="bg-green-"],
+  [class*="bg-emerald-"], [class*="bg-indigo-"], [class*="bg-purple-"],
+  [class*="bg-cyan-"], [class*="bg-amber-"], [class*="bg-yellow-"],
+  [class*="bg-orange-"], [class*="bg-rose-"], [class*="bg-teal-"],
+  [class*="bg-violet-"], [class*="bg-fuchsia-"], [class*="bg-pink-"],
+  [class*="bg-lime-"], [class*="bg-sky-"],
+  [class*="bg-primary"],
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]).text-zinc-50,
+[data-theme="light"] :is(
+  [class*="bg-blue-"], [class*="bg-red-"], [class*="bg-green-"],
+  [class*="bg-emerald-"], [class*="bg-indigo-"], [class*="bg-purple-"],
+  [class*="bg-cyan-"], [class*="bg-amber-"], [class*="bg-yellow-"],
+  [class*="bg-orange-"], [class*="bg-rose-"], [class*="bg-teal-"],
+  [class*="bg-violet-"], [class*="bg-fuchsia-"], [class*="bg-pink-"],
+  [class*="bg-lime-"], [class*="bg-sky-"],
+  [class*="bg-primary"],
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]).text-zinc-100 {
+  color: #fafafa !important;
+} */
+
+/* --- Descendant: text inside colored/gradient parent --- */
+/* NOTE: Gradient descendant uses [class*="from-COLOR-"] to avoid matching
+   animation classes (slide-in-from-bottom, slide-in-from-top, etc.) */
+/* [data-theme="light"] .bg-primary .text-zinc-50,
+[data-theme="light"] .bg-primary .text-zinc-100,
+[data-theme="light"] :is(
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]) .text-zinc-50,
+[data-theme="light"] :is(
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]) .text-zinc-100,
+[data-theme="light"] :is(
+  [class*="bg-blue-5"], [class*="bg-blue-6"], [class*="bg-blue-7"],
+  [class*="bg-red-5"], [class*="bg-red-6"], [class*="bg-red-7"],
+  [class*="bg-green-5"], [class*="bg-green-6"], [class*="bg-green-7"],
+  [class*="bg-emerald-5"], [class*="bg-emerald-6"], [class*="bg-emerald-7"],
+  [class*="bg-indigo-5"], [class*="bg-indigo-6"], [class*="bg-indigo-7"],
+  [class*="bg-purple-5"], [class*="bg-purple-6"], [class*="bg-purple-7"],
+  [class*="bg-cyan-5"], [class*="bg-cyan-6"], [class*="bg-cyan-7"],
+  [class*="bg-violet-5"], [class*="bg-violet-6"], [class*="bg-violet-7"],
+  [class*="bg-amber-5"], [class*="bg-amber-6"], [class*="bg-amber-7"],
+  [class*="bg-teal-5"], [class*="bg-teal-6"], [class*="bg-teal-7"],
+  [class*="bg-rose-5"], [class*="bg-rose-6"], [class*="bg-rose-7"],
+  [class*="bg-orange-5"], [class*="bg-orange-6"], [class*="bg-orange-7"]) .text-zinc-50,
+[data-theme="light"] :is(
+  [class*="bg-blue-5"], [class*="bg-blue-6"], [class*="bg-blue-7"],
+  [class*="bg-red-5"], [class*="bg-red-6"], [class*="bg-red-7"],
+  [class*="bg-green-5"], [class*="bg-green-6"], [class*="bg-green-7"],
+  [class*="bg-emerald-5"], [class*="bg-emerald-6"], [class*="bg-emerald-7"],
+  [class*="bg-indigo-5"], [class*="bg-indigo-6"], [class*="bg-indigo-7"],
+  [class*="bg-purple-5"], [class*="bg-purple-6"], [class*="bg-purple-7"],
+  [class*="bg-cyan-5"], [class*="bg-cyan-6"], [class*="bg-cyan-7"],
+  [class*="bg-violet-5"], [class*="bg-violet-6"], [class*="bg-violet-7"],
+  [class*="bg-amber-5"], [class*="bg-amber-6"], [class*="bg-amber-7"],
+  [class*="bg-teal-5"], [class*="bg-teal-6"], [class*="bg-teal-7"],
+  [class*="bg-rose-5"], [class*="bg-rose-6"], [class*="bg-rose-7"],
+  [class*="bg-orange-5"], [class*="bg-orange-6"], [class*="bg-orange-7"]) .text-zinc-100 {
+  color: #fafafa !important;
+} */
 
 /* ============= CUSTOM SCROLLBARS ============= */
 
@@ -888,6 +1036,193 @@ input[type="checkbox"]:disabled {
   background-color: rgb(39 39 42); 
   border-color: rgb(63 63 70); 
 } */
+
+/* =====================================================
+   LIGHT MODE — Flow MessagePreview (hardcoded Telegram colors)
+   ===================================================== */
+[data-theme="light"] .bg-\[\#0e1621\] {
+  background-color: #e8ecf1 !important;
+}
+[data-theme="light"] .bg-\[\#2b5278\] {
+  background-color: #d0e2f3 !important;
+}
+
+/* =====================================================
+   LIGHT MODE — Zinc-to-Zinc gradient avatars / cards
+   from-zinc-700/800/900 produce nearly invisible gradients
+   in light mode. Override to a subtle cool gray gradient.
+   ===================================================== */
+[data-theme="light"] [class*="from-zinc-7"][class*="to-zinc-8"],
+[data-theme="light"] [class*="from-zinc-8"][class*="to-zinc-9"],
+[data-theme="light"] [class*="from-zinc-7"][class*="to-zinc-9"],
+[data-theme="light"] [class*="from-zinc-6"][class*="to-zinc-7"],
+[data-theme="light"] [class*="from-zinc-6"][class*="to-zinc-8"] {
+  --tw-gradient-from: #94a3b8 !important;
+  --tw-gradient-to: #64748b !important;
+  background-image: linear-gradient(to right, var(--tw-gradient-from), var(--tw-gradient-to)) !important;
+}
+
+/* Text inside zinc gradients stays white */
+/* [data-theme="light"] [class*="from-zinc-7"] .text-zinc-50,
+[data-theme="light"] [class*="from-zinc-8"] .text-zinc-50,
+[data-theme="light"] [class*="from-zinc-6"] .text-zinc-50,
+[data-theme="light"] [class*="from-zinc-7"].text-zinc-50,
+[data-theme="light"] [class*="from-zinc-8"].text-zinc-50 {
+  color: #fafafa !important;
+} */
+
+/* =====================================================
+   LIGHT MODE — Code / Mono blocks
+   bg-zinc-800/900/950 get palette-swapped to light grays,
+   making dark code text invisible. Override code-specific
+   backgrounds to stay dark or use a subtle code-background.
+   ===================================================== */
+
+/* Inline <code> and <pre> inside message previews and content areas */
+[data-theme="light"] code.bg-black\/20,
+[data-theme="light"] pre.bg-black\/20 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  color: #1e293b !important;
+}
+
+/* Standalone code blocks (bg-zinc-800/900/950 used for code) */
+[data-theme="light"] pre[class*="bg-zinc-8"],
+[data-theme="light"] pre[class*="bg-zinc-9"],
+[data-theme="light"] code[class*="bg-zinc-8"],
+[data-theme="light"] code[class*="bg-zinc-9"] {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 1px solid #e2e8f0;
+}
+
+/* Code text colors - ensure contrast on light code bg */
+[data-theme="light"] code .text-emerald-400,
+[data-theme="light"] pre .text-emerald-400,
+[data-theme="light"] code.text-emerald-400,
+[data-theme="light"] pre.text-emerald-400 {
+  color: #047857 !important;
+}
+[data-theme="light"] code .text-cyan-400,
+[data-theme="light"] pre .text-cyan-400 {
+  color: #0e7490 !important;
+}
+[data-theme="light"] code .text-zinc-300,
+[data-theme="light"] code.text-zinc-300,
+[data-theme="light"] pre .text-zinc-300,
+[data-theme="light"] pre.text-zinc-300 {
+  color: #334155 !important;
+}
+
+/* Generic monospace containers (font-mono with dark bg) */
+[data-theme="light"] .font-mono[class*="bg-zinc-8"],
+[data-theme="light"] .font-mono[class*="bg-zinc-9"] {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 1px solid #e2e8f0;
+}
+
+/* =====================================================
+   LIGHT MODE — Hardcoded bg-black overlays (light adjust)
+   ===================================================== */
+[data-theme="light"] .bg-black\/5 { background-color: rgba(0, 0, 0, 0.03) !important; }
+[data-theme="light"] .bg-black\/10 { background-color: rgba(0, 0, 0, 0.06) !important; }
+[data-theme="light"] .bg-black\/20 { background-color: rgba(0, 0, 0, 0.08) !important; }
+[data-theme="light"] .bg-black\/30 { background-color: rgba(0, 0, 0, 0.1) !important; }
+[data-theme="light"] .bg-black\/40 { background-color: rgba(0, 0, 0, 0.12) !important; }
+[data-theme="light"] .bg-black\/50 { background-color: rgba(0, 0, 0, 0.15) !important; }
+[data-theme="light"] .bg-black\/60 { background-color: rgba(0, 0, 0, 0.2) !important; }
+[data-theme="light"] .bg-black\/70 { background-color: rgba(0, 0, 0, 0.3) !important; }
+[data-theme="light"] .bg-black\/80 { background-color: rgba(0, 0, 0, 0.4) !important; }
+
+/* =====================================================
+   LIGHT MODE — Gradient button hover states
+   Ensure hover:opacity-90 doesn't wash out gradient text
+   ===================================================== */
+/* [data-theme="light"] :is(
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]):hover .text-zinc-50,
+[data-theme="light"] :is(
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]):hover.text-zinc-50 {
+  color: #fafafa !important;
+} */
+
+/* =====================================================
+   LIGHT MODE — Badge / Pill fixes on colored backgrounds
+   ===================================================== */
+[data-theme="light"] [class*="bg-green-5"] .text-green-50,
+[data-theme="light"] [class*="bg-red-5"] .text-red-50,
+[data-theme="light"] [class*="bg-blue-5"] .text-blue-50,
+[data-theme="light"] [class*="bg-amber-5"] .text-amber-50,
+[data-theme="light"] [class*="bg-emerald-5"] .text-emerald-50,
+[data-theme="light"] [class*="bg-purple-5"] .text-purple-50,
+[data-theme="light"] [class*="bg-indigo-5"] .text-indigo-50 {
+  color: #ffffff !important;
+}
+
+/* =====================================================
+   LIGHT MODE — text-white preservation on colored/gradient backgrounds
+   ===================================================== */
+[data-theme="light"] :is(
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]) .text-white,
+[data-theme="light"] :is(
+  [class*="from-blue-"], [class*="from-red-"], [class*="from-green-"],
+  [class*="from-emerald-"], [class*="from-indigo-"], [class*="from-purple-"],
+  [class*="from-cyan-"], [class*="from-amber-"], [class*="from-yellow-"],
+  [class*="from-orange-"], [class*="from-rose-"], [class*="from-teal-"],
+  [class*="from-violet-"], [class*="from-fuchsia-"], [class*="from-pink-"],
+  [class*="from-lime-"], [class*="from-sky-"], [class*="from-zinc-"]).text-white,
+[data-theme="light"] [class*="bg-blue-5"].text-white,
+[data-theme="light"] [class*="bg-blue-6"].text-white,
+[data-theme="light"] [class*="bg-red-5"].text-white,
+[data-theme="light"] [class*="bg-red-6"].text-white,
+[data-theme="light"] [class*="bg-green-5"].text-white,
+[data-theme="light"] [class*="bg-green-6"].text-white,
+[data-theme="light"] [class*="bg-emerald-5"].text-white,
+[data-theme="light"] [class*="bg-emerald-6"].text-white,
+[data-theme="light"] [class*="bg-indigo-5"].text-white,
+[data-theme="light"] [class*="bg-indigo-6"].text-white,
+[data-theme="light"] [class*="bg-purple-5"].text-white,
+[data-theme="light"] [class*="bg-purple-6"].text-white,
+[data-theme="light"] [class*="bg-cyan-5"].text-white,
+[data-theme="light"] [class*="bg-cyan-6"].text-white,
+[data-theme="light"] .bg-primary.text-white,
+[data-theme="light"] .bg-primary .text-white {
+  color: #ffffff !important;
+}
+
+/* =====================================================
+   LIGHT MODE — SystemControl queue cards (bg-zinc-900/950 cards)
+   ===================================================== */
+[data-theme="light"] .bg-zinc-950\/50 {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+}
+[data-theme="light"] .bg-zinc-900\/50 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+/* =====================================================
+   LIGHT MODE — Ring / outline on focus for buttons
+   ===================================================== */
+[data-theme="light"] .ring-zinc-700 {
+  --tw-ring-color: #cbd5e1 !important;
+}
+[data-theme="light"] .ring-zinc-800 {
+  --tw-ring-color: #e2e8f0 !important;
+}
 
 /* ============= REACT FLOW LIGHT MODE ============= */
 [data-theme="light"] .react-flow__background {

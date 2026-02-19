@@ -68,7 +68,6 @@ const TABS: { id: MediaTab; label: string; icon: typeof ImageIcon }[] = [
 // ============= MAIN COMPONENT =============
 
 export function SidebarMedia({ sessionId, contactInfo }: SidebarMediaProps & { contactInfo?: any }) {
-  console.log('Rendering SidebarMedia with sessionId:', contactInfo);
   const { token } = useAuthStore();
   const { socket } = useSocket();
 

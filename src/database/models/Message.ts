@@ -52,6 +52,27 @@ export interface IMessage extends Document {
   isDeleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
+  // Translation tracking (outgoing)
+  translation?: {
+    isTranslated: boolean;
+    originalContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider: string;
+    latencyMs: number;
+    deliveryMode: 'translated_only' | 'both';
+    translatedAt: Date;
+  };
+  // Incoming auto-translation (user → agent)
+  incomingTranslation?: {
+    translatedContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider: string;
+    latencyMs: number;
+    cached: boolean;
+    translatedAt: Date;
+  };
   // Delivery status
   deliveryStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   deliveredAt?: Date;
@@ -141,6 +162,27 @@ const MessageSchema = new Schema<IMessage>(
     deletedBy: {
       type: Schema.Types.ObjectId,
       ref: 'Agent',
+    },
+    // Translation tracking (outgoing)
+    translation: {
+      isTranslated: { type: Boolean, default: false },
+      originalContent: String,
+      sourceLang: String,
+      targetLang: String,
+      provider: String,
+      latencyMs: Number,
+      deliveryMode: { type: String, enum: ['translated_only', 'both'] },
+      translatedAt: Date,
+    },
+    // Incoming auto-translation (user → agent)
+    incomingTranslation: {
+      translatedContent: String,
+      sourceLang: String,
+      targetLang: String,
+      provider: String,
+      latencyMs: Number,
+      cached: { type: Boolean, default: false },
+      translatedAt: Date,
     },
     // Delivery status
     deliveryStatus: {

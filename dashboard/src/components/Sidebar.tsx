@@ -8,13 +8,14 @@ import {
   ChevronDown, MessageSquare, Wifi, WifiOff, Loader2, Eye, Activity,
   Download, GitBranch, ChevronLeft, ChevronRight, User, Sliders, Bell,
   Shield, History, ListChecks, Server, Languages, Contact, Megaphone,
-  KeyRound, Radio, Globe, HardDrive, ClipboardCheck
+  KeyRound, Radio, Globe, HardDrive, ClipboardCheck, BookOpen
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
 import { updateAgentStatus } from '../services/socket';
 import { useTranslation } from 'react-i18next';
 import NotificationCenter from './NotificationCenter';
+import { useThemeStore } from '../hooks';
 
 interface SidebarProps {
   agent: Agent | null;
@@ -32,6 +33,7 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
   const { status: connectionStatus } = useConnectionStore();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useThemeStore();
 
   if (HIDDEN_ROUTES.some(route => location.pathname.startsWith(route))) {
     // return null;
@@ -115,6 +117,8 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
           { path: '/dashboard/qa', icon: ClipboardCheck, label: t('sidebar.nav.qa', 'QA & Coaching'), permission: 'supervisor.monitor' },
           { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
           { path: '/dashboard/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
+          { path: '/dashboard/playbooks', icon: BookOpen, label: t('sidebar.nav.playbooks', 'Playbooks'), permission: 'playbooks.read' },
+          { path: '/dashboard/translation', icon: Languages, label: t('sidebar.nav.translation', 'Traducción'), permission: 'settings.read' },
         ]
       },
       {
@@ -157,12 +161,12 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
   return (
     <aside
-      className={`${isCollapsed ? 'w-[72px]' : 'w-72'} bg-zinc-950 border-r border-zinc-800 flex flex-col transition-all duration-300 relative z-50`}
+      className={`${isCollapsed ? 'w-[72px]' : 'w-72'} bg-zinc-950 border-r border-zinc-800 flex flex-col transition-all duration-300 relative z-[10]`}
     >
       {/* Toggle Button */}
       <button
         onClick={toggleCollapse}
-        className="absolute -right-3 top-11 z-50 w-6 h-6 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none transition-all duration-300"
+        className="absolute -right-3 top-11 w-6 h-6 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none transition-all duration-300"
       >
         {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
@@ -171,10 +175,10 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       <div className="h-[56px] flex items-center px-4 border-b border-zinc-800/50 bg-zinc-950 transition-all duration-200">
         <div className={`flex items-center gap-3 w-full transition-all duration-300 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {isCollapsed ? (
-            <img src="/assets/img/logo-small-dark.png" alt="Logo" className="w-8 h-8 rounded-sm object-contain transition-all duration-200" />
+            <img src={`/assets/img/logo-small-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`} alt="Logo" className="w-8 h-8 rounded-sm object-contain transition-all duration-200" />
           ) : (
             <div className="flex items-center gap-2 text-zinc-50 font-semibold  duration-200">
-              <img src="/assets/img/logo-dark.png" alt="Logo" className="rounded-sm object-contain h-8 w-auto transition-all duration-200" />
+              <img src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`} alt="Logo" className="rounded-sm object-contain h-8 w-auto transition-all duration-200" />
               <span className="font-bold text-zinc-100 text-sm ">Support</span>
             </div>
           )}
@@ -190,8 +194,8 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
       <div>
         <div
           className={`flex items-center ${isCollapsed
-              ? "justify-center flex gap-1"
-              : "justify-between"
+            ? "justify-center flex gap-1"
+            : "justify-between"
             } text-[10px] bg-zinc-900/40 px-2 py-1`}
         >
           {/* Connection Status */}
@@ -238,10 +242,10 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
             isCollapsed ? (
               <div
                 className={`w-1.5 h-1.5 rounded-full ${availabilityStatus === "available"
-                    ? "bg-emerald-500"
-                    : availabilityStatus === "busy"
-                      ? "bg-amber-500"
-                      : "bg-zinc-600"
+                  ? "bg-emerald-500"
+                  : availabilityStatus === "busy"
+                    ? "bg-amber-500"
+                    : "bg-zinc-600"
                   }`}
                 title={availabilityStatus}
               />

@@ -149,6 +149,27 @@ export interface Message {
   isPinned?: boolean;
   internalNote?: string;
   tags?: string[];
+  // Outgoing auto-translation metadata
+  translation?: {
+    isTranslated: boolean;
+    originalContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider: string;
+    latencyMs: number;
+    deliveryMode: 'translated_only' | 'both';
+    translatedAt: string;
+  };
+  // Incoming auto-translation metadata
+  incomingTranslation?: {
+    translatedContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider: string;
+    latencyMs: number;
+    cached: boolean;
+    translatedAt: string;
+  };
 }
 
 export interface DashboardStats {
@@ -368,7 +389,7 @@ export interface UserHistorySession {
 
 // ============= ENTERPRISE TYPES =============
 
-export type ChatCategory = 'support' | 'billing' | 'bug' | 'feedback' | 'other';
+export type ChatCategory = 'support' | 'billing' | 'bug' | 'feedback' | 'other' | 'refund';
 
 export interface Transfer {
   _id: string;

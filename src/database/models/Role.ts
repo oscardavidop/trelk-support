@@ -164,6 +164,14 @@ export const PERMISSION_CATEGORIES = {
         'segments.write',       // Create/edit segments
         'segments.delete',      // Delete segments
     ],
+
+    // Playbooks / Guided Scripts
+    playbooks: [
+        'playbooks.read',       // View playbooks
+        'playbooks.write',      // Create/edit playbooks
+        'playbooks.delete',     // Delete playbooks
+        'playbooks.execute',    // Execute playbooks in chats
+    ],
 } as const;
 
 // Flatten all permissions for validation
@@ -206,6 +214,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
         'customFields.read', 'customFields.write',
         // Segments
         'segments.read', 'segments.write',
+        // Playbooks
+        'playbooks.read', 'playbooks.write', 'playbooks.execute',
     ],
 
     support: [
@@ -219,6 +229,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
         'replies.read', 'replies.use',
         // Custom fields
         'customFields.read',
+        // Playbooks (execute only)
+        'playbooks.read', 'playbooks.execute',
     ],
 
     junior: [
@@ -229,6 +241,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
         'notes.read', 'notes.write',
         // Replies
         'replies.read', 'replies.use',
+        // Playbooks (execute only)
+        'playbooks.read', 'playbooks.execute',
     ],
 };
 

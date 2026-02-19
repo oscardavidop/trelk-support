@@ -308,10 +308,10 @@ export async function handleMessage(message: TelegramMessage): Promise<void> {
       // Trigger flow: keyword detected (flows will filter by keywords)
       await triggerKeywordDetected(activeSession, { content: text, messageType: 'text' });
       
-      // Reset inactivity timer when user responds
-      if (activeSession.status === 'human') {
-        await resetInactivityTimer(activeSession.sessionId);
-      }
+      // // Reset inactivity timer when user responds
+      // if (activeSession.status === 'human') {
+      //   await resetInactivityTimer(activeSession.sessionId);
+      // }
       
       if (activeSession.status === 'waiting') {
         // Reset queued timer when user sends message

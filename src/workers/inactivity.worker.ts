@@ -133,6 +133,7 @@ async function handleWarning(
 
     return { success: true, type: 'warning' };
   } catch (error) {
+    console.error('Error sending inactivity warning:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     // Check if this is a blocking error (user blocked bot - Telegram only)

@@ -21,6 +21,7 @@ import {
   QrCode,
   Key,
 } from "lucide-react";
+import { useTheme } from "../hooks";
 
 type MFAMethod = "telegram" | "totp";
 
@@ -38,6 +39,7 @@ interface MFAVerifyState {
 
 export default function MFAVerifyPage() {
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
   const location = useLocation();
   const { login } = useAuthStore();
 
@@ -430,7 +432,7 @@ export default function MFAVerifyPage() {
           {/* Logo */}
           <div className="inline-flex items-center justify-center mb-4 w-full">
             <img
-              src="/assets/img/logo-dark.png"
+              src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
               alt="Trelk Logo"
               className="h-14 w-auto"
             />
@@ -537,7 +539,7 @@ export default function MFAVerifyPage() {
         {/* Logo */}
         <div className="inline-flex items-center justify-center mb-4 w-full">
           <img
-            src="/assets/img/logo-dark.png"
+            src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
             alt="Trelk Logo"
             className="h-14 w-auto"
           />

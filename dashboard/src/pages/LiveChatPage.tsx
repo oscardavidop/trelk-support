@@ -394,7 +394,7 @@ export default function LiveChatPage() {
           <div className="flex items-center gap-2 p-1 bg-zinc-900/60 backdrop-blur-md border border-zinc-800 rounded-xl w-fit">
             <button
               onClick={() => setActiveTab('projects')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium focus:outline-none transition-all ${
                 activeTab === 'projects'
                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
@@ -409,7 +409,7 @@ export default function LiveChatPage() {
                   setActiveTab('security');
                   loadSecurityEvents();
                 }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all focus:outline-none ${
                   activeTab === 'security'
                     ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'

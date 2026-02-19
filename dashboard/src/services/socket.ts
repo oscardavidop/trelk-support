@@ -10,6 +10,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { toast } from '../stores/toastStore';
 import { getBrowserSessionId, getDeviceInfo } from './sessionGuard.service';
 import type { ChatSession, Message, DashboardStats, Agent, TypingEvent, TransferEvent, ReopenEvent, BlockEvent, UnblockEvent } from '../types';
+import { usePlaybookStore } from '../stores/playbookStore';
 
 let socket: Socket | null = null;
 let reconnectAttempt = 0;
@@ -52,16 +53,6 @@ export function initializeSocket(): Socket {
   socket.on('disconnect', (reason) => {
     console.log('🔌 Socket disconnected:', reason);
     useConnectionStore.getState().setDisconnected();
-    
-    // Show toast after short delay (avoid flash on page reload)
-    setTimeout(() => {
-      if (!socket?.connected) {
-        toast.warning('Conexión perdida', 'Intentando reconectar...', { 
-          groupKey: 'connection:lost',
-          priority: 'high'
-        });
-      }
-    }, 2000);
   });
 
   socket.on('connect_error', (error) => {
@@ -111,7 +102,6 @@ export function initializeSocket(): Socket {
   // ============= SYNC STATE (on connect/reconnect) =============
   
   socket.on('sync:state', (data) => {
-    console.log('🔄 Sync state received:', data);
     
     // Update connection store
     useConnectionStore.getState().setSyncState({
@@ -269,6 +259,9 @@ export function initializeSocket(): Socket {
   socket.on('session:updated', (session: ChatSession) => {
     console.log('📝 Session updated:', session.sessionId, 'assigned to:', session.assignedAgent?._id || 'none');
     
+    // Dispatch DOM event so sidebar components can re-fetch contactInfo
+    window.dispatchEvent(new CustomEvent('session:updated', { detail: { sessionId: session.sessionId, session } }));
+
     const currentAgent = useAuthStore.getState().agent;
     const isMySession = session.assignedAgent?._id === currentAgent?._id || 
                         session.assignedAgent?._id === currentAgent?.id;
@@ -350,6 +343,32 @@ export function initializeSocket(): Socket {
     if (message.sender === 'user') {
       playNotificationSound('message');
     }
+  });
+
+  // Incoming auto-translation result (arrives async after message:new)
+  socket.on('message:translation', (data: {
+    messageId: string;
+    sessionId: string;
+    translatedContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider?: string;
+    latencyMs: number;
+    cached: boolean;
+    showOriginal: boolean;
+  }) => {
+    console.log('🌐 Incoming translation:', data.messageId);
+    useChatStore.getState().updateMessage(data.messageId, {
+      incomingTranslation: {
+        translatedContent: data.translatedContent,
+        sourceLang: data.sourceLang,
+        targetLang: data.targetLang,
+        provider: data.provider || 'unknown',
+        latencyMs: data.latencyMs,
+        cached: data.cached,
+        translatedAt: new Date().toISOString(),
+      },
+    });
   });
 
   // Message updated (edit)
@@ -950,6 +969,32 @@ export function initializeSocket(): Socket {
     }
     // Dispatch custom event for QACoachingModal to re-check
     window.dispatchEvent(new CustomEvent('qa:review:edited', { detail: data }));
+  });
+
+  // ============= PLAYBOOK EVENTS =============
+
+  socket.on('playbook:progress' as any, (data: { sessionId: string; progress: any }) => {
+    console.log('📋 Playbook progress:', data.sessionId);
+    usePlaybookStore.getState().onPlaybookProgress(data.sessionId, data.progress);
+  });
+
+  socket.on('playbook:started' as any, (data: { sessionId: string; playbookName: string; agentId: string }) => {
+    console.log('📋 Playbook started:', data.playbookName, 'for session', data.sessionId);
+    toast.info('Playbook Iniciado', `"${data.playbookName}" se inició en el chat`, {
+      groupKey: `playbook:started:${data.sessionId}`,
+      sessionId: data.sessionId,
+      duration: 4000,
+    });
+  });
+
+  socket.on('playbook:updated' as any, (data: { playbookId: string; playbook: any }) => {
+    console.log('📋 Playbook updated:', data.playbookId);
+    usePlaybookStore.getState().onPlaybookUpdated(data.playbook);
+  });
+
+  socket.on('playbook:deleted' as any, (data: { playbookId: string }) => {
+    console.log('📋 Playbook deleted:', data.playbookId);
+    usePlaybookStore.getState().onPlaybookDeleted(data.playbookId);
   });
 
   return socket;

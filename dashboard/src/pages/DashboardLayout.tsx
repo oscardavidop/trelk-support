@@ -202,7 +202,6 @@ export default function DashboardLayout() {
 
 
   // Show Telegram link required screen (blocking)
-  console.log("telegramLinkRequired", telegramLinkRequired);
   if (telegramLinkRequired) {
     return <TelegramLinkRequired onLinkComplete={handleTelegramLinkComplete} reason="policy" />;
   }
@@ -232,7 +231,7 @@ export default function DashboardLayout() {
           <Sidebar agent={agent} stats={stats} />
           {/* )} */}
 
-          <main className="flex-1 overflow-hidden flex flex-col">
+          <main className="flex-1 overflow-hidden flex flex-col z-0">
             {/* Broadcast Banners (internal announcements) */}
             <BroadcastBanner />
 

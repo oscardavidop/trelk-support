@@ -133,3 +133,7 @@ export {
 
 // Enterprise models - Media Admin
 export { MediaFile, type IMediaFile, type MediaSource, type MediaType, type MediaStatus } from './MediaFile.js';
+
+// Playbooks / Guided Scripts
+export { Playbook, type IPlaybook, type IPlaybookStep, type IPlaybookTrigger, type PlaybookStepType, type PlaybookStepAction, type PlaybookTriggerType } from './Playbook.js';
+export { PlaybookProgress, type IPlaybookProgress, type IStepProgress, type StepStatus } from './PlaybookProgress.js';

@@ -149,7 +149,7 @@ export function SidebarHistory({ userId, totalSessions, currentSessionId }: Hist
                             </span>
                           </div>
                           
-                          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border ${status.bg} ${status.color} ${status.border}`}>
+                          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase  border ${status.bg} ${status.color} ${status.border}`}>
                             <StatusIcon className="w-2.5 h-2.5" />
                             {status.label}
                           </div>

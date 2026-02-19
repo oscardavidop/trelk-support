@@ -39,6 +39,7 @@ import {
   validateOrigin,
   logSecurityEvent,
 } from './webchat-security.service.js';
+import { translateIncoming } from './incoming-translation.service.js';
 
 // Connected visitors map
 const connectedVisitors = new Map<string, {
@@ -412,6 +413,31 @@ export function initializeWebChatSocket(httpServer: HttpServer): SocketServer {
             media: data.media,
             createdAt: message.createdAt,
           });
+
+          // Async incoming auto-translate for web messages (non-blocking)
+          if (data.content && data.content.trim().length > 0) {
+            translateIncoming({
+              messageId: message._id.toString(),
+              content: data.content,
+              sessionId: connectionInfo.sessionId,
+              channel: 'web',
+              messageType: data.contentType || 'text',
+            }).then(txResult => {
+              if (txResult.shouldTranslate && dashboardIO) {
+                dashboardIO.emit('message:translation', {
+                  messageId: message._id.toString(),
+                  sessionId: connectionInfo.sessionId,
+                  translatedContent: txResult.translatedContent,
+                  sourceLang: txResult.sourceLang,
+                  targetLang: txResult.targetLang,
+                  provider: txResult.provider,
+                  latencyMs: txResult.latencyMs,
+                  cached: txResult.cached,
+                  showOriginal: txResult.showOriginal,
+                });
+              }
+            }).catch(() => { /* silent */ });
+          }
         }
 
         // Trigger flow engine - use WebVisitor-specific triggers

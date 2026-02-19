@@ -413,13 +413,14 @@ export function getFAQMenuKeyboard(lang: Language): InlineKeyboardMarkup {
 }
 
 export function getTicketCategoryKeyboard(lang: Language): InlineKeyboardMarkup {
+  const l = (obj: Record<string, string>) => obj[lang] || obj.en || '';
   return {
     inline_keyboard: [
-      [{ text: TICKET_CATEGORY_LABELS[TicketCategory.BUG][lang], callback_data: `ticket_${TicketCategory.BUG}` }],
-      [{ text: TICKET_CATEGORY_LABELS[TicketCategory.PAYMENT][lang], callback_data: `ticket_${TicketCategory.PAYMENT}` }],
-      [{ text: TICKET_CATEGORY_LABELS[TicketCategory.ACCOUNT][lang], callback_data: `ticket_${TicketCategory.ACCOUNT}` }],
-      [{ text: TICKET_CATEGORY_LABELS[TicketCategory.FEATURE][lang], callback_data: `ticket_${TicketCategory.FEATURE}` }],
-      [{ text: TICKET_CATEGORY_LABELS[TicketCategory.OTHER][lang], callback_data: `ticket_${TicketCategory.OTHER}` }],
+      [{ text: l(TICKET_CATEGORY_LABELS[TicketCategory.BUG] as any), callback_data: `ticket_${TicketCategory.BUG}` }],
+      [{ text: l(TICKET_CATEGORY_LABELS[TicketCategory.PAYMENT] as any), callback_data: `ticket_${TicketCategory.PAYMENT}` }],
+      [{ text: l(TICKET_CATEGORY_LABELS[TicketCategory.ACCOUNT] as any), callback_data: `ticket_${TicketCategory.ACCOUNT}` }],
+      [{ text: l(TICKET_CATEGORY_LABELS[TicketCategory.FEATURE] as any), callback_data: `ticket_${TicketCategory.FEATURE}` }],
+      [{ text: l(TICKET_CATEGORY_LABELS[TicketCategory.OTHER] as any), callback_data: `ticket_${TicketCategory.OTHER}` }],
       [{ text: lang === 'en' ? '❌ Cancel' : '❌ Cancelar', callback_data: 'cancel' }]
     ]
   };
@@ -467,16 +468,16 @@ export function getTicketDoneKeyboard(lang: Language): InlineKeyboardMarkup {
 export function getMessage(key: keyof typeof MESSAGES, lang: Language): string {
   const msg = MESSAGES[key];
   if (typeof msg === 'object' && lang in msg) {
-    return msg[lang] as string;
+    return (msg as Record<string, string>)[lang] as string;
   }
   return '';
 }
 
 export function formatTicketConfirmation(ticketId: string, category: TicketCategory, lang: Language): string {
-  const template = MESSAGES.ticketConfirmation[lang];
+  const template = (MESSAGES.ticketConfirmation as Record<string, string>)[lang] || MESSAGES.ticketConfirmation.en;
   return template
     .replace('{{ticketId}}', ticketId)
-    .replace('{{category}}', TICKET_CATEGORY_LABELS[category][lang]);
+    .replace('{{category}}', (TICKET_CATEGORY_LABELS[category] as Record<string, string>)[lang] || '');
 }
 
 export function formatAgentNotification(
@@ -486,10 +487,10 @@ export function formatAgentNotification(
   description: string,
   lang: Language
 ): string {
-  const template = MESSAGES.agentNotification[lang];
+  const template = (MESSAGES.agentNotification as Record<string, string>)[lang] || MESSAGES.agentNotification.en;
   return template
     .replace('{{username}}', username ? `@${username}` : `User ${userId}`)
     .replace('{{userId}}', String(userId))
-    .replace('{{category}}', TICKET_CATEGORY_LABELS[category][lang])
+    .replace('{{category}}', (TICKET_CATEGORY_LABELS[category] as Record<string, string>)[lang] || '')
     .replace('{{description}}', description);
 }

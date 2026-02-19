@@ -519,7 +519,7 @@ const SessionItem = memo(({ session, isActive, isNew, currentAgentId, onClick }:
               {/* Agent assignment indicator if not me */}
               {session.assignedAgent && session.assignedAgent._id !== currentAgentId && !isClosed && (
                  <div className="w-4 h-4 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] font-bold text-zinc-400 border border-zinc-700" title={session.assignedAgent.name}>
-                    {session.assignedAgent.name.charAt(0)}
+                    {session?.assignedAgent?.name?.charAt(0)}
                  </div>
               )}
            </div>

@@ -52,17 +52,21 @@ import {
 } from 'lucide-react';
 import {
   File as FileIcon,
+  Languages,
 } from 'lucide-react';
 import type { ChatSession, Message, TypingEvent, ChatCategory } from '../types';
 import AgentComposer from './AgentComposer';
 import { TypingIndicator, TransferModal, BlockUserModal, CategorySelector, ReopenChatButton, SurveyDisplay } from './enterprise';
 import MessageContextMenu from './MessageContextMenu';
 import { EditMessageModal, DeleteMessageModal, SaveQuickReplyModal, AddNoteModal, TagSelectorModal, PinnedMessageConfirmationModal } from './MessageActionModals';
+import { useMessageTranslation, TranslationBubble } from './translation/MessageTranslation';
+import { updateSessionIncomingTranslation } from '../services/translation.service';
 import { DispositionModal } from './DispositionModal';
 import { WhisperDisplay } from './chat/WhisperDisplay';
 import ChatReplayModal from './ChatReplayModal';
 import { useSupervisorStore } from '../stores/supervisorStore';
 import { markWhisperAsRead as markWhisperReadApi } from '../services/socket';
+import { usePlaybookStore } from '../stores/playbookStore';
 import { formatFileSize, useFileDownload, useFileSize } from '../hooks/useFileSize';
 import { set } from 'date-fns';
 
@@ -133,8 +137,13 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
     | null>(null);
   const [closeChatModal, setCloseChatModal] = useState(false);
   const [closingChat, setClosingChat] = useState(false);
+  const [playbookBlockModal, setPlaybookBlockModal] = useState<{ pendingSteps: string[]; playbookNames: string[] } | null>(null);
   const [tagSelectorModal, setTagSelectorModal] = useState<{ message: Message } | null>(null);
   const [pinnedMessageConfirmation, setPinnedMessageConfirmation] = useState<{ message: Message } | null>(null);
+
+  // Translation hook
+  const { translations: messageTranslations, loading: translationLoading, translateMessage, clearTranslation } = useMessageTranslation();
+  const [showOriginalMap, setShowOriginalMap] = useState<Map<string, string>>(new Map());
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [pinForUser, setPinForUser] = useState<boolean>(false);
 
@@ -147,6 +156,26 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
     markWhisperReadApi(whisperId);
     markWhisperReadStore(whisperId);
   }, [markWhisperReadStore]);
+
+  // Listen for "Ver original" events from context menu
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.messageId && detail?.originalContent) {
+        setShowOriginalMap(prev => {
+          const next = new Map(prev);
+          if (next.has(detail.messageId)) {
+            next.delete(detail.messageId);
+          } else {
+            next.set(detail.messageId, detail.originalContent);
+          }
+          return next;
+        });
+      }
+    };
+    window.addEventListener('translation:showOriginal', handler);
+    return () => window.removeEventListener('translation:showOriginal', handler);
+  }, []);
 
   // Join session room and load messages
   useEffect(() => {
@@ -533,6 +562,43 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
   const handleReportSpam = useCallback((message: Message) => {
     if (confirm('¿Reportar este mensaje como spam?')) {
       reportSpam(message._id, session.sessionId);
+    }
+    closeContextMenu();
+  }, [session.sessionId, closeContextMenu]);
+
+  // Translate a message from the context menu
+  const handleTranslateMessage = useCallback((message: Message, targetLang: string) => {
+    if (message.content) {
+      translateMessage(message._id, message.content, targetLang, session.sessionId);
+    }
+    closeContextMenu();
+  }, [session.sessionId, translateMessage, closeContextMenu]);
+
+  // Disable incoming auto-translate for this chat from context menu
+  const handleDisableIncomingTranslate = useCallback(async (message: Message) => {
+    try {
+      await updateSessionIncomingTranslation(session.sessionId, { incomingEnabled: false });
+      toast.info('Auto-translate desactivado', 'La traducción entrante fue desactivada para este chat.');
+    } catch {
+      toast.error('Error', 'No se pudo desactivar el auto-translate.');
+    }
+    closeContextMenu();
+  }, [session.sessionId, closeContextMenu]);
+
+  // Report bad incoming translation
+  const handleReportTranslation = useCallback((message: Message) => {
+    const detail = message.incomingTranslation;
+    if (detail) {
+      console.warn('[Translation Report]', {
+        messageId: message._id,
+        sessionId: session.sessionId,
+        original: message.content,
+        translated: detail.translatedContent,
+        sourceLang: detail.sourceLang,
+        targetLang: detail.targetLang,
+        provider: detail.provider,
+      });
+      toast.info('Reporte enviado', 'Se reportó la traducción como incorrecta. Gracias por tu feedback.');
     }
     closeContextMenu();
   }, [session.sessionId, closeContextMenu]);
@@ -1016,6 +1082,67 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
                     isHighlighted={highlightedMessageId === msg._id}
                     session={session}
                   />
+                  {/* Incoming auto-translate overlay (user messages) */}
+                  {msg.sender === 'user' && msg.incomingTranslation?.translatedContent && (
+                    <div className="px-4 pr-16">
+                      <div className="mt-1 p-3 bg-cyan-950/30 backdrop-blur-sm border border-cyan-800/30 rounded-xl text-sm relative group/itx">
+                        <div className="flex items-center gap-1.5 mb-1 text-[10px] text-cyan-400/60 font-bold uppercase tracking-wider">
+                          <Languages className="w-3 h-3" />
+                          <span>Auto-translated · {msg.incomingTranslation.sourceLang} → {msg.incomingTranslation.targetLang}</span>
+                          {msg.incomingTranslation.cached && (
+                            <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400/50 rounded text-[9px]">cached</span>
+                          )}
+                          <span className="ml-auto text-[9px] text-zinc-600 opacity-0 group-hover/itx:opacity-100 transition-opacity">
+                            {msg.incomingTranslation.provider} · {msg.incomingTranslation.latencyMs}ms
+                          </span>
+                        </div>
+                        <p className="text-zinc-200 whitespace-pre-wrap break-words">{msg.incomingTranslation.translatedContent}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Inline Translation Bubble */}
+                  {messageTranslations.has(msg._id) && (
+                    <div className={`px-4 ${msg.sender === 'user' ? 'pr-16' : 'pl-16'}`}>
+                      <TranslationBubble
+                        translatedText={messageTranslations.get(msg._id)!.text}
+                        detectedLang={messageTranslations.get(msg._id)!.detectedLang}
+                        targetLang={messageTranslations.get(msg._id)!.targetLang}
+                        provider={messageTranslations.get(msg._id)!.provider}
+                        latencyMs={messageTranslations.get(msg._id)!.latencyMs}
+                        onClose={() => clearTranslation(msg._id)}
+                      />
+                    </div>
+                  )}
+                  {translationLoading.has(msg._id) && (
+                    <div className={`px-4 ${msg.sender === 'user' ? 'pr-16' : 'pl-16'}`}>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-indigo-400/60 animate-pulse">
+                        <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.416" strokeDashoffset="10.472" /></svg>
+                        Traduciendo…
+                      </div>
+                    </div>
+                  )}
+                  {/* Show original content for auto-translated messages */}
+                  {showOriginalMap.has(msg._id) && (
+                    <div className={`px-4 ${msg.sender === 'agent' ? 'pl-16' : 'pr-16'}`}>
+                      <div className="mt-1 p-3 bg-zinc-800/60 backdrop-blur-sm border border-zinc-700/50 rounded-xl text-sm relative">
+                        <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                          <Eye className="w-3 h-3" />
+                          Original
+                          <button
+                            onClick={() => setShowOriginalMap(prev => {
+                              const next = new Map(prev);
+                              next.delete(msg._id);
+                              return next;
+                            })}
+                            className="ml-auto text-zinc-500 hover:text-zinc-300 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <p className="text-zinc-300 whitespace-pre-wrap break-words">{showOriginalMap.get(msg._id)}</p>
+                      </div>
+                    </div>
+                  )}
                 </React.Fragment>
               );
             })}
@@ -1046,7 +1173,20 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           session={session}
           replyTo={replyTo}
           onCancelReply={handleCancelReply}
-          onRequestClose={() => setCloseChatModal(true)}
+          onRequestClose={async () => {
+            // Check playbook validation before allowing close
+            try {
+              const validation = await usePlaybookStore.getState().validateClose(session.sessionId);
+              if (validation && !validation.canClose) {
+                setPlaybookBlockModal({
+                  pendingSteps: validation.pendingCriticalSteps || [],
+                  playbookNames: validation.mandatoryPlaybooks?.map((p: any) => p.name || p) || [],
+                });
+                return;
+              }
+            } catch { /* if validation fails, allow close anyway */ }
+            setCloseChatModal(true);
+          }}
         />
       ) : session.status === 'waiting' ? (
         <div className="p-4 border-t border-amber-700/50 bg-amber-500/10 text-center">
@@ -1121,6 +1261,9 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           onAddTag={handleAddTag}
           onAddNote={handleAddNote}
           onReportSpam={handleReportSpam}
+          onTranslate={handleTranslateMessage}
+          onDisableIncomingTranslate={handleDisableIncomingTranslate}
+          onReportTranslation={handleReportTranslation}
         />
       )}
 
@@ -1197,6 +1340,42 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
           />
         )
       }
+
+      {/* Playbook Block Modal — prevents close when mandatory playbooks incomplete */}
+      {playbookBlockModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPlaybookBlockModal(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-amber-500/10 rounded-xl"><AlertCircle className="w-5 h-5 text-amber-400" /></div>
+              <h3 className="text-lg font-bold text-zinc-100">Playbook Incompleto</h3>
+            </div>
+            <p className="text-zinc-400 text-sm mb-3">No puedes cerrar este chat hasta completar los pasos críticos del playbook.</p>
+            {playbookBlockModal.playbookNames.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-zinc-500 mb-1">Playbooks pendientes:</p>
+                <ul className="space-y-1">
+                  {playbookBlockModal.playbookNames.map((name, i) => (
+                    <li key={i} className="text-xs text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">• {name}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {playbookBlockModal.pendingSteps.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs text-zinc-500 mb-1">Pasos críticos pendientes:</p>
+                <ul className="space-y-1">
+                  {playbookBlockModal.pendingSteps.map((step, i) => (
+                    <li key={i} className="text-xs text-red-300 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">• {step}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button onClick={() => setPlaybookBlockModal(null)} className="px-4 py-2 text-sm text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all">Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tagSelectorModal && (
         <TagSelectorModal
@@ -1395,6 +1574,16 @@ function MessageBubble({
 
             {isPinned && <Pin className="w-3 h-3" />}
           </div>
+
+          {/* Auto-translated indicator */}
+          {message.translation?.isTranslated && isAgent && (
+            <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-white/10 text-[10px] text-indigo-300/60">
+              <Languages className="w-3 h-3" />
+              <span>Auto-traducido · {message.translation.sourceLang} → {message.translation.targetLang}</span>
+            </div>
+          )}
+
+
         </div>
       </div>
     </div>

@@ -58,6 +58,17 @@ export interface IAgentPreferences extends Document {
   // Desktop notifications
   desktopNotifications: boolean;
 
+  // Translation preferences
+  translation: {
+    outgoingOverride: 'global' | 'always_on' | 'always_off';
+    agentWritesIn: string;
+    confirmBeforeSend: boolean;
+    // Incoming auto-translate
+    incomingOverride: 'global' | 'always_on' | 'always_off';
+    incomingTargetLang: string;
+    showOriginalWithTranslation: boolean;
+  };
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -126,6 +137,17 @@ const AgentPreferencesSchema = new Schema<IAgentPreferences>(
 
     // Desktop notifications
     desktopNotifications: { type: Boolean, default: true },
+
+    // Translation preferences
+    translation: {
+      outgoingOverride: { type: String, enum: ['global', 'always_on', 'always_off'], default: 'global' },
+      agentWritesIn: { type: String, default: 'es' },
+      confirmBeforeSend: { type: Boolean, default: true },
+      // Incoming auto-translate
+      incomingOverride: { type: String, enum: ['global', 'always_on', 'always_off'], default: 'global' },
+      incomingTargetLang: { type: String, default: '' },
+      showOriginalWithTranslation: { type: Boolean, default: true },
+    },
   },
   {
     timestamps: true,
@@ -147,11 +169,11 @@ export async function getOrCreatePreferences(agentId: string): Promise<IAgentPre
 
   const globalSettings = await getAgentRules();
 
-  return {
-    ...prefs.toObject(), organizationSettings: {
-      agentRules: {
-        focusModeEnabled: globalSettings.focusModeEnabled,
-      }
+  Object.assign(prefs, { organizationSettings: {
+    agentRules: {
+      focusModeEnabled: globalSettings.focusModeEnabled,
     }
-  } as unknown as IAgentPreferences;
+  } as Partial<IAgentPreferences> });
+
+  return prefs as unknown as IAgentPreferences;
 }

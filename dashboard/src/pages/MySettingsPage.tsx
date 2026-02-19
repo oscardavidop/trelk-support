@@ -4,11 +4,13 @@ import { useAuthStore } from '../stores/authStore';
 import {
   User, Sliders, Bell, Shield, History, Save, Loader2, Monitor, Smartphone, Tablet, Globe, Trash2,
   AlertTriangle, Check, X, Volume2, VolumeX, Moon, Sun, Eye, EyeOff, LogOut, RefreshCw, Camera, Upload,
-  ChevronRight, Mail, Hash, MapPin, Laptop, Layout, Keyboard, MessageSquare, Zap, ClipboardCheck, TrendingUp, TrendingDown, Minus, Star, AlertCircle, ExternalLink
+  ChevronRight, Mail, Hash, MapPin, Laptop, Layout, Keyboard, MessageSquare, Zap, ClipboardCheck, TrendingUp, TrendingDown, Minus, Star, AlertCircle, ExternalLink,
+  Languages, Lock
 } from 'lucide-react';
 import type { AgentPreferences, AgentSession, AgentActivity } from '../types';
 import * as settingsService from '../services/settings.service';
 import * as qaService from '../services/qa.service';
+import { getOutgoingConfig, getIncomingConfig } from '../services/translation.service';
 import type { AgentQAPerformance, QAReview } from '../services/qa.service';
 import { useTheme, type Theme } from '../hooks/useTheme';
 import MFASettingsSection from '../components/MFASettingsSection';
@@ -259,9 +261,13 @@ function PreferencesContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [orgOverrideAllowed, setOrgOverrideAllowed] = useState(true);
+  const [orgIncomingOverrideAllowed, setOrgIncomingOverrideAllowed] = useState(true);
 
   useEffect(() => {
     settingsService.getPreferences().then(setPrefs).catch(() => {}).finally(() => setLoading(false));
+    getOutgoingConfig('').then(cfg => setOrgOverrideAllowed(cfg.agentOverrideAllowed)).catch(() => {});
+    getIncomingConfig('').then(cfg => setOrgIncomingOverrideAllowed(cfg.agentOverrideAllowed)).catch(() => {});
   }, []);
 
   const handleSave = async () => {
@@ -356,6 +362,168 @@ function PreferencesContent() {
                 icon={Zap} 
             />
          </div>
+      </SectionCard>
+
+      {/* Translation Preferences */}
+      <SectionCard title="Traducción Automática" description="Configura cómo se traducen tus mensajes salientes.">
+        {!orgOverrideAllowed && (
+          <div className="mb-4 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center gap-3">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-300/80">
+              La configuración de traducción está administrada por tu organización. No puedes modificar estas opciones.
+            </p>
+          </div>
+        )}
+        <div className={`space-y-4 ${!orgOverrideAllowed ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+          <div>
+            <label className="block text-xs text-zinc-500 mb-2 font-bold">Modo de traducción saliente</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: 'global' as const, label: 'Global', desc: 'Usar configuración del admin' },
+                { id: 'always_on' as const, label: 'Siempre ON', desc: 'Traducir siempre mis mensajes' },
+                { id: 'always_off' as const, label: 'Siempre OFF', desc: 'Nunca traducir mis mensajes' },
+              ]).map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => setPrefs({
+                    ...prefs,
+                    translation: { ...prefs.translation, outgoingOverride: opt.id } as any
+                  })}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    (prefs.translation as any)?.outgoingOverride === opt.id
+                      ? 'bg-indigo-600/10 border-indigo-500/50 text-indigo-400 ring-1 ring-indigo-500/20'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="text-xs font-bold">{opt.label}</div>
+                  <div className="text-[10px] text-zinc-600 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1.5 font-bold">Idioma en que escribo</label>
+            <select
+              value={(prefs.translation as any)?.agentWritesIn || 'es'}
+              onChange={e => setPrefs({
+                ...prefs,
+                translation: { ...prefs.translation, agentWritesIn: e.target.value } as any
+              })}
+              className="w-full max-w-xs bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="es">Español</option>
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="ru">Русский</option>
+              <option value="zh">中文</option>
+              <option value="ar">العربية</option>
+              <option value="ja">日本語</option>
+            </select>
+            <p className="text-[10px] text-zinc-600 mt-1">Se usa como idioma de origen para la traducción automática</p>
+          </div>
+
+          <ToggleRow
+            label="Confirmar antes de enviar"
+            desc="Mostrar preview de traducción y pedir confirmación"
+            checked={(prefs.translation as any)?.confirmBeforeSend ?? true}
+            onChange={v => setPrefs({
+              ...prefs,
+              translation: { ...prefs.translation, confirmBeforeSend: v } as any
+            })}
+            icon={Languages}
+          />
+
+          <ToggleRow
+            label="Mostrar preview de traducción"
+            desc="Ver cómo se verá el mensaje traducido antes de enviarlo"
+            checked={(prefs.translation as any)?.showPreview ?? true}
+            onChange={v => setPrefs({
+              ...prefs,
+              translation: { ...prefs.translation, showPreview: v } as any
+            })}
+            icon={Eye}
+          />
+        </div>
+      </SectionCard>
+
+      {/* Incoming Translation Preferences */}
+      <SectionCard title="Traducción Entrante" description="Configura cómo se traducen los mensajes del usuario para ti.">
+        {!orgIncomingOverrideAllowed && (
+          <div className="mb-4 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center gap-3">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-300/80">
+              La configuración de traducción entrante está administrada por tu organización.
+            </p>
+          </div>
+        )}
+        <div className={`space-y-4 ${!orgIncomingOverrideAllowed ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+          <div>
+            <label className="block text-xs text-zinc-500 mb-2 font-bold">Modo de traducción entrante</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: 'global' as const, label: 'Global', desc: 'Usar configuración del admin' },
+                { id: 'always_on' as const, label: 'Siempre ON', desc: 'Traducir mensajes entrantes' },
+                { id: 'always_off' as const, label: 'Siempre OFF', desc: 'Nunca traducir entrantes' },
+              ]).map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => setPrefs({
+                    ...prefs,
+                    translation: { ...prefs.translation, incomingOverride: opt.id } as any
+                  })}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    (prefs.translation as any)?.incomingOverride === opt.id
+                      ? 'bg-cyan-600/10 border-cyan-500/50 text-cyan-400 ring-1 ring-cyan-500/20'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="text-xs font-bold">{opt.label}</div>
+                  <div className="text-[10px] text-zinc-600 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1.5 font-bold">Mi idioma preferido (destino de traducción)</label>
+            <select
+              value={(prefs.translation as any)?.incomingTargetLang || ''}
+              onChange={e => setPrefs({
+                ...prefs,
+                translation: { ...prefs.translation, incomingTargetLang: e.target.value } as any
+              })}
+              className="w-full max-w-xs bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none"
+            >
+              <option value="">Usar default del sistema</option>
+              <option value="es">Español</option>
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="ru">Русский</option>
+              <option value="zh">中文</option>
+              <option value="ar">العربية</option>
+              <option value="ja">日本語</option>
+            </select>
+            <p className="text-[10px] text-zinc-600 mt-1">Los mensajes del usuario se traducirán a este idioma</p>
+          </div>
+
+          <ToggleRow
+            label="Mostrar original con traducción"
+            desc="Ver el mensaje original junto con la traducción"
+            checked={(prefs.translation as any)?.showOriginalWithTranslation ?? true}
+            onChange={v => setPrefs({
+              ...prefs,
+              translation: { ...prefs.translation, showOriginalWithTranslation: v } as any
+            })}
+            icon={Eye}
+          />
+        </div>
       </SectionCard>
 
       <div className="flex justify-end pt-4">
