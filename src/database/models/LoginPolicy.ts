@@ -240,13 +240,13 @@ const LoginPolicySchema = new Schema<ILoginPolicy>(
 
     // Redirects
     redirects: {
-      defaultLandingPage: { type: String, default: '/dashboard/chat' },
+      defaultLandingPage: { type: String, default: '/chat' },
       roleBasedRedirects: [{
         role: { type: String, required: true },
         redirectTo: { type: String, required: true },
       }],
       forceCompleteProfile: { type: Boolean, default: true },
-      profileCompletionPage: { type: String, default: '/dashboard/my-settings' },
+      profileCompletionPage: { type: String, default: '/my-settings' },
     },
 
     // Location restrictions

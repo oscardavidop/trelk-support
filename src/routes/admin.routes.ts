@@ -58,6 +58,7 @@ interface UpdateAgentBody {
   name?: string;
   role?: 'admin' | 'support';
   isActive?: boolean;
+  language?: string;
 }
 
 interface ResetPasswordBody {
@@ -214,7 +215,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
       }
 
       // Can't change your own role
-      if (role && agentId === request.agent!._id.toString()) {
+      if (role && agentId === request.agent!._id.toString() && role !== agent.role) {
         return reply.code(400).send({
           ok: false,
           error: 'Cannot change your own role'
@@ -224,6 +225,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
       // Update fields
       if (name) agent.name = name;
       if (role) agent.role = role;
+      if (typeof (request.body as any).language === 'string') (agent as any).language = (request.body as any).language;
       if (typeof isActive === 'boolean') {
         const wasActive = agent.isActive;
         agent.isActive = isActive;

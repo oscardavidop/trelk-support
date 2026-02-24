@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Languages, Loader2, X, ChevronDown, ArrowRightLeft, Clock } from 'lucide-react';
+import { Languages, Loader2, X, ChevronDown, ArrowRightLeft, Clock, Copy, Check } from 'lucide-react';
 import { translateText, type SupportedLanguage } from '../../services/translation.service';
 
 const QUICK_LANGS: SupportedLanguage[] = [
@@ -31,6 +31,12 @@ interface TranslationBubbleProps {
  * A small bubble shown below the message with the translated text
  */
 export function TranslationBubble({ translatedText, detectedLang, targetLang, provider, latencyMs, onClose }: TranslationBubbleProps) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(translatedText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
   return (
     <div className="mt-1.5 p-2.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl animate-in fade-in slide-in-from-top-1 duration-200">
       {/* Header */}
@@ -51,12 +57,17 @@ export function TranslationBubble({ translatedText, detectedLang, targetLang, pr
             </span>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="p-0.5 text-zinc-500 hover:text-zinc-300 rounded transition-colors"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={handleCopy} className="p-0.5 text-zinc-500 hover:text-indigo-300 rounded transition-colors" title="Copiar traducción">
+            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-0.5 text-zinc-500 hover:text-zinc-300 rounded transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       {/* Translation */}
@@ -70,6 +81,7 @@ export function TranslationBubble({ translatedText, detectedLang, targetLang, pr
 interface MessageTranslationState {
   translations: Map<string, { text: string; detectedLang?: string; targetLang: string; provider?: string; latencyMs?: number }>;
   loading: Set<string>;
+  failed: Map<string, { text: string; targetLang: string; sessionId?: string }>;
 }
 
 /**
@@ -79,6 +91,7 @@ export function useMessageTranslation() {
   const [state, setState] = useState<MessageTranslationState>({
     translations: new Map(),
     loading: new Set(),
+    failed: new Map(),
   });
 
   const translateMessage = useCallback(async (
@@ -87,11 +100,16 @@ export function useMessageTranslation() {
     targetLang: string,
     sessionId?: string,
   ) => {
-    // Mark as loading
-    setState(prev => ({
-      ...prev,
-      loading: new Set(prev.loading).add(messageId),
-    }));
+    // Mark as loading, clear failed
+    setState(prev => {
+      const newFailed = new Map(prev.failed);
+      newFailed.delete(messageId);
+      return {
+        ...prev,
+        loading: new Set(prev.loading).add(messageId),
+        failed: newFailed,
+      };
+    });
 
     try {
       const result = await translateText(messageText, targetLang, {
@@ -113,23 +131,34 @@ export function useMessageTranslation() {
           });
           const newLoading = new Set(prev.loading);
           newLoading.delete(messageId);
-          return { translations: newTranslations, loading: newLoading };
+          return { translations: newTranslations, loading: newLoading, failed: prev.failed };
         });
       } else {
         setState(prev => {
           const newLoading = new Set(prev.loading);
           newLoading.delete(messageId);
-          return { ...prev, loading: newLoading };
+          const newFailed = new Map(prev.failed);
+          newFailed.set(messageId, { text: messageText, targetLang, sessionId });
+          return { ...prev, loading: newLoading, failed: newFailed };
         });
       }
     } catch {
       setState(prev => {
         const newLoading = new Set(prev.loading);
         newLoading.delete(messageId);
-        return { ...prev, loading: newLoading };
+        const newFailed = new Map(prev.failed);
+        newFailed.set(messageId, { text: messageText, targetLang, sessionId });
+        return { ...prev, loading: newLoading, failed: newFailed };
       });
     }
   }, []);
+
+  const retryTranslation = useCallback((messageId: string) => {
+    const failedInfo = state.failed.get(messageId);
+    if (failedInfo) {
+      translateMessage(messageId, failedInfo.text, failedInfo.targetLang, failedInfo.sessionId);
+    }
+  }, [state.failed, translateMessage]);
 
   const clearTranslation = useCallback((messageId: string) => {
     setState(prev => {
@@ -140,13 +169,15 @@ export function useMessageTranslation() {
   }, []);
 
   const clearAll = useCallback(() => {
-    setState({ translations: new Map(), loading: new Set() });
+    setState({ translations: new Map(), loading: new Set() } as MessageTranslationState);
   }, []);
 
   return {
     translations: state.translations,
     loading: state.loading,
+    failed: state.failed,
     translateMessage,
+    retryTranslation,
     clearTranslation,
     clearAll,
   };

@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import type { ContactInfo } from '../types';
 import { getContactInfo } from '../services/contactApi';
-import { getOutgoingConfig, updateSessionTranslation, type OutgoingConfig, getIncomingConfig, updateSessionIncomingTranslation, type IncomingConfig } from '../services/translation.service';
+import { getSocket } from '../services/socket';
+import { getOutgoingConfig, type OutgoingConfig, getIncomingConfig, type IncomingConfig } from '../services/translation.service';
 
 // Sub-components imports (Mantenemos la lógica de importación existente)
 import { SidebarConversationStatus } from './sidebar/ConversationStatus';
@@ -28,6 +29,8 @@ import { SidebarPlaybook } from './sidebar/SidebarPlaybook';
 import ContactProfileHeader from './0';
 import QAReviewPanel from './QAReviewPanel';
 import ExportPanel from './sidebar/ExportPanel';
+import { SidebarIncomingTranslation, SidebarTranslation } from './sidebar/Translations';
+import usePermissions from '../hooks/usePermissions';
 
 interface ChatInfoSidebarProps {
   sessionId: string | null;
@@ -43,7 +46,7 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status']));
   const [outgoingCfg, setOutgoingCfg] = useState<OutgoingConfig | null>(null);
   const [incomingCfg, setIncomingCfg] = useState<IncomingConfig | null>(null);
-
+  const { can } = usePermissions();
   const fetchContactInfo = useCallback(async () => {
     if (!sessionId) {
       setContactInfo(null);
@@ -82,6 +85,20 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
     getIncomingConfig(sessionId).then(setIncomingCfg).catch(() => setIncomingCfg(null));
   }, [sessionId]);
 
+  // Sync translation config when composer or other components update it
+  useEffect(() => {
+    if (!sessionId) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.sessionId === sessionId) {
+        getOutgoingConfig(sessionId).then(setOutgoingCfg).catch(() => { });
+        getIncomingConfig(sessionId).then(setIncomingCfg).catch(() => { });
+      }
+    };
+    window.addEventListener('translation:sessionUpdated', handler);
+    return () => window.removeEventListener('translation:sessionUpdated', handler);
+  }, [sessionId]);
+
   // Re-fetch contactInfo when session updates (disposition, tags, category changes)
   useEffect(() => {
     if (!sessionId) return;
@@ -99,6 +116,29 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
       window.removeEventListener('disposition:saved', handler);
     };
   }, [sessionId, fetchContactInfo]);
+
+  // Optimistically update "Última actividad" and message count when new messages arrive
+  useEffect(() => {
+    if (!sessionId) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNewMessage = (msg: any) => {
+      const msgSession = msg.session || msg.sessionId;
+      if (msgSession !== sessionId) return;
+      setContactInfo(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          session: { ...prev.session, updatedAt: new Date().toISOString() },
+          stats: { ...prev.stats, totalMessages: prev.stats.totalMessages + 1 },
+        };
+      });
+    };
+
+    socket.on('message:new', handleNewMessage);
+    return () => { socket.off('message:new', handleNewMessage); };
+  }, [sessionId]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -255,15 +295,20 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
               />
             </SidebarSection>
 
-            <SidebarSection
-              title="Mensajes Programados"
-              icon={<Clock className="w-4 h-4 text-teal-400" />}
-              isExpanded={expandedSections.has('scheduled')}
-              onToggle={() => toggleSection('scheduled')}
-              badge={scheduledCount}
-            >
-              <ScheduledMessagesList sessionId={sessionId || ''} onCountChange={setScheduledCount} />
-            </SidebarSection>
+            {
+              can('scheduled.read') && (
+
+                <SidebarSection
+                  title="Mensajes Programados"
+                  icon={<Clock className="w-4 h-4 text-teal-400" />}
+                  isExpanded={expandedSections.has('scheduled')}
+                  onToggle={() => toggleSection('scheduled')}
+                  badge={scheduledCount}
+                >
+                  <ScheduledMessagesList sessionId={sessionId || ''} onCountChange={setScheduledCount} />
+                </SidebarSection>
+              )
+            }
 
             <SidebarSection
               title="Historial de Chats"
@@ -317,18 +362,22 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
             )}
 
             {/* Export Section */}
-            {sessionId && (
-              <SidebarSection
-                title="Exportar Chat"
-                icon={<Download className="w-4 h-4 text-cyan-400" />}
-                isExpanded={expandedSections.has('export')}
-                onToggle={() => toggleSection('export')}
-                headerClassName="hover:bg-cyan-500/10"
-                className='overflow-x-auto'
-              >
-                <ExportPanel sessionId={sessionId} />
-              </SidebarSection>
-            )}
+            {
+              can('exports.create') && (
+                sessionId && (
+                  <SidebarSection
+                    title="Exportar Chat"
+                    icon={<Download className="w-4 h-4 text-cyan-400" />}
+                    isExpanded={expandedSections.has('export')}
+                    onToggle={() => toggleSection('export')}
+                    headerClassName="hover:bg-cyan-500/10"
+                    className='overflow-x-auto'
+                  >
+                    <ExportPanel sessionId={sessionId} />
+                  </SidebarSection>
+                )
+              )
+            }
 
             {/* Translation Section */}
             {sessionId && outgoingCfg && (
@@ -402,180 +451,6 @@ export function ChatInfoSidebar({ sessionId, isOpen, onClose }: ChatInfoSidebarP
 }
 
 // ============= HELPER COMPONENTS =============
-
-function SidebarTranslation({ sessionId, config, onConfigChange }: {
-  sessionId: string;
-  config: OutgoingConfig;
-  onConfigChange: (cfg: OutgoingConfig) => void;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [targetLang, setTargetLang] = useState(config.targetLang || '');
-
-  const toggleEnabled = async () => {
-    setSaving(true);
-    try {
-      const next = !config.enabled;
-      await updateSessionTranslation(sessionId, { outgoingEnabled: next, outgoingTargetLang: targetLang || undefined });
-      onConfigChange({ ...config, enabled: next });
-      // Notify composer to refresh its config
-      window.dispatchEvent(new CustomEvent('translation:sessionUpdated', { detail: { sessionId } }));
-    } catch { /* silent */ }
-    setSaving(false);
-  };
-
-  const handleLangChange = async (lang: string) => {
-    setTargetLang(lang);
-    setSaving(true);
-    try {
-      await updateSessionTranslation(sessionId, { outgoingEnabled: config.enabled, outgoingTargetLang: lang });
-      onConfigChange({ ...config, targetLang: lang });
-      window.dispatchEvent(new CustomEvent('translation:sessionUpdated', { detail: { sessionId } }));
-    } catch { /* silent */ }
-    setSaving(false);
-  };
-
-  return (
-    <div className="px-4 pb-3 space-y-3 pt-4">
-      {/* Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Languages className="w-4 h-4 text-indigo-400" />
-          <span className="text-sm text-zinc-200 font-medium">Auto-Translate saliente</span>
-        </div>
-        <button
-          onClick={toggleEnabled}
-          disabled={saving || !config.agentOverrideAllowed}
-          className={`relative w-10 h-5 rounded-full transition-colors ${config.enabled ? 'bg-indigo-600' : 'bg-zinc-700'} ${!config.agentCanOverride ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-        </button>
-      </div>
-      {!config.agentOverrideAllowed && (
-        <p className="text-[13px] text-zinc-600">Controlado por el admin — no puedes cambiar esto</p>
-      )}
-
-      {/* Target language override */}
-      {config.agentOverrideAllowed && (
-        <div>
-          <label className="block text-[12px] text-zinc-500 mb-1 font-bold">Idioma destino (este chat)</label>
-          <select
-            value={targetLang}
-            onChange={e => handleLangChange(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
-          >
-            <option value="">Auto-detectar</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="pt">Português</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-            <option value="it">Italiano</option>
-            <option value="ru">Русский</option>
-            <option value="zh">中文</option>
-            <option value="ar">العربية</option>
-            <option value="ja">日本語</option>
-          </select>
-        </div>
-      )}
-
-      {/* Info */}
-      <div className="text-[11px] text-zinc-500">
-        {config.enabled
-          ? `Los mensajes salientes se traducirán a ${config.targetLang?.toUpperCase() || 'auto'} antes de enviarse al usuario.`
-          : 'La traducción automática está desactivada para este chat.'}
-        {config.deliveryMode === 'both' && config.enabled && (
-          <span className="block mt-1 text-indigo-400/70">Modo: Original + Traducción</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SidebarIncomingTranslation({ sessionId, config, onConfigChange }: {
-  sessionId: string;
-  config: IncomingConfig;
-  onConfigChange: (cfg: IncomingConfig) => void;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [targetLang, setTargetLang] = useState('');
-
-  const toggleEnabled = async () => {
-    if (!config.agentOverrideAllowed) return;
-    setSaving(true);
-    try {
-      const next = !config.enabled;
-      await updateSessionIncomingTranslation(sessionId, { incomingEnabled: next });
-      onConfigChange({ ...config, enabled: next });
-    } catch { /* silent */ }
-    setSaving(false);
-  };
-
-  const handleLangChange = async (lang: string) => {
-    setTargetLang(lang);
-    setSaving(true);
-    try {
-      await updateSessionIncomingTranslation(sessionId, { incomingTargetLang: lang || undefined });
-      onConfigChange({ ...config, targetLang: lang || config.targetLang });
-    } catch { /* silent */ }
-    setSaving(false);
-  };
-
-  return (
-    <div className="px-4 pb-3 space-y-3 pt-2 border-t border-zinc-800/50">
-      {/* Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Languages className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm text-zinc-200 font-medium">Auto-Translate entrante</span>
-        </div>
-        <button
-          onClick={toggleEnabled}
-          disabled={saving || !config.agentOverrideAllowed}
-          className={`relative w-10 h-5 rounded-full transition-colors ${config.enabled ? 'bg-cyan-600' : 'bg-zinc-700'} ${!config.agentOverrideAllowed ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-        </button>
-      </div>
-      {!config.agentOverrideAllowed && (
-        <p className="text-[13px] text-zinc-600">Controlado por el admin — no puedes cambiar esto</p>
-      )}
-
-      {/* Target language override */}
-      {config.agentOverrideAllowed && (
-        <div>
-          <label className="block text-[12px] text-zinc-500 mb-1 font-bold">Idioma destino entrante (este chat)</label>
-          <select
-            value={targetLang}
-            onChange={e => handleLangChange(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:border-cyan-500 focus:outline-none"
-          >
-            <option value="">Usar default del sistema</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="pt">Português</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-            <option value="it">Italiano</option>
-            <option value="ru">Русский</option>
-            <option value="zh">中文</option>
-            <option value="ar">العربية</option>
-            <option value="ja">日本語</option>
-          </select>
-        </div>
-      )}
-
-      {/* Info */}
-      <div className="text-[11px] text-zinc-500">
-        {config.enabled
-          ? `Los mensajes del usuario se traducirán a ${config.targetLang?.toUpperCase() || 'auto'} en tiempo real.`
-          : 'La traducción entrante está desactivada para este chat.'}
-        {config.showOriginal && config.enabled && (
-          <span className="block mt-1 text-cyan-400/70">Se mostrará el mensaje original junto a la traducción.</span>
-        )}
-      </div>
-    </div>
-  );
-}
 
 
 interface SidebarSectionProps {

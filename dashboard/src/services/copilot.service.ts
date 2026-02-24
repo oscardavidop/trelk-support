@@ -75,6 +75,7 @@ export async function summarize(sessionId: string): Promise<ApiResponse<Suggesti
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
+      body: JSON.stringify({ sessionId }),
     });
     const data = await res.json();
     return {

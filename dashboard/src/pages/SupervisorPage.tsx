@@ -1,6 +1,6 @@
 /**
- * SupervisorPage - Full-page supervisor dashboard
- * Live monitoring of agents, chats, whispers, and performance
+ * SupervisorPage - Enterprise Supervisor Dashboard
+ * Live monitoring of agents, chats, SLA with full action controls
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -9,6 +9,7 @@ import { useSupervisorStore, type AgentOverview } from '../stores/supervisorStor
 import { supervisorService } from '../services/supervisor.service';
 import { Navigate } from 'react-router-dom';
 import { ChatPreview } from '../components/supervisor/ChatPreview';
+import { AgentDetailPanel } from '../components/supervisor/AgentDetailPanel';
 import {
   Eye,
   Users,
@@ -20,9 +21,10 @@ import {
   PhoneForwarded,
   MessageSquare,
   CheckCircle2,
-  XCircle,
   Activity,
-  Shield
+  Shield,
+  Search,
+  X,
 } from 'lucide-react';
 
 interface LiveChat {
@@ -39,6 +41,8 @@ interface LiveChat {
   slaStatus: 'ok' | 'warning' | 'critical';
 }
 
+type AgentStatusFilter = 'all' | 'online' | 'away' | 'offline';
+
 export default function SupervisorPage() {
   const { agent } = useAuthStore();
   const {
@@ -54,28 +58,29 @@ export default function SupervisorPage() {
 
   const [liveChats, setLiveChats] = useState<LiveChat[]>([]);
   const [selectedChat, setSelectedChat] = useState<LiveChat | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [whisperText, setWhisperText] = useState('');
   const [whisperSending, setWhisperSending] = useState(false);
   const [activeTab, setActiveTab] = useState<'agents' | 'chats' | 'sla'>('agents');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Access control
+  // Search & filter state
+  const [agentSearch, setAgentSearch] = useState('');
+  const [agentStatusFilter, setAgentStatusFilter] = useState<AgentStatusFilter>('all');
+  const [chatSearch, setChatSearch] = useState('');
+
   const canAccess = agent?.role === 'admin' || agent?.role === 'supervisor';
 
-  // Fetch all data
   const fetchData = useCallback(async () => {
     if (!canAccess) return;
-
     setLoadingStats(true);
     setLoadingAgents(true);
-
     try {
       const [statsRes, agentsRes, chatsRes] = await Promise.all([
         supervisorService.getStats(),
         supervisorService.getAgentOverviews(),
         supervisorService.getLiveChats(),
       ]);
-
       if (statsRes.success) setStats(statsRes.data);
       if (agentsRes.success) setAgents(agentsRes.data);
       if (chatsRes.success) setLiveChats(chatsRes.data || []);
@@ -101,10 +106,8 @@ export default function SupervisorPage() {
     setRefreshing(false);
   };
 
-  // Send whisper to agent
   const handleSendWhisper = async () => {
     if (!selectedChat || !whisperText.trim()) return;
-
     setWhisperSending(true);
     try {
       await supervisorService.sendWhisper(selectedChat.sessionId, selectedChat.agentId, whisperText);
@@ -116,32 +119,54 @@ export default function SupervisorPage() {
     }
   };
 
-  // Take over chat
+  // Take over: clears panels so agent sees chat in their own interface
   const handleTakeOver = async (sessionId: string) => {
     try {
-      await supervisorService.takeOverChat(sessionId);
-      await fetchData();
+      const res = await supervisorService.takeOverChat(sessionId);
+      if (res.success) {
+        setSelectedChat(null);
+        setSelectedAgentId(null);
+        await fetchData();
+      }
     } catch (error) {
       console.error('Failed to take over chat:', error);
     }
   };
 
-  if (!canAccess) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const handleSelectAgent = (agentId: string) => {
+    setSelectedAgentId(prev => (prev === agentId ? null : agentId));
+    setSelectedChat(null);
+  };
+
+  const handleSelectChat = (chat: LiveChat) => {
+    setSelectedChat(prev => (prev?.sessionId === chat.sessionId ? null : chat));
+    setSelectedAgentId(null);
+  };
+
+  if (!canAccess) return <Navigate to="/dashboard" replace />;
 
   const slaAtRisk = liveChats.filter(c => c.slaStatus === 'critical').length;
   const slaWarning = liveChats.filter(c => c.slaStatus === 'warning').length;
 
+  const filteredAgents = agents
+    .filter(a => agentStatusFilter === 'all' || a.status === agentStatusFilter)
+    .filter(a => !agentSearch || a.name.toLowerCase().includes(agentSearch.toLowerCase()));
+
+  const filteredChats = liveChats.filter(
+    c =>
+      !chatSearch ||
+      c.userName.toLowerCase().includes(chatSearch.toLowerCase()) ||
+      c.agentName.toLowerCase().includes(chatSearch.toLowerCase())
+  );
+
+  const selectedAgentData = agents.find(a => a.id === selectedAgentId) ?? null;
+
   return (
     <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans relative selection:bg-purple-500/30">
-
-      {/* Purple Ambient Glow */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-
-        {/* Header Section */}
+        {/* Header */}
         <div className="px-8 py-6 pb-2">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -153,7 +178,6 @@ export default function SupervisorPage() {
                 <p className="text-sm text-zinc-400">Monitoreo y gestión en tiempo real</p>
               </div>
             </div>
-
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -164,13 +188,13 @@ export default function SupervisorPage() {
             </button>
           </div>
 
-          {/* Stats Bar (Glassy) */}
+          {/* Stats bar */}
           <div className="flex items-center gap-4 p-1.5 bg-zinc-900/60 backdrop-blur-md border border-white/5 rounded-2xl w-fit mb-6 overflow-x-auto">
-            <StatBadge icon={MessageCircle} count={stats?.totalActiveSessions || liveChats.length} label="Chats Activos" color="text-blue-400" bg="bg-blue-500/10" />
+            <StatBadge icon={MessageCircle} count={stats?.totalActiveSessions ?? liveChats.length} label="Chats Activos" color="text-blue-400" bg="bg-blue-500/10" />
             <div className="h-4 w-px bg-white/10" />
-            <StatBadge icon={Clock} count={stats?.queuedSessions || 0} label="En Espera" color="text-amber-400" bg="bg-amber-500/10" />
+            <StatBadge icon={Clock} count={stats?.queuedSessions ?? 0} label="En Espera" color="text-amber-400" bg="bg-amber-500/10" />
             <div className="h-4 w-px bg-white/10" />
-            <StatBadge icon={Users} count={stats?.onlineAgents || agents.filter(a => a.status === 'online').length} label="Agentes Online" color="text-emerald-400" bg="bg-emerald-500/10" />
+            <StatBadge icon={Users} count={stats?.onlineAgents ?? agents.filter(a => a.status === 'online').length} label="Agentes Online" color="text-emerald-400" bg="bg-emerald-500/10" />
             {(slaAtRisk > 0 || slaWarning > 0) && (
               <>
                 <div className="h-4 w-px bg-white/10" />
@@ -180,10 +204,10 @@ export default function SupervisorPage() {
           </div>
         </div>
 
-        {/* Main Content Area */}
+        {/* Content */}
         <div className="flex-1 flex overflow-hidden border-t border-zinc-800/50">
 
-          {/* Left Panel: Lists */}
+          {/* Left panel */}
           <div className="w-2/5 xl:w-1/3 border-r border-zinc-800 flex flex-col bg-zinc-900/30">
             {/* Tabs */}
             <div className="flex border-b border-zinc-800 bg-zinc-950/50">
@@ -192,27 +216,97 @@ export default function SupervisorPage() {
               <TabButton active={activeTab === 'sla'} onClick={() => setActiveTab('sla')} icon={AlertTriangle} label="SLA" badge={slaAtRisk + slaWarning} alert={slaAtRisk > 0} />
             </div>
 
-            {/* List Content */}
+            {/* Search/filter for agents */}
+            {activeTab === 'agents' && (
+              <div className="p-3 border-b border-zinc-800/60 space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                  <input
+                    value={agentSearch}
+                    onChange={e => setAgentSearch(e.target.value)}
+                    placeholder="Buscar agente..."
+                    className="w-full pl-8 pr-3 py-2 bg-zinc-900/80 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-purple-500/50"
+                  />
+                  {agentSearch && (
+                    <button onClick={() => setAgentSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  {(['all', 'online', 'away', 'offline'] as AgentStatusFilter[]).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setAgentStatusFilter(s)}
+                      className={`flex-1 text-[10px] font-semibold py-1 rounded-md border transition-colors capitalize ${
+                        agentStatusFilter === s
+                          ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {s === 'all' ? 'Todos' : s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Search for chats */}
+            {activeTab === 'chats' && (
+              <div className="p-3 border-b border-zinc-800/60">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                  <input
+                    value={chatSearch}
+                    onChange={e => setChatSearch(e.target.value)}
+                    placeholder="Buscar chat o agente..."
+                    className="w-full pl-8 pr-3 py-2 bg-zinc-900/80 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-purple-500/50"
+                  />
+                  {chatSearch && (
+                    <button onClick={() => setChatSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* List content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
               {activeTab === 'agents' && (
-                isLoadingAgents ? <LoadingSkeleton /> : <AgentList agents={agents} />
+                isLoadingAgents
+                  ? <LoadingSkeleton />
+                  : <AgentList agents={filteredAgents} selectedAgentId={selectedAgentId} onSelectAgent={handleSelectAgent} />
               )}
-
               {activeTab === 'chats' && (
-                <LiveChatsList chats={liveChats} selectedChat={selectedChat} onSelectChat={setSelectedChat} />
+                <LiveChatsList chats={filteredChats} selectedChat={selectedChat} onSelectChat={handleSelectChat} />
               )}
-
               {activeTab === 'sla' && (
-                <SLAAlerts chats={liveChats.filter(c => c.slaStatus !== 'ok')} onSelectChat={setSelectedChat} />
+                <SLAAlerts chats={liveChats.filter(c => c.slaStatus !== 'ok')} onSelectChat={handleSelectChat} />
               )}
             </div>
           </div>
 
-          {/* Right Panel: Chat Detail */}
-          <div className="flex-1 flex flex-col bg-zinc-950/80 relative">
-            {selectedChat ? (
+          {/* Right panel */}
+          <div className="flex-1 flex flex-col bg-zinc-950/80 relative overflow-hidden">
+            {activeTab === 'agents' && selectedAgentData ? (
+              <AgentDetailPanel
+                agent={selectedAgentData}
+                supervisorId={agent?.id ?? ''}
+                onClose={() => setSelectedAgentId(null)}
+                onRefresh={fetchData}
+                onOpenChat={(sessionId) => {
+                  const chat = liveChats.find(c => c.sessionId === sessionId);
+                  if (chat) {
+                    setSelectedChat(chat);
+                    setActiveTab('chats');
+                    setSelectedAgentId(null);
+                  }
+                }}
+              />
+            ) : selectedChat ? (
               <>
-                {/* Chat Header */}
+                {/* Chat header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-zinc-50 font-bold border border-white/10">
@@ -227,17 +321,24 @@ export default function SupervisorPage() {
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => handleTakeOver(selectedChat.sessionId)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-sm font-medium border border-orange-500/20 transition-colors"
-                  >
-                    <PhoneForwarded className="w-4 h-4" />
-                    <span>Tomar Control</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleTakeOver(selectedChat.sessionId)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-sm font-medium border border-orange-500/20 transition-colors"
+                    >
+                      <PhoneForwarded className="w-4 h-4" />
+                      <span>Tomar Control</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedChat(null)}
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Chat Area */}
+                {/* Chat preview */}
                 <div className="flex-1 overflow-hidden relative">
                   <ChatPreview
                     sessionId={selectedChat.sessionId}
@@ -246,9 +347,9 @@ export default function SupervisorPage() {
                   />
                 </div>
 
-                {/* Supervisor Whisper Input */}
+                {/* Supervisor whisper */}
                 <div className="p-4 border-t border-zinc-800 bg-zinc-900">
-                  <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercasetext-purple-400">
+                  <div className="flex items-center gap-2 mb-3 text-xs font-bold text-purple-400">
                     <Eye className="w-3 h-3" /> Modo Supervisión (Privado)
                   </div>
                   <div className="relative">
@@ -272,9 +373,19 @@ export default function SupervisorPage() {
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 opacity-60">
-                <MessageSquare className="w-16 h-16 mb-4 stroke-1" />
-                <p className="text-lg font-medium">Selecciona una conversación</p>
-                <p className="text-sm">para monitorear o intervenir</p>
+                {activeTab === 'agents' ? (
+                  <>
+                    <Activity className="w-16 h-16 mb-4 stroke-1" />
+                    <p className="text-lg font-medium">Selecciona un agente</p>
+                    <p className="text-sm">para ver detalles y tomar acciones</p>
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="w-16 h-16 mb-4 stroke-1" />
+                    <p className="text-lg font-medium">Selecciona una conversación</p>
+                    <p className="text-sm">para monitorear o intervenir</p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -284,12 +395,13 @@ export default function SupervisorPage() {
   );
 }
 
-// Sub-components
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
-
-function StatBadge({ icon: Icon, count, label, color, bg, alert }: any) {
+function StatBadge({ icon: Icon, count, label, color, bg, alert }: {
+  icon: React.ElementType; count: number; label: string; color: string; bg: string; alert?: boolean;
+}) {
   return (
-    <div className={`flex items-center gap-3 px-3 py-1 rounded-xl transition-all min-w-fit ${alert ? 'animate-pulse' : ''}`}>
+    <div className={`flex items-center gap-3 px-3 py-1 rounded-xl min-w-fit ${alert ? 'animate-pulse' : ''}`}>
       <div className={`p-1.5 rounded-lg ${bg}`}>
         <Icon className={`w-4 h-4 ${color}`} />
       </div>
@@ -301,14 +413,17 @@ function StatBadge({ icon: Icon, count, label, color, bg, alert }: any) {
   );
 }
 
-function TabButton({ active, onClick, icon: Icon, label, badge, alert }: any) {
+function TabButton({ active, onClick, icon: Icon, label, badge, alert }: {
+  active: boolean; onClick: () => void; icon: React.ElementType; label: string; badge: number; alert?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-all ${active
+      className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-all ${
+        active
           ? 'border-purple-500 text-purple-400 bg-purple-500/5'
           : 'border-transparent text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900'
-        }`}
+      }`}
     >
       <Icon className="w-4 h-4" />
       <span className="text-sm font-medium">{label}</span>
@@ -321,43 +436,74 @@ function TabButton({ active, onClick, icon: Icon, label, badge, alert }: any) {
   );
 }
 
-function AgentList({ agents }: { agents: AgentOverview[] }) {
-  if (agents.length === 0) return <EmptyState icon={Users} text="No hay agentes conectados" />;
+function AgentList({ agents, selectedAgentId, onSelectAgent }: {
+  agents: AgentOverview[];
+  selectedAgentId: string | null;
+  onSelectAgent: (id: string) => void;
+}) {
+  if (agents.length === 0) return <EmptyState icon={Users} text="Sin agentes que coincidan" />;
 
   return (
     <>
-      {agents.map(agent => (
-        <div key={agent.id} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl hover:bg-zinc-800/50 transition-colors">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-xs font-bold text-zinc-300 border border-zinc-700">
-                  {agent.name.charAt(0)}
+      {agents.map(agent => {
+        const isSelected = selectedAgentId === agent.id;
+        const statusDot = {
+          online: 'bg-emerald-500',
+          away: 'bg-amber-500',
+          offline: 'bg-zinc-500',
+        }[agent.status] || 'bg-zinc-500';
+        const capacityPct = agent.maxChats > 0 ? Math.round((agent.activeChats / agent.maxChats) * 100) : 0;
+
+        return (
+          <button
+            key={agent.id}
+            onClick={() => onSelectAgent(agent.id)}
+            className={`w-full text-left p-3 rounded-xl border transition-all ${
+              isSelected
+                ? 'bg-purple-500/10 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.1)]'
+                : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/40'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-xs font-bold text-zinc-300 border border-zinc-700">
+                    {agent.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-zinc-900 ${statusDot}`} />
                 </div>
-                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-zinc-900 ${agent.status === 'online' ? 'bg-emerald-500' : agent.status === 'away' ? 'bg-amber-500' : 'bg-zinc-500'
-                  }`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-zinc-50 truncate">{agent.name}</p>
+                  <p className="text-[10px] text-zinc-500 capitalize">{agent.status}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-50">{agent.name}</p>
-                <p className="text-[10px] text-zinc-500 capitalize">{agent.status}</p>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-zinc-50">{agent.activeChats}</p>
+                <p className="text-[10px] text-zinc-500">Chats</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-zinc-50">{agent.activeChats}</p>
-              <p className="text-[10px] text-zinc-500">Chats</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <MetricPill label="Avg Time" value={agent.avgResponseTime || '-'} />
-            {/* Add more metrics if needed */}
-          </div>
-        </div>
-      ))}
+            {agent.maxChats > 0 && (
+              <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    capacityPct >= 90 ? 'bg-red-500' : capacityPct >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`}
+                  style={{ width: `${Math.min(capacityPct, 100)}%` }}
+                />
+              </div>
+            )}
+          </button>
+        );
+      })}
     </>
   );
 }
 
-function LiveChatsList({ chats, selectedChat, onSelectChat }: { chats: LiveChat[], selectedChat: LiveChat | null, onSelectChat: (chat: LiveChat) => void }) {
+function LiveChatsList({ chats, selectedChat, onSelectChat }: {
+  chats: LiveChat[];
+  selectedChat: LiveChat | null;
+  onSelectChat: (chat: LiveChat) => void;
+}) {
   if (chats.length === 0) return <EmptyState icon={MessageCircle} text="No hay chats activos" />;
 
   return (
@@ -366,10 +512,11 @@ function LiveChatsList({ chats, selectedChat, onSelectChat }: { chats: LiveChat[
         <button
           key={chat.sessionId}
           onClick={() => onSelectChat(chat)}
-          className={`w-full text-left p-3 rounded-xl border transition-all ${selectedChat?.sessionId === chat.sessionId
+          className={`w-full text-left p-3 rounded-xl border transition-all ${
+            selectedChat?.sessionId === chat.sessionId
               ? 'bg-purple-500/10 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.1)]'
               : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700'
-            }`}
+          }`}
         >
           <div className="flex justify-between items-start mb-1">
             <span className="font-medium text-zinc-200 text-sm">{chat.userName}</span>
@@ -377,12 +524,10 @@ function LiveChatsList({ chats, selectedChat, onSelectChat }: { chats: LiveChat[
               {Math.floor(chat.duration / 60)}:{(chat.duration % 60).toString().padStart(2, '0')}
             </span>
           </div>
-
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs text-zinc-500 truncate max-w-[120px]">{chat.agentName}</span>
             <SLABadge status={chat.slaStatus} mini />
           </div>
-
           <p className="text-xs text-zinc-400 truncate opacity-80 pl-2 border-l-2 border-zinc-700">
             {chat.lastMessage || '...'}
           </p>
@@ -392,7 +537,10 @@ function LiveChatsList({ chats, selectedChat, onSelectChat }: { chats: LiveChat[
   );
 }
 
-function SLAAlerts({ chats, onSelectChat }: { chats: LiveChat[], onSelectChat: (chat: LiveChat) => void }) {
+function SLAAlerts({ chats, onSelectChat }: {
+  chats: LiveChat[];
+  onSelectChat: (chat: LiveChat) => void;
+}) {
   if (chats.length === 0) return <EmptyState icon={CheckCircle2} text="Todo bajo control" color="text-emerald-500" />;
 
   return (
@@ -401,22 +549,19 @@ function SLAAlerts({ chats, onSelectChat }: { chats: LiveChat[], onSelectChat: (
         <button
           key={chat.sessionId}
           onClick={() => onSelectChat(chat)}
-          className={`w-full text-left p-3 rounded-xl border mb-2 transition-all ${chat.slaStatus === 'critical'
+          className={`w-full text-left p-3 rounded-xl border mb-2 transition-all ${
+            chat.slaStatus === 'critical'
               ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
               : 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20'
-            }`}
+          }`}
         >
           <div className="flex items-center justify-between mb-1">
             <span className="font-medium text-zinc-50 text-sm">{chat.userName}</span>
             <AlertTriangle className={`w-4 h-4 ${chat.slaStatus === 'critical' ? 'text-red-400' : 'text-amber-400'}`} />
           </div>
           <div className="flex justify-between items-center text-xs opacity-80">
-            <span className={chat.slaStatus === 'critical' ? 'text-red-300' : 'text-amber-300'}>
-              {chat.agentName}
-            </span>
-            <span className="font-mono">
-              Wait: {Math.floor(chat.duration / 60)}m
-            </span>
+            <span className={chat.slaStatus === 'critical' ? 'text-red-300' : 'text-amber-300'}>{chat.agentName}</span>
+            <span className="font-mono">Wait: {Math.floor(chat.duration / 60)}m</span>
           </div>
         </button>
       ))}
@@ -424,39 +569,41 @@ function SLAAlerts({ chats, onSelectChat }: { chats: LiveChat[], onSelectChat: (
   );
 }
 
-const MetricPill = ({ label, value }: { label: string, value: string | number }) => (
-  <div className="px-2 py-1 bg-zinc-950 rounded text-[10px] text-zinc-400 border border-zinc-800">
-    <span className="opacity-70 mr-1">{label}:</span>
-    <span className="text-zinc-200 font-medium">{value}</span>
-  </div>
-);
-
-const SLABadge = ({ status, mini }: { status: string, mini?: boolean }) => {
-  const styles = {
+function SLABadge({ status, mini }: { status: string; mini?: boolean }) {
+  const styles: Record<string, string> = {
     ok: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     warning: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
     critical: 'text-red-400 bg-red-500/10 border-red-500/20',
   };
-  const s = styles[status as keyof typeof styles] || styles.ok;
+  const s = styles[status] || styles['ok'];
 
-  if (mini) return <div className={`w-2 h-2 rounded-full ${s.split(' ')[1].replace('/10', '')}`} />;
+  if (mini) {
+    const dotColor: Record<string, string> = { ok: 'bg-emerald-500', warning: 'bg-amber-500', critical: 'bg-red-500' };
+    return <div className={`w-2 h-2 rounded-full ${dotColor[status] || 'bg-zinc-500'}`} />;
+  }
 
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercaseborder ${s}`}>
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border ${s}`}>
       {status}
     </span>
   );
-};
+}
 
-const EmptyState = ({ icon: Icon, text, color = 'text-zinc-500' }: any) => (
-  <div className={`flex flex-col items-center justify-center py-10 opacity-60 ${color}`}>
-    <Icon className="w-10 h-10 mb-2 stroke-1" />
-    <p className="text-sm font-medium">{text}</p>
-  </div>
-);
+function EmptyState({ icon: Icon, text, color = 'text-zinc-500' }: {
+  icon: React.ElementType; text: string; color?: string;
+}) {
+  return (
+    <div className={`flex flex-col items-center justify-center py-10 opacity-60 ${color}`}>
+      <Icon className="w-10 h-10 mb-2 stroke-1" />
+      <p className="text-sm font-medium">{text}</p>
+    </div>
+  );
+}
 
-const LoadingSkeleton = () => (
-  <div className="space-y-3">
-    {[1, 2, 3].map(i => <div key={i} className="h-20 bg-zinc-900/50 rounded-xl animate-pulse" />)}
-  </div>
-);
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map(i => <div key={i} className="h-20 bg-zinc-900/50 rounded-xl animate-pulse" />)}
+    </div>
+  );
+}

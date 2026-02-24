@@ -107,16 +107,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
     sessions: [session, ...state.sessions.filter(s => s.sessionId !== session.sessionId)],
     // Also remove from queue if present
     queueSessions: state.queueSessions.filter(s => s.sessionId !== session.sessionId),
+    // Decrement queue count if session was previously in queue
+    sessionCounts: state.queueSessions.some(s => s.sessionId === session.sessionId)
+      ? { ...state.sessionCounts, queue: Math.max(0, state.sessionCounts.queue - 1) }
+      : state.sessionCounts,
   })),
   
   addToQueue: (session) => set((state) => ({
     queueSessions: [session, ...state.queueSessions.filter(s => s.sessionId !== session.sessionId)],
     // Remove from regular sessions if present (shouldn't be, but safety)
     sessions: state.sessions.filter(s => s.sessionId !== session.sessionId),
+    // Increment queue count so the badge updates immediately without waiting for fetchCounts
+    sessionCounts: state.queueSessions.some(s => s.sessionId === session.sessionId)
+      ? state.sessionCounts // already in queue, no change
+      : { ...state.sessionCounts, queue: state.sessionCounts.queue + 1 },
   })),
   
   removeFromQueue: (sessionId) => set((state) => ({
     queueSessions: state.queueSessions.filter(s => s.sessionId !== sessionId),
+    // Decrement queue count to keep badge in sync
+    sessionCounts: state.queueSessions.some(s => s.sessionId === sessionId)
+      ? { ...state.sessionCounts, queue: Math.max(0, state.sessionCounts.queue - 1) }
+      : state.sessionCounts,
   })),
   
   updateSession: (session) => set((state) => ({

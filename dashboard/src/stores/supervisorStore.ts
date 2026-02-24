@@ -39,6 +39,7 @@ export interface SupervisorStats {
 
 export interface Whisper {
   id: string;
+  _id: string; // For compatibility with backend
   sessionId: string;
   supervisorId: string;
   supervisorName: string;

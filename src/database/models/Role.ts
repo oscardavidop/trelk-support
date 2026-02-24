@@ -125,8 +125,10 @@ export const PERMISSION_CATEGORIES = {
     supervisor: [
         'supervisor.monitor',   // Monitor agents in real-time
         'supervisor.whisper',   // Send whisper messages
-        'supervisor.intervene', // Intervene in chats
+        'supervisor.intervene', // Intervene in chats (takeover)
         'supervisor.reports',   // Supervisor reports
+        'supervisor.unassign',  // Unassign sessions back to queue
+        'supervisor.force_logout', // Force-logout an agent
     ],
 
     // Saved replies
@@ -204,6 +206,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
         'analytics.read', 'analytics.export',
         // Supervisor features
         'supervisor.monitor', 'supervisor.whisper', 'supervisor.intervene', 'supervisor.reports',
+        'supervisor.unassign', 'supervisor.force_logout',
         // Replies
         'replies.read', 'replies.write', 'replies.delete', 'replies.use',
         // Scheduled

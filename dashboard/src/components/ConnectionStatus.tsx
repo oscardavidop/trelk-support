@@ -189,10 +189,6 @@ export function ConnectionBanner() {
         </span>
       </div>
       
-      {/* Progress Line (Visual cue for activity) */}
-      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-zinc-800/20 overflow-hidden">
-        <div className={`h-full w-1/3 ${config.dot} opacity-50 animate-indeterminate-bar`} />
-      </div>
     </div>
   );
 }

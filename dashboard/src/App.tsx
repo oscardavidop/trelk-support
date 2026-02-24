@@ -29,6 +29,8 @@ import MediaPage from './pages/MediaPage';
 import QAPage from './pages/QAPage';
 import PlaybooksPage from './pages/PlaybooksPage';
 import TranslationSettingsPage from './pages/TranslationSettingsPage';
+import WallboardPage from './pages/WallboardPage';
+import AgentEnginePage from './pages/AgentEnginePage';
 import { lazy } from 'react';
 
 // // Páginas de Autenticación
@@ -74,7 +76,7 @@ import './index.css';
 function ChatRedirect() {
   const { sessionId } = useParams();
   const location = useLocation();
-  return <Navigate to={`/dashboard/chat?session=${sessionId}${location.hash}`} replace />;
+  return <Navigate to={`/chat?session=${sessionId}${location.hash}`} replace />;
 }
 
 export default function App() {
@@ -88,9 +90,9 @@ export default function App() {
           <Route path="/force-change-password" element={<ForceChangePasswordPage />} />
           {/* Redirect legacy /chat/:sessionId URLs to new format */}
           <Route path="/chat/:sessionId" element={<ChatRedirect />} />
-          <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route path="/" element={<DashboardLayout />}>
             {/* Overview - todos pueden ver */}
-            <Route index element={<OverviewPage />} />
+            <Route path='/dashboard' index element={<OverviewPage />} />
             
             {/* Chat - requiere chats.read */}
             <Route path="chat" element={
@@ -259,6 +261,20 @@ export default function App() {
             <Route path="translation" element={
               <ProtectedRoute permission="settings.read">
                 <TranslationSettingsPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Wallboard - requiere supervisor.monitor */}
+            <Route path="wallboard" element={
+              <ProtectedRoute permission="supervisor.monitor">
+                <WallboardPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Agent Engine - requiere settings.read */}
+            <Route path="agent-engine" element={
+              <ProtectedRoute permission="settings.read">
+                <AgentEnginePage />
               </ProtectedRoute>
             } />
           </Route>

@@ -42,7 +42,7 @@ export default function ChatPage() {
       onSessionReplaced: (data) => setSessionReplaced({ device: data.newDevice, ip: data.newIp }),
     });
 
-    registerAsActiveTab('/dashboard/chat').then((success) => {
+    registerAsActiveTab('/chat').then((success) => {
       if (!success) setIsTabBlocked(true);
     });
 
@@ -94,7 +94,7 @@ export default function ChatPage() {
     if (sessionParam && activeSession?.sessionId === sessionParam && targetMessageId) {
       const timer = setTimeout(() => {
         targetMessageRef.current = null;
-        navigate('/dashboard/chat', { replace: true });
+        navigate('/chat', { replace: true });
       }, 5000);
       return () => clearTimeout(timer);
     }

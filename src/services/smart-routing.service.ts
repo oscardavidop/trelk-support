@@ -11,6 +11,22 @@ import { User } from '../database/models/User.js';
 import { ActivityHelpers } from './activity-log.service.js';
 import { io } from './socket.js';
 import { getAssignmentSettings, isWithinWorkingHours } from './settings-cache.service.js';
+import { canReceiveChats } from './presence.service.js';
+import { resolveAgentCapacity } from './agent-config.service.js';
+import { checkAutoBusyAfterAssignment } from './agent-rule-engine.js';
+
+// ─── Availability helper ──────────────────────────────────────────────────────
+// Single source of truth for "can this agent take a new chat?"
+// Uses the Rule Engine (Redis > DB) not the legacy onlineStatus field.
+async function isAgentAvailableForChat(agent: IAgent, _maxChats?: number): Promise<boolean> {
+  const agentId = String(agent._id);
+  // Use the centralised presence guard (delegates to Rule Engine)
+  const eligible = await canReceiveChats(agentId);
+  if (!eligible) return false;
+  // Dynamic capacity from config (agent > team > global)
+  const capacity = await resolveAgentCapacity(agentId);
+  return (agent.activeChats || 0) < capacity;
+}
 
 // Language detection keywords (simplified - in production use a proper library)
 const LANGUAGE_KEYWORDS: Record<string, string[]> = {
@@ -94,11 +110,17 @@ async function calculateAgentScore(
   const skills = await AgentSkills.findOne({ agentId: agent._id }).lean();
 
   // Availability score (0-1)
+  // Uses auxiliaryStateCode (new State Engine). Legacy onlineStatus kept as fallback.
   let availability = 0;
-  if (agent.onlineStatus === 'online') {
-    availability = 1;
-  } else if (agent.onlineStatus === 'away') {
-    availability = 0.3;
+  const auxCode = (agent as any).auxiliaryStateCode;
+  if (auxCode) {
+    if (auxCode === 'available') availability = 1;
+    else if (auxCode === 'busy') availability = 0.1;  // still online but chatting
+    else availability = 0;  // break, offline, etc.
+  } else {
+    // Legacy fallback
+    if (agent.onlineStatus === 'online') availability = 1;
+    else if (agent.onlineStatus === 'away') availability = 0.3;
   }
 
   // Skill match score (0-1)
@@ -313,23 +335,29 @@ export async function findBestAgent(
       switch (action.type) {
         case 'assignToAgent':
           if (action.targetAgentId) {
-            const agent = await Agent.findById(action.targetAgentId);
-            if (agent && agent.onlineStatus === 'online' && agent.isActive) {
+            const agent = await Agent.findById(action.targetAgentId).lean() as unknown as IAgent | null;
+            if (agent && agent.isActive) {
               const skills = await AgentSkills.findOne({ agentId: agent._id });
               const maxChats = skills?.maxConcurrentChats || maxChatsPerAgent;
-              if (agent.activeChats < maxChats) {
-                return { agent, reason: `Matched rule: ${rule.name}` };
+              const available = await isAgentAvailableForChat(agent, maxChats);
+              if (available) {
+                const fullAgent = await Agent.findById(agent._id);
+                if (fullAgent) return { agent: fullAgent, reason: `Matched rule: ${rule.name}` };
               }
             }
           }
           break;
 
         case 'roundRobin':
-        case 'assignToTeam':
-          // Get available agents (optionally filtered by team)
+        case 'assignToTeam': {
+          // Query agents that are in 'available' state (new system) OR
+          // legacy 'online' agents that haven't been migrated to the presence system yet
           const agentQuery: Record<string, unknown> = {
             isActive: true,
-            onlineStatus: 'online',
+            $or: [
+              { auxiliaryStateCode: 'available' },
+              { auxiliaryStateCode: { $exists: false }, onlineStatus: 'online' },
+            ],
           };
           
           if (action.targetTeamId) {
@@ -337,7 +365,7 @@ export async function findBestAgent(
           }
 
           const availableAgents = await Agent.find(agentQuery).lean();
-          
+
           if (availableAgents.length === 0) {
             continue; // Try next rule
           }
@@ -347,11 +375,15 @@ export async function findBestAgent(
             availableAgents.map((a: unknown) => calculateAgentScore(a as IAgent, context, weights))
           );
 
-          // Filter agents at capacity
-          const eligibleAgents = scores.filter((s: { agent: IAgent; skills?: IAgentSkills; score: number }) => {
-            const maxChats = s.skills?.maxConcurrentChats || maxChatsPerAgent;
-            return s.agent.activeChats < maxChats;
-          });
+          // Filter agents at capacity – using canReceiveChats for accuracy
+          const eligibleResults = await Promise.all(
+            scores.map(async (s: { agent: IAgent; skills?: IAgentSkills; score: number }) => {
+              const maxChats = s.skills?.maxConcurrentChats || maxChatsPerAgent;
+              const ok = await isAgentAvailableForChat(s.agent, maxChats);
+              return ok ? s : null;
+            })
+          );
+          const eligibleAgents = eligibleResults.filter((s): s is NonNullable<typeof s> => s !== null);
 
           if (eligibleAgents.length === 0) {
             continue; // Try next rule
@@ -362,12 +394,13 @@ export async function findBestAgent(
 
           const bestAgent = await Agent.findById(eligibleAgents[0].agent._id);
           if (bestAgent) {
-            return { 
-              agent: bestAgent, 
-              reason: `Matched rule: ${(rule as unknown as IRoutingRule).name} (score: ${eligibleAgents[0].score.toFixed(2)})` 
+            return {
+              agent: bestAgent,
+              reason: `Matched rule: ${(rule as unknown as IRoutingRule).name} (score: ${eligibleAgents[0].score.toFixed(2)})`,
             };
           }
           break;
+        }
 
         case 'addToQueue':
           // Don't assign, just set priority
@@ -392,25 +425,28 @@ export async function findBestAgent(
   }
 
   // No rule matched - fall back based on assignment mode
+  // Query: agents in new 'available' state OR legacy 'online' without presence system
   const fallbackAgents = await Agent.find({
     isActive: true,
-    onlineStatus: 'online',
+    $or: [
+      { auxiliaryStateCode: 'available' },
+      { auxiliaryStateCode: { $exists: false }, onlineStatus: 'online' },
+    ],
   }).lean();
-  
+
   // Sort agents based on assignment mode
   let sortedAgents = [...fallbackAgents];
   if (assignmentSettings.mode === 'least-busy') {
     sortedAgents.sort((a, b) => a.activeChats - b.activeChats);
   } else if (assignmentSettings.mode === 'round-robin') {
-    // Simple round-robin: shuffle agents
     sortedAgents.sort(() => Math.random() - 0.5);
   }
-  // 'manual' mode: just iterate in order
 
   for (const agent of sortedAgents) {
     const skills = await AgentSkills.findOne({ agentId: agent._id });
     const maxChats = skills?.maxConcurrentChats || maxChatsPerAgent;
-    if (agent.activeChats < maxChats) {
+    const ok = await isAgentAvailableForChat(agent as unknown as IAgent, maxChats);
+    if (ok) {
       const fullAgent = await Agent.findById(agent._id);
       if (fullAgent) {
         return { agent: fullAgent, reason: `Assignment mode: ${assignmentSettings.mode}` };
@@ -452,6 +488,19 @@ export async function assignChatToAgent(
   await Agent.findByIdAndUpdate(agent._id, {
     $inc: { activeChats: 1 },
   });
+
+  // Rule Engine: auto-set busy if now at capacity
+  const shouldBusy = await checkAutoBusyAfterAssignment(String(agent._id));
+  if (shouldBusy) {
+    const { setAgentState } = await import('./presence.service.js');
+    await setAgentState(String(agent._id), 'busy', {
+      triggeredBy: 'system_auto',
+      skipValidation: true,
+      reason: 'Auto-busy: at capacity',
+      ip: '0.0.0.0',
+      userAgent: 'system',
+    });
+  }
 
   // Log activity
   await ActivityHelpers.sessionAssigned(sessionId, agent._id, agent.name);

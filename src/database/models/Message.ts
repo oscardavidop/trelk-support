@@ -56,6 +56,9 @@ export interface IMessage extends Document {
   translation?: {
     isTranslated: boolean;
     originalContent: string;
+    autoTranslatedContent?: string;  // what the system auto-translated
+    editedContent?: string;          // what the agent edited it to
+    wasEdited?: boolean;             // whether agent edited the translation
     sourceLang: string;
     targetLang: string;
     provider: string;
@@ -167,6 +170,9 @@ const MessageSchema = new Schema<IMessage>(
     translation: {
       isTranslated: { type: Boolean, default: false },
       originalContent: String,
+      autoTranslatedContent: String,
+      editedContent: String,
+      wasEdited: { type: Boolean, default: false },
       sourceLang: String,
       targetLang: String,
       provider: String,

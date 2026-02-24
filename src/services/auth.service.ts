@@ -28,7 +28,8 @@ import {
   evaluateLoginPolicy,
   type PolicyContext,
   type PolicyResult,
-} from "./policy-engine.service.js";
+} from './policy-engine.service.js';
+import { handleAgentLogin, handleAgentLogout } from './presence.service.js';
 
 export interface TokenPayload {
   agentId: string;
@@ -259,6 +260,12 @@ export async function loginAgent(
     // Update last login (status will be set by policy engine)
     await updateLastLogin(agent._id.toString());
 
+    // Initialize presence tracking (async, non-blocking)
+    handleAgentLogin(agent._id.toString(), {
+      ip: deviceInfo?.ip || 'unknown',
+      userAgent: options?.deviceFingerprint || 'unknown',
+    }).catch(() => {/* non-blocking */});
+
     // Return agent without password
     const agentData = await findAgentById(agent._id.toString());
 
@@ -397,8 +404,13 @@ export async function loginAgent(
 /**
  * Logout agent
  */
-export async function logoutAgent(agentId: string): Promise<void> {
-  await updateAgentStatus(agentId, "offline");
+export async function logoutAgent(agentId: string, opts?: { ip?: string; userAgent?: string }): Promise<void> {
+  await updateAgentStatus(agentId, 'offline');
+  // Terminate presence tracking (async, non-blocking)
+  handleAgentLogout(agentId, {
+    ip: opts?.ip,
+    userAgent: opts?.userAgent,
+  }).catch(() => {/* non-blocking */});
 }
 
 /**

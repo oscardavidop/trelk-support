@@ -1039,6 +1039,7 @@ export function sendMessage(
   content: string,
   options?: {
     replyToMessageId?: string;
+    editedTranslation?: string;
   },
   callback?: (result: { ok: boolean; error?: string; data?: Message }) => void
 ): void {
@@ -1046,6 +1047,7 @@ export function sendMessage(
     sessionId, 
     content,
     replyToMessageId: options?.replyToMessageId,
+    editedTranslation: options?.editedTranslation,
   }, callback || (() => {}));
 }
 

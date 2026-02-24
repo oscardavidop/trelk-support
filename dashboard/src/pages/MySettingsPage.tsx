@@ -36,7 +36,7 @@ export default function MySettingsPage() {
   const activeTabInfo = TABS.find(t => t.id === currentTab);
 
   useEffect(() => {
-    if (!tab) navigate('/dashboard/my-settings/account', { replace: true });
+    if (!tab) navigate('/my-settings/account', { replace: true });
   }, [tab, navigate]);
 
   return (
@@ -55,7 +55,7 @@ export default function MySettingsPage() {
             return (
               <button
                 key={t.id}
-                onClick={() => navigate(`/dashboard/my-settings/${t.id}`)}
+                onClick={() => navigate(`/my-settings/${t.id}`)}
                 className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-left transition-all duration-200 group ${
                   isActive 
                     ? 'bg-zinc-800 border border-zinc-700 shadow-sm' 

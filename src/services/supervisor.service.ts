@@ -4,7 +4,7 @@
 
 import { Types } from 'mongoose';
 import { Whisper, type IWhisper } from '../database/models/Whisper.js';
-import { Agent, type IAgent } from '../database/models/Agent.js';
+import { Agent, type IAgent, MAX_CONCURRENT_CHATS } from '../database/models/Agent.js';
 import { ChatSession, type IChatSession } from '../database/models/ChatSession.js';
 import { ActivityLog } from '../database/models/ActivityLog.js';
 import { io } from './socket.js';
@@ -19,18 +19,25 @@ interface SupervisorStats {
 }
 
 interface AgentOverview {
-  _id: Types.ObjectId;
+  id: string;
   name: string;
   email: string;
-  onlineStatus: string;
+  role: string;
+  status: 'online' | 'away' | 'offline';
+  availability: 'available' | 'busy' | 'unavailable';
   activeChats: number;
-  availability: string;
-  avgResponseTime?: number;
-  currentSessions: {
-    sessionId: string;
-    userName: string;
-    startedAt: Date;
-    lastMessageAt?: Date;
+  maxChats: number;
+  avgResponseTime: number;
+  resolvedToday: number;
+  lastActive: Date | null;
+  sessions: {
+    id: string;
+    user: { firstName: string; username?: string };
+    status: string;
+    category?: string;
+    unreadCount: number;
+    lastMessage?: string;
+    createdAt: Date;
   }[];
 }
 
@@ -41,11 +48,16 @@ export async function getSupervisorStats(): Promise<SupervisorStats> {
   const [liveChats, queuedChats, agents] = await Promise.all([
     ChatSession.countDocuments({ status: 'human' }),
     ChatSession.countDocuments({ status: { $in: ['queued', 'waiting'] } }),
-    Agent.find({ isActive: true }).select('onlineStatus'),
+    Agent.find({ isActive: true }).select('onlineStatus auxiliaryStateCode').lean(),
   ]);
 
-  const onlineAgents = agents.filter((a: IAgent) => a.onlineStatus === 'online').length;
-  const awayAgents = agents.filter((a: IAgent) => a.onlineStatus === 'away').length;
+  // Use auxiliaryStateCode when available (new system), fallback to onlineStatus (legacy)
+  const onlineAgents = agents.filter((a: any) =>
+    a.auxiliaryStateCode ? a.auxiliaryStateCode !== 'offline' : a.onlineStatus === 'online'
+  ).length;
+  const awayAgents = agents.filter((a: any) =>
+    a.auxiliaryStateCode ? a.auxiliaryStateCode === 'busy' || a.auxiliaryStateCode?.startsWith('break') : a.onlineStatus === 'away'
+  ).length;
 
   // TODO: Calculate SLA at risk based on response times
   const slaAtRisk = 0;
@@ -62,46 +74,108 @@ export async function getSupervisorStats(): Promise<SupervisorStats> {
 }
 
 /**
- * Get overview of all active agents with their current sessions
+ * Get overview of all active agents with their current sessions.
+ * Returns data shaped to match the frontend AgentOverview type exactly.
  */
 export async function getAgentOverviews(): Promise<AgentOverview[]> {
-  const agents = await Agent.find({
-    isActive: true,
-    onlineStatus: { $ne: 'offline' },
-  }).lean<IAgent[]>();
+  // Include offline agents so supervisors can see everyone
+  const agents = await Agent.find({ isActive: true })
+    .select('name email role onlineStatus auxiliaryStateCode activeChats lastActivity lastDisconnect')
+    .lean<IAgent[]>();
 
   const agentIds = agents.map((a: IAgent) => a._id);
-  
+
+  // Sessions assigned to these agents (both active and recently queued)
   const sessions = await ChatSession.find({
     status: 'human',
     assignedAgent: { $in: agentIds },
   })
-    .populate('user', 'firstName lastName telegramUsername')
+    .populate('user', 'firstName lastName username telegramId')
+    .select('sessionId status category lastMessage lastMessageAt createdAt assignedAgent user')
     .lean<IChatSession[]>();
 
+  // Index sessions by agent ID
   const sessionsByAgent = new Map<string, IChatSession[]>();
   for (const session of sessions) {
-    const agentId = session.assignedAgent?.toString() || '';
-    if (!sessionsByAgent.has(agentId)) {
-      sessionsByAgent.set(agentId, []);
-    }
-    sessionsByAgent.get(agentId)!.push(session);
+    const aId = session.assignedAgent?.toString() || '';
+    if (!sessionsByAgent.has(aId)) sessionsByAgent.set(aId, []);
+    sessionsByAgent.get(aId)!.push(session);
   }
 
-  return agents.map((agent: IAgent) => ({
-    _id: agent._id,
-    name: agent.name,
-    email: agent.email,
-    onlineStatus: agent.onlineStatus,
-    activeChats: agent.activeChats,
-    availability: agent.activeChats >= 5 ? 'busy' : 'available',
-    currentSessions: (sessionsByAgent.get(agent._id.toString()) || []).map((s: IChatSession) => ({
-      sessionId: s.sessionId,
-      userName: (s.user as any)?.firstName || 'Unknown',
-      startedAt: s.createdAt,
-      lastMessageAt: s.updatedAt,
-    })),
-  }));
+  // Compute resolvedToday per agent from ActivityLog
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const resolvedLogs = await ActivityLog.find({
+    action: { $in: ['session_closed', 'session_resolved'] },
+    'actor.id': { $in: agentIds.map(id => id.toString()) },
+    createdAt: { $gte: todayStart },
+  })
+    .select('actor.id')
+    .lean();
+
+  const resolvedByAgent = new Map<string, number>();
+  for (const log of resolvedLogs) {
+    const aId = (log as any).actor?.id?.toString() || '';
+    resolvedByAgent.set(aId, (resolvedByAgent.get(aId) || 0) + 1);
+  }
+
+  return agents.map((agent: IAgent): AgentOverview => {
+    const agentId = agent._id.toString();
+    const agentSessions = sessionsByAgent.get(agentId) || [];
+    const auxCode = (agent as any).auxiliaryStateCode;
+
+    // Derive legacy status from new system for UI compatibility
+    let status: 'online' | 'away' | 'offline';
+    if (auxCode) {
+      if (auxCode === 'offline') status = 'offline';
+      else if (auxCode === 'available') status = 'online';
+      else status = 'away'; // busy, break, etc.
+    } else {
+      status = (agent.onlineStatus as 'online' | 'away' | 'offline') || 'offline';
+    }
+
+    const busyThreshold = Math.max(1, MAX_CONCURRENT_CHATS);
+
+    let availability: 'available' | 'busy' | 'unavailable';
+    if (auxCode) {
+      if (auxCode === 'offline') availability = 'unavailable';
+      else if (auxCode === 'available' && (agent.activeChats || 0) < busyThreshold) availability = 'available';
+      else availability = 'busy';
+    } else if (status === 'offline') {
+      availability = 'unavailable';
+    } else if ((agent.activeChats || 0) >= busyThreshold) {
+      availability = 'busy';
+    } else {
+      availability = 'available';
+    }
+
+    return {
+      id: agentId,
+      name: agent.name,
+      email: agent.email,
+      role: agent.role || 'support',
+      status,
+      availability,
+      activeChats: agent.activeChats || 0,
+      maxChats: MAX_CONCURRENT_CHATS,
+      avgResponseTime: 0, // TODO: compute from message timestamps
+      resolvedToday: resolvedByAgent.get(agentId) || 0,
+      lastActive: agent.lastActivity || null,
+      sessions: agentSessions.map((s: IChatSession) => ({
+        id: s.sessionId,
+        user: {
+          firstName: (s.user as any)?.firstName || (s.user as any)?.username || 'Cliente',
+          username: (s.user as any)?.username,
+        },
+        status: s.status,
+        category: s.category,
+        unreadCount: 0, // TODO: track per-session unread count
+        lastMessage: s.lastMessage,
+        createdAt: s.createdAt,
+      })),
+    };
+  });
 }
 
 /**

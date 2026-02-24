@@ -131,7 +131,7 @@ const tabs: { id: SettingsTab; label: string; icon: React.ReactNode; description
 // Link to Agent Rules page
 const AgentRulesLink = () => (
   <Link 
-    to="/dashboard/agent-rules"
+    to="/agent-rules"
     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent hover:border-purple-500/30"
   >
     <div className="p-2 rounded-lg bg-zinc-800 text-zinc-500 group-hover:text-purple-400 group-hover:bg-purple-500/20 transition-colors">
@@ -147,7 +147,7 @@ const AgentRulesLink = () => (
 
 const DispositionsLink = () => (
   <Link
-    to="/dashboard/dispositions"
+    to="/dispositions"
     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent hover:border-purple-500/30"
   >
     <div className="p-2 rounded-lg bg-zinc-800 text-zinc-500 group-hover:text-purple-400 group-hover:bg-purple-500/20 transition-colors">

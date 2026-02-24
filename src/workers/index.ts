@@ -3,13 +3,14 @@
  * Central export and initialization for all BullMQ workers
  */
 
-import { initializeQueues, shutdownQueues } from '../services/queue.js';
+import { initializeQueues, shutdownQueues, QUEUE_NAMES } from '../services/queue.js';
 import { startScheduledMessagesWorker, migrateExistingScheduledMessages } from './scheduledMessages.worker.js';
 import { startFlowExecutionWorker } from './flowExecution.worker.js';
 import { startCleanupWorker, scheduleCleanupJobs } from './cleanup.worker.js';
 import { initializeInactivityWorker, stopInactivityWorker } from './inactivity.worker.js';
 import { registerBroadcastWorker } from '../services/broadcast.worker.js';
 import { logger } from '../services/logger.js';
+import { set as redisSet, isRedisConnected } from '../services/redis.js';
 
 // ============= LIFECYCLE =============
 
@@ -45,6 +46,16 @@ export async function initializeWorkers(): Promise<boolean> {
 
     isInitialized = true;
     console.log('✅ [Workers] All workers initialized successfully');
+
+    // Store worker start timestamps in Redis for uptime tracking
+    if (isRedisConnected()) {
+      const startedAt = Date.now().toString();
+      await Promise.all(
+        Object.values(QUEUE_NAMES).map((name) =>
+          redisSet(`worker:startedAt:${name}`, startedAt)
+        )
+      );
+    }
     
     return true;
   } catch (error) {

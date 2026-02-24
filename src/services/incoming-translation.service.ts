@@ -34,10 +34,12 @@ import {
   type ChannelType,
 } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
+import { Agent } from '../database/models/Agent.js';
 import { logTranslation } from '../database/models/TranslationLog.js';
 import { translateTextV2, type TranslateResult } from './translation.service.js';
 import * as redis from './redis.js';
 import { logger } from './logger.js';
+import { TranslationConfigCache } from './cache.js';
 
 // ─── TYPES ──────────────────────────────────────────────────
 
@@ -96,9 +98,10 @@ async function setRedisCache(text: string, targetLang: string, translated: strin
   } catch { /* silent */ }
 }
 
-// ─── THROTTLE ───────────────────────────────────────────────
+// ─── THROTTLE & RATE LIMIT ──────────────────────────────────
 
 const throttleMap = new Map<string, number>(); // sessionId → lastTranslateTimestamp
+const rateLimitMap = new Map<string, number[]>(); // sessionId → array of timestamps (last 60s)
 
 function isThrottled(sessionId: string, throttleMs: number): boolean {
   if (throttleMs <= 0) return false;
@@ -109,11 +112,58 @@ function isThrottled(sessionId: string, throttleMs: number): boolean {
   return false;
 }
 
-// Cleanup throttle map every 10 minutes
+function isRateLimited(sessionId: string, maxPerMin: number): boolean {
+  if (!maxPerMin || maxPerMin <= 0) return false;
+  const now = Date.now();
+  const cutoff = now - 60000;
+  let timestamps = rateLimitMap.get(sessionId) || [];
+  timestamps = timestamps.filter(t => t > cutoff);
+  if (timestamps.length >= maxPerMin) return true;
+  timestamps.push(now);
+  rateLimitMap.set(sessionId, timestamps);
+  return false;
+}
+
+// Cleanup throttle & rate limit maps every 10 minutes
 setInterval(() => {
   const cutoff = Date.now() - 60000;
   for (const [key, ts] of throttleMap) {
     if (ts < cutoff) throttleMap.delete(key);
+  }
+  for (const [key, timestamps] of rateLimitMap) {
+    const recent = timestamps.filter(t => t > cutoff);
+    if (recent.length === 0) rateLimitMap.delete(key);
+    else rateLimitMap.set(key, recent);
+  }
+}, 600_000);
+
+// ─── AGENT PREFERENCES IN-MEMORY CACHE ──────────────────────
+// Avoids repeated DB queries for the same agent on every message.
+// TTL: 5 minutes (agent prefs rarely change and cache is invalidated on update).
+
+const AGENT_PREFS_TTL_MS = 5 * 60 * 1000;
+interface CachedAgentPrefs { data: IAgentPreferences | null; ts: number }
+const agentPrefsCache = new Map<string, CachedAgentPrefs>();
+
+async function getCachedAgentPrefs(agentId: string): Promise<IAgentPreferences | null> {
+  const cached = agentPrefsCache.get(agentId);
+  if (cached && Date.now() - cached.ts < AGENT_PREFS_TTL_MS) {
+    return cached.data;
+  }
+  try {
+    const prefs = await AgentPreferences.findOne({ agentId }).lean() as IAgentPreferences | null;
+    agentPrefsCache.set(agentId, { data: prefs, ts: Date.now() });
+    return prefs;
+  } catch {
+    return null;
+  }
+}
+
+// Cleanup agent prefs cache every 10 minutes
+setInterval(() => {
+  const cutoff = Date.now() - AGENT_PREFS_TTL_MS;
+  for (const [key, entry] of agentPrefsCache) {
+    if (entry.ts < cutoff) agentPrefsCache.delete(key);
   }
 }, 600_000);
 
@@ -121,6 +171,10 @@ setInterval(() => {
 
 const COMMAND_REGEX = /^\/[a-zA-Z]/;
 const EMOJI_ONLY_REGEX = /^[\p{Emoji_Presentation}\p{Emoji}\u200d\ufe0f\s]+$/u;
+const URL_ONLY_REGEX = /^(https?:\/\/[^\s]+)$/i;
+const NUMBER_ONLY_REGEX = /^[\d\s.,+\-()]+$/;
+const CODE_BLOCK_REGEX = /^```[\s\S]*```$/;
+const CODE_LIKE_REGEX = /^[\s]*(?:(?:const|let|var|function|class|import|export|return|if|else|for|while|switch|case|break|continue|try|catch|throw|new|async|await)\b|[{}\[\]();=<>]|\/\/|\/\*|\*\/|=>|\.\.\.)/m;
 
 function shouldSkip(
   content: string,
@@ -136,19 +190,43 @@ function shouldSkip(
     return { skip: true, reason: 'empty' };
   }
 
+  const trimmed = content.trim();
+
   // Skip commands
-  if (config.skipCommands && COMMAND_REGEX.test(content.trim())) {
+  if (config.skipCommands && COMMAND_REGEX.test(trimmed)) {
     return { skip: true, reason: 'command' };
   }
 
   // Skip short messages
-  if (config.skipShortMessages && content.trim().length < 3) {
+  if (config.skipShortMessages && trimmed.length < 3) {
     return { skip: true, reason: 'too_short' };
   }
 
   // Skip emoji-only
-  if (config.skipEmojiOnly && EMOJI_ONLY_REGEX.test(content.trim())) {
+  if (config.skipEmojiOnly && EMOJI_ONLY_REGEX.test(trimmed)) {
     return { skip: true, reason: 'emoji_only' };
+  }
+
+  // Anti-abuse: max chars per message
+  if (config.maxCharsPerMessage && content.length > config.maxCharsPerMessage) {
+    return { skip: true, reason: 'too_long' };
+  }
+
+  // ── Smart Skip Logic (cost saving) ──
+
+  // Skip URL-only messages
+  if (URL_ONLY_REGEX.test(trimmed)) {
+    return { skip: true, reason: 'url_only' };
+  }
+
+  // Skip number-only messages (phone numbers, amounts, IDs)
+  if (NUMBER_ONLY_REGEX.test(trimmed)) {
+    return { skip: true, reason: 'numbers_only' };
+  }
+
+  // Skip code blocks / code-like content
+  if (CODE_BLOCK_REGEX.test(trimmed) || (trimmed.length > 20 && CODE_LIKE_REGEX.test(trimmed) && trimmed.split('\n').length > 2)) {
+    return { skip: true, reason: 'code_content' };
   }
 
   return { skip: false };
@@ -174,15 +252,20 @@ async function resolveTargetLang(
 
   switch (mode) {
     case 'agent_lang': {
-      // Use agent's preferred language from preferences
+      // Use agent's preferred language — fetched from cache
       if (agentId) {
         try {
-          const prefs = await AgentPreferences.findOne({ agentId }).lean() as IAgentPreferences | null;
+          const prefs = await getCachedAgentPrefs(agentId);
           if (prefs?.translation?.incomingTargetLang && prefs.translation.incomingTargetLang.length >= 2) {
             return prefs.translation.incomingTargetLang;
           }
           if (prefs?.language && prefs.language.length >= 2) {
             return prefs.language;
+          }
+          // Fallback to Agent model's language field
+          const agent = await Agent.findById(agentId).select('language').lean();
+          if (agent && (agent as any).language && (agent as any).language.length >= 2) {
+            return (agent as any).language;
           }
         } catch { /* fallthrough */ }
       }
@@ -212,6 +295,7 @@ async function getIncomingDecision(
   channel: ChannelType,
   agentId: string | undefined,
   globalConfig: IIncomingTranslateConfig,
+  prefetchedSession?: IChatSession | null,  // avoids extra DB query when already fetched
 ): Promise<IncomingDecision> {
   const defaults: IncomingDecision = {
     enabled: globalConfig.enabled,
@@ -224,9 +308,16 @@ async function getIncomingDecision(
     return { ...defaults, enabled: false };
   }
 
-  // 1. Check per-session override
+  // 1. Check per-session override — reuse pre-fetched session when available
   try {
-    const session = await ChatSession.findOne({ sessionId }).lean();
+    const session = prefetchedSession !== undefined
+      ? prefetchedSession
+      : await ChatSession.findOne({ sessionId }, {
+          'translationOverride.incomingEnabled': 1,
+          'translationOverride.incomingTargetLang': 1,
+          'translationOverride.showOriginal': 1,
+        }).lean() as IChatSession | null;
+
     if (session?.translationOverride) {
       if (session.translationOverride.incomingEnabled === false) {
         return { ...defaults, enabled: false };
@@ -234,16 +325,16 @@ async function getIncomingDecision(
       if (session.translationOverride.incomingEnabled === true) {
         defaults.enabled = true;
       }
-      if (session.translationOverride.incomingTargetLang) {
-        defaults.targetLang = session.translationOverride.incomingTargetLang;
+      if ((session.translationOverride as any).incomingTargetLang) {
+        defaults.targetLang = (session.translationOverride as any).incomingTargetLang;
       }
     }
   } catch { /* */ }
 
-  // 2. Check agent preferences override (if agent is assigned)
+  // 2. Check agent preferences override — use in-memory cache
   if (agentId && globalConfig.agentOverrideAllowed) {
     try {
-      const prefs = await AgentPreferences.findOne({ agentId }).lean() as IAgentPreferences | null;
+      const prefs = await getCachedAgentPrefs(agentId);
       if (prefs?.translation) {
         if (prefs.translation.incomingOverride === 'always_off') {
           return { ...defaults, enabled: false };
@@ -296,14 +387,14 @@ export async function translateIncoming(req: IncomingTranslateRequest): Promise<
     const inConfig = settings.incoming;
     if (!inConfig || !inConfig.enabled) return noTranslate;
 
-    // Get session for agent info
+    // Get session for agent info (fetched once — reused in decision engine and resolveTargetLang)
     const session = await ChatSession.findOne({ sessionId: req.sessionId }).lean() as IChatSession | null;
 
     // Get assigned agent ID
     const agentId = session?.assignedAgent?.toString();
 
-    // Decision engine (global + agent + session overrides)
-    const decision = await getIncomingDecision(req.sessionId, req.channel, agentId, inConfig);
+    // Decision engine (global + agent + session overrides) — pass pre-fetched session
+    const decision = await getIncomingDecision(req.sessionId, req.channel, agentId, inConfig, session);
     if (!decision.enabled) return noTranslate;
 
     // Skip rules
@@ -312,6 +403,11 @@ export async function translateIncoming(req: IncomingTranslateRequest): Promise<
 
     // Throttle check
     if (isThrottled(req.sessionId, inConfig.throttleMs || 1000)) {
+      return noTranslate;
+    }
+
+    // Rate limit check (anti-abuse)
+    if (isRateLimited(req.sessionId, inConfig.maxTranslationsPerMin || 30)) {
       return noTranslate;
     }
 
@@ -478,7 +574,7 @@ export async function getIncomingConfig(agentId: string, sessionId: string): Pro
 
   let channel: ChannelType = 'web';
   try {
-    const session = await ChatSession.findOne({ sessionId }).lean() as IChatSession | null;
+    const session = await ChatSession.findOne({ sessionId }, { channel: 1 }).lean() as IChatSession | null;
     if (session?.channel) channel = session.channel;
   } catch { /* */ }
 
@@ -508,4 +604,5 @@ export async function updateSessionIncomingTranslation(
     update['translationOverride.incomingTargetLang'] = override.incomingTargetLang;
   }
   await ChatSession.updateOne({ sessionId }, { $set: update });
+  await TranslationConfigCache.updateIncoming(sessionId, update);
 }

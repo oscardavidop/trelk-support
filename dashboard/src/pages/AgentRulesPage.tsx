@@ -166,14 +166,14 @@ const defaultPolicy: PolicySettings = {
         allowReadOnlyOutsideHours: true,
     },
     redirects: {
-        defaultLandingPage: '/dashboard/chat',
+        defaultLandingPage: '/chat',
         roleBasedRedirects: [
-            { role: 'admin', redirectTo: '/dashboard/overview' },
-            { role: 'supervisor', redirectTo: '/dashboard/supervisor' },
-            { role: 'support', redirectTo: '/dashboard/chat' },
+            { role: 'admin', redirectTo: '/overview' },
+            { role: 'supervisor', redirectTo: '/supervisor' },
+            { role: 'support', redirectTo: '/chat' },
         ],
         forceCompleteProfile: true,
-        profileCompletionPage: '/dashboard/my-settings',
+        profileCompletionPage: '/my-settings',
     },
     locationRestriction: {
         enabled: false,
@@ -924,7 +924,7 @@ export default function AgentRulesPage() {
                                         label="Página de inicio por defecto"
                                         value={policy.redirects.defaultLandingPage}
                                         onChange={(v) => setPolicy({ ...policy, redirects: { ...policy.redirects, defaultLandingPage: v } })}
-                                        placeholder="/dashboard/chat"
+                                        placeholder="/chat"
                                     />
 
                                     <div>

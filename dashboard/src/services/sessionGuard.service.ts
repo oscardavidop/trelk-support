@@ -130,7 +130,7 @@ function handleMessage(msg: TabMessage): void {
     case 'tab_claim':
       // Another tab is claiming control of /chat
       // We must surrender - new tab wins
-      if (msg.path === '/dashboard/chat' && !isTabBlocked) {
+      if (msg.path === '/chat' && !isTabBlocked) {
         console.log('[SessionGuard] Another tab claimed /chat, blocking this tab');
         blockThisTab();
       }
@@ -138,7 +138,7 @@ function handleMessage(msg: TabMessage): void {
       
     case 'tab_close':
       // Another tab closed, if we were blocked we can try to become active
-      if (isTabBlocked && msg.path === '/dashboard/chat') {
+      if (isTabBlocked && msg.path === '/chat') {
         console.log('[SessionGuard] Active tab closed, attempting to claim');
         // Don't auto-recover - user needs to refresh
       }
@@ -308,7 +308,7 @@ export function releaseTab(): void {
       type: 'tab_close',
       tabId,
       timestamp: Date.now(),
-      path: '/dashboard/chat',
+      path: '/chat',
     });
   }
   

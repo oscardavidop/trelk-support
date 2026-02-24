@@ -12,9 +12,20 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['trelk.site', 's.trelk.site'],
+    allowedHosts: ['trelk.site', 'api.trelk.site'],
     port: 5173,
     proxy: {
+      // '/api': {
+      //   target: 'https://api.trelk.site', // <-- Tu nuevo dominio para el backend
+      //   changeOrigin: true,
+      //   secure: false, // Ponlo en true si el certificado SSL de tu API es estricto/válido
+        
+      //   // ATENCIÓN A ESTA LÍNEA:
+      //   // Si tu nuevo backend espera rutas como "api.trelk.site/users" (sin la palabra /api),
+      //   // descomenta la siguiente línea para que Vite la borre antes de enviar la petición:
+        
+      //   // rewrite: (path) => path.replace(/^\/api/, '') 
+      // },
       '/api': {
         target: 'https://localhost:8443',
         changeOrigin: true,
@@ -41,17 +52,17 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Separa las librerías grandes en sus propios archivos
-            if (id.includes('react')) return 'vendor-react';
-            if (id.includes('lucide')) return 'vendor-icons';
-            if (id.includes('chart.js')) return 'vendor-charts';
-            return 'vendor-others'; // El resto de librerías
-          }
-        },
-      },
+      // output: {
+      //   manualChunks(id) {
+      //     if (id.includes('node_modules')) {
+      //       // Separa las librerías grandes en sus propios archivos
+      //       if (id.includes('react')) return 'vendor-react';
+      //       if (id.includes('lucide')) return 'vendor-icons';
+      //       if (id.includes('chart.js')) return 'vendor-charts';
+      //       return 'vendor-others'; // El resto de librerías
+      //     }
+      //   },
+      // },
     },
   }
 })

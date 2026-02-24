@@ -4,6 +4,7 @@
  */
 
 import mongoose, { Schema, type Document } from 'mongoose';
+import { TranslationConfigCache } from '../../services/cache.js';
 
 // ─── TYPES ──────────────────────────────────────────────────
 
@@ -78,6 +79,9 @@ export interface IIncomingTranslateConfig {
   skipShortMessages: boolean;      // skip messages < 3 chars
   skipEmojiOnly: boolean;          // skip emoji-only messages
   throttleMs: number;              // min ms between translations per chat (anti-flood)
+  maxTranslationsPerMin: number;   // max translations/min per chat (anti-abuse)
+  maxCharsPerMessage: number;      // max chars to translate per message
+  blockRepetitive: boolean;        // block identical repeated messages
 }
 
 export interface ITranslationSettings extends Document {
@@ -188,6 +192,9 @@ const TranslationSettingsSchema = new Schema<ITranslationSettings>({
     skipShortMessages: { type: Boolean, default: true },
     skipEmojiOnly: { type: Boolean, default: true },
     throttleMs: { type: Number, default: 1000 },
+    maxTranslationsPerMin: { type: Number, default: 30 },
+    maxCharsPerMessage: { type: Number, default: 5000 },
+    blockRepetitive: { type: Boolean, default: false },
   },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'Agent' },
 }, {
@@ -226,6 +233,8 @@ export const TranslationSettings = mongoose.model<ITranslationSettings>('Transla
  * Get or create the global translation settings (singleton)
  */
 export async function getTranslationSettings(): Promise<ITranslationSettings> {
+  const cached = await TranslationConfigCache.get();
+  if (cached) return cached;
   let settings = await TranslationSettings.findOne();
   if (!settings) {
     settings = await TranslationSettings.create({
@@ -233,6 +242,7 @@ export async function getTranslationSettings(): Promise<ITranslationSettings> {
       providers: getDefaultProviders(),
     });
   }
+  TranslationConfigCache.set(settings);
   return settings;
 }
 
@@ -252,6 +262,7 @@ export async function updateTranslationSettings(
   }
   Object.assign(settings, data, { updatedBy: new mongoose.Types.ObjectId(agentId) });
   await settings.save();
+  TranslationConfigCache.set(settings);
   return settings;
 }
 

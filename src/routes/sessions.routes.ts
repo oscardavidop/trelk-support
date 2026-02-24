@@ -294,6 +294,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
         content: msg.content,
         messageType: msg.messageType,
         mediaUrl: msg.mediaUrl,
+        fileName: msg.fileName,
         telegramMessageId: msg.telegramMessageId,
         isRead: msg.isRead,
         isEdited: msg.isEdited || false,
@@ -306,6 +307,9 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
           senderAgent: msg.replyTo.senderAgent,
           content: msg.replyTo.content,
         } : undefined,
+        // Translation fields (persisted)
+        translation: msg.translation || undefined,
+        incomingTranslation: msg.incomingTranslation || undefined,
       });
 
       return {

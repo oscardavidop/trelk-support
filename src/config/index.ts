@@ -47,8 +47,8 @@ export const ENV = {
   
   // Dashboard
   DASHBOARD_URL: process.env.DASHBOARD_URL || 'http://localhost:5173',
-  DASHBOARD_PUBLIC_URL: process.env.DASHBOARD_PUBLIC_URL || 'http://localhost:5173',
-  CORS_ORIGIN: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
+  DASHBOARD_PUBLIC_URL: process.env.DASHBOARD_PUBLIC_URL || 'https://trelk.site',
+  CORS_ORIGIN: (process.env.CORS_ORIGIN || ['http://localhost:5173', 'https://trelk.site', 'https://api.trelk.site',  'https://support.trelk.site'])
 } as const;
 
 // ============= WEBHOOK CONFIGURATION =============

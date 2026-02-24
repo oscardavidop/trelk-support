@@ -689,7 +689,7 @@ function CoachingTab() {
                 </div>
                 <div className="flex items-center gap-2 justify-end">
                   <button
-                    onClick={() => navigate(`/dashboard/chat?session=${session.sessionId}`)}
+                    onClick={() => navigate(`/chat?session=${session.sessionId}`)}
                     className="px-3 py-1 text-xs bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 rounded-lg transition-colors flex items-center gap-1"
                   >
                     <MessageSquare className="w-3 h-3" /> Ver chat y evaluar
@@ -748,7 +748,7 @@ function CoachingTab() {
                 </span>
                 <div className="flex-1" />
                 <button
-                  onClick={() => navigate(`/dashboard/chat?session=${review.sessionId}`)}
+                  onClick={() => navigate(`/chat?session=${review.sessionId}`)}
                   className="px-3 py-1 text-xs bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 rounded-lg transition-colors flex items-center gap-1"
                 >
                   <ExternalLink className="w-3 h-3" /> Ir a sesión

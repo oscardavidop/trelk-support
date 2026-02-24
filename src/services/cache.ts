@@ -20,63 +20,67 @@ export const CacheKeys = {
   flowByTrigger: (triggerType: string) => `flow:trigger:${triggerType}`,
   flowByKeyword: (keyword: string) => `flow:keyword:${keyword.toLowerCase()}`,
   flowActiveList: () => `flow:active:list`,
-  
+
   // Flow Executions (hot cache for active executions)
   flowExecution: (executionId: string) => `flowexec:${executionId}`,
   flowExecutionBySession: (sessionId: string) => `flowexec:session:${sessionId}`,
   flowExecutionActive: (chatId: number) => `flowexec:active:${chatId}`,
   flowExecutionPending: () => `flowexec:pending:sync`, // List of IDs pending DB sync
-  
+
   // Sessions
   session: (sessionId: string) => `session:${sessionId}`,
   sessionByChat: (chatId: number) => `session:chat:${chatId}`,
-  
+
   // Agents
   agent: (agentId: string) => `agent:${agentId}`,
   agentOnline: () => `agents:online`,
-  
+
   // Bot settings
   botSettings: () => `settings:bot`,
   queueSettings: () => `settings:queue`,
-  
+
   // Scheduled messages
   scheduledPending: () => `scheduled:pending`,
   scheduledBySession: (sessionId: string) => `scheduled:session:${sessionId}`,
-  
+
   // User data
   user: (telegramId: number) => `user:${telegramId}`,
   userCustomFields: (telegramId: number) => `user:${telegramId}:fields`,
   userCustomFieldsPending: () => `ucf:pending:sync`, // List of pending syncs
-  
+
   // Custom Field Definitions (rarely change, cache longer)
   customFieldDefinitions: () => `cfd:all`,
   customFieldDefinition: (fieldId: string) => `cfd:${fieldId}`,
   customFieldByKey: (key: string) => `cfd:key:${key}`,
-  
+
   // Saved replies
   savedReplies: () => `saved:replies:all`,
   savedReply: (id: string) => `saved:reply:${id}`,
-  
+
   // Tags
   tags: () => `tags:all`,
-  
+
   // Contacts PRO
   contact: (telegramId: number) => `contact:${telegramId}`,
   contactProfile: (telegramId: number) => `contact:profile:${telegramId}`,
   contactList: (page: number, hash: string) => `contacts:list:${page}:${hash}`,
   contactStats: () => `contacts:stats`,
-  
+
   // Segments
   segments: () => `segments:all`,
   segment: (segmentId: string) => `segment:${segmentId}`,
   segmentContacts: (segmentId: string, page: number) => `segment:${segmentId}:contacts:${page}`,
   segmentCount: (segmentId: string) => `segment:${segmentId}:count`,
-  
+
   // Saved Views
   savedViews: (userId?: string) => userId ? `views:${userId}` : `views:global`,
-  
+
   // Stats
   stats: (type: string) => `stats:${type}`,
+  // translations config
+  translationConfig: () => `translation:config:global`,
+  translationIncomingConfig: (sessionId: string) => `translation:incoming_config:${sessionId}`,
+  translationOutgoingConfig: (sessionId: string) => `translation:outgoing_config:${sessionId}`,
 } as const;
 
 // ============= CACHE TTLs (in seconds) =============
@@ -86,7 +90,7 @@ export const CacheTTL = {
   MEDIUM: 300,         // 5 minutes - for semi-stable data
   LONG: 3600,          // 1 hour - for stable data
   VERY_LONG: 86400,    // 24 hours - for rarely changing data
-  
+
   // Specific TTLs
   FLOW: 1800,          // 30 min - flows change occasionally
   FLOW_EXECUTION: 900, // 15 min - active executions, refreshed on activity
@@ -149,7 +153,7 @@ export async function getOrFetch<T>(
  */
 export async function invalidate(keys: string | string[]): Promise<void> {
   const keyArray = Array.isArray(keys) ? keys : [keys];
-  
+
   for (const key of keyArray) {
     await redis.del(key);
   }
@@ -200,23 +204,23 @@ export const FlowCache = {
    */
   async updateFlowCache(flow: any): Promise<void> {
     if (!flow || !flow._id) return;
-    
+
     const flowId = flow._id.toString();
     const flowToCache = stripFlowVersions(
       typeof flow.toObject === 'function' ? flow.toObject() : flow
     );
-    
+
     // Update the flow cache
     await redis.setJSON(CacheKeys.flow(flowId), flowToCache, CacheTTL.FLOW);
-    
+
     // Invalidate trigger-based caches so they get refreshed with new flow data
     await invalidatePattern('flow:trigger:*');
     await invalidatePattern('flow:keyword:*');
     await invalidate([CacheKeys.flowActiveList()]);
-    
+
     // Publish event for other workers
     await redis.publish('cache:invalidate', { type: 'flow_updated', flowId });
-    
+
     logger.info('cache', { action: 'flow_cache_updated', flowId });
   },
 
@@ -229,14 +233,14 @@ export const FlowCache = {
       CacheKeys.flowPublished(flowId),
       CacheKeys.flowActiveList(),
     ]);
-    
+
     // Also invalidate trigger-based caches (we don't know which triggers this flow had)
     await invalidatePattern('flow:trigger:*');
     await invalidatePattern('flow:keyword:*');
-    
+
     // Publish event for other workers
     await redis.publish('cache:invalidate', { type: 'flow', flowId });
-    
+
     logger.info('cache', { action: 'flow_invalidated', flowId });
   },
 
@@ -310,6 +314,41 @@ export const SavedRepliesCache = {
   },
 };
 
+// ============= TRANSLATION CONFIG CACHE =============
+
+export const TranslationConfigCache = {
+  /**
+   * Invalidate translation config cache
+   */
+  async invalidate(): Promise<void> {
+    await invalidate(CacheKeys.translationConfig());
+  },
+  async get(): Promise<any | null> {
+    return redis.getJSON(CacheKeys.translationConfig());
+  },
+  async set(config: any): Promise<boolean> {
+    return redis.setJSON(CacheKeys.translationConfig(), config, CacheTTL.SETTINGS);
+  },
+  async getIncoming(sessionId: string): Promise<any | null> {
+    return redis.getJSON(CacheKeys.translationIncomingConfig(sessionId));
+  },
+  async setIncoming(sessionId: string, config: any): Promise<boolean> {
+    return redis.setJSON(CacheKeys.translationIncomingConfig(sessionId), config, CacheTTL.SETTINGS);
+  },
+  async updateIncoming(sessionId: string, updates: any): Promise<void> {
+    const current = await redis.getJSON(CacheKeys.translationIncomingConfig(sessionId));
+    if (!current) return;
+    const updated = { ...current, ...updates };
+    await redis.setJSON(CacheKeys.translationIncomingConfig(sessionId), updated, CacheTTL.SETTINGS);
+  },
+  async getOutgoing(sessionId: string): Promise<any | null> {
+    return redis.getJSON(CacheKeys.translationOutgoingConfig(sessionId));
+  },
+  async setOutgoing(sessionId: string, config: any): Promise<boolean> {
+    return redis.setJSON(CacheKeys.translationOutgoingConfig(sessionId), config, CacheTTL.SETTINGS);
+  }
+};
+
 // ============= CACHE WARMING =============
 
 /**
@@ -328,12 +367,12 @@ export async function warmupCache(): Promise<void> {
     // Note: Actual warming would import and cache flows, settings, etc.
     // For now, we just log that warmup is ready
     // The actual caching happens on first access (lazy warming)
-    
+
     logger.info('cache', { action: 'warmup_completed' });
   } catch (error) {
-    logger.error('cache', { 
-      action: 'warmup_failed', 
-      error: error instanceof Error ? error.message : String(error) 
+    logger.error('cache', {
+      action: 'warmup_failed',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 }

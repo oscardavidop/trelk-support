@@ -16,7 +16,13 @@ import {
   getLiveChats,
 } from '../services/supervisor.service.js';
 import { getSessionTimeline } from '../services/activity-log.service.js';
-import { authMiddleware, requireRole } from '../middleware/auth.js';
+import { authMiddleware, requireRole, requirePermission, requireAnyPermission } from '../middleware/auth.js';
+import { addToQueue } from '../services/chat.service.js';
+import { ChatSession } from '../database/models/ChatSession.js';
+import { Agent } from '../database/models/Agent.js';
+import { forceLogoutAgent } from '../services/auto-lock.service.js';
+import { ActivityLog } from '../database/models/ActivityLog.js';
+import { getIO } from '../services/socket.js';
 
 interface WhisperBody {
   sessionId: string;
@@ -36,7 +42,7 @@ interface TakeoverBody {
 }
 
 export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> {
-  // All routes require authentication and supervisor/admin role
+  // Base auth + role guard on all supervisor routes
   fastify.addHook('preHandler', authMiddleware);
   fastify.addHook('preHandler', requireRole(['supervisor', 'admin']));
 
@@ -94,6 +100,7 @@ export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> 
    */
   fastify.post<{ Body: WhisperBody }>(
     '/whisper',
+    { preHandler: requirePermission('supervisor.whisper') },
     async (request: FastifyRequest<{ Body: WhisperBody }>, reply: FastifyReply) => {
       try {
         const { sessionId, content } = request.body;
@@ -184,6 +191,7 @@ export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> 
    */
   fastify.get<{ Params: SessionParams }>(
     '/sessions/:sessionId/timeline',
+    { preHandler: requirePermission('supervisor.monitor') },
     async (request: FastifyRequest<{ Params: SessionParams }>, reply: FastifyReply) => {
       try {
         const { sessionId } = request.params;
@@ -204,6 +212,7 @@ export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> 
    */
   fastify.post<{ Params: SessionParams }>(
     '/sessions/:sessionId/watch',
+    { preHandler: requirePermission('supervisor.monitor') },
     async (request: FastifyRequest<{ Params: SessionParams }>, reply: FastifyReply) => {
       try {
         const { sessionId } = request.params;
@@ -226,6 +235,7 @@ export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> 
    */
   fastify.post<{ Params: SessionParams }>(
     '/sessions/:sessionId/unwatch',
+    { preHandler: requirePermission('supervisor.monitor') },
     async (request: FastifyRequest<{ Params: SessionParams }>, reply: FastifyReply) => {
       try {
         const { sessionId } = request.params;
@@ -248,6 +258,7 @@ export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> 
    */
   fastify.post<{ Params: SessionParams; Body: TakeoverBody }>(
     '/sessions/:sessionId/takeover',
+    { preHandler: requirePermission('supervisor.intervene') },
     async (
       request: FastifyRequest<{ Params: SessionParams; Body: TakeoverBody }>,
       reply: FastifyReply
@@ -263,6 +274,114 @@ export async function supervisorRoutes(fastify: FastifyInstance): Promise<void> 
         return reply.status(500).send({
           success: false,
           error: error instanceof Error ? error.message : 'Failed to takeover session',
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/supervisor/sessions/:sessionId/unassign
+   * Unassign a chat from its agent and move it to queue
+   */
+  fastify.post<{ Params: SessionParams; Body: { reason?: string } }>(
+    '/sessions/:sessionId/unassign',
+    { preHandler: requirePermission('supervisor.unassign') },
+    async (
+      request: FastifyRequest<{ Params: SessionParams; Body: { reason?: string } }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { sessionId } = request.params;
+        const { reason } = request.body || {};
+        const supervisor = (request as any).agent;
+
+        const session = await ChatSession.findOne({ sessionId });
+        if (!session) {
+          return reply.status(404).send({ success: false, error: 'Session not found' });
+        }
+
+        const previousAgentId = session.assignedAgent;
+
+        // Move session to queue
+        const queued = await addToQueue(sessionId);
+        if (!queued) {
+          return reply.status(500).send({ success: false, error: 'Failed to queue session' });
+        }
+
+        // Decrement previous agent's chat count
+        if (previousAgentId) {
+          await Agent.findByIdAndUpdate(previousAgentId, { $inc: { activeChats: -1 } });
+        }
+
+        // Audit log
+        await ActivityLog.create({
+          sessionId,
+          action: 'session_unassigned',
+          actor: { type: 'supervisor', id: supervisor._id, name: supervisor.name },
+          metadata: { fromAgentId: previousAgentId?.toString(), reason: reason || 'Supervisor unassigned', type: 'unassign' },
+          description: `${supervisor.name} devolvió este chat a la cola`,
+          icon: '↩️',
+          color: 'amber',
+        });
+
+        // Notify via socket
+        const io = getIO();
+        io.emit('session:queued', { sessionId, status: 'queued' } as any);
+
+        return { success: true, message: 'Session returned to queue' };
+      } catch (error) {
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to unassign session',
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/supervisor/agents/:agentId/force-logout
+   * Force logout an agent (disconnect their socket session)
+   */
+  fastify.post<{ Params: { agentId: string }; Body: { reason?: string } }>(
+    '/agents/:agentId/force-logout',
+    { preHandler: requireAnyPermission(['supervisor.force_logout', 'system.admin']) },
+    async (
+      request: FastifyRequest<{ Params: { agentId: string }; Body: { reason?: string } }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { agentId } = request.params;
+        const { reason } = request.body || {};
+        const supervisor = (request as any).agent;
+
+        const targetAgent = await Agent.findById(agentId);
+        if (!targetAgent) {
+          return reply.status(404).send({ success: false, error: 'Agent not found' });
+        }
+
+        // Cannot force-logout another admin or supervisor with higher privileges unless admin
+        if (supervisor.role === 'supervisor' && ['admin', 'supervisor'].includes(targetAgent.role)) {
+          return reply.status(403).send({ success: false, error: 'Insufficient permissions' });
+        }
+
+        forceLogoutAgent(agentId, reason || `Desconexión forzada por supervisor ${supervisor.name}`);
+
+        // Audit log
+        await ActivityLog.create({
+          sessionId: 'system',
+          action: 'agent_force_logout',
+          actor: { type: 'supervisor', id: supervisor._id, name: supervisor.name },
+          metadata: { targetAgentId: agentId, targetAgentName: targetAgent.name, reason },
+          description: `${supervisor.name} desconectó forzadamente a ${targetAgent.name}`,
+          icon: '🔌',
+          color: 'red',
+        });
+
+        return { success: true, message: `Agent ${targetAgent.name} has been force-logged out` };
+      } catch (error) {
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to force logout agent',
         });
       }
     }

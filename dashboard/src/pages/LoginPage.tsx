@@ -716,19 +716,33 @@ export default function LoginPage() {
             {/* Scrollable Content */}
             <div className="overflow-y-auto p-6 scrollbar-thumb-zinc-800 scrollbar-track-transparent">
               {/* Header */}
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
-                  <Smartphone className="w-8 h-8 text-indigo-400" />
-                </div>
-                <h3 className="text-xl font-bold text-zinc-50 tracking-tight mb-2">
-                  Iniciar sesión con Telegram
-                </h3>
-                <p className="text-zinc-400 text-sm max-w-[260px] mx-auto leading-relaxed">
-                  Escanea el código QR con tu cámara para acceder
-                  instantáneamente.
-                </p>
-              </div>
+              {
+                qrStatus !== "scanned" && qrStatus !== "expired" && (
 
+                  <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16">
+                      <svg width="76px" height="76px" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="14" fill="url(#paint0_linear_87_7225)" />
+                        <path d="M22.9866 10.2088C23.1112 9.40332 22.3454 8.76755 21.6292 9.082L7.36482 15.3448C6.85123 15.5703 6.8888 16.3483 7.42147 16.5179L10.3631 17.4547C10.9246 17.6335 11.5325 17.541 12.0228 17.2023L18.655 12.6203C18.855 12.4821 19.073 12.7665 18.9021 12.9426L14.1281 17.8646C13.665 18.3421 13.7569 19.1512 14.314 19.5005L19.659 22.8523C20.2585 23.2282 21.0297 22.8506 21.1418 22.1261L22.9866 10.2088Z" fill="white" />
+                        <defs>
+                          <linearGradient id="paint0_linear_87_7225" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#37BBFE" />
+                            <stop offset="1" stop-color="#007DBB" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-zinc-50 tracking-tight mb-2">
+                      Iniciar sesión con Telegram
+                    </h3>
+                    <p className="text-zinc-400 text-sm max-w-[260px] mx-auto leading-relaxed">
+                      Escanea el código QR con tu cámara para acceder
+                      instantáneamente.
+                    </p>
+                  </div>
+
+                )
+              }
               {/* QR Content Area */}
               <div className="flex flex-col items-center justify-center min-h-[220px]">
                 {/* 1. Loading State */}
@@ -769,7 +783,7 @@ export default function LoginPage() {
                 {/* 3. Scanned State */}
                 {qrStatus === "scanned" && (
                   <div className="w-64 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
-                    <div className="relative w-20 h-20 flex items-center justify-center mb-4">
+                    <div className="relative w-20 h-20 flex items-center justify-center mb-12 m-5">
                       <div className="absolute inset-0 border-2 border-indigo-500/30 rounded-full animate-ping" />
                       <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center border border-indigo-500/50">
                         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
@@ -804,41 +818,40 @@ export default function LoginPage() {
                 {(qrStatus === "rejected" ||
                   qrStatus === "expired" ||
                   qrStatus === "error") && (
-                  <div className="w-64 flex flex-col items-center justify-center text-center animate-in shake">
-                    <div
-                      className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
-                        qrStatus === "expired"
+                    <div className="w-64 flex flex-col items-center justify-center text-center animate-in shake">
+                      <div
+                        className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${qrStatus === "expired"
                           ? "bg-zinc-900 border border-zinc-800 text-zinc-400"
                           : "bg-red-500/10 border border-red-500/20 text-red-400"
-                      }`}
-                    >
-                      {qrStatus === "expired" ? (
-                        <RefreshCw className="w-8 h-8" />
-                      ) : (
-                        <X className="w-8 h-8" />
-                      )}
-                    </div>
+                          }`}
+                      >
+                        {qrStatus === "expired" ? (
+                          <RefreshCw className="w-8 h-8" />
+                        ) : (
+                          <X className="w-8 h-8" />
+                        )}
+                      </div>
 
-                    <p className="text-base font-bold text-zinc-200">
-                      {qrStatus === "expired"
-                        ? "Código Expirado"
-                        : "Acceso Denegado"}
-                    </p>
-                    <p className="text-xs text-zinc-500 mt-1 mb-6 leading-relaxed px-4">
-                      {qrStatus === "expired"
-                        ? "El código QR ha caducado por seguridad."
-                        : qrError ||
+                      <p className="text-base font-bold text-zinc-200">
+                        {qrStatus === "expired"
+                          ? "Código Expirado"
+                          : "Acceso Denegado"}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-1 mb-6 leading-relaxed px-4">
+                        {qrStatus === "expired"
+                          ? "El código QR ha caducado por seguridad."
+                          : qrError ||
                           "La solicitud fue rechazada o ocurrió un error."}
-                    </p>
+                      </p>
 
-                    <button
-                      onClick={regenerateQR}
-                      className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
-                    >
-                      <RefreshCw className="w-4 h-4" /> Generar Nuevo
-                    </button>
-                  </div>
-                )}
+                      <button
+                        onClick={regenerateQR}
+                        className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-zinc-50 text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Generar Nuevo
+                      </button>
+                    </div>
+                  )}
               </div>
 
               {/* Instructions Footer */}
@@ -879,9 +892,9 @@ export default function LoginPage() {
               )}
 
               {/* o BUTTON con click DIRECT, crear */}
-              
 
-              
+
+
             </div>
           </div>
         </div>

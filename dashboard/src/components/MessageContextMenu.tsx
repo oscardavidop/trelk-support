@@ -155,15 +155,6 @@ export default function MessageContextMenu({
         onClose();
       },
     });
-    if (onDisableIncomingTranslate) {
-      actions.push({
-        id: 'disable-incoming-translate',
-        label: 'Desactivar auto-translate',
-        icon: <EyeOff className="w-4 h-4" />,
-        onClick: () => { onDisableIncomingTranslate(message); onClose(); },
-        variant: 'warning',
-      });
-    }
     if (onReportTranslation) {
       actions.push({
         id: 'report-translation',
@@ -225,8 +216,6 @@ export default function MessageContextMenu({
 
   // 4. User Tools
   if (isUserMessage) {
-    if (onAddTag) actions.push({ id: 'tag', label: 'Etiquetar', icon: <Tag className="w-4 h-4" />, onClick: () => { onAddTag(message); onClose(); } });
-    if (onAddNote) actions.push({ id: 'note', label: 'Crear nota', icon: <FileText className="w-4 h-4" />, onClick: () => { onAddNote(message); onClose(); } });
     actions.push({ id: 'link', label: 'Copiar enlace', icon: <Link2 className="w-4 h-4" />, onClick: () => { onCopyLink(message); onClose(); } });
 
     // Danger Zone
@@ -364,44 +353,57 @@ const TRANSLATE_LANGS = [
   { code: 'ar', name: 'العربية' },
 ];
 
-function TranslateLanguageSubMenu({ position, onSelect, onClose }: {
+// ============= COMPONENT =============
+
+export function TranslateLanguageSubMenu({ position, onSelect, onClose }: {
   position: { top: number; left: number };
   onSelect: (lang: string) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  // Click outside handler with slight delay to prevent immediate closure from trigger
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
     };
     const timer = setTimeout(() => document.addEventListener('mousedown', handler), 50);
-    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
+    return () => { 
+      clearTimeout(timer); 
+      document.removeEventListener('mousedown', handler); 
+    };
   }, [onClose]);
 
   return (
     <div
       ref={ref}
       data-translate-portal
-      className="fixed w-44 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl z-[99999] animate-in fade-in slide-in-from-left-1 duration-150 overflow-hidden"
+      className="fixed w-48 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl shadow-black/80 ring-1 ring-white/5 z-[99999] animate-in fade-in zoom-in-95 slide-in-from-left-2 duration-200 overflow-hidden flex flex-col"
       style={{ top: position.top, left: position.left }}
     >
-      <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-900/50">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase">
-          <Languages className="w-3 h-3" />
+      {/* Header */}
+      <div className="px-3 py-2.5 border-b border-zinc-800/80 bg-zinc-900/50 shrink-0">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+          <Languages className="w-3.5 h-3.5" />
           Traducir a
         </div>
       </div>
-      <div className="max-h-52 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-zinc-700">
+
+      {/* Language List */}
+      <div className="p-1 max-h-[260px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
         {TRANSLATE_LANGS.map((lang) => (
           <button
             key={lang.code}
             type="button"
             onClick={() => onSelect(lang.code)}
-            className="w-full text-left px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all flex items-center justify-between"
+            className="group w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 active:scale-[0.98]"
           >
-            <span className="font-medium">{lang.name}</span>
-            <span className="text-[10px] font-mono text-zinc-600 uppercase">{lang.code}</span>
+            <span className="font-medium tracking-tight">{lang.name}</span>
+            <span className="text-[10px] font-mono font-bold text-zinc-600 uppercase group-hover:text-indigo-400 transition-colors">
+              {lang.code}
+            </span>
           </button>
         ))}
       </div>

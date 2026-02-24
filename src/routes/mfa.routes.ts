@@ -212,6 +212,7 @@ export async function registerMFARoutes(fastify: FastifyInstance): Promise<void>
 
       return {
         ok: true,
+        loginToken: result.loginToken,
         message: 'Código reenviado a tu Telegram',
       };
     }

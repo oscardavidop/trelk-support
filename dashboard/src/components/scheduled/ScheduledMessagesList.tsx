@@ -58,9 +58,13 @@ export function ScheduledMessagesList({ sessionId, onCountChange }: Props) {
     }
   }, [sessionId, onCountChange]);
 
+  const [, setTick] = useState(0); // tick for re-rendering countdown timers
+
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 30000); // Actualizar tiempo restante
+    // Local 10-second tick to re-render countdowns — no API call needed
+    // since formatTimeRemaining() computes from scheduledAt client-side
+    const interval = setInterval(() => setTick(t => t + 1), 10000);
     return () => clearInterval(interval);
   }, [loadMessages]);
 

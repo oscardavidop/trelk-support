@@ -4,14 +4,14 @@ import {
   Users, Search, Filter, RefreshCw, Loader2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   MoreVertical, Tag, UserX, UserCheck, Trash2, Download, Upload, Eye, Edit3, X, Check,
   Plus, Settings, Grid, List, Calendar, MessageSquare, Clock, Globe, Ban, AlertTriangle,
-  CheckCircle, XCircle, Hash, Save, Copy, Star, Bookmark, Activity, TrendingUp, Layers, Layout
+  CheckCircle, XCircle, Hash, Save, Copy, Star, Bookmark, Activity, TrendingUp, Layers, Layout, Pencil
 } from 'lucide-react';
 import Contact360Panel from '../components/Contact360Panel';
 import SegmentsManager from '../components/SegmentsManager';
 
 // ============= TYPES =============
 interface IContactListItem { _id: string; telegramId: number; username?: string; firstName?: string; lastName?: string; fullName: string; language?: string; isBlocked: boolean; createdAt: string; lastActivity?: string; tags: Array<{ _id: string; name: string; color: string }>; activeSession?: { sessionId: string; status: string; assignedAgent?: string; }; totalSessions: number; totalMessages: number; }
-interface ISegment { _id: string; name: string; description?: string; color: string; contactCount: number; isActive: boolean; isPinned: boolean; }
+interface ISegment { _id: string; name: string; description?: string; color: string; contactCount: number; isActive: boolean; isPinned: boolean; filters?: any; }
 interface ITag { _id: string; name: string; color: string; }
 interface ISavedView { _id: string; name: string; isGlobal: boolean; }
 interface ContactStats { totalContacts: number; activeContacts: number; blockedContacts: number; contactsWithActiveSession: number; newContactsToday: number; newContactsThisWeek: number; topLanguages: Array<{ language: string; count: number }>; }
@@ -77,6 +77,9 @@ export default function ContactsPage() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [showContact360, setShowContact360] = useState(false);
   const [showSegmentsManager, setShowSegmentsManager] = useState(false);
+  const [editingSegment, setEditingSegment] = useState<ISegment | null>(null);
+  const [deletingSegment, setDeletingSegment] = useState<ISegment | null>(null);
+  const [segmentSearch, setSegmentSearch] = useState('');
 
   // --- BULK ACTIONS STATE ---
   const [showBulkActions, setShowBulkActions] = useState(false);
@@ -171,6 +174,22 @@ export default function ContactsPage() {
     setIsRefreshing(true);
     await Promise.all([fetchContacts(), fetchSegments(), fetchStats()]);
     setIsRefreshing(false);
+  };
+
+  const handleDeleteSegment = async (segment: ISegment) => {
+    try {
+      const res = await fetch(`/api/segments/${segment._id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setDeletingSegment(null);
+        if (selectedSegment === segment._id) setSelectedSegment(null);
+        fetchSegments();
+      }
+    } catch (err) {
+      console.error('Error deleting segment:', err);
+    }
   };
 
   const handleSelectAll = () => {
@@ -278,10 +297,35 @@ export default function ContactsPage() {
               <span>Personalizados</span>
               <button onClick={() => setShowSegmentsManager(true)} className="hover:text-blue-400"><Plus className="w-3 h-3" /></button>
             </div>
+            {/* Segment search */}
+            <div className="relative px-1 mb-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
+              <input
+                value={segmentSearch}
+                onChange={e => setSegmentSearch(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full pl-7 pr-3 py-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg text-[11px] text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-blue-500/40"
+              />
+              {segmentSearch && (
+                <button onClick={() => setSegmentSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
             <div className="space-y-1">
-              {segments.map(s => (
-                <SegmentItem key={s._id} segment={s} active={selectedSegment === s._id} onClick={() => setSelectedSegment(s._id)} />
-              ))}
+              {segments
+                .filter(s => !segmentSearch || s.name.toLowerCase().includes(segmentSearch.toLowerCase()))
+                .map(s => (
+                  <SegmentItem
+                    key={s._id}
+                    segment={s}
+                    active={selectedSegment === s._id}
+                    onClick={() => setSelectedSegment(s._id)}
+                    onEdit={() => setEditingSegment(s)}
+                    onDelete={() => setDeletingSegment(s)}
+                  />
+                ))
+              }
             </div>
           </div>
 
@@ -544,8 +588,47 @@ export default function ContactsPage() {
         <Contact360Panel contactId={selectedContactId} onClose={() => { setShowContact360(false); setSelectedContactId(null); }} onUpdate={handleRefresh} />
       )}
 
-      {showSegmentsManager && (
-        <SegmentsManager onClose={() => setShowSegmentsManager(false)} onSegmentCreated={handleRefresh} />
+      {(showSegmentsManager || editingSegment) && (
+        <SegmentsManager
+          onClose={() => { setShowSegmentsManager(false); setEditingSegment(null); }}
+          onSegmentCreated={() => { handleRefresh(); setEditingSegment(null); }}
+          editingSegment={editingSegment as any}
+        />
+      )}
+
+      {/* Delete segment confirmation */}
+      {deletingSegment && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-500/10 rounded-xl">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-50">Eliminar segmento</h3>
+                <p className="text-xs text-zinc-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <p className="text-sm text-zinc-300 mb-6">
+              ¿Eliminar el segmento <span className="font-semibold text-zinc-50">"{deletingSegment.name}"</span>?
+              Los contactos no serán afectados.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingSegment(null)}
+                className="flex-1 px-4 py-2 rounded-xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors text-sm font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteSegment(deletingSegment)}
+                className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-colors text-sm font-medium"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bulk Tag Modal (Restaurado) */}
@@ -639,15 +722,32 @@ function NavButton({ active, onClick, label, icon: Icon, count }: any) {
   );
 }
 
-function SegmentItem({ segment, active, onClick }: any) {
+function SegmentItem({ segment, active, onClick, onEdit, onDelete }: { segment: ISegment; active: boolean; onClick: () => void; onEdit: () => void; onDelete: () => void; }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all group ${active ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/30'}`}>
-      <div className="flex items-center gap-2.5">
-        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: segment.color || '#71717a' }} />
+    <div className={`flex items-center rounded-lg transition-all group ${active ? 'bg-zinc-800' : 'hover:bg-zinc-800/30'}`}>
+      <button onClick={onClick} className={`flex-1 flex items-center gap-2.5 px-3 py-2 text-sm min-w-0 ${active ? 'text-zinc-50' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: segment.color || '#71717a' }} />
         <span className="truncate">{segment.name}</span>
+      </button>
+      <div className="flex items-center gap-0.5 pr-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={e => { e.stopPropagation(); onEdit(); }}
+          className="p-1 rounded text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+          title="Editar"
+        >
+          <Pencil className="w-3 h-3" />
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+          className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          title="Eliminar"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+        <span className="text-[10px] text-zinc-600 pl-1">{segment.contactCount}</span>
       </div>
-      <span className="text-[10px] text-zinc-600 group-hover:text-zinc-500">{segment.contactCount}</span>
-    </button>
+      {!active && <span className="text-[10px] text-zinc-600 pr-2 group-hover:hidden">{segment.contactCount}</span>}
+    </div>
   );
 }
 

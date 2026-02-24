@@ -95,6 +95,7 @@ export interface PlaybookQAData {
 }
 
 export interface CloseValidation {
+  [x: string]: any;
   canClose: boolean;
   pendingCriticalSteps: { stepId: string; label: string }[];
   playbookName: string | null;

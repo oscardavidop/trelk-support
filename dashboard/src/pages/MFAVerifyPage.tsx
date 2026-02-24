@@ -343,6 +343,11 @@ export default function MFAVerifyPage() {
         return;
       }
 
+      // Update loginToken so subsequent verification uses the new session
+      if (data.loginToken) {
+        setLoginToken(data.loginToken);
+      }
+
       // Reset timer and cooldown
       setTimeLeft(120);
       setResendCooldown(60);

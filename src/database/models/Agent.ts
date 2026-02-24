@@ -150,7 +150,15 @@ export interface IAgent extends Document {
   socketId?: string;
   activeChats: number;
   totalChatsHandled: number;
-  
+
+  // ─── Presence / Auxiliary State System ─────────
+  auxiliaryStateCode: string;           // Current auxiliary state code (cached from Redis)
+  maxChatsOverride?: number;           // Supervisor override for max concurrent chats
+  breakQuotaBlockedUntil?: Date;       // Block forced-break if quota exceeded
+  idleRiskSince?: Date;                // When idle detection was triggered
+  presenceSessionId?: string;          // Current presence session ID (UUID)
+  // ───────────────────────────────────────────────
+
   // Agent metrics
   metrics?: IAgentMetrics;
   
@@ -176,6 +184,9 @@ export interface IAgent extends Document {
   
   // Whether the agent can request permissions (can be blocked by admin)
   canRequestPermissions?: boolean;
+  
+  // Agent preferred language for translation rules
+  language?: string;
   
   // Security settings (password + MFA) - new nested structure
   security: ISecuritySettings;
@@ -224,6 +235,11 @@ const AgentSchema = new Schema<IAgent>(
       index: true,
     },
     avatar: String,
+    language: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     telegramId: {
       type: Number,
       sparse: true,
@@ -250,6 +266,29 @@ const AgentSchema = new Schema<IAgent>(
       type: Number,
       default: 0,
     },
+    // ─── Presence / Auxiliary State System ─────────
+    auxiliaryStateCode: {
+      type: String,
+      default: 'offline',
+      index: true,
+    },
+    maxChatsOverride: {
+      type: Number,
+      default: null,
+    },
+    breakQuotaBlockedUntil: {
+      type: Date,
+      default: null,
+    },
+    idleRiskSince: {
+      type: Date,
+      default: null,
+    },
+    presenceSessionId: {
+      type: String,
+      default: null,
+    },
+    // ───────────────────────────────────────────────
     // Team membership
     teamId: {
       type: Schema.Types.ObjectId,

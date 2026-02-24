@@ -194,3 +194,8 @@ export {
 } from './models/TranslationLog.js';
 
 export { connectDatabase, disconnectDatabase } from './connection.js';
+
+// Presence / Agent Status System
+export { AuxiliaryState, type IAuxiliaryState, DEFAULT_AUXILIARY_STATES } from './models/AuxiliaryState.js';
+export { AgentStatusLog, type IAgentStatusLog, type StatusChangeTrigger } from './models/AgentStatusLog.js';
+export { AgentEngineConfig, type IAgentEngineConfig, ENGINE_DEFAULTS } from './models/AgentEngineConfig.js';

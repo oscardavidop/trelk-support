@@ -675,7 +675,7 @@ export async function resendMFACode(
     ip?: string;
     userAgent?: string;
   }
-): Promise<{ success: boolean; error?: string; waitSeconds?: number }> {
+): Promise<{ success: boolean; error?: string; waitSeconds?: number; loginToken?: string }> {
   try {
     // Get existing session
     const session = await getMFASessionByToken(loginToken);
@@ -711,15 +711,14 @@ export async function resendMFACode(
 
     // Note: We return the same loginToken as a security measure
     // The old session was already cancelled, new one has new loginToken
-    // But for UX we keep using the original token (which is now invalid)
-    // This forces user to use the new code with new loginToken from response
+    // The frontend must update its loginToken state with the returned value
 
     logger.info('mfa-service', {
       action: 'mfa_code_resent',
       agentId,
     });
 
-    return { success: true };
+    return { success: true, loginToken: newToken };
   } catch (error) {
     logger.error('mfa-service', { action: 'resend_error', error: String(error) });
     return { success: false, error: 'Error al reenviar código' };

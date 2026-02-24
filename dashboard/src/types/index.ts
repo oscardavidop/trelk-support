@@ -566,6 +566,17 @@ export interface AgentPreferences {
       focusModeEnabled: boolean;
     }
   };
+
+  // Translation preferences (mirror server model)
+  translation?: {
+    outgoingOverride: 'global' | 'always_on' | 'always_off';
+    agentWritesIn: string;
+    confirmBeforeSend: boolean;
+    incomingOverride: 'global' | 'always_on' | 'always_off';
+    incomingTargetLang: string;
+    showOriginalWithTranslation: boolean;
+  };
+
   createdAt?: string;
   updatedAt?: string;
 }

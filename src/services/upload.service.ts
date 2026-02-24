@@ -5,7 +5,7 @@
 
 import { mkdir, writeFile, unlink, stat } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join, extname } from 'path';
+import { join, extname, resolve, sep } from 'path';
 import { randomUUID } from 'crypto';
 import { logger } from './logger.js';
 import { getFileUploadSettings } from './settings-cache.service.js';
@@ -419,7 +419,21 @@ export async function getFileInfo(url: string): Promise<{ size: number; exists: 
  * Get absolute path for uploaded file
  */
 export function getAbsolutePath(url: string): string {
-  return join(process.cwd(), UPLOAD_DIR, url.replace('/uploads/', ''));
+  // Strip leading /uploads/ prefix if present
+  const relativePart = url.startsWith('/uploads/')
+    ? url.slice('/uploads/'.length)
+    : url;
+
+  // Resolve to absolute path
+  const uploadRoot = resolve(process.cwd(), UPLOAD_DIR);
+  const resolved = resolve(uploadRoot, relativePart);
+
+  // Path traversal guard — must stay inside the uploads directory
+  if (!resolved.startsWith(uploadRoot + sep) && resolved !== uploadRoot) {
+    throw new Error('Invalid file path: path traversal attempt detected');
+  }
+
+  return resolved;
 }
 
 export const UPLOAD_CONFIG = {

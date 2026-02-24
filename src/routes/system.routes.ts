@@ -27,7 +27,8 @@ import {
 import { 
   isRedisConnected, 
   getRedisHealth, 
-  ping as pingRedis 
+  ping as pingRedis,
+  get as redisGet,
 } from '../services/redis.js';
 import { ScheduledMessage } from '../database/models/ScheduledMessage.js';
 import { Flow } from '../database/models/Flow.js';
@@ -501,12 +502,21 @@ export const systemRoutes: FastifyPluginAsync = async (fastify) => {
           const workerCount = await queue.getWorkersCount();
           
           if (workerCount > 0) {
+            // Read start timestamp stored in Redis when workers initialized
+            const startedAtMs = await redisGet(`worker:startedAt:${name}`);
+            const startedAt = startedAtMs
+              ? new Date(parseInt(startedAtMs, 10)).toISOString()
+              : new Date().toISOString();
+
+            // Use BullMQ completed count as a proxy for jobs processed
+            const jobsProcessed = await queue.getCompletedCount();
+
             workers.push({
               id: `${name}-worker`,
               queue: name,
               status: 'online',
-              jobsProcessed: 0, // Would need persistent tracking
-              startedAt: new Date().toISOString(),
+              jobsProcessed,
+              startedAt,
               lastActivityAt: new Date().toISOString(),
             });
           }

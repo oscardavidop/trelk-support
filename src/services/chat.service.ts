@@ -378,6 +378,8 @@ export async function getClosedSessionsForAgent(
 
   if (search) {
     // Search with user lookup
+    // Escape regex special characters to prevent ReDoS
+    const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pipeline: any[] = [
       { $match: query },
       {
@@ -392,9 +394,9 @@ export async function getClosedSessionsForAgent(
       {
         $match: {
           $or: [
-            { 'userDoc.username': { $regex: search, $options: 'i' } },
-            { 'userDoc.firstName': { $regex: search, $options: 'i' } },
-            { sessionId: { $regex: search, $options: 'i' } },
+            { 'userDoc.username': { $regex: safeSearch, $options: 'i' } },
+            { 'userDoc.firstName': { $regex: safeSearch, $options: 'i' } },
+            { sessionId: { $regex: safeSearch, $options: 'i' } },
           ],
         },
       },

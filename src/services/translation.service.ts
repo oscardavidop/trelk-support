@@ -245,7 +245,7 @@ export async function testProxyConnection(proxy: IProxyConfig): Promise<{ succes
 
 // ─── FREE PROVIDER (no API key) ─────────────────────────────
 
-const FreeProvider: ITranslationProviderImpl = {
+const FreeProvider2: ITranslationProviderImpl = {
   name: 'free',
 
   async translate(text, sourceLang, targetLang, _config, proxy) {
@@ -282,6 +282,75 @@ const FreeProvider: ITranslationProviderImpl = {
     const data = await res.json() as unknown[];
     const lang = typeof data[2] === 'string' ? data[2] : 'unknown';
     return { language: lang, confidence: 0.8 };
+  },
+};
+
+const FreeProvider: ITranslationProviderImpl = {
+  name: 'free',
+
+  async translate(text, sourceLang, targetLang, _config, proxy) {
+    const url = `http://localhost:5000/translate`;
+
+    // Form body igual que curl: -d q= -d source= -d target=
+    const body = new URLSearchParams();
+    body.append('q', text);
+    body.append('source', sourceLang === 'auto' ? 'auto' : sourceLang);
+    body.append('target', targetLang);
+
+    const res = await proxyFetch(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0',
+        },
+        body,
+      },
+      proxy,
+      'local-api'
+    );
+
+    if (!res.ok) {
+      throw new Error(`Local API translation failed: HTTP ${res.status}`);
+    }
+
+    const data = await res.json() as { translatedText?: string; detectedLanguage?: { language: string } };
+    console.log('[Translation] Local API response:', data);
+
+    const translated = data.translatedText;
+    const detectedLang = data.detectedLanguage?.language || sourceLang;
+
+    if (!translated) {
+      throw new Error('Local API returned empty result');
+    }
+
+    return {
+      translated,
+      detectedLang: detectedLang !== 'auto' ? detectedLang : undefined,
+    };
+  },
+  async detectLanguage(text, _config, proxy) {
+    const url = `http://localhost:5000/detect`;
+    const res = await proxyFetch(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0',
+        },
+        body: JSON.stringify({ q: text.slice(0, 200) }),
+      },
+      proxy,
+      'local-api'
+    );
+    if (!res.ok) {
+      throw new Error(`Local API language detection failed: HTTP ${res.status}`);
+    }
+    const data = await res.json() as { language: string; confidence: number }[];
+    const first = data?.[0];
+    return { language: first?.language || 'unknown', confidence: first?.confidence ? first.confidence / 100 : 0 };
   },
 };
 

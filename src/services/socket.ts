@@ -801,6 +801,23 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
   logger.info('api', { action: 'agent_connected', agentId, email, socketId: socket.id });
 
+  // ── Per-socket send rate limiter (max 30 message-sends per 10 s) ──────────
+  const MSG_RATE_LIMIT = 30;   // max events
+  const MSG_RATE_WINDOW = 10_000; // milliseconds
+  const msgTimestamps: number[] = [];
+
+  function checkMsgRateLimit(): boolean {
+    const now = Date.now();
+    // Purge entries outside the window
+    while (msgTimestamps.length > 0 && now - msgTimestamps[0] > MSG_RATE_WINDOW) {
+      msgTimestamps.shift();
+    }
+    if (msgTimestamps.length >= MSG_RATE_LIMIT) return false; // rate exceeded
+    msgTimestamps.push(now);
+    return true;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Store socket reference
   agentSockets.set(agentId, socket);
 
@@ -1393,8 +1410,13 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // ============= MESSAGE HANDLERS =============
 
   // Send message to user
-  socket.on('message:send', async ({ sessionId, content, replyToMessageId }, callback) => {
+  socket.on('message:send', async ({ sessionId, content, replyToMessageId, editedTranslation }: { sessionId: string; content: string; replyToMessageId?: string; editedTranslation?: string }, callback) => {
     try {
+      // Rate limit check
+      if (!checkMsgRateLimit()) {
+        return callback({ ok: false, error: 'Rate limit exceeded. Too many messages sent too quickly.' });
+      }
+
       // Permission check: chats.respond
       const canRespond = await hasPermission(agentId, 'chats.respond');
       if (!canRespond) {
@@ -1444,6 +1466,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         latencyMs: number;
         deliveryMode: 'translated_only' | 'both';
         translatedAt: Date;
+        autoTranslatedContent?: string;
+        editedContent?: string;
+        wasEdited?: boolean;
       } | undefined;
 
       try {
@@ -1456,7 +1481,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
         });
 
         if (txResult.shouldTranslate && !txResult.error) {
-          contentToSend = txResult.translatedContent;
+          // If agent provided an edited translation, use that instead
+          const wasEdited = typeof editedTranslation === 'string' && editedTranslation.trim() && editedTranslation.trim() !== txResult.translatedContent;
+          contentToSend = wasEdited ? editedTranslation.trim() : txResult.translatedContent;
           translationMeta = {
             isTranslated: true,
             originalContent: content,
@@ -1466,6 +1493,9 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
             latencyMs: txResult.latencyMs,
             deliveryMode: txResult.deliveryMode as 'translated_only' | 'both',
             translatedAt: new Date(),
+            autoTranslatedContent: wasEdited ? txResult.translatedContent : undefined,
+            editedContent: wasEdited ? editedTranslation.trim() : undefined,
+            wasEdited: wasEdited || undefined,
           };
         }
       } catch (txErr) {
@@ -1592,6 +1622,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send image to user
   socket.on('message:sendImage', async ({ sessionId, url, caption }, callback) => {
     try {
+      // Rate limit check
+      if (!checkMsgRateLimit()) {
+        return callback({ ok: false, error: 'Rate limit exceeded. Too many messages sent too quickly.' });
+      }
+
       // Permission check: chats.respond
       const canRespond = await hasPermission(agentId, 'chats.respond');
       if (!canRespond) {
@@ -1602,6 +1637,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
       if (!session) {
         return callback({ ok: false, error: 'Session not found' });
+      }
+
+      // Verify agent has access to this session
+      const isAdminImg = socket.data.role === 'admin';
+      const isSupervisorImg = socket.data.role === 'supervisor';
+      const canAccessImg = await canAgentAccessSession(sessionId, agentId, isAdminImg, isSupervisorImg);
+      if (!canAccessImg) {
+        return callback({ ok: false, error: 'Access denied to this session' });
       }
 
       // Get absolute path for the image
@@ -1672,6 +1715,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send file/document to user
   socket.on('message:sendFile', async ({ sessionId, url, filename, caption }, callback) => {
     try {
+      // Rate limit check
+      if (!checkMsgRateLimit()) {
+        return callback({ ok: false, error: 'Rate limit exceeded. Too many messages sent too quickly.' });
+      }
+
       // Permission check: chats.respond
       const canRespond = await hasPermission(agentId, 'chats.respond');
       if (!canRespond) {
@@ -1682,6 +1730,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
       if (!session) {
         return callback({ ok: false, error: 'Session not found' });
+      }
+
+      // Verify agent has access to this session
+      const isAdminFile = socket.data.role === 'admin';
+      const isSupervisorFile = socket.data.role === 'supervisor';
+      const canAccessFile = await canAgentAccessSession(sessionId, agentId, isAdminFile, isSupervisorFile);
+      if (!canAccessFile) {
+        return callback({ ok: false, error: 'Access denied to this session' });
       }
 
       // Get absolute path for the file
@@ -1754,6 +1810,11 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
   // Send voice message to user
   socket.on('message:sendVoice', async ({ sessionId, url }, callback) => {
     try {
+      // Rate limit check
+      if (!checkMsgRateLimit()) {
+        return callback({ ok: false, error: 'Rate limit exceeded. Too many messages sent too quickly.' });
+      }
+
       // Permission check: chats.respond
       const canRespond = await hasPermission(agentId, 'chats.respond');
       if (!canRespond) {
@@ -1764,6 +1825,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
       if (!session) {
         return callback({ ok: false, error: 'Session not found' });
+      }
+
+      // Verify agent has access to this session
+      const isAdminVoice = socket.data.role === 'admin';
+      const isSupervisorVoice = socket.data.role === 'supervisor';
+      const canAccessVoice = await canAgentAccessSession(sessionId, agentId, isAdminVoice, isSupervisorVoice);
+      if (!canAccessVoice) {
+        return callback({ ok: false, error: 'Access denied to this session' });
       }
 
       // Get absolute path for the audio
@@ -2508,56 +2577,6 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     }
   });
 
-  // Register tab for /chat page (multi-tab prevention)
-  // socket.on('tab:register', async ({ tabId }, callback) => {
-  //   try {
-  //     const result = await registerChatTab(agentId, tabId, socket.id);
-
-  //     if (result.isBlocked) {
-  //       // Another tab is active
-  //       socket.emit('tab:duplicate_detected', {
-  //         activeTabId: result.activeTabId || 'unknown',
-  //         message: 'Chat abierto en otra pestaña',
-  //       });
-  //       callback({ ok: false, error: 'duplicate_tab', data: { blocked: true } });
-  //       return;
-  //     }
-
-  //     callback({ ok: true });
-  //   } catch (error) {
-  //     callback({ ok: false, error: 'Tab registration failed' });
-  //   }
-  // });
-
-  // // Tab heartbeat
-  // socket.on('tab:heartbeat', async ({ tabId }, callback) => {
-  //   try {
-  //     const isActive = await heartbeatTab(agentId, tabId);
-
-  //     if (!isActive) {
-  //       // This tab is no longer active
-  //       socket.emit('tab:duplicate_detected', {
-  //         activeTabId: 'another',
-  //         message: 'Otra pestaña tomó el control',
-  //       });
-  //       callback({ ok: false, error: 'not_active_tab' });
-  //       return;
-  //     }
-
-  //     callback({ ok: true });
-  //   } catch (error) {
-  //     callback({ ok: false, error: 'Heartbeat failed' });
-  //   }
-  // });
-
-  // // Release tab lock
-  // socket.on('tab:release', async ({ tabId }) => {
-  //   try {
-  //     await releaseChatTab(agentId, tabId);
-  //   } catch (error) {
-  //     // Silent fail
-  //   }
-  // });
 
   // ============= DISCONNECTION =============
 

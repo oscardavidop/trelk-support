@@ -34,6 +34,7 @@ import { initializeSocketIO } from "./services/socket.js";
 import { initializeWebChatSocket, setDashboardIO } from "./services/webchat-socket.service.js";
 import { initializeChannelManager } from "./channels/index.js";
 import { performFullReconciliation } from "./services/reconciliation.service.js";
+import { initPresenceService } from "./services/presence.service.js";
 import { registerAPIRoutes } from "./routes/index.js";
 import { logger } from "./services/logger.js";
 import type { TelegramUpdate } from "./types/index.js";
@@ -413,6 +414,10 @@ async function start(): Promise<void> {
 
     // Initialize Socket.IO with Fastify's server (Dashboard)
     const dashboardIO = initializeSocketIO(fastify.server);
+
+    // Initialize Presence Service (agent status engine + anti-fraud)
+    initPresenceService(dashboardIO);
+    console.log('   ✅ Presence Service Initialized');
 
     // Initialize WebChat Socket.IO (Widget)
     const webChatIO = initializeWebChatSocket(fastify.server);

@@ -134,6 +134,9 @@ export interface OutgoingConfig {
   targetLang: string;
   showPreview: boolean;
   agentOverrideAllowed: boolean;
+  agentCanOverride: boolean;
+  agentOverride: AgentTranslateOverride;
+
 }
 
 export interface OutgoingPreviewResult {
@@ -349,4 +352,173 @@ export async function updateSessionIncomingTranslation(
   override: { incomingEnabled?: boolean; incomingTargetLang?: string },
 ): Promise<void> {
   await api.patch('/api/translation/incoming/session', { sessionId, ...override });
+}
+
+// ─── TRANSLATION REPORTS ────────────────────────────────────
+
+export type ReportCategory = 'wrong_translation' | 'wrong_language' | 'offensive' | 'incomplete' | 'improvement' | 'bug' | 'other';
+export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+
+export interface TranslationReportEntry {
+  _id: string;
+  messageId: string;
+  sessionId: string;
+  reportedBy: { _id: string; name: string; email: string; avatar?: string } | string;
+  reportedByName: string;
+  category: ReportCategory;
+  reason: string;
+  originalContent: string;
+  translatedContent: string;
+  sourceLang: string;
+  targetLang: string;
+  provider: string;
+  direction: 'incoming' | 'outgoing';
+  latencyMs?: number;
+  status: ReportStatus;
+  reviewedBy?: { _id: string; name: string; email: string } | string;
+  reviewedByName?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
+  reporterBlocked: boolean;
+  createdAt: string;
+}
+
+export interface ReportStats {
+  byStatus: { _id: ReportStatus; count: number }[];
+  byCategory: { _id: ReportCategory; count: number }[];
+  byProvider: { _id: string; count: number }[];
+  topReporters: { _id: string; name: string; count: number }[];
+}
+
+export async function submitTranslationReport(data: {
+  messageId: string;
+  sessionId: string;
+  category: ReportCategory;
+  reason: string;
+  originalContent: string;
+  translatedContent: string;
+  sourceLang: string;
+  targetLang: string;
+  provider: string;
+  direction?: 'incoming' | 'outgoing';
+  latencyMs?: number;
+}): Promise<{ ok: boolean; report: TranslationReportEntry }> {
+  const res = await api.post<{ ok: boolean; report: TranslationReportEntry }>('/api/translation/reports', data);
+  return res.data;
+}
+
+export async function getTranslationReports(opts?: {
+  status?: ReportStatus;
+  category?: ReportCategory;
+  reportedBy?: string;
+  provider?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ reports: TranslationReportEntry[]; total: number; page: number; pages: number }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set('status', opts.status);
+  if (opts?.category) params.set('category', opts.category);
+  if (opts?.reportedBy) params.set('reportedBy', opts.reportedBy);
+  if (opts?.provider) params.set('provider', opts.provider);
+  if (opts?.page) params.set('page', String(opts.page));
+  if (opts?.limit) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+  const res = await api.get<{ ok: boolean; reports: TranslationReportEntry[]; total: number; page: number; pages: number }>(
+    `/api/translation/reports${qs ? `?${qs}` : ''}`
+  );
+  return { reports: res.data.reports, total: res.data.total, page: res.data.page, pages: res.data.pages };
+}
+
+export async function updateTranslationReport(
+  reportId: string,
+  data: { status: ReportStatus; reviewNote?: string },
+): Promise<TranslationReportEntry> {
+  const res = await api.patch<{ ok: boolean; report: TranslationReportEntry }>(`/api/translation/reports/${reportId}`, data);
+  return res.data.report;
+}
+
+export async function getReportStats(): Promise<ReportStats> {
+  const res = await api.get<{ ok: boolean; stats: ReportStats }>('/api/translation/reports/stats');
+  return res.data.stats;
+}
+
+export async function blockReporter(agentId: string): Promise<void> {
+  await api.post(`/api/translation/reports/block/${agentId}`, { agentId });
+}
+
+export async function unblockReporter(agentId: string): Promise<void> {
+  await api.post(`/api/translation/reports/unblock/${agentId}`, { agentId });
+}
+
+// ─── COST DASHBOARD ─────────────────────────────────────────
+
+export interface CostDashboardData {
+  days: number;
+  totals: {
+    totalRequests: number;
+    totalChars: number;
+    cachedHits: number;
+    avgLatency: number;
+    estimatedCost: number;
+  };
+  dailyUsage: { _id: string; requests: number; characters: number; cached: number }[];
+  byProvider: { _id: string; count: number; chars: number; avgLatency: number }[];
+  byDirection: { _id: string; count: number; chars: number }[];
+  byLangPair: { _id: { source: string; target: string }; count: number; chars: number }[];
+  topAgents: { _id: string; agentName: string; count: number; chars: number }[];
+}
+
+export async function getCostDashboard(days?: number): Promise<CostDashboardData> {
+  const qs = days ? `?days=${days}` : '';
+  const res = await api.get<{ ok: boolean } & CostDashboardData>(`/api/translation/cost-dashboard${qs}`);
+  return res.data;
+}
+
+// ─── QA REVIEW ──────────────────────────────────────────────
+
+export interface QAMessage {
+  _id: string;
+  sessionId: string;
+  sender: string;
+  senderAgent?: { _id: string; name: string; email: string; avatar?: string };
+  originalContent: string;
+  outgoingTranslation?: {
+    translatedContent?: string;
+    originalAgentContent?: string;
+    editedContent?: string;
+    sourceLang: string;
+    targetLang: string;
+    provider: string;
+    latencyMs: number;
+    wasEdited: boolean;
+  };
+  incomingTranslation?: {
+    translatedContent: string;
+    sourceLang: string;
+    targetLang: string;
+    provider: string;
+    latencyMs: number;
+    cached: boolean;
+  };
+  createdAt: string;
+}
+
+export async function getQAMessages(opts?: {
+  sessionId?: string;
+  direction?: 'incoming' | 'outgoing';
+  edited?: boolean;
+  page?: number;
+  limit?: number;
+}): Promise<{ messages: QAMessage[]; total: number; page: number; pages: number }> {
+  const params = new URLSearchParams();
+  if (opts?.sessionId) params.set('sessionId', opts.sessionId);
+  if (opts?.direction) params.set('direction', opts.direction);
+  if (opts?.edited) params.set('edited', 'true');
+  if (opts?.page) params.set('page', String(opts.page));
+  if (opts?.limit) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+  const res = await api.get<{ ok: boolean; messages: QAMessage[]; total: number; page: number; pages: number }>(
+    `/api/translation/qa/messages${qs ? `?${qs}` : ''}`
+  );
+  return { messages: res.data.messages, total: res.data.total, page: res.data.page, pages: res.data.pages };
 }

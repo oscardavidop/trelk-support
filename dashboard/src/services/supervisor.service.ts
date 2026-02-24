@@ -296,6 +296,36 @@ export async function takeOverChat(sessionId: string): Promise<ApiResponse<void>
   }
 }
 
+export async function unassignSession(sessionId: string, reason?: string): Promise<ApiResponse<void>> {
+  try {
+    const res = await fetch(`${API_URL}/supervisor/sessions/${sessionId}/unassign`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ reason: reason || 'Supervisor unassigned' }),
+    });
+    const data = await res.json();
+    return { success: data.success, data: undefined, error: data.error };
+  } catch (error) {
+    return { success: false, data: undefined, error: 'Failed to unassign session' };
+  }
+}
+
+export async function forceLogoutAgent(agentId: string, reason?: string): Promise<ApiResponse<void>> {
+  try {
+    const res = await fetch(`${API_URL}/supervisor/agents/${agentId}/force-logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ reason: reason || 'Forzado por supervisor' }),
+    });
+    const data = await res.json();
+    return { success: data.success, data: undefined, error: data.error };
+  } catch (error) {
+    return { success: false, data: undefined, error: 'Failed to force logout agent' };
+  }
+}
+
 export const supervisorService = {
   getStats,
   getAgentOverviews,
@@ -309,6 +339,8 @@ export const supervisorService = {
   getSessionTimeline,
   getLiveChats,
   takeOverChat,
+  unassignSession,
+  forceLogoutAgent,
 };
 
 export default supervisorService;

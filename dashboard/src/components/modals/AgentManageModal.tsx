@@ -110,6 +110,7 @@ export function AgentManageModal({
     maxConcurrentChats: agent.maxConcurrentChats || 5,
     skills: agent.skills || [],
     department: agent.department || '',
+    language: (agent as any).language || '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -693,6 +694,30 @@ export function AgentManageModal({
                   </span>
                 ))}
               </div>
+            </div>
+
+            {/* Telegram Integration */}
+            <div className="border-t border-zinc-800 pt-5">
+              <label className="block text-xs font-medium text-zinc-400 mb-2">Idioma del agente</label>
+              <select
+                value={editForm.language || ''}
+                onChange={(e) => setEditForm({ ...editForm, language: e.target.value })}
+                className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-50 text-sm focus:outline-none focus:border-emerald-500/50"
+              >
+                <option value="">Sin definir (usar default del sistema)</option>
+                <option value="es">Español</option>
+                <option value="en">English</option>
+                <option value="pt">Português</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="it">Italiano</option>
+                <option value="ru">Русский</option>
+                <option value="zh">中文</option>
+                <option value="ar">العربية</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+              </select>
+              <p className="text-[11px] text-zinc-600 mt-1">Se usa para reglas de traducción entrante (modo "idioma del agente")</p>
             </div>
 
             {/* Telegram Integration */}

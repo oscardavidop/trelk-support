@@ -132,13 +132,13 @@ export const SurveyDisplay: React.FC<SurveyDisplayProps> = ({ survey, compact = 
       <div className="p-6 relative z-10">
         
         {/* Comment Box */}
-        {survey.comment ? (
+        {!survey.comment ? (
           <div className="relative group">
             <div className="absolute top-0 left-0 w-1 h-full bg-zinc-800 group-hover:bg-zinc-700 transition-colors rounded-full" />
             <div className="pl-5 py-1">
               <Quote className="w-4 h-4 text-zinc-600 mb-2 rotate-180" />
               <p className="text-sm text-zinc-300 italic leading-relaxed">
-                "{survey.comment}"
+                "{survey.comment}" podria ser un gran lugar para que los agentes agreguen notas adicionales sobre la interacción, como detalles del problema del cliente o cualquier seguimiento necesario. Esto ayudaría a proporcionar contexto adicional para futuras referencias y mejorar la calidad del soporte al cliente.
               </p>
             </div>
           </div>

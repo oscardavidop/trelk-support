@@ -37,14 +37,14 @@ export function CommandPalette({ isOpen, onClose, onShowShortcuts }: CommandPale
   // Define commands
   const commands: Command[] = useMemo(() => [
     // Navigation
-    { id: 'nav-overview', label: 'Ir a Overview', description: 'Dashboard principal', icon: <LayoutDashboard className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard'); onClose(); } },
-    { id: 'nav-chat', label: 'Ir a Chat', description: 'Conversaciones activas', icon: <MessageCircle className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/chat'); onClose(); } },
-    { id: 'nav-supervisor', label: 'Ir a Supervisor', description: 'Panel de supervisión', icon: <Eye className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/supervisor'); onClose(); } },
-    { id: 'nav-audit', label: 'Ir a Actividad', description: 'Logs de auditoría', icon: <Activity className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/audit'); onClose(); } },
-    { id: 'nav-exports', label: 'Ir a Exportar', description: 'Descargar reportes', icon: <Download className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/exports'); onClose(); } },
-    { id: 'nav-replies', label: 'Respuestas Rápidas', description: 'Gestionar plantillas', icon: <MessageSquare className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/saved-replies'); onClose(); } },
-    { id: 'nav-agents', label: 'Ir a Agentes', description: 'Gestión de equipo', icon: <Users className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/agents'); onClose(); } },
-    { id: 'nav-settings', label: 'Configuración', description: 'Ajustes del sistema', icon: <Settings className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/dashboard/settings'); onClose(); } },
+    { id: 'nav-overview', label: 'Ir a Overview', description: 'Dashboard principal', icon: <LayoutDashboard className="w-4 h-4" />, category: 'navigation', action: () => { navigate(''); onClose(); } },
+    { id: 'nav-chat', label: 'Ir a Chat', description: 'Conversaciones activas', icon: <MessageCircle className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/chat'); onClose(); } },
+    { id: 'nav-supervisor', label: 'Ir a Supervisor', description: 'Panel de supervisión', icon: <Eye className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/supervisor'); onClose(); } },
+    { id: 'nav-audit', label: 'Ir a Actividad', description: 'Logs de auditoría', icon: <Activity className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/audit'); onClose(); } },
+    { id: 'nav-exports', label: 'Ir a Exportar', description: 'Descargar reportes', icon: <Download className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/exports'); onClose(); } },
+    { id: 'nav-replies', label: 'Respuestas Rápidas', description: 'Gestionar plantillas', icon: <MessageSquare className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/saved-replies'); onClose(); } },
+    { id: 'nav-agents', label: 'Ir a Agentes', description: 'Gestión de equipo', icon: <Users className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/agents'); onClose(); } },
+    { id: 'nav-settings', label: 'Configuración', description: 'Ajustes del sistema', icon: <Settings className="w-4 h-4" />, category: 'navigation', action: () => { navigate('/settings'); onClose(); } },
     // Actions
     { id: 'action-refresh', label: 'Recargar Datos', description: 'Sincronizar interfaz', icon: <RefreshCw className="w-4 h-4" />, category: 'action', shortcut: 'F5', action: () => { window.location.reload(); } },
     // Help

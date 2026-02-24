@@ -19,6 +19,7 @@ import AutoLockProvider from '../components/AutoLockProvider';
 import BroadcastBanner from '../components/BroadcastBanner';
 import QACoachingModal from '../components/QACoachingModal';
 import { initNotificationSocket, cleanupNotificationSocket } from '../stores/notificationStore';
+import { usePresenceStore } from '../stores/presenceStore';
 import { Loader2 } from 'lucide-react';
 import useFocusModeStore from '../hooks/useFocusMode';
 
@@ -27,6 +28,8 @@ export default function DashboardLayout() {
   const { isAuthenticated, isLoading, agent, checkAuth, forcePasswordChange, telegramLinkRequired, mfaSetupRequired, setTelegramLinkRequired, setMfaSetupRequired } = useAuthStore();
   const stats = useChatStore((state) => state.stats);
   const { showSupervisorPanel, toggleSupervisorPanel } = useSupervisorStore();
+  const presenceInit = usePresenceStore((s) => s.init);
+  const onSocketStateChange = usePresenceStore((s) => s.onSocketStateChange);
   const { isEnabled: isFocusMode, toggleFocusMode, disableFocusMode } = useFocusModeStore();
 
   // UI State
@@ -128,15 +131,25 @@ export default function DashboardLayout() {
       // Initialize notification socket events
       initNotificationSocket();
 
+      // Initialize presence system
+      presenceInit();
+
       // Set agent online when connected (only on initial connect)
       const handleConnect = () => {
         updateAgentStatus('online');
       };
 
+      // Presence socket events
+      const handleStateChange = (data: any) => {
+        onSocketStateChange(data);
+      };
+
       socket.on('connect', handleConnect);
+      socket.on('agent:state_changed', handleStateChange);
 
       return () => {
         socket.off('connect', handleConnect);
+        socket.off('agent:state_changed', handleStateChange);
         cleanupNotificationSocket();
         disconnectSocket();
       };

@@ -53,7 +53,11 @@ export function MFASetupRequired({ onSetupComplete }: MFASetupRequiredProps) {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
       <div className="relative w-full max-w-md">
+        {/* logo */}
+         <img src='assets/img/logo-dark.png' className="w-55 mx-auto mb-4" />
+       
         {/* Card */}
+
         <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="px-6 pt-8 pb-6 text-center border-b border-zinc-800/50">
@@ -135,7 +139,7 @@ export function MFASetupRequired({ onSetupComplete }: MFASetupRequiredProps) {
           </div>
 
           {/* Footer info */}
-          <div className="px-6 pb-6">
+          {/* <div className="px-6 pb-6">
             <div className="p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl">
               <div className="flex items-start gap-3">
                 <Lock className="w-5 h-5 text-zinc-500 flex-shrink-0 mt-0.5" />
@@ -150,7 +154,7 @@ export function MFASetupRequired({ onSetupComplete }: MFASetupRequiredProps) {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
 
       </div>

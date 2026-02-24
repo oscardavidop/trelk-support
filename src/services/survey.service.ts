@@ -7,6 +7,7 @@ import { Agent } from '../database/models/Agent.js';
 import { AuditLog } from '../database/models/AuditLog.js';
 import { getIO } from './socket.js';
 import { sendPoll, type SendPollResult } from './telegram.js';
+import { addMessage } from './chat.service.js';
 
 // Survey configuration
 const SURVEY_CONFIG = {
@@ -143,6 +144,24 @@ export async function sendPostChatSurvey(sessionId: string): Promise<{ success: 
 
     console.log(`[Survey] Sent poll ${result.poll.id} for session ${sessionId}`);
 
+    // Create system message so agents can see the survey was sent in chat history
+    try {
+      const sysMsg = await addMessage(sessionId, 'bot', '📊 Se envió encuesta de satisfacción al usuario', {
+        messageType: 'system',
+      });
+      const io = getIO();
+      if (io) {
+        io.to(`session:${sessionId}`).emit('message:new', {
+          _id: sysMsg._id.toString(),
+          session: sessionId,
+          sender: 'bot',
+          content: sysMsg.content,
+          messageType: 'system',
+          createdAt: sysMsg.createdAt,
+        });
+      }
+    } catch { /* non-critical */ }
+
     // Emit event to dashboard
     const io = getIO();
     if (io) {
@@ -246,6 +265,24 @@ export async function handlePollAnswer(pollId: string, optionIndexes: number[], 
     pendingPolls.delete(pollId);
 
     console.log(`[Survey] Received answer for ${sessionId}: ${label} (${satisfaction})`);
+
+    // Create system message so the answer is visible in chat history
+    try {
+      const sysMsg = await addMessage(sessionId, 'bot', `📊 Encuesta respondida: ${label}`, {
+        messageType: 'system',
+      });
+      const io = getIO();
+      if (io) {
+        io.to(`session:${sessionId}`).emit('message:new', {
+          _id: sysMsg._id.toString(),
+          session: sessionId,
+          sender: 'bot',
+          content: sysMsg.content,
+          messageType: 'system',
+          createdAt: sysMsg.createdAt,
+        });
+      }
+    } catch { /* non-critical */ }
 
     // Update agent metrics if assigned
     if (session.assignedAgent) {

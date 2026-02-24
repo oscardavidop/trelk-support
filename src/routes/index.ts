@@ -42,6 +42,8 @@ import { replayRoutes } from './replay.routes.js';
 import { qaRoutes } from './qa.routes.js';
 import { playbookRoutes } from './playbook.routes.js';
 import { translationRoutes } from './translation.routes.js';
+import { presenceRoutes } from './presence.routes.js';
+import { agentEngineRoutes } from './agent-engine.routes.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
   // Static uploads (public)
@@ -193,4 +195,10 @@ export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void>
 
   // Translation System routes (multi-provider translation engine)
   await fastify.register(translationRoutes, { prefix: '/api/translation' });
+
+  // Presence / Agent Status Management routes
+  await fastify.register(presenceRoutes, { prefix: '/api/presence' });
+
+  // Agent Engine / Config routes (Agent Rule Engine management)
+  await fastify.register(agentEngineRoutes, { prefix: '/api/agent-engine' });
 }

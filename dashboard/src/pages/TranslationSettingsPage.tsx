@@ -8,7 +8,9 @@ import {
     Languages, Save, Loader2, Settings2, Shield, BarChart3,
     Globe, Key, ToggleLeft, ToggleRight, RefreshCcw, AlertTriangle,
     Check, ArrowUpDown, FileText, Clock, Zap, ChevronDown,
-    Network, Lock, Wifi, WifiOff, Play, ArrowRightLeft, Send
+    Network, Lock, Wifi, WifiOff, Play, ArrowRightLeft, Send,
+    Flag, Eye, DollarSign, Search, Filter, ChevronLeft, ChevronRight,
+    Ban, CheckCircle, XCircle, MessageSquare, TrendingUp, Activity
 } from 'lucide-react';
 import {
     getTranslationSettings,
@@ -16,6 +18,13 @@ import {
     getTranslationLogs,
     getTranslationStats,
     testProxy,
+    getTranslationReports as fetchReports,
+    updateTranslationReport,
+    getReportStats as fetchReportStats,
+    blockReporter,
+    unblockReporter,
+    getCostDashboard,
+    getQAMessages,
     type TranslationSettings,
     type TranslationLogEntry,
     type TranslationStats,
@@ -25,15 +34,24 @@ import {
     type ProxyProtocol,
     type OutgoingDeliveryMode,
     type TargetLangStrategy,
+    type TranslationReportEntry,
+    type ReportStats,
+    type ReportStatus,
+    type ReportCategory,
+    type CostDashboardData,
+    type QAMessage,
 } from '../services/translation.service';
 
 // ─── TABS ───────────────────────────────────────────────────
 
-type SettingsTab = 'general' | 'providers' | 'logs' | 'stats';
+type SettingsTab = 'general' | 'providers' | 'logs' | 'stats' | 'reports' | 'cost' | 'qa';
 
 const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: 'general', label: 'General', icon: <Settings2 className="w-4 h-4" /> },
     { id: 'providers', label: 'Proveedores', icon: <Globe className="w-4 h-4" /> },
+    { id: 'reports', label: 'Reportes', icon: <Flag className="w-4 h-4" /> },
+    { id: 'cost', label: 'Costos', icon: <DollarSign className="w-4 h-4" /> },
+    { id: 'qa', label: 'QA Review', icon: <Eye className="w-4 h-4" /> },
     { id: 'logs', label: 'Logs', icon: <FileText className="w-4 h-4" /> },
     { id: 'stats', label: 'Estadísticas', icon: <BarChart3 className="w-4 h-4" /> },
 ];
@@ -58,6 +76,27 @@ export default function TranslationSettingsPage() {
     const [stats, setStats] = useState<TranslationStats | null>(null);
     const [statsLoading, setStatsLoading] = useState(false);
 
+    // Reports state
+    const [reports, setReports] = useState<TranslationReportEntry[]>([]);
+    const [reportsPage, setReportsPage] = useState(1);
+    const [reportsTotal, setReportsTotal] = useState(0);
+    const [reportsLoading, setReportsLoading] = useState(false);
+    const [reportStats, setReportStats] = useState<ReportStats | null>(null);
+    const [reportsFilter, setReportsFilter] = useState<{ status?: ReportStatus; category?: ReportCategory }>({});
+
+    // Cost dashboard state
+    const [costData, setCostData] = useState<CostDashboardData | null>(null);
+    const [costLoading, setCostLoading] = useState(false);
+    const [costDays, setCostDays] = useState(30);
+
+    // QA Review state
+    const [qaMessages, setQaMessages] = useState<QAMessage[]>([]);
+    const [qaPage, setQaPage] = useState(1);
+    const [qaTotal, setQaTotal] = useState(0);
+    const [qaLoading, setQaLoading] = useState(false);
+    const [qaDirection, setQaDirection] = useState<'incoming' | 'outgoing' | undefined>(undefined);
+    const [qaEditedOnly, setQaEditedOnly] = useState(false);
+
     const fetchSettings = useCallback(async () => {
         setLoading(true);
         try {
@@ -76,6 +115,9 @@ export default function TranslationSettingsPage() {
     useEffect(() => {
         if (tab === 'logs') loadLogs(1);
         if (tab === 'stats') loadStats();
+        if (tab === 'reports') { loadReports(1); loadReportStats(); }
+        if (tab === 'cost') loadCostData();
+        if (tab === 'qa') loadQA(1);
     }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const loadLogs = async (page: number) => {
@@ -98,6 +140,69 @@ export default function TranslationSettingsPage() {
         } catch { /* silent */ } finally {
             setStatsLoading(false);
         }
+    };
+
+    const loadReports = async (page: number) => {
+        setReportsLoading(true);
+        try {
+            const res = await fetchReports({ ...reportsFilter, page, limit: 15 });
+            setReports(res.reports);
+            setReportsPage(res.page);
+            setReportsTotal(res.total);
+        } catch { /* silent */ } finally {
+            setReportsLoading(false);
+        }
+    };
+
+    const loadReportStats = async () => {
+        try {
+            const s = await fetchReportStats();
+            setReportStats(s);
+        } catch { /* silent */ }
+    };
+
+    const loadCostData = async () => {
+        setCostLoading(true);
+        try {
+            const data = await getCostDashboard(costDays);
+            setCostData(data);
+        } catch { /* silent */ } finally {
+            setCostLoading(false);
+        }
+    };
+
+    const loadQA = async (page: number) => {
+        setQaLoading(true);
+        try {
+            const res = await getQAMessages({ direction: qaDirection, edited: qaEditedOnly, page, limit: 20 });
+            setQaMessages(res.messages);
+            setQaPage(res.page);
+            setQaTotal(res.total);
+        } catch { /* silent */ } finally {
+            setQaLoading(false);
+        }
+    };
+
+    const handleReportAction = async (reportId: string, status: ReportStatus, reviewNote?: string) => {
+        try {
+            await updateTranslationReport(reportId, { status, reviewNote });
+            loadReports(reportsPage);
+            loadReportStats();
+        } catch { /* silent */ }
+    };
+
+    const handleBlockReporter = async (agentId: string) => {
+        try {
+            await blockReporter(agentId);
+            loadReports(reportsPage);
+        } catch { /* silent */ }
+    };
+
+    const handleUnblockReporter = async (agentId: string) => {
+        try {
+            await unblockReporter(agentId);
+            loadReports(reportsPage);
+        } catch { /* silent */ }
     };
 
     const handleSave = async () => {
@@ -617,6 +722,44 @@ export default function TranslationSettingsPage() {
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Outgoing Anti-abuse */}
+                                    <div className="border-t border-zinc-800/50 pt-4 mt-2">
+                                        <h4 className="text-xs font-bold text-amber-400/80 mb-3 flex items-center gap-1.5">
+                                            <Shield className="w-3.5 h-3.5" /> Anti-abuso saliente
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] text-zinc-500 mb-1">Máx. traducciones/min por agente</label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    max={120}
+                                                    value={(settings.outgoing as any)?.maxTranslationsPerMinAgent || 60}
+                                                    onChange={e => updateField('outgoing', {
+                                                        ...settings.outgoing,
+                                                        ...(({ maxTranslationsPerMinAgent: parseInt(e.target.value) || 60 }) as any),
+                                                    })}
+                                                    className="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-500/50 focus:outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] text-zinc-500 mb-1">Cooldown entre previews (ms)</label>
+                                                <input
+                                                    type="number"
+                                                    min={200}
+                                                    max={5000}
+                                                    step={100}
+                                                    value={(settings.outgoing as any)?.previewCooldownMs || 800}
+                                                    onChange={e => updateField('outgoing', {
+                                                        ...settings.outgoing,
+                                                        ...(({ previewCooldownMs: parseInt(e.target.value) || 800 }) as any),
+                                                    })}
+                                                    className="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-500/50 focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <p className="text-xs text-zinc-600">
@@ -733,48 +876,54 @@ export default function TranslationSettingsPage() {
                                     <div className="space-y-1">
                                         <ToggleRow
                                             label="Mostrar siempre original + traducción"
-                                            active={settings.incoming?.showOriginal ?? true}
-                                            onToggle={() => updateField('incoming', {
+                                            description="El agente verá el mensaje original junto a la traducción"
+                                            checked={settings.incoming?.showOriginal ?? true}
+                                            onChange={() => updateField('incoming', {
                                                 ...settings.incoming,
                                                 showOriginal: !(settings.incoming?.showOriginal ?? true),
                                             })}
                                         />
                                         <ToggleRow
                                             label="Solo traducir si idioma ≠ destino"
-                                            active={(settings.incoming as any)?.onlyIfDifferent ?? true}
-                                            onToggle={() => updateField('incoming', {
+                                            description="Evita traducciones innecesarias cuando el idioma coincide"
+                                            checked={(settings.incoming as any)?.onlyIfDifferent ?? true}
+                                            onChange={() => updateField('incoming', {
                                                 ...settings.incoming,
                                                 onlyIfDifferent: !((settings.incoming as any)?.onlyIfDifferent ?? true),
                                             })}
                                         />
                                         <ToggleRow
                                             label="Saltar comandos (/start, /help…)"
-                                            active={(settings.incoming as any)?.skipCommands ?? true}
-                                            onToggle={() => updateField('incoming', {
+                                            description="No traducir mensajes que empiezan con /"
+                                            checked={(settings.incoming as any)?.skipCommands ?? true}
+                                            onChange={() => updateField('incoming', {
                                                 ...settings.incoming,
                                                 skipCommands: !((settings.incoming as any)?.skipCommands ?? true),
                                             })}
                                         />
                                         <ToggleRow
                                             label="Saltar mensajes cortos (<3 chars)"
-                                            active={(settings.incoming as any)?.skipShortMessages ?? true}
-                                            onToggle={() => updateField('incoming', {
+                                            description="Ignora mensajes muy cortos como 'ok', 'si'"
+                                            checked={(settings.incoming as any)?.skipShortMessages ?? true}
+                                            onChange={() => updateField('incoming', {
                                                 ...settings.incoming,
                                                 skipShortMessages: !((settings.incoming as any)?.skipShortMessages ?? true),
                                             })}
                                         />
                                         <ToggleRow
                                             label="Saltar mensajes solo emoji"
-                                            active={(settings.incoming as any)?.skipEmojiOnly ?? true}
-                                            onToggle={() => updateField('incoming', {
+                                            description="No traducir mensajes que solo contienen emojis"
+                                            checked={(settings.incoming as any)?.skipEmojiOnly ?? true}
+                                            onChange={() => updateField('incoming', {
                                                 ...settings.incoming,
                                                 skipEmojiOnly: !((settings.incoming as any)?.skipEmojiOnly ?? true),
                                             })}
                                         />
                                         <ToggleRow
                                             label="Permitir override por agente"
-                                            active={(settings.incoming as any)?.agentOverrideAllowed ?? true}
-                                            onToggle={() => updateField('incoming', {
+                                            description="Cada agente puede activar/desactivar para sus chats"
+                                            checked={(settings.incoming as any)?.agentOverrideAllowed ?? true}
+                                            onChange={() => updateField('incoming', {
                                                 ...settings.incoming,
                                                 agentOverrideAllowed: !((settings.incoming as any)?.agentOverrideAllowed ?? true),
                                             })}
@@ -797,6 +946,53 @@ export default function TranslationSettingsPage() {
                                                 throttleMs: parseInt(e.target.value),
                                             })}
                                             className="w-full max-w-xs h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                                        />
+                                    </div>
+
+                                    {/* Anti-abuse section */}
+                                    <div className="border-t border-zinc-800/50 pt-4 mt-2">
+                                        <h4 className="text-xs font-bold text-amber-400/80 mb-3 flex items-center gap-1.5">
+                                            <Shield className="w-3.5 h-3.5" /> Anti-abuso
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[11px] text-zinc-500 mb-1">Máx. traducciones/min por chat</label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    max={120}
+                                                    value={(settings.incoming as any)?.maxTranslationsPerMinute || 30}
+                                                    onChange={e => updateField('incoming', {
+                                                        ...settings.incoming,
+                                                        ...(({ maxTranslationsPerMinute: parseInt(e.target.value) || 30 }) as any),
+                                                    })}
+                                                    className="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-500/50 focus:outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] text-zinc-500 mb-1">Máx. caracteres por mensaje</label>
+                                                <input
+                                                    type="number"
+                                                    min={100}
+                                                    max={10000}
+                                                    step={100}
+                                                    value={(settings.incoming as any)?.maxCharsPerMessage || 5000}
+                                                    onChange={e => updateField('incoming', {
+                                                        ...settings.incoming,
+                                                        ...(({ maxCharsPerMessage: parseInt(e.target.value) || 5000 }) as any),
+                                                    })}
+                                                    className="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-500/50 focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                        <ToggleRow
+                                            label="Bloquear traducciones de contenido repetido"
+                                            description="Detecta spam y evita traducir mensajes idénticos repetidos"
+                                            checked={(settings.incoming as any)?.blockRepetitive ?? false}
+                                            onChange={() => updateField('incoming', {
+                                                ...settings.incoming,
+                                                ...(({ blockRepetitive: !((settings.incoming as any)?.blockRepetitive ?? false) }) as any),
+                                            })}
                                         />
                                     </div>
                                 </div>
@@ -1050,6 +1246,365 @@ export default function TranslationSettingsPage() {
                         )}
                     </div>
                 )}
+
+                {/* === REPORTS TAB === */}
+                {tab === 'reports' && (
+                    <div className="space-y-6">
+                        {/* Report Stats Summary */}
+                        {reportStats && (
+                            <div className="grid grid-cols-4 gap-4">
+                                {(['pending', 'reviewed', 'resolved', 'dismissed'] as ReportStatus[]).map(s => {
+                                    const count = reportStats.byStatus.find((x: any) => x._id === s)?.count || 0;
+                                    const colors: Record<string, string> = { pending: 'amber', reviewed: 'blue', resolved: 'emerald', dismissed: 'zinc' };
+                                    const labels: Record<string, string> = { pending: 'Pendientes', reviewed: 'Revisados', resolved: 'Resueltos', dismissed: 'Descartados' };
+                                    return (
+                                        <div key={s} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                                            <p className={`text-2xl font-bold text-${colors[s]}-400`}>{count}</p>
+                                            <p className="text-xs text-zinc-500 mt-1">{labels[s]}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Filters */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <select
+                                value={reportsFilter.status || ''}
+                                onChange={e => { setReportsFilter(f => ({ ...f, status: (e.target.value as ReportStatus) || undefined })); }}
+                                className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                            >
+                                <option value="">Todos los estados</option>
+                                <option value="pending">Pendientes</option>
+                                <option value="reviewed">Revisados</option>
+                                <option value="resolved">Resueltos</option>
+                                <option value="dismissed">Descartados</option>
+                            </select>
+                            <select
+                                value={reportsFilter.category || ''}
+                                onChange={e => { setReportsFilter(f => ({ ...f, category: (e.target.value as ReportCategory) || undefined })); }}
+                                className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                            >
+                                <option value="">Todas las categorías</option>
+                                <option value="wrong_translation">Traducción incorrecta</option>
+                                <option value="wrong_language">Idioma incorrecto</option>
+                                <option value="offensive">Ofensiva</option>
+                                <option value="incomplete">Incompleta</option>
+                                <option value="improvement">Mejora</option>
+                                <option value="bug">Bug</option>
+                                <option value="other">Otro</option>
+                            </select>
+                            <button onClick={() => loadReports(1)} className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg text-xs hover:bg-zinc-700 transition-colors">
+                                <RefreshCcw className="w-3 h-3" /> Actualizar
+                            </button>
+                        </div>
+
+                        {/* Reports List */}
+                        {reportsLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                            </div>
+                        ) : reports.length === 0 ? (
+                            <div className="text-center py-12 text-zinc-500">
+                                <Flag className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                <p>No hay reportes</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {reports.map(r => {
+                                    const statusColors: Record<string, string> = { pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20', reviewed: 'bg-blue-500/10 text-blue-400 border-blue-500/20', resolved: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dismissed: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' };
+                                    const catLabels: Record<string, string> = { wrong_translation: '❌ Incorrecta', wrong_language: '🌐 Idioma errado', offensive: '⚠️ Ofensiva', incomplete: '✂️ Incompleta', improvement: '💡 Mejora', bug: '🐛 Bug', other: '📝 Otro' };
+                                    const reporterName = typeof r.reportedBy === 'object' && r.reportedBy !== null ? (r.reportedBy as any).name : r.reportedByName;
+                                    const reporterAgentId = typeof r.reportedBy === 'object' && r.reportedBy !== null ? (r.reportedBy as any)._id : (r.reportedBy as string);
+                                    return (
+                                        <div key={r._id} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                            <div className="flex items-start justify-between gap-4 mb-3">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColors[r.status]}`}>{r.status.toUpperCase()}</span>
+                                                    <span className="text-xs text-zinc-400">{catLabels[r.category] || r.category}</span>
+                                                    <span className="text-[10px] text-zinc-600">•</span>
+                                                    <span className="text-[10px] text-zinc-500">{r.sourceLang} → {r.targetLang}</span>
+                                                    <span className="text-[10px] text-zinc-600">•</span>
+                                                    <span className="text-[10px] text-zinc-500">{r.provider}</span>
+                                                    {r.reporterBlocked && <span className="text-[10px] text-red-400 font-bold">BLOQUEADO</span>}
+                                                </div>
+                                                <span className="text-[10px] text-zinc-600 shrink-0">{new Date(r.createdAt).toLocaleString()}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Original</p>
+                                                    <p className="text-xs text-zinc-300 line-clamp-3">{r.originalContent}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-cyan-500 uppercase mb-1">Traducción</p>
+                                                    <p className="text-xs text-cyan-300 line-clamp-3">{r.translatedContent}</p>
+                                                </div>
+                                            </div>
+                                            <div className="mb-3 px-3 py-2 bg-zinc-800/50 rounded-lg">
+                                                <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Motivo</p>
+                                                <p className="text-xs text-zinc-300">{r.reason}</p>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-[10px] text-zinc-500">
+                                                    Reportado por <span className="text-zinc-300 font-medium">{reporterName}</span>
+                                                    {r.reviewedByName && <span className="ml-2">• Revisado por <span className="text-zinc-300">{r.reviewedByName}</span></span>}
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    {r.status === 'pending' && (
+                                                        <>
+                                                            <button onClick={() => handleReportAction(r._id, 'reviewed')} className="text-[10px] px-2 py-1 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors font-bold">Revisar</button>
+                                                            <button onClick={() => handleReportAction(r._id, 'resolved')} className="text-[10px] px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors font-bold">Resolver</button>
+                                                            <button onClick={() => handleReportAction(r._id, 'dismissed')} className="text-[10px] px-2 py-1 bg-zinc-700/50 text-zinc-400 rounded-lg hover:bg-zinc-700 transition-colors font-bold">Descartar</button>
+                                                        </>
+                                                    )}
+                                                    {r.status === 'reviewed' && (
+                                                        <button onClick={() => handleReportAction(r._id, 'resolved')} className="text-[10px] px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors font-bold">Resolver</button>
+                                                    )}
+                                                    {!r.reporterBlocked ? (
+                                                        <button onClick={() => handleBlockReporter(reporterAgentId)} className="text-[10px] px-2 py-1 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors font-bold flex items-center gap-1"><Ban className="w-2.5 h-2.5" />Bloquear</button>
+                                                    ) : (
+                                                        <button onClick={() => handleUnblockReporter(reporterAgentId)} className="text-[10px] px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors font-bold">Desbloquear</button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {r.reviewNote && (
+                                                <div className="mt-2 px-3 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-lg">
+                                                    <p className="text-[10px] text-indigo-400"><strong>Nota:</strong> {r.reviewNote}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {/* Pagination */}
+                                {reportsTotal > 15 && (
+                                    <div className="flex items-center justify-center gap-2 pt-4">
+                                        <button disabled={reportsPage <= 1} onClick={() => loadReports(reportsPage - 1)} className="p-1.5 text-zinc-500 hover:text-zinc-300 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                                        <span className="text-xs text-zinc-500">Página {reportsPage} de {Math.ceil(reportsTotal / 15)}</span>
+                                        <button disabled={reportsPage >= Math.ceil(reportsTotal / 15)} onClick={() => loadReports(reportsPage + 1)} className="p-1.5 text-zinc-500 hover:text-zinc-300 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* === COST DASHBOARD TAB === */}
+                {tab === 'cost' && (
+                    <div className="space-y-6">
+                        {/* Period Selector */}
+                        <div className="flex items-center gap-3">
+                            {[7, 14, 30, 90].map(d => (
+                                <button key={d} onClick={() => setCostDays(d)}
+                                    className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${costDays === d ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300 border border-zinc-700'}`}
+                                >{d}d</button>
+                            ))}
+                        </div>
+
+                        {costLoading ? (
+                            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-indigo-500 animate-spin" /></div>
+                        ) : costData ? (
+                            <>
+                                {/* Summary Cards */}
+                                <div className="grid grid-cols-5 gap-4">
+                                    <StatCard label="Total Requests" value={costData.totals.totalRequests.toLocaleString()} icon={<Activity className="w-4 h-4" />} color="indigo" />
+                                    <StatCard label="Total Caracteres" value={costData.totals.totalChars.toLocaleString()} icon={<FileText className="w-4 h-4" />} color="blue" />
+                                    <StatCard label="Cache Hits" value={costData.totals.cachedHits.toLocaleString()} icon={<Zap className="w-4 h-4" />} color="emerald" />
+                                    <StatCard label="Latencia Prom." value={`${Math.round(costData.totals.avgLatency)}ms`} icon={<Clock className="w-4 h-4" />} color="amber" />
+                                    <StatCard label="Costo Estimado" value={`$${costData.totals.estimatedCost}`} icon={<DollarSign className="w-4 h-4" />} color="emerald" />
+                                </div>
+
+                                {/* Daily usage bar chart */}
+                                <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                    <h4 className="text-sm font-bold text-zinc-300 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-400" /> Uso Diario</h4>
+                                    {costData.dailyUsage.length === 0 ? (
+                                        <p className="text-xs text-zinc-500">Sin datos para este período</p>
+                                    ) : (
+                                        <div className="flex items-end gap-1 h-32">
+                                            {(() => {
+                                                const maxReq = Math.max(...costData.dailyUsage.map((d: any) => d.requests), 1);
+                                                return costData.dailyUsage.slice(-30).map((d: any) => (
+                                                    <div key={d._id} className="flex-1 flex flex-col items-center gap-1 group relative" title={`${d._id}: ${d.requests} req, ${d.characters.toLocaleString()} chars`}>
+                                                        <div className="w-full bg-indigo-500/80 rounded-t-sm transition-all hover:bg-indigo-400" style={{ height: `${Math.max((d.requests / maxReq) * 100, 2)}%` }} />
+                                                        <span className="text-[7px] text-zinc-600 truncate w-full text-center">{d._id.slice(5)}</span>
+                                                    </div>
+                                                ));
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
+                                    {/* By Provider */}
+                                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                        <h4 className="text-sm font-bold text-zinc-300 mb-3">Por Proveedor</h4>
+                                        <div className="space-y-2">
+                                            {costData.byProvider.map((p: any) => (
+                                                <div key={p._id} className="flex items-center justify-between text-xs">
+                                                    <span className="text-zinc-300 font-medium capitalize">{p._id}</span>
+                                                    <div className="flex gap-3 text-zinc-500">
+                                                        <span>{p.count} req</span>
+                                                        <span>{Math.round(p.avgLatency)}ms</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* By Direction */}
+                                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                        <h4 className="text-sm font-bold text-zinc-300 mb-3">Por Dirección</h4>
+                                        <div className="space-y-2">
+                                            {costData.byDirection.map((d: any) => (
+                                                <div key={d._id} className="flex items-center justify-between text-xs">
+                                                    <span className="text-zinc-300 font-medium">{d._id === 'incoming' ? '📥 Entrante' : d._id === 'outgoing' ? '📤 Saliente' : '🔧 Manual'}</span>
+                                                    <div className="flex gap-3 text-zinc-500">
+                                                        <span>{d.count} req</span>
+                                                        <span>{d.chars.toLocaleString()} chars</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* Top Language Pairs */}
+                                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                        <h4 className="text-sm font-bold text-zinc-300 mb-3">Idiomas Frecuentes</h4>
+                                        <div className="space-y-2">
+                                            {costData.byLangPair.slice(0, 8).map((lp: any, i: number) => (
+                                                <div key={i} className="flex items-center justify-between text-xs">
+                                                    <span className="text-zinc-300 font-medium">{lp._id.source} → {lp._id.target}</span>
+                                                    <span className="text-zinc-500">{lp.count} req</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Top Agents */}
+                                <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                    <h4 className="text-sm font-bold text-zinc-300 mb-3">Top Agentes por Uso</h4>
+                                    <div className="space-y-2">
+                                        {costData.topAgents.map((a: any, i: number) => (
+                                            <div key={a._id} className="flex items-center justify-between text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-zinc-600 font-mono">#{i + 1}</span>
+                                                    <span className="text-zinc-300 font-medium">{a.agentName || 'Desconocido'}</span>
+                                                </div>
+                                                <div className="flex gap-4 text-zinc-500">
+                                                    <span>{a.count} req</span>
+                                                    <span>{a.chars.toLocaleString()} chars</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-12 text-zinc-500"><DollarSign className="w-8 h-8 mx-auto mb-2 opacity-30" /><p>No hay datos de costos</p></div>
+                        )}
+                    </div>
+                )}
+
+                {/* === QA REVIEW TAB === */}
+                {tab === 'qa' && (
+                    <div className="space-y-6">
+                        {/* Filters */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <select value={qaDirection || ''} onChange={e => setQaDirection((e.target.value as 'incoming' | 'outgoing') || undefined)}
+                                className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                            >
+                                <option value="">Todas las direcciones</option>
+                                <option value="incoming">📥 Entrante</option>
+                                <option value="outgoing">📤 Saliente</option>
+                            </select>
+                            <button onClick={() => setQaEditedOnly(p => !p)}
+                                className={`text-xs px-3 py-1.5 rounded-lg font-bold border transition-colors ${qaEditedOnly ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
+                            >
+                                Solo editadas
+                            </button>
+                            <button onClick={() => loadQA(1)} className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg text-xs hover:bg-zinc-700 transition-colors">
+                                <RefreshCcw className="w-3 h-3" /> Actualizar
+                            </button>
+                            <span className="text-[10px] text-zinc-600 ml-auto">{qaTotal} mensajes con traducción</span>
+                        </div>
+
+                        {/* QA Messages */}
+                        {qaLoading ? (
+                            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-indigo-500 animate-spin" /></div>
+                        ) : qaMessages.length === 0 ? (
+                            <div className="text-center py-12 text-zinc-500"><Eye className="w-8 h-8 mx-auto mb-2 opacity-30" /><p>No hay mensajes traducidos para revisar</p></div>
+                        ) : (
+                            <div className="space-y-3">
+                                {qaMessages.map((m: any) => (
+                                    <div key={m._id} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className={`px-1.5 py-0.5 rounded font-bold ${m.sender === 'user' ? 'bg-cyan-500/10 text-cyan-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
+                                                    {m.sender === 'user' ? '📥 Incoming' : '📤 Outgoing'}
+                                                </span>
+                                                {m.senderAgent && <span className="text-zinc-400">Agente: {m.senderAgent.name}</span>}
+                                                <span className="text-zinc-600">•</span>
+                                                <span className="text-zinc-500 font-mono">{m.sessionId?.slice(0, 12)}…</span>
+                                            </div>
+                                            <span className="text-[10px] text-zinc-600">{new Date(m.createdAt).toLocaleString()}</span>
+                                        </div>
+
+                                        {/* Content comparison */}
+                                        <div className="space-y-2">
+                                            {/* Original */}
+                                            <div className="px-3 py-2 bg-zinc-800/50 rounded-lg">
+                                                <p className="text-[10px] font-bold text-zinc-500 mb-1">ORIGINAL</p>
+                                                <p className="text-sm text-zinc-200">{m.originalContent || m.content}</p>
+                                            </div>
+
+                                            {/* Translation details */}
+                                            {m.translation && (
+                                                <div className="px-3 py-2 bg-cyan-500/5 border border-cyan-500/10 rounded-lg">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-[10px] font-bold text-cyan-500">TRADUCCIÓN</p>
+                                                            {m.translation.wasEdited && <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">EDITADA</span>}
+                                                        </div>
+                                                        <div className="flex gap-2 text-[10px] text-zinc-500">
+                                                            {m.translation.sourceLang && <span>{m.translation.sourceLang} → {m.translation.targetLang}</span>}
+                                                            {m.translation.provider && <span className="capitalize">{m.translation.provider}</span>}
+                                                            {m.translation.latencyMs && <span>{m.translation.latencyMs}ms</span>}
+                                                            {m.translation.cached && <span className="text-emerald-400">cache</span>}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm text-cyan-200">{m.translation.translatedContent}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Auto-translated content (before edit) */}
+                                            {m.translation?.autoTranslatedContent && m.translation?.wasEdited && (
+                                                <div className="px-3 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-lg">
+                                                    <p className="text-[10px] font-bold text-indigo-400 mb-1">TRADUCCIÓN AUTOMÁTICA (antes de edición)</p>
+                                                    <p className="text-sm text-indigo-200">{m.translation.autoTranslatedContent}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Edited content */}
+                                            {m.translation?.editedContent && (
+                                                <div className="px-3 py-2 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                                                    <p className="text-[10px] font-bold text-amber-400 mb-1">VERSIÓN EDITADA (ENVIADA)</p>
+                                                    <p className="text-sm text-amber-200">{m.translation.editedContent}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {/* Pagination */}
+                                {qaTotal > 20 && (
+                                    <div className="flex items-center justify-center gap-2 pt-4">
+                                        <button disabled={qaPage <= 1} onClick={() => loadQA(qaPage - 1)} className="p-1.5 text-zinc-500 hover:text-zinc-300 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                                        <span className="text-xs text-zinc-500">Página {qaPage} de {Math.ceil(qaTotal / 20)}</span>
+                                        <button disabled={qaPage >= Math.ceil(qaTotal / 20)} onClick={() => loadQA(qaPage + 1)} className="p-1.5 text-zinc-500 hover:text-zinc-300 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                     </div>
                 </div>
             </div>

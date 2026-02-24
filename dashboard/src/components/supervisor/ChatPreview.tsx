@@ -22,14 +22,19 @@ export function ChatPreview({ sessionId, userName, agentName }: ChatPreviewProps
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const token = useAuthStore((s) => s.token);
 
-  // Auto-scroll logic (only if near bottom)
+  // Auto-scroll: directly set scrollTop on the container for reliability
+  // within a constrained overflow-y-auto element.
   const scrollToBottom = useCallback((force = false) => {
-    if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-      if (force || isNearBottom) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (force || isNearBottom) {
+      // Use requestAnimationFrame so layout is complete before measuring
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      });
     }
   }, []);
 

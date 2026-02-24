@@ -1,10 +1,12 @@
 /**
- * TabBlockedOverlay Component
- * 
- * Full-screen overlay shown when another tab has the chat open
- * Inspired by WhatsApp Web's multi-device behavior
+ * System Overlays - Premium Zinc Refactor
+ * High-fidelity blocking screens for concurrency and session management.
  */
+
 import { useState, useEffect } from 'react';
+import { MonitorX, LogOut, MapPin, AlertCircle, Monitor } from 'lucide-react';
+
+// ============= TAB BLOCKED OVERLAY =============
 
 interface TabBlockedOverlayProps {
   isBlocked: boolean;
@@ -30,65 +32,63 @@ export function TabBlockedOverlay({ isBlocked, onClose }: TabBlockedOverlayProps
 
   const handleClose = () => {
     window.close();
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 100);
+    // Fallback if window.close() is blocked by browser
+    setTimeout(() => { window.location.href = '/dashboard'; }, 100);
   };
 
   if (!isVisible) return null;
 
-  const overlayClass = `fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`;
-  const contentClass = `max-w-md mx-4 text-center transition-all duration-300 ${isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`;
-
   return (
     <div
-      className={overlayClass}
-      style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'} bg-zinc-950/90 backdrop-blur-xl`}
     >
-      <div className={contentClass}>
-        <div className="mb-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-800/80 border-2 border-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+      <div className={`max-w-md w-full mx-4 flex flex-col items-center text-center transition-all duration-300 ${isAnimating ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4'}`}>
+        
+        {/* Animated Icon */}
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-amber-500/20 blur-2xl rounded-full animate-pulse" />
+          <div className="relative w-24 h-24 rounded-full bg-zinc-900 border border-zinc-800 shadow-2xl flex items-center justify-center ring-1 ring-amber-500/20">
+            <MonitorX className="w-10 h-10 text-amber-500" />
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-zinc-50 mb-3">Chat abierto en otra pestaña</h2>
-        <p className="text-gray-300 mb-8 leading-relaxed">
-          Para evitar conflictos y pérdida de mensajes, el chat solo puede estar activo en una pestaña a la vez.
+        {/* Content */}
+        <h2 className="text-2xl font-bold text-zinc-100 tracking-tight mb-3">Chat abierto en otra pestaña</h2>
+        <p className="text-sm text-zinc-400 leading-relaxed mb-8 max-w-sm">
+          Para evitar conflictos y pérdida de mensajes, el sistema de soporte solo puede estar activo en una pestaña a la vez.
         </p>
 
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="flex-1 h-px bg-gray-700" />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <div className="flex-1 h-px bg-gray-700" />
+        {/* Visual Separator */}
+        <div className="w-full flex items-center justify-center gap-4 mb-8 opacity-50">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent to-zinc-700" />
+          <AlertCircle className="w-5 h-5 text-zinc-600" />
+          <div className="flex-1 h-px bg-gradient-to-l from-transparent to-zinc-700" />
         </div>
 
-        <p className="text-gray-400 text-sm mb-6">👉 Vuelve a la pestaña activa o cierra esta.</p>
+        <p className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-4">Vuelve a la pestaña activa o cierra esta</p>
 
+        {/* Actions */}
         <button
           onClick={handleClose}
-          className="px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-zinc-50 font-semibold rounded-lg shadow-lg shadow-red-500/25 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          className="w-full sm:w-auto px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           Cerrar esta pestaña
         </button>
 
         {onClose && (
-          <button onClick={onClose} className="block mx-auto mt-4 text-sm text-gray-500 hover:text-gray-400 transition-colors">
-            Ir al Dashboard
+          <button 
+            onClick={onClose} 
+            className="mt-6 text-xs text-zinc-500 hover:text-zinc-300 transition-colors font-medium border-b border-transparent hover:border-zinc-500 pb-0.5"
+          >
+            Volver al Dashboard
           </button>
         )}
       </div>
     </div>
   );
 }
+
+// ============= SESSION REPLACED OVERLAY =============
 
 interface SessionReplacedOverlayProps {
   isShown: boolean;
@@ -119,62 +119,60 @@ export function SessionReplacedOverlay({ isShown, device, ip }: SessionReplacedO
 
   if (!isVisible) return null;
 
-  const overlayClass = `fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`;
-  const contentClass = `max-w-md mx-4 text-center transition-all duration-300 ${isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`;
-
   return (
     <div
-      className={overlayClass}
-      style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'} bg-zinc-950/95 backdrop-blur-2xl`}
     >
-      <div className={contentClass}>
-        <div className="mb-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-900/50 border-2 border-red-500">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
+      <div className={`max-w-md w-full mx-4 flex flex-col items-center text-center transition-all duration-300 ${isAnimating ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4'}`}>
+        
+        {/* Animated Icon */}
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-red-500/20 blur-2xl rounded-full animate-pulse" />
+          <div className="relative w-24 h-24 rounded-full bg-zinc-900 border border-zinc-800 shadow-2xl flex items-center justify-center ring-1 ring-red-500/20">
+            <LogOut className="w-10 h-10 text-red-500 translate-x-1" />
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-zinc-50 mb-3">Sesión cerrada</h2>
-        <p className="text-gray-300 mb-4 leading-relaxed">
-          Se ha iniciado sesión en otro dispositivo. Solo puedes tener una sesión activa a la vez.
+        {/* Content */}
+        <h2 className="text-2xl font-bold text-zinc-100 tracking-tight mb-3">Sesión Finalizada</h2>
+        <p className="text-sm text-zinc-400 leading-relaxed mb-6 max-w-sm">
+          Se ha iniciado sesión en otro dispositivo. Por motivos de seguridad, solo puedes tener una sesión activa a la vez.
         </p>
 
+        {/* Device Info Panel */}
         {(device || ip) && (
-          <div className="bg-gray-800/50 rounded-lg p-4 mb-6 text-left">
-            <p className="text-gray-400 text-sm font-medium mb-2">Nuevo inicio de sesión:</p>
-            {device && (
-              <div className="flex items-center gap-2 text-gray-300 text-sm mb-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>{device}</span>
-              </div>
-            )}
-            {ip && (
-              <div className="flex items-center gap-2 text-gray-300 text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-                <span>IP: {ip}</span>
-              </div>
-            )}
+          <div className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mb-8 text-left shadow-inner">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase  mb-3">Detalles del nuevo inicio de sesión</p>
+            <div className="space-y-2">
+              {device && (
+                <div className="flex items-center gap-3 text-sm text-zinc-300">
+                  <div className="p-1.5 bg-zinc-800 rounded-md text-zinc-400"><Monitor className="w-4 h-4" /></div>
+                  <span className="font-medium truncate">{device}</span>
+                </div>
+              )}
+              {ip && (
+                <div className="flex items-center gap-3 text-sm text-zinc-300">
+                  <div className="p-1.5 bg-zinc-800 rounded-md text-zinc-400"><MapPin className="w-4 h-4" /></div>
+                  <span className="font-mono text-xs">{ip}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
+        {/* Action */}
         <button
           onClick={handleLogin}
-          className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-zinc-50 font-semibold rounded-lg shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
         >
-          Iniciar sesión de nuevo
+          Iniciar sesión nuevamente
         </button>
 
-        <p className="text-gray-500 text-xs mt-6">¿No fuiste tú? Cambia tu contraseña inmediatamente.</p>
+        {/* Warning */}
+        <p className="text-[11px] text-zinc-500 mt-6 flex items-center gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5 text-zinc-600" />
+          ¿No fuiste tú? Contacta a tu administrador.
+        </p>
       </div>
     </div>
   );

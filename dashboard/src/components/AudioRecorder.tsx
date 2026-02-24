@@ -9,6 +9,8 @@ interface AudioRecorderProps {
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped';
 
+const BAR_COUNT = 40;
+
 export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderProps) {
   const [state, setState] = useState<RecordingState>('idle');
   const [duration, setDuration] = useState(0);
@@ -16,6 +18,7 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [waveformBars, setWaveformBars] = useState<number[]>(Array(BAR_COUNT).fill(4));
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -23,20 +26,62 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Web Audio refs
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      stopWaveformLoop();
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioUrl]);
+
+  // Start Web Audio waveform analysis loop
+  const startWaveformLoop = useCallback((analyser: AnalyserNode) => {
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      animationFrameRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      // Sample BAR_COUNT bins evenly across the frequency spectrum
+      const step = Math.floor(bufferLength / BAR_COUNT);
+      const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
+        const value = dataArray[i * step] ?? 0; // 0-255
+        // Map to pixel height: min 4px, max 40px
+        return 4 + (value / 255) * 36;
+      });
+
+      setWaveformBars(bars);
+    };
+
+    draw();
+  }, []);
+
+  // Stop waveform loop
+  const stopWaveformLoop = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    setWaveformBars(Array(BAR_COUNT).fill(4));
+  }, []);
 
   // Start recording
   const startRecording = useCallback(async () => {
@@ -52,6 +97,19 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
         }
       });
       streamRef.current = stream;
+
+      // Set up Web Audio API analyser for real waveform visualization
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const audioCtx = new AudioContextClass();
+      audioContextRef.current = audioCtx;
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.75;
+      analyserRef.current = analyser;
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+      // Note: intentionally NOT connecting analyser to destination to avoid feedback
+      startWaveformLoop(analyser);
 
       // Create MediaRecorder with preferred format
       let mimeType = 'audio/webm;codecs=opus';
@@ -111,8 +169,13 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+
+      stopWaveformLoop();
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
     }
-  }, [state]);
+  }, [state, stopWaveformLoop]);
 
   // Pause/Resume recording
   const togglePause = useCallback(() => {
@@ -125,14 +188,18 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      stopWaveformLoop();
     } else if (state === 'paused') {
       mediaRecorderRef.current.resume();
       setState('recording');
       timerRef.current = window.setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);
+      if (analyserRef.current) {
+        startWaveformLoop(analyserRef.current);
+      }
     }
-  }, [state]);
+  }, [state, startWaveformLoop, stopWaveformLoop]);
 
   // Play/Pause preview
   const togglePlayback = useCallback(() => {
@@ -207,22 +274,13 @@ export default function AudioRecorder({ onComplete, onCancel }: AudioRecorderPro
         </div>
       )}
 
-      {/* Waveform visualization (simplified) */}
+      {/* Waveform visualization — real WebAudio frequency data while recording */}
       <div className="px-4 py-4 flex items-center justify-center gap-0.5">
-        {[...Array(40)].map((_, i) => (
+        {waveformBars.map((barHeight, i) => (
           <div
             key={i}
-            className={`w-1 bg-primary rounded-full transition-all ${
-              state === 'recording' ? 'animate-pulse' : ''
-            }`}
-            style={{
-              height: state === 'recording' 
-                ? `${Math.random() * 24 + 8}px` 
-                : state === 'stopped' 
-                  ? `${Math.sin(i / 3) * 12 + 16}px`
-                  : '4px',
-              animationDelay: `${i * 50}ms`,
-            }}
+            className="w-1 bg-primary rounded-full transition-all duration-75"
+            style={{ height: `${barHeight}px` }}
           />
         ))}
       </div>

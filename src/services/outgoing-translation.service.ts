@@ -215,6 +215,28 @@ async function resolveStrategy(
   }
 }
 
+// ─── AGENT PREFERENCES IN-MEMORY CACHE ──────────────────────
+// Shared TTL cache to avoid repeated DB queries for agent prefs.
+
+const AGENT_PREFS_TTL_MS = 5 * 60 * 1000;
+interface CachedAgentPrefs { data: IAgentPreferences | null; ts: number }
+const agentPrefsCache = new Map<string, CachedAgentPrefs>();
+
+async function getCachedAgentPrefs(agentId: string): Promise<IAgentPreferences | null> {
+  const cached = agentPrefsCache.get(agentId);
+  if (cached && Date.now() - cached.ts < AGENT_PREFS_TTL_MS) return cached.data;
+  try {
+    const prefs = await AgentPreferences.findOne({ agentId }).lean() as IAgentPreferences | null;
+    agentPrefsCache.set(agentId, { data: prefs, ts: Date.now() });
+    return prefs;
+  } catch { return null; }
+}
+
+setInterval(() => {
+  const cutoff = Date.now() - AGENT_PREFS_TTL_MS;
+  for (const [key, e] of agentPrefsCache) { if (e.ts < cutoff) agentPrefsCache.delete(key); }
+}, 600_000);
+
 // ─── CHECK IF AGENT HAS TRANSLATION ENABLED ────────────────
 
 interface TranslateDecision {
@@ -224,10 +246,15 @@ interface TranslateDecision {
   agentWritesIn: string;
 }
 
+/**
+ * Resolve the outgoing translate decision.
+ * Accepts an optional pre-fetched session to avoid a duplicate DB query.
+ */
 async function getTranslateDecision(
   agentId: string,
   sessionId: string,
   globalConfig: IOutgoingTranslateConfig,
+  prefetchedSession?: IChatSession | null,
 ): Promise<TranslateDecision> {
   const defaults: TranslateDecision = {
     enabled: globalConfig.enabled,
@@ -236,9 +263,12 @@ async function getTranslateDecision(
     agentWritesIn: 'auto',
   };
 
-  // 1. Check per-session override
+  // 1. Check per-session override — reuse pre-fetched session when available
   try {
-    const session = await ChatSession.findOne({ sessionId }).lean();
+    const session = prefetchedSession !== undefined
+      ? prefetchedSession
+      : await ChatSession.findOne({ sessionId }).lean() as IChatSession | null;
+
     if (session?.translationOverride) {
       if (session.translationOverride.outgoingEnabled === false) {
         return { ...defaults, enabled: false };
@@ -249,9 +279,9 @@ async function getTranslateDecision(
     }
   } catch { /* no session */ }
 
-  // 2. Check agent preferences override
+  // 2. Check agent preferences override — use in-memory cache
   try {
-    const prefs = await AgentPreferences.findOne({ agentId }).lean() as IAgentPreferences | null;
+    const prefs = await getCachedAgentPrefs(agentId);
     if (prefs?.translation) {
       if (prefs.translation.outgoingOverride === 'always_off') {
         return { ...defaults, enabled: false };
@@ -314,19 +344,19 @@ export async function translateOutgoing(req: OutgoingTranslateRequest): Promise<
     const settings = await getTranslationSettings();
     const outConfig = settings.outgoing || { enabled: false } as IOutgoingTranslateConfig;
 
-    // Get decision (global + agent + session overrides)
-    const decision = await getTranslateDecision(req.agentId, req.sessionId, outConfig);
-    if (!decision.enabled) return noTranslate;
-
-    // Resolve target language
+    // Fetch session once — reused by decision engine and target-lang resolver
     const session = await ChatSession.findOne({ sessionId: req.sessionId })
       .populate('user')
       .lean() as IChatSession | null;
 
     if (!session) return noTranslate;
 
-    // Per-session target lang override
-    const targetLang = session.translationOverride?.outgoingTargetLang
+    // Get decision (global + agent + session overrides) — pass pre-fetched session
+    const decision = await getTranslateDecision(req.agentId, req.sessionId, outConfig, session);
+    if (!decision.enabled) return noTranslate;
+
+    // Per-session target lang override, or resolve via priorities
+    const targetLang = (session.translationOverride as any)?.outgoingTargetLang
       || await resolveTargetLang(session, outConfig);
 
     const sourceLang = decision.agentWritesIn || 'auto';

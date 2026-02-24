@@ -55,6 +55,7 @@ import {
   getOutgoingConfig,
   previewOutgoingTranslation,
   updateSessionTranslation,
+  detectLanguage,
   type OutgoingConfig,
 } from '../services/translation.service';
 
@@ -154,9 +155,12 @@ export default function AgentComposer({
   // === Auto-Translate Outgoing State ===
   const [outgoingConfig, setOutgoingConfig] = useState<OutgoingConfig | null>(null);
   const [translationPreview, setTranslationPreview] = useState<string | null>(null);
+  const [editedTranslation, setEditedTranslation] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [showTranslationPreview, setShowTranslationPreview] = useState(false);
+  const [detectedLang, setDetectedLang] = useState<string | null>(null);
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs originales
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -240,9 +244,36 @@ export default function AgentComposer({
     setTranslationPreview(null);
     setShowTranslationPreview(false);
     getOutgoingConfig(session.sessionId)
-      .then(cfg => { if (!cancelled) setOutgoingConfig(cfg); })
+      .then(cfg => {
+        if (!cancelled) {
+          setOutgoingConfig(cfg);
+          // Default preview state from config
+          if (cfg?.enabled && cfg.showPreview) setShowTranslationPreview(true);
+        }
+      })
       .catch(() => { /* silent */ });
     return () => { cancelled = true; };
+  }, [session.sessionId]);
+
+  // ─── Sync config when sidebar updates translation settings ───
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.sessionId === session.sessionId) {
+        // Re-fetch config to get updated values
+        getOutgoingConfig(session.sessionId)
+          .then(cfg => {
+            setOutgoingConfig(cfg);
+            if (cfg && !cfg.enabled) {
+              setTranslationPreview(null);
+              setShowTranslationPreview(false);
+            }
+          })
+          .catch(() => { /* silent */ });
+      }
+    };
+    window.addEventListener('translation:sessionUpdated', handler);
+    return () => window.removeEventListener('translation:sessionUpdated', handler);
   }, [session.sessionId]);
 
   // ─── Debounced translation preview ───
@@ -251,6 +282,7 @@ export default function AgentComposer({
 
     if (!outgoingConfig?.enabled || !outgoingConfig.showPreview || !message.trim() || !showTranslationPreview) {
       setTranslationPreview(null);
+      setEditedTranslation(null);
       return;
     }
 
@@ -260,17 +292,38 @@ export default function AgentComposer({
         const result = await previewOutgoingTranslation(message.trim(), session.sessionId);
         if (result.shouldTranslate) {
           setTranslationPreview(result.translatedContent);
+          setEditedTranslation(null); // Reset edit when new auto-translation arrives
         } else {
           setTranslationPreview(null);
+          setEditedTranslation(null);
         }
       } catch {
         setTranslationPreview(null);
+        setEditedTranslation(null);
       }
       setIsPreviewLoading(false);
     }, 800);
 
     return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current); };
   }, [message, outgoingConfig?.enabled, outgoingConfig?.showPreview, showTranslationPreview, session.sessionId]);
+
+  // ─── Detect language while typing ───
+  useEffect(() => {
+    if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
+    if (!message.trim() || message.trim().length < 8) {
+      setDetectedLang(null);
+      return;
+    }
+    detectTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await detectLanguage(message.trim().slice(0, 200));
+        if (result.ok && result.language) {
+          setDetectedLang(result.language);
+        }
+      } catch { /* silent */ }
+    }, 1200);
+    return () => { if (detectTimerRef.current) clearTimeout(detectTimerRef.current); };
+  }, [message]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -369,10 +422,14 @@ export default function AgentComposer({
     sendMessage(
       session.sessionId,
       processedMessage,
-      { replyToMessageId: replyTo?._id },
+      {
+        replyToMessageId: replyTo?._id,
+        editedTranslation: editedTranslation && editedTranslation !== translationPreview ? editedTranslation : undefined,
+      },
       (result) => {
         if (result.ok) {
           setMessage('');
+          setEditedTranslation(null);
           setSendStatus('sent');
           onCancelReply?.();
           // Re-focus textarea after sending
@@ -530,6 +587,15 @@ export default function AgentComposer({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl+Shift+T: Toggle outgoing translation preview
+    if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+      e.preventDefault();
+      if (outgoingConfig?.enabled) {
+        setShowTranslationPreview(p => !p);
+      }
+      return;
+    }
+
     if (showQuickReplies) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -875,6 +941,7 @@ export default function AgentComposer({
                         try {
                           await updateSessionTranslation(session.sessionId, { outgoingEnabled: false });
                           setOutgoingConfig(prev => prev ? { ...prev, enabled: false } : prev);
+                          window.dispatchEvent(new CustomEvent('translation:sessionUpdated', { detail: { sessionId: session.sessionId } }));
                         } catch { /* silent */ }
                       }}
                       className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 font-bold transition-colors"
@@ -885,7 +952,7 @@ export default function AgentComposer({
                 </div>
               </div>
 
-              {/* Live preview */}
+              {/* Live preview - editable */}
               {showTranslationPreview && message.trim() && (
                 <div className="px-4 py-2 bg-zinc-900/50 border-t border-zinc-800/30">
                   {isPreviewLoading ? (
@@ -895,8 +962,21 @@ export default function AgentComposer({
                     </div>
                   ) : translationPreview ? (
                     <div className="flex items-start gap-2">
-                      <Languages className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                      <p className="text-xs text-zinc-300 leading-relaxed">{translationPreview}</p>
+                      <Languages className="w-3.5 h-3.5 text-emerald-500 mt-1.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <textarea
+                          value={editedTranslation ?? translationPreview}
+                          onChange={e => setEditedTranslation(e.target.value)}
+                          className="w-full bg-transparent text-xs text-zinc-300 leading-relaxed resize-none border-0 outline-none p-0 focus:ring-0"
+                          rows={Math.min(Math.ceil((editedTranslation ?? translationPreview).length / 80), 4)}
+                        />
+                        {editedTranslation && editedTranslation !== translationPreview && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-amber-400 font-bold">Editada</span>
+                            <button onClick={() => setEditedTranslation(null)} className="text-[10px] text-zinc-500 hover:text-zinc-300 underline">Restaurar</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <p className="text-xs text-zinc-600 italic">Sin traducción disponible</p>
@@ -917,6 +997,7 @@ export default function AgentComposer({
                   try {
                     await updateSessionTranslation(session.sessionId, { outgoingEnabled: true });
                     setOutgoingConfig(prev => prev ? { ...prev, enabled: true } : prev);
+                    window.dispatchEvent(new CustomEvent('translation:sessionUpdated', { detail: { sessionId: session.sessionId } }));
                   } catch { /* silent */ }
                 }}
                 className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800 text-indigo-400 hover:bg-indigo-500/10 font-bold transition-colors"
@@ -943,6 +1024,14 @@ export default function AgentComposer({
               className="w-full px-4 py-3 bg-transparent text-zinc-50 placeholder-gray-500 resize-none focus:outline-none max-h-64 overflow-y-auto scrollbar-thin"
               style={{ minHeight: '56px' }}
             />
+
+            {/* Detected language indicator */}
+            {detectedLang && message.trim().length >= 8 && (
+              <div className="flex items-center gap-1.5 px-4 pb-1">
+                <span className="text-[10px] text-zinc-600">Idioma detectado:</span>
+                <span className="text-[10px] font-bold text-zinc-400 uppercase bg-zinc-800 px-1.5 py-0.5 rounded">{detectedLang}</span>
+              </div>
+            )}
 
             {/* 2.2 Toolbar & Actions (Bottom Bar) */}
             <div className="flex items-center justify-between px-2 pb-2 mt-1">

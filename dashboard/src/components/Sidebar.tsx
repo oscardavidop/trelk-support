@@ -8,22 +8,23 @@ import {
   ChevronDown, MessageSquare, Wifi, WifiOff, Loader2, Eye, Activity,
   Download, GitBranch, ChevronLeft, ChevronRight, User, Sliders, Bell,
   Shield, History, ListChecks, Server, Languages, Contact, Megaphone,
-  KeyRound, Radio, Globe, HardDrive, ClipboardCheck, BookOpen
+  KeyRound, Radio, Globe, HardDrive, ClipboardCheck, BookOpen, Monitor, Cpu
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
-import { updateAgentStatus } from '../services/socket';
 import { useTranslation } from 'react-i18next';
 import NotificationCenter from './NotificationCenter';
 import { useThemeStore } from '../hooks';
+import { usePresenceStore, formatLiveTime } from '../stores/presenceStore';
+import AgentStatusBar from './AgentStatusBar';
 
 interface SidebarProps {
   agent: Agent | null;
   stats: DashboardStats | null;
 }
 
-const COLLAPSED_ROUTES = ['/dashboard/flows', '/dashboard/chat'];
-const HIDDEN_ROUTES = ['/dashboard/chat'];
+const COLLAPSED_ROUTES = ['/flows', '/chat'];
+const HIDDEN_ROUTES = ['/chat'];
 
 export default function Sidebar({ agent, stats }: SidebarProps) {
   const { t } = useTranslation('common');
@@ -34,6 +35,11 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useThemeStore();
+
+  // Presence store – live state for footer display
+  const presenceState = usePresenceStore((s) => s.currentState);
+  const presenceSeconds = usePresenceStore((s) => s.secondsInState);
+  const presenceLiveTime = formatLiveTime(presenceSeconds);
 
   if (HIDDEN_ROUTES.some(route => location.pathname.startsWith(route))) {
     // return null;
@@ -81,11 +87,6 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 
   const availabilityStatus = agent?.availability || getAvailabilityStatus();
 
-  const handleStatusChange = (status: 'online' | 'away' | 'offline') => {
-    updateAgentStatus(status);
-    setShowStatusMenu(false);
-  };
-
   // Navigation Item Type
   type NavItem = {
     path: string;
@@ -104,60 +105,53 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
         section: t('sidebar.sections.principal'),
         items: [
           { path: '/dashboard', icon: LayoutDashboard, label: t('sidebar.nav.overview'), permission: null },
-          { path: '/dashboard/chat', icon: MessageCircle, label: t('sidebar.nav.chat'), permission: 'chats.read' },
-          { path: '/dashboard/contacts', icon: Contact, label: t('sidebar.nav.contacts'), permission: 'contacts.read' },
+          { path: '/chat', icon: MessageCircle, label: t('sidebar.nav.chat'), permission: 'chats.read' },
+          { path: '/contacts', icon: Contact, label: t('sidebar.nav.contacts'), permission: 'contacts.read' },
         ]
       },
       {
         section: t('sidebar.sections.operations'),
         items: [
-          { path: '/dashboard/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
-          { path: '/dashboard/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios'), permission: 'system.admin' },
-          { path: '/dashboard/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
-          { path: '/dashboard/qa', icon: ClipboardCheck, label: t('sidebar.nav.qa', 'QA & Coaching'), permission: 'supervisor.monitor' },
-          { path: '/dashboard/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
-          { path: '/dashboard/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
-          { path: '/dashboard/playbooks', icon: BookOpen, label: t('sidebar.nav.playbooks', 'Playbooks'), permission: 'playbooks.read' },
-          { path: '/dashboard/translation', icon: Languages, label: t('sidebar.nav.translation', 'Traducción'), permission: 'settings.read' },
+          { path: '/broadcast', icon: Megaphone, label: t('sidebar.nav.broadcast'), permission: 'broadcast.read' },
+          { path: '/internal-broadcasts', icon: Radio, label: t('sidebar.nav.internalBroadcasts', 'Anuncios'), permission: 'system.admin' },
+          { path: '/supervisor', icon: Eye, label: t('sidebar.nav.supervisor'), permission: 'supervisor.monitor' },
+          { path: '/wallboard', icon: Monitor, label: 'Wallboard', permission: 'supervisor.monitor' },
+          { path: '/qa', icon: ClipboardCheck, label: t('sidebar.nav.qa', 'QA & Coaching'), permission: 'supervisor.monitor' },
+          { path: '/flows', icon: GitBranch, label: t('sidebar.nav.flowBuilder'), permission: 'flows.read' },
+          { path: '/live-chat', icon: Globe, label: t('sidebar.nav.liveChat', 'Live Chat'), permission: 'settings.read' },
+          { path: '/playbooks', icon: BookOpen, label: t('sidebar.nav.playbooks', 'Playbooks'), permission: 'playbooks.read' },
+          { path: '/translation', icon: Languages, label: t('sidebar.nav.translation', 'Traducción'), permission: 'settings.read' },
         ]
       },
       {
         section: t('sidebar.sections.management'),
         items: [
-          { path: '/dashboard/agents', icon: Users, label: t('sidebar.nav.agents'), permission: 'agents.read' },
-          { path: '/dashboard/saved-replies', icon: MessageSquare, label: t('sidebar.nav.replies'), permission: 'replies.write' },
-          { path: '/dashboard/custom-fields', icon: ListChecks, label: t('sidebar.nav.fields'), permission: 'customFields.read' },
-          { path: '/dashboard/texts', icon: Languages, label: t('sidebar.nav.texts'), permission: 'settings.write' },
+          { path: '/agents', icon: Users, label: t('sidebar.nav.agents'), permission: 'agents.read' },
+          { path: '/saved-replies', icon: MessageSquare, label: t('sidebar.nav.replies'), permission: 'replies.write' },
+          { path: '/custom-fields', icon: ListChecks, label: t('sidebar.nav.fields'), permission: 'customFields.read' },
+          { path: '/texts', icon: Languages, label: t('sidebar.nav.texts'), permission: 'settings.write' },
         ]
       },
       {
         section: t('sidebar.sections.system'),
         items: [
-          { path: '/dashboard/audit', icon: Activity, label: t('sidebar.nav.activity'), permission: 'system.audit' },
-          { path: '/dashboard/exports', icon: Download, label: t('sidebar.nav.exports'), permission: 'exports.create' },
-          { path: '/dashboard/system', icon: Server, label: t('sidebar.nav.monitor'), permission: 'system.read' },
-          { path: '/dashboard/system-control', icon: Sliders, label: t('sidebar.nav.control'), permission: 'system.admin' },
-          { path: '/dashboard/media', icon: HardDrive, label: t('sidebar.nav.media', 'Media'), permission: 'system.manage' },
-          { path: '/dashboard/permissions', icon: KeyRound, label: t('sidebar.nav.permissions'), permission: 'agents.permissions' },
-          { path: '/dashboard/settings', icon: Settings, label: t('sidebar.nav.settings'), permission: 'settings.read' },
+          { path: '/audit', icon: Activity, label: t('sidebar.nav.activity'), permission: 'system.audit' },
+          { path: '/exports', icon: Download, label: t('sidebar.nav.exports'), permission: 'exports.create' },
+          { path: '/system', icon: Server, label: t('sidebar.nav.monitor'), permission: 'system.read' },
+          { path: '/system-control', icon: Sliders, label: t('sidebar.nav.control'), permission: 'system.admin' },
+          { path: '/media', icon: HardDrive, label: t('sidebar.nav.media', 'Media'), permission: 'system.manage' },
+          { path: '/permissions', icon: KeyRound, label: t('sidebar.nav.permissions'), permission: 'agents.permissions' },
+          { path: '/agent-engine', icon: Cpu, label: 'Agent Engine', permission: 'settings.read' },
+          { path: '/settings', icon: Settings, label: t('sidebar.nav.settings'), permission: 'settings.read' },
         ]
       }
     ];
-
-  // Helper colors
-  const statusConfig = {
-    online: { color: 'text-emerald-500', bg: 'bg-emerald-500', ring: 'ring-emerald-500/20' },
-    away: { color: 'text-amber-500', bg: 'bg-amber-500', ring: 'ring-amber-500/20' },
-    offline: { color: 'text-zinc-500', bg: 'bg-zinc-500', ring: 'ring-zinc-500/20' },
-  };
 
   const availabilityColors = {
     available: 'text-emerald-500',
     busy: 'text-amber-500',
     offline: 'text-zinc-500',
   };
-
-  const currentStatusStyle = statusConfig[agent?.onlineStatus || 'offline'];
 
   return (
     <aside
@@ -345,55 +339,44 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
                       : <User className="w-5 h-5" />
                 }
               </div>
-              <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-zinc-950 ${currentStatusStyle.bg}`} />
+              {/* Presence status dot (new system) */}
+              <div
+                className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-zinc-950"
+                style={{ backgroundColor: presenceState?.color || '#52525b' }}
+              />
             </div>
 
             {!isCollapsed && (
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-medium text-zinc-200 truncate">{agent?.name}</p>
-                <p className={`text-xs truncate ${currentStatusStyle.color} capitalize`}>{agent?.onlineStatus}</p>
+                <p
+                  className="text-xs truncate font-medium leading-none mt-0.5"
+                  style={{ color: presenceState?.color || '#6b7280' }}
+                >
+                  {presenceState?.label ?? (agent?.onlineStatus || 'offline')}
+                  {presenceState && (
+                    <span className="ml-1.5 font-mono text-zinc-500">{presenceLiveTime}</span>
+                  )}
+                </p>
               </div>
             )}
 
             {!isCollapsed && <ChevronDown className="w-4 h-4 text-zinc-600" />}
           </button>
 
-          {/* Popup Menu */}
+          {/* Popup Menu hacia arriba */}
           {showStatusMenu && (
-            <div className={`absolute bottom-full mb-3 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden p-1 w-64 z-50 ${isCollapsed ? 'left-14' : 'left-0 right-0'}`}>
-
-              {/* Profile Header in Menu */}
+            <div className={`absolute bottom-full mb-3 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl p-1 w-64 z-50 ${isCollapsed ? 'left-14' : 'left-0 right-0'}`}>
+              {/* Presence State Selector (new system) */}
               <div className="p-3 border-b border-zinc-800/50 mb-1">
-                <p className="text-xs font-medium text-zinc-500 uppercasemb-2">Estado</p>
-                <div className="space-y-1">
-                  <StatusButton
-                    status="online"
-                    label="En línea"
-                    active={agent?.onlineStatus === 'online'}
-                    onClick={() => handleStatusChange('online')}
-                    color="bg-emerald-500"
-                  />
-                  <StatusButton
-                    status="away"
-                    label="Ausente"
-                    active={agent?.onlineStatus === 'away'}
-                    onClick={() => handleStatusChange('away')}
-                    color="bg-amber-500"
-                  />
-                  <StatusButton
-                    status="offline"
-                    label="Desconectado"
-                    active={agent?.onlineStatus === 'offline'}
-                    onClick={() => handleStatusChange('offline')}
-                    color="bg-zinc-500"
-                  />
-                </div>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Estado</p>
+                <AgentStatusBar />
               </div>
 
               {/* Menu Links */}
               <div className="space-y-0.5 p-1">
-                <MenuLink icon={User} label="Mi Cuenta" onClick={() => navigate('/dashboard/my-settings/account')} />
-                <MenuLink icon={Settings} label="Preferencias" onClick={() => navigate('/dashboard/my-settings/preferences')} />
+                <MenuLink icon={User} label="Mi Cuenta" onClick={() => navigate('/my-settings/account')} />
+                <MenuLink icon={Settings} label="Preferencias" onClick={() => navigate('/my-settings/preferences')} />
                 <div className="h-px bg-zinc-800 my-1 mx-2" />
                 <MenuLink icon={LogOut} label="Cerrar Sesión" onClick={logout} danger />
               </div>
@@ -406,20 +389,6 @@ export default function Sidebar({ agent, stats }: SidebarProps) {
 }
 
 // ============= SUB-COMPONENTS =============
-
-function StatusButton({ status, label, active, onClick, color }: { status: string; label: string; active: boolean; onClick: () => void; color: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${active ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
-        }`}
-    >
-      <div className={`w-2.5 h-2.5 rounded-full ${color} ${active ? 'ring-2 ring-white/10' : ''}`} />
-      <span>{label}</span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50" />}
-    </button>
-  );
-}
 
 function MenuLink({ icon: Icon, label, onClick, danger }: { icon: React.ComponentType<any>; label: string; onClick: () => void; danger?: boolean }) {
   return (

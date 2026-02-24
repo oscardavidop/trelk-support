@@ -116,7 +116,9 @@ export function SidebarMedia({ sessionId, contactInfo }: SidebarMediaProps & { c
   useEffect(() => {
     if (!socket || !sessionId) return;
     const handleNewMessage = (msg: any) => {
-      if (msg.sessionId !== sessionId) return;
+      // Backend emits 'session' field; support both 'session' and 'sessionId' for compatibility
+      const msgSessionId = msg.session || msg.sessionId;
+      if (msgSessionId !== sessionId) return;
       const mediaTypes = ['image', 'video', 'audio', 'voice', 'file', 'document', 'sticker'];
       if (!mediaTypes.includes(msg.messageType)) return;
 
