@@ -44,8 +44,12 @@ import { playbookRoutes } from './playbook.routes.js';
 import { translationRoutes } from './translation.routes.js';
 import { presenceRoutes } from './presence.routes.js';
 import { agentEngineRoutes } from './agent-engine.routes.js';
+import { apiRateLimit } from '../middleware/rate-limit.js';
 
 export async function registerAPIRoutes(fastify: FastifyInstance): Promise<void> {
+  // Global API rate limit (100 req/min per IP) - applied before all routes
+  fastify.addHook('preHandler', apiRateLimit);
+
   // Static uploads (public)
   await registerStaticUploads(fastify);
   

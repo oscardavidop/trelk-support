@@ -10,6 +10,7 @@ import { User } from '../database/models/User.js';
 import { Types, FilterQuery } from 'mongoose';
 import { sendPostChatSurvey } from './survey.service.js';
 import { logActivity } from './activity-log.service.js';
+import { channel } from 'diagnostics_channel';
 /**
  * Get or create active session for a user
  */
@@ -39,7 +40,7 @@ export async function getOrCreateSession(user: IUser, telegramChatId: number): P
     actorType: 'user',
     actorId: user._id.toString(),
     actorName: user.firstName || 'User',
-    metadata: { userId: user._id.toString(), telegramChatId },
+    metadata: { userId: user._id.toString(), telegramChatId, channel: 'telegram' },
     description: `Session started by ${user.firstName || 'user'}`,
   });
 
@@ -745,149 +746,7 @@ export interface PaginatedSessions {
   totalPages: number;
   hasMore: boolean;
 }
-/**
- * Get sessions with filters and pagination
- * IMPORTANT: Respects agent visibility rules
- */
-// export async function getFilteredSessions(filters: SessionFilters): Promise<PaginatedSessions> {
-//   const { 
-//     status = 'open', 
-//     search, 
-//     dateFilter = 'all',
-//     agentId,
-//     isAdmin = false,
-//     page = 1, 
-//     limit = 50 
-//   } = filters;
 
-//   // Build base query
-//   const query: Record<string, unknown> = {};
-
-//   // Status filter with visibility rules
-//   if (status === 'open') {
-//     // Exclude 'bot' status - those are automated interactions that don't need human attention
-//     query.status = { $in: ['queued', 'waiting', 'human'] };
-
-//     // Apply visibility rules for non-admins
-//     if (!isAdmin && agentId) {
-//       // Non-admin agents can only see:
-//       // 1. Sessions assigned to them
-//       // 2. Sessions in queue (not assigned)
-//       query.$or = [
-//         { assignedAgent: new Types.ObjectId(agentId) },
-//         { status: { $in: ['queued', 'waiting'] }, assignedAgent: { $exists: false } },
-//       ];
-//       delete query.status; // Remove status filter, handled in $or
-//     }
-//   } else {
-//     // Closed sessions
-//     query.status = 'closed';
-
-//     // Non-admin agents only see their own closed sessions
-//     if (!isAdmin && agentId) {
-//       query.closedBy = new Types.ObjectId(agentId);
-//     }
-//   }
-
-//   // Date filter
-//   const now = new Date();
-//   if (dateFilter === 'today') {
-//     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-//     query.updatedAt = { $gte: startOfDay };
-//   } else if (dateFilter === 'week') {
-//     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-//     query.updatedAt = { $gte: weekAgo };
-//   } else if (dateFilter === 'month') {
-//     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-//     query.updatedAt = { $gte: monthAgo };
-//   }
-
-//   // Get total count first
-//   let totalCount: number;
-//   let sessions: IChatSession[];
-
-//   if (search) {
-//     // Search requires aggregation with user lookup
-//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-//     const pipeline: any[] = [
-//       { $match: query },
-//       {
-//         $lookup: {
-//           from: 'users',
-//           localField: 'user',
-//           foreignField: '_id',
-//           as: 'userDoc',
-//         },
-//       },
-//       { $unwind: '$userDoc' },
-//       {
-//         $match: {
-//           $or: [
-//             { 'userDoc.username': { $regex: search, $options: 'i' } },
-//             { 'userDoc.firstName': { $regex: search, $options: 'i' } },
-//             { 'userDoc.lastName': { $regex: search, $options: 'i' } },
-//             { sessionId: { $regex: search, $options: 'i' } },
-//             { 'userDoc.telegramId': parseInt(search) || -1 },
-//           ],
-//         },
-//       },
-//     ];
-
-//     // Count pipeline
-//     const countResult = await ChatSession.aggregate([...pipeline, { $count: 'total' }]);
-//     totalCount = countResult[0]?.total || 0;
-
-//     // Data pipeline with pagination
-//     const dataPipeline = [
-//       ...pipeline,
-//       { $sort: { updatedAt: -1 } },
-//       { $skip: (page - 1) * limit },
-//       { $limit: limit },
-//       {
-//         $lookup: {
-//           from: 'agents',
-//           localField: 'assignedAgent',
-//           foreignField: '_id',
-//           as: 'agentDoc',
-//         },
-//       },
-//       {
-//         $addFields: {
-//           user: '$userDoc',
-//           assignedAgent: { $arrayElemAt: ['$agentDoc', 0] },
-//         },
-//       },
-//       {
-//         $project: {
-//           userDoc: 0,
-//           agentDoc: 0,
-//         },
-//       },
-//     ];
-
-//     sessions = await ChatSession.aggregate(dataPipeline);
-//   } else {
-//     // Simple query without search
-//     totalCount = await ChatSession.countDocuments(query);
-//     sessions = await ChatSession.find(query)
-//       .populate('user')
-//       .populate('assignedAgent')
-//       .populate('closedBy')
-//       .sort({ updatedAt: -1 })
-//       .skip((page - 1) * limit)
-//       .limit(limit);
-//   }
-
-//   const totalPages = Math.ceil(totalCount / limit);
-
-//   return {
-//     sessions,
-//     total: totalCount,
-//     page,
-//     totalPages,
-//     hasMore: page < totalPages,
-//   };
-// }
 
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

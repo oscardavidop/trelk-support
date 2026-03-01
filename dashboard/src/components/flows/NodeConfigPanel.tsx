@@ -782,6 +782,21 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               )}
             </div>
 
+            {/* input messsage */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase r flex items-center gap-2">
+                <MessageSquare className="w-3 h-3" /> Mensaje de Cierre/Reapertura
+              </label>
+              <textarea
+                value={actionConfig.messageContent || ''}
+                onChange={(e) => updateConfig('messageContent', e.target.value)}
+                disabled={readOnly}
+                rows={3}
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 placeholder-zinc-600 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 outline-none resize-none"
+                placeholder={actionConfig.actionType === 'close_chat' ? 'Ej: Gracias por contactarnos. Si necesitas más ayuda, no dudes en escribirnos de nuevo.' : 'Ej: Bienvenido de nuevo. ¿En qué podemos ayudarte hoy?'}
+              />
+            </div>
+
             {/* Info Box */}
             <div className="flex items-start gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg">
               <CheckCircle2Icon className={`w-4 h-4 mt-0.5 shrink-0 ${actionConfig.actionType === 'close_chat' ? 'text-red-500/50' : 'text-emerald-500/50'

@@ -46,6 +46,8 @@ const breakTodayKey   = (agentId: string, date: string) => `presence:break_today
 const auxCacheKey     = () => `presence:aux_states`;
 
 let _io: SocketIOServer | null = null;
+let _heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+let _busyValidatorInterval: ReturnType<typeof setInterval> | null = null;
 
 // ─── IO init ─────────────────────────────────────────────────────────────────
 
@@ -63,6 +65,21 @@ export function initPresenceService(io: SocketIOServer): void {
     logger.error('presence', { action: 'global_config_seed_error', error: String(err) })
   );
   logger.info('presence', { action: 'initialized' });
+}
+
+/**
+ * Stop presence service intervals (for graceful shutdown)
+ */
+export function stopPresenceService(): void {
+  if (_heartbeatInterval) {
+    clearInterval(_heartbeatInterval);
+    _heartbeatInterval = null;
+  }
+  if (_busyValidatorInterval) {
+    clearInterval(_busyValidatorInterval);
+    _busyValidatorInterval = null;
+  }
+  logger.info('presence', { action: 'stopped' });
 }
 
 // ─── Aux state cache ─────────────────────────────────────────────────────────
@@ -265,7 +282,7 @@ export async function handleHeartbeat(
  * Called internally each second to check for missed heartbeats.
  */
 async function startHeartbeatMonitor(): Promise<void> {
-  setInterval(async () => {
+  _heartbeatInterval = setInterval(async () => {
     try {
       // Get all agents that are NOT offline
       const agents = await Agent.find({
@@ -333,7 +350,7 @@ async function startHeartbeatMonitor(): Promise<void> {
  * Periodically validate busy state is legitimate (agent must have active chats).
  */
 async function startBusyValidator(): Promise<void> {
-  setInterval(async () => {
+  _busyValidatorInterval = setInterval(async () => {
     try {
       const busyAgents = await Agent.find({
         auxiliaryStateCode: 'busy',

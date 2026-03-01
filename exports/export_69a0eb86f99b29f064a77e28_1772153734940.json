@@ -1,0 +1,66 @@
+{
+  "exportedAt": "2026-02-27T00:55:34.940Z",
+  "exportedBy": "6962dc472ba9a76efed78395",
+  "format": "json",
+  "version": "2.0",
+  "totalSessions": 1,
+  "sessions": [
+    {
+      "session": {
+        "id": "CS-3M84-441FF9",
+        "status": "closed",
+        "channel": "telegram",
+        "priority": "medium",
+        "tags": [],
+        "createdAt": "2026-02-22T20:51:34.852Z",
+        "closedAt": "2026-02-22T20:52:00.419Z",
+        "closedByType": "agent",
+        "closedByName": "Oscar",
+        "closeReason": "manual",
+        "reopenCount": 0,
+        "duration": "0m",
+        "durationMinutes": 0,
+        "lastMessageAt": "2026-02-22T20:51:54.697Z"
+      },
+      "user": {
+        "id": "696c30a5386057edeb43be9f",
+        "name": "Esteban",
+        "telegramId": 779612292
+      },
+      "agent": {
+        "id": "6962dc472ba9a76efed78395",
+        "name": "Oscar",
+        "email": "admin@trelk.site"
+      },
+      "messages": [
+        {
+          "id": "699b6c56d58f9f4fa08a3576",
+          "content": "User requested human support",
+          "sender": "bot",
+          "messageType": "system",
+          "createdAt": "2026-02-22T20:51:34.860Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        },
+        {
+          "id": "699b6c6ad58f9f4fa08a35d1",
+          "content": "Agent Oscar joined the conversation",
+          "sender": "agent",
+          "messageType": "system",
+          "createdAt": "2026-02-22T20:51:54.696Z",
+          "isEdited": false,
+          "deliveryStatus": "sent"
+        }
+      ],
+      "disposition": {
+        "categoryCode": "technical_support",
+        "categoryName": "Soporte Técnico",
+        "subcategoryCode": "login_error",
+        "subcategoryName": "Error en login",
+        "tags": []
+      },
+      "notes": [],
+      "transfers": []
+    }
+  ]
+}

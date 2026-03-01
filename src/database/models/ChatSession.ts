@@ -9,7 +9,7 @@ import type { IWebVisitor } from './WebVisitor.js';
 
 export type SessionStatus = 'bot' | 'queued' | 'waiting' | 'human' | 'closed';
 export type ClosedByType = 'user' | 'agent' | 'system';
-export type CloseReason = 'manual' | 'inactivity' | 'resolved' | 'spam';
+export type CloseReason = 'manual' | 'inactivity' | 'resolved' | 'spam' | 'automation';
 export type SatisfactionLevel = 'positive' | 'neutral' | 'negative';
 
 export type ChatCategory = 'support' | 'billing' | 'bug' | 'feedback' | 'other';
@@ -214,7 +214,7 @@ const ChatSessionSchema = new Schema<IChatSession>(
     },
     closeReason: {
       type: String,
-      enum: ['manual', 'inactivity', 'resolved', 'spam'],
+      enum: ['manual', 'inactivity', 'resolved', 'spam', 'automation'],
     },
     closureReason: String, // Legacy - detailed text
     // Disposition (tipificación) - Enterprise feature
@@ -305,5 +305,9 @@ const ChatSessionSchema = new Schema<IChatSession>(
 // Index for finding active sessions
 ChatSessionSchema.index({ status: 1, createdAt: -1 });
 ChatSessionSchema.index({ assignedAgent: 1, status: 1 });
+// Performance indexes: closedAt for time-range reports, createdAt for sorting
+ChatSessionSchema.index({ closedAt: -1 });
+ChatSessionSchema.index({ createdAt: -1 });
+ChatSessionSchema.index({ assignedAgent: 1, createdAt: -1 });
 
 export const ChatSession = mongoose.model<IChatSession>('ChatSession', ChatSessionSchema);

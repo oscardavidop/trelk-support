@@ -24,6 +24,7 @@ export interface ExecutionStep {
 }
 
 export interface ExecutionContext {
+  flowName: string;
   // Trigger data
   triggerType: string;
   triggerData: Record<string, any>;
@@ -69,6 +70,7 @@ export interface ExecutionContext {
 
 export interface IFlowExecution extends Document {
   _id: Types.ObjectId;
+  name?: string;
   flowId: Types.ObjectId;
   flowVersion: number;
   sessionId: string;

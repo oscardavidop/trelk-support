@@ -7,6 +7,7 @@ import { BaseChannelAdapter, SendResult, SurveyResult } from './base.adapter.js'
 import type { ChannelType, ChannelConfig, MediaContent, SendMessageOptions, SendMediaOptions, SurveyConfig } from '../types/omnichannel.js';
 import { logger } from '../services/logger.js';
 
+
 const WHATSAPP_CONFIG: ChannelConfig = {
   type: 'whatsapp',
   name: 'WhatsApp',

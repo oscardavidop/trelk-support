@@ -834,7 +834,7 @@ async function handleUserMediaMessage(
 
 // ============= CLEANUP =============
 
-// Cleanup old conversation contexts every 30 minutes
+// Cleanup old conversation contexts and rate limits every 30 minutes
 setInterval(() => {
   const now = Date.now();
   const timeout = 30 * 60 * 1000; // 30 minutes
@@ -842,6 +842,13 @@ setInterval(() => {
   for (const [chatId, ctx] of conversationContexts) {
     if (now - ctx.lastActivity > timeout) {
       conversationContexts.delete(chatId);
+    }
+  }
+
+  // Clean stale rate limit entries (no message in 30 min)
+  for (const [chatId, limit] of rateLimits) {
+    if (now - limit.lastMessage > timeout) {
+      rateLimits.delete(chatId);
     }
   }
 }, 30 * 60 * 1000);

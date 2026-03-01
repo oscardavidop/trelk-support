@@ -29,7 +29,7 @@ export const ENV = {
   POLLING_TIMEOUT: parseInt(process.env.POLLING_TIMEOUT || '30', 10), // Long polling timeout in seconds
   
   // Notification Bot
-  NOTIFICATION_BOT_TOKEN: process.env.NOTIFICATION_BOT_TOKEN || '7588166869:AAGroOeWsYbM_QmovwQmf6RvYFZ_maalwI0',
+  NOTIFICATION_BOT_TOKEN: process.env.NOTIFICATION_BOT_TOKEN || '',
   
   // Server
   PORT: parseInt(process.env.PORT || '8443', 10),
@@ -43,12 +43,14 @@ export const ENV = {
   
   // JWT
   JWT_SECRET: process.env.JWT_SECRET || 'change-this-secret-in-production',
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
   
   // Dashboard
   DASHBOARD_URL: process.env.DASHBOARD_URL || 'http://localhost:5173',
   DASHBOARD_PUBLIC_URL: process.env.DASHBOARD_PUBLIC_URL || 'https://trelk.site',
-  CORS_ORIGIN: (process.env.CORS_ORIGIN || ['http://localhost:5173', 'https://trelk.site', 'https://api.trelk.site',  'https://support.trelk.site'])
+  CORS_ORIGIN: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean)
+    : ['http://localhost:5173', 'https://trelk.site', 'https://api.trelk.site', 'https://support.trelk.site'],
 } as const;
 
 // ============= WEBHOOK CONFIGURATION =============
@@ -129,8 +131,19 @@ export function validateConfig(): void {
     throw new Error('SUPPORT_BOT_TOKEN is required');
   }
   
-  if (ENV.NODE_ENV === 'production' && !ENV.WEBHOOK_URL) {
-    throw new Error('WEBHOOK_URL is required in production');
+  if (ENV.NODE_ENV === 'production') {
+    if (!ENV.WEBHOOK_URL && !ENV.POLLING_ENABLED) {
+      throw new Error('WEBHOOK_URL is required in production (or enable POLLING_ENABLED)');
+    }
+    if (ENV.JWT_SECRET === 'change-this-secret-in-production') {
+      throw new Error('JWT_SECRET must be changed in production');
+    }
+    if (ENV.WEBHOOK_SECRET === 'trelk-support-secret') {
+      throw new Error('WEBHOOK_SECRET must be changed in production');
+    }
+    if (!ENV.NOTIFICATION_BOT_TOKEN) {
+      console.warn('⚠️  NOTIFICATION_BOT_TOKEN not set - notification features will be disabled');
+    }
   }
 }
 

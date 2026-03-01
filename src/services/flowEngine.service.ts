@@ -136,7 +136,7 @@ async function saveBotMessageToDb(
       externalMessageId: `bot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       deliveryStatus: 'sent',
     };
-    
+
     // Store keyboard data if present (for message history)
     if (replyMarkup) {
       const markup = replyMarkup as any;
@@ -184,7 +184,7 @@ async function sendMessageToChannel(
     }
     return null;
   }
-  
+
   // Default: Telegram
   return await sendMessageWithId(ctx.chatId, content, options);
 }
@@ -209,7 +209,7 @@ async function sendPhotoToChannel(
     }
     return null;
   }
-  
+
   return await sendPhotoWithId(ctx.chatId, url, options);
 }
 
@@ -233,7 +233,7 @@ async function sendDocumentToChannel(
     }
     return null;
   }
-  
+
   return await sendDocumentWithId(ctx.chatId, url, options);
 }
 
@@ -256,7 +256,7 @@ async function sendVideoToChannel(
     }
     return null;
   }
-  
+
   return await sendVideoWithId(ctx.chatId, url, options);
 }
 
@@ -280,7 +280,7 @@ async function sendAudioToChannel(
     }
     return result.success;
   }
-  
+
   if (isVoice) {
     return await sendVoice(ctx.chatId, url, options);
   }
@@ -292,6 +292,7 @@ async function sendAudioToChannel(
 // We use short IDs and store full data in memory + Redis for persistence
 
 import { getRedisClient } from './redis.js';
+import { logActivity } from './activity-log.service.js';
 
 interface CallbackMapping {
   flowId: string;
@@ -327,10 +328,10 @@ function registerCallback(flowId: string, nodeId: string, btnId: string, mode: s
     mode,
     createdAt: Date.now(),
   };
-  
+
   // Store in memory
   callbackRegistry.set(shortId, mapping);
-  
+
   // Store in Redis asynchronously (don't await to avoid blocking)
   const redis = getRedisClient();
   if (redis) {
@@ -342,7 +343,7 @@ function registerCallback(flowId: string, nodeId: string, btnId: string, mode: s
       logger.warn('flow', { action: 'callback_redis_store_failed', shortId, error: String(err) });
     });
   }
-  
+
   return shortId;
 }
 
@@ -358,7 +359,7 @@ export async function getCallbackDataAsync(shortId: string): Promise<CallbackMap
     }
     return memData;
   }
-  
+
   // Try Redis
   const redis = getRedisClient();
   if (redis) {
@@ -374,7 +375,7 @@ export async function getCallbackDataAsync(shortId: string): Promise<CallbackMap
       logger.warn('flow', { action: 'callback_redis_get_failed', shortId, error: String(err) });
     }
   }
-  
+
   return null;
 }
 
@@ -382,13 +383,13 @@ export async function getCallbackDataAsync(shortId: string): Promise<CallbackMap
 export function getCallbackData(shortId: string): CallbackMapping | null {
   const data = callbackRegistry.get(shortId);
   if (!data) return null;
-  
+
   // Check if expired
   if (Date.now() - data.createdAt > CALLBACK_TTL_MS) {
     callbackRegistry.delete(shortId);
     return null;
   }
-  
+
   return data;
 }
 
@@ -459,7 +460,7 @@ export class FlowEngine {
    */
   private async getFlowsByTrigger(triggerType: TriggerType): Promise<IFlow[]> {
     const cacheKey = CacheKeys.flowByTrigger(triggerType);
-    
+
     if (isRedisConnected()) {
       const flows = await getOrFetch<IFlow[]>(
         cacheKey,
@@ -495,7 +496,7 @@ export class FlowEngine {
    */
   private async getFlowById(flowId: string): Promise<IFlow | null> {
     const cacheKey = CacheKeys.flow(flowId);
-    
+
     if (isRedisConnected()) {
       const flow = await getOrFetch<IFlow | null>(
         cacheKey,
@@ -552,7 +553,7 @@ export class FlowEngine {
     // Get session and user/visitor data for context
     const isNoSession = event.sessionId.startsWith('nosession-');
     const session = isNoSession ? null : await ChatSession.findOne({ sessionId: event.sessionId });
-    
+
     // Handle different channels for user data
     let userData: {
       id: number | string;
@@ -564,7 +565,7 @@ export class FlowEngine {
       phone?: string;
       visitorId?: string;
     } | null = null;
-    
+
     if (event.channel === 'web') {
       // For WebChat, get user data from the event.data.user (populated by trigger)
       // WebVisitors don't have a User record - their data comes from the trigger event
@@ -588,7 +589,7 @@ export class FlowEngine {
           visitorId: event.externalUserId,
         };
       }
-      
+
       logger.info('flow', {
         action: 'web_user_data_resolved',
         sessionId: event.sessionId,
@@ -615,7 +616,7 @@ export class FlowEngine {
       logger.warn('flow', { action: 'missing_user', sessionId: event.sessionId, userId: event.userId, channel: event.channel });
       return;
     }
-    
+
     // Ensure we have user data for all channels
     if (!userData) {
       logger.warn('flow', { action: 'missing_user_data', sessionId: event.sessionId, channel: event.channel });
@@ -647,6 +648,7 @@ export class FlowEngine {
 
     // Build execution context
     const context: ExecutionContext = {
+      flowName: '', // Will be set when we find the matching flow
       triggerType: event.type,
       triggerData: event.data,
       sessionId: event.sessionId,
@@ -794,12 +796,12 @@ export class FlowEngine {
         if (!config.command) return false;
         const cmdName = event.data.command?.name?.toLowerCase() || '';
         if (cmdName !== config.command.toLowerCase()) return false;
-        
+
         // Check param matching if configured
         if (config.commandParamMatch && config.commandParamMatch !== 'any') {
           const param = event.data.command?.param || '';
           const expectedParam = config.commandParam || '';
-          
+
           switch (config.commandParamMatch) {
             case 'exact':
               if (param !== expectedParam) return false;
@@ -1383,7 +1385,7 @@ export class FlowEngine {
           const session = await getOrCreateSession(user, ctx.chatId);
           const oldSessionId = ctx.sessionId;
           ctx.sessionId = session.sessionId;
-          
+
           // IMPORTANT: Also update execution.sessionId so future button clicks can find this execution
           execution.sessionId = session.sessionId;
           execution.markModified('sessionId');
@@ -1412,6 +1414,16 @@ export class FlowEngine {
           if (updatedSession) {
             await notifyNewSession(updatedSession);
           }
+
+          await logActivity({
+            sessionId: ctx.sessionId,
+            action: 'agent_assigned',
+            actorType: 'flow',
+            actorId: userFlowId,
+            actorName: `Flow Automation`,
+            metadata: { flowName: ctx.flowName || 'Unknown', userId: ctx.userId, targetAgentId: config.targetAgentId || 'queue' },
+            description: `Session escalated to human support via flow automation`,
+          });
 
           logger.info('flow', {
             action: 'agent_assigned',
@@ -1444,6 +1456,16 @@ export class FlowEngine {
           await notifyNewSession(assignedSession);
         }
 
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'agent_assigned',
+          actorType: 'flow',
+          actorName: `Flow Automation`,
+          actorId: userFlowId,
+          metadata: { flowName: ctx.flowName || 'Unknown', userId: ctx.userId, targetAgentId: config.targetAgentId || 'queue' },
+          description: `Agent assigned to session via flow automation`,
+        });
+
         logger.info('flow', {
           action: 'agent_assigned',
           sessionId: ctx.sessionId,
@@ -1473,6 +1495,16 @@ export class FlowEngine {
           { sessionId: ctx.sessionId },
           { $set: { category: config.categoryName } }
         );
+
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'category_changed',
+          actorType: 'flow',
+          actorId: userFlowId,
+          actorName: `Flow Automation`,
+          metadata: { flowName: ctx.flowName || 'Unknown', userId: ctx.userId, category: config.categoryName },
+          description: `Session category changed via flow automation`,
+        });
         return { success: true };
       }
 
@@ -1526,6 +1558,9 @@ export class FlowEngine {
             createdBy: userFlowId,
           });
 
+          // add history log for tag creation
+
+
           logger.info('flow', {
             action: 'tag_created',
             tagName: config.tagName,
@@ -1534,7 +1569,17 @@ export class FlowEngine {
           });
         }
 
-      
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'tag_added',
+          actorType: 'flow',
+          actorId: user._id.toString(),
+          actorName: `Flow Automation`,
+          metadata: { flowName: ctx.flowName || 'Unknown', userId: user._id.toString(), tagId: tag._id.toString(), tagName: tag.name },
+          description: `Tag added to session via flow automation`,
+        });
+
+
         // Crear la relación UserTag (ignorar si ya existe)
         try {
           await UserTag.create({
@@ -1592,6 +1637,15 @@ export class FlowEngine {
           await Tag.findByIdAndUpdate(tagToRemove._id, { $inc: { usageCount: -1 } });
         }
 
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'tag_removed',
+          actorType: 'flow',
+          actorName: `Flow Automation`,
+          metadata: { flowName: ctx.flowName || 'Unknown', userId: userForRemove._id.toString(), tagId: tagToRemove._id.toString(), tagName: tagToRemove.name },
+          description: `Tag removed from session via flow automation`,
+        });
+
         return { success: true };
       }
 
@@ -1630,7 +1684,7 @@ export class FlowEngine {
         }
 
         const noteContent = this.resolvePlaceholders(config.noteContent || '', ctx);
-       
+
         // Crear la nota en la colección Note
         const note = await Note.create({
           user: user._id,
@@ -1638,6 +1692,16 @@ export class FlowEngine {
           content: noteContent,
           createdBy: userFlowId,
           // No hay agente en automatización, dejamos createdBy vacío o usamos un sistema
+        });
+
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'note_added',
+          actorType: 'flow',
+          actorId: user._id.toString(),
+          actorName: `Flow Automation`,
+          metadata: { flowName: ctx.flowName || 'Unknown', userId: user._id.toString(), noteId: note._id?.toString() },
+          description: `Note created via flow automation`,
         });
 
         logger.info('flow', {
@@ -1688,6 +1752,7 @@ export class FlowEngine {
           // Store response in variables
           execution.context.variables.webhookResponse = responseData;
 
+
           return {
             success: response.ok,
             output: { status: response.status, data: responseData },
@@ -1704,10 +1769,10 @@ export class FlowEngine {
       case 'set_custom_field': {
         const fieldKey = config.customFieldName || '';
         const resolvedValue = this.resolvePlaceholders(config.customFieldValue || '', ctx);
-        
+
         // Store in execution context variables (for backward compatibility)
         execution.context.variables[fieldKey] = resolvedValue;
-        
+
         // IMPORTANT: Also update ctx.customFields for i18n resolution within the same flow execution
         if (!ctx.customFields) {
           ctx.customFields = {};
@@ -1723,9 +1788,19 @@ export class FlowEngine {
           if (resolvedValue === 'true') typedValue = true;
           else if (resolvedValue === 'false') typedValue = false;
           else if (!isNaN(Number(resolvedValue)) && resolvedValue !== '') typedValue = Number(resolvedValue);
-          
+
           await setUserFieldByKey(user._id!.toString(), fieldKey, typedValue);
-          
+
+          await logActivity({
+            sessionId: ctx.sessionId,
+            action: 'custom_field_set',
+            actorType: 'flow',
+            actorId: user._id.toString(),
+            actorName: `Flow Automation`,
+            metadata: { flowName: ctx.flowName || 'Unknown', userId: user._id.toString(), fieldKey, fieldValue: typedValue },
+            description: `Custom field set via flow automation`,
+          });
+
           logger.info('flow', {
             action: 'custom_field_set',
             fieldKey,
@@ -1733,7 +1808,7 @@ export class FlowEngine {
             userId: ctx.userId,
           });
         }
-        
+
         return { success: true };
       }
 
@@ -1744,7 +1819,7 @@ export class FlowEngine {
           sessionId: ctx.sessionId,
           chatId: ctx.chatId,
         });
-        
+
         // First try by sessionId, then by telegramChatId (for cases where sessionId is temporary)
         let closeResult = await ChatSession.findOneAndUpdate(
           { sessionId: ctx.sessionId },
@@ -1758,13 +1833,13 @@ export class FlowEngine {
           },
           { new: true }
         ).populate('user');
-        
+
         logger.info('flow', {
           action: 'close_chat_first_attempt',
           foundBySessionId: !!closeResult,
           sessionId: ctx.sessionId,
         });
-        
+
         // If no session found by sessionId (maybe it's a temporary nosession-xxx),
         // try to find by telegramChatId
         if (!closeResult && ctx.chatId) {
@@ -1773,18 +1848,18 @@ export class FlowEngine {
             telegramChatId: ctx.chatId,
             status: { $in: ['queued', 'waiting', 'human', 'bot'] }
           }).select('sessionId status createdAt');
-          
+
           logger.info('flow', {
             action: 'close_chat_searching_by_chatId',
             chatId: ctx.chatId,
-            existingSessions: existingSessions.map(s => ({ 
-              sessionId: s.sessionId, 
-              status: s.status 
+            existingSessions: existingSessions.map(s => ({
+              sessionId: s.sessionId,
+              status: s.status
             })),
           });
-          
+
           closeResult = await ChatSession.findOneAndUpdate(
-            { 
+            {
               telegramChatId: ctx.chatId,
               status: { $in: ['queued', 'waiting', 'human', 'bot'] }
             },
@@ -1798,7 +1873,7 @@ export class FlowEngine {
             },
             { new: true }
           ).populate('user');
-          
+
           if (closeResult) {
             logger.info('flow', {
               action: 'close_chat_found_by_chatId',
@@ -1807,7 +1882,7 @@ export class FlowEngine {
             });
           }
         }
-        
+
         // Emit WebSocket events for real-time dashboard update
         if (closeResult) {
           // Cancel any pending scheduled messages
@@ -1817,18 +1892,18 @@ export class FlowEngine {
           } catch (e) {
             logger.warn('flow', { action: 'cancel_scheduled_messages_failed', error: String(e) });
           }
-          
+
           emitChatClosed(closeResult.sessionId, 'Closed by automation', 'automation');
-          
+
           logger.info('flow', {
             action: 'close_chat_success',
             sessionId: closeResult.sessionId,
             chatId: ctx.chatId,
           });
-          
+
           // Optionally send a confirmation message to user
-          if ((config as any).closeMessage) {
-            const closeMsg = this.resolvePlaceholders((config as any).closeMessage, ctx);
+          if (config.messageContent) {
+            const closeMsg = this.resolvePlaceholders(config.messageContent, ctx);
             await sendMessage(ctx.chatId, closeMsg);
           }
         } else {
@@ -1838,7 +1913,21 @@ export class FlowEngine {
             chatId: ctx.chatId,
           });
         }
-        
+
+        addMessage(ctx.sessionId, 'bot', 'User requested chat close via flow automation', {
+          messageType: 'system',
+        });
+
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'chat_closed',
+          actorType: 'flow',
+          actorId: SYSTEM_USERS.FLOW_USER_ID,
+          actorName: `Flow Automation`,
+          metadata: { flowName: ctx.flowName || 'Unknown', chatId: ctx.chatId },
+          description: `Chat closed via flow automation - User clicked close button`,
+        });
+
         return { success: !!closeResult };
       }
 
@@ -1859,6 +1948,16 @@ export class FlowEngine {
         if (queuedSession) {
           await notifyNewSession(queuedSession);
         }
+
+        await logActivity({
+          sessionId: ctx.sessionId,
+          action: 'added_to_queue',
+          actorType: 'flow',
+          actorId: SYSTEM_USERS.FLOW_USER_ID,
+          actorName: `Flow Automation`,
+          metadata: { flowName: ctx.flowName || 'Unknown', queuePriority: config.queuePriority || 'normal' },
+          description: `Session added to queue via flow automation`,
+        });
 
         logger.info('flow', {
           action: 'added_to_queue',
@@ -2192,10 +2291,10 @@ export class FlowEngine {
       for (const extract of extractVariables) {
         if (extract.variableName && extract.jsonPath) {
           const value = this.extractJsonPath(responseData, extract.jsonPath);
-          execution.context.variables[extract.variableName] = value !== undefined 
-            ? value 
+          execution.context.variables[extract.variableName] = value !== undefined
+            ? value
             : extract.defaultValue || '';
-          
+
           logger.info('flow', {
             action: 'api_call_variable_extracted',
             variableName: extract.variableName,
@@ -2231,13 +2330,13 @@ export class FlowEngine {
     switch (onError) {
       case 'stop':
         return { success: false, error: lastError || 'API call failed' };
-      
+
       case 'goto_node':
         if (errorNodeId) {
           return { success: true, nextNodeId: errorNodeId };
         }
         return { success: true };
-      
+
       case 'continue':
       default:
         return { success: true };
@@ -2249,13 +2348,13 @@ export class FlowEngine {
    */
   private extractJsonPath(obj: any, path: string): any {
     if (!obj || !path) return undefined;
-    
+
     const parts = path.split('.');
     let value = obj;
-    
+
     for (const part of parts) {
       if (value === undefined || value === null) return undefined;
-      
+
       // Handle array index notation like "items[0]"
       const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
       if (arrayMatch) {
@@ -2270,7 +2369,7 @@ export class FlowEngine {
         value = value[part];
       }
     }
-    
+
     return value;
   }
 
@@ -2471,12 +2570,12 @@ export class FlowEngine {
 
   // i18n configuration type for determining language source
   private getLanguageFromI18nConfig(
-    i18nConfig: { 
-      source: 'user_language' | 'custom_field' | 'variable' | 'fixed'; 
-      customFieldName?: string; 
-      variableName?: string; 
-      fixedLanguage?: string; 
-    } | undefined, 
+    i18nConfig: {
+      source: 'user_language' | 'custom_field' | 'variable' | 'fixed';
+      customFieldName?: string;
+      variableName?: string;
+      fixedLanguage?: string;
+    } | undefined,
     ctx: ExecutionContext
   ): SupportedLanguage {
     if (!i18nConfig) {
@@ -2498,7 +2597,7 @@ export class FlowEngine {
     switch (i18nConfig.source) {
       case 'user_language':
         return (ctx.user?.language || 'es') as SupportedLanguage;
-      
+
       case 'custom_field':
         if (i18nConfig.customFieldName) {
           const fieldValue = ctx.customFields?.[i18nConfig.customFieldName];
@@ -2519,7 +2618,7 @@ export class FlowEngine {
         }
         logger.warn('flow', { action: 'i18n_fallback_es', reason: 'custom_field_not_found_or_invalid' });
         return 'es' as SupportedLanguage; // Fallback
-      
+
       case 'variable':
         if (i18nConfig.variableName) {
           const varValue = ctx.variables?.[i18nConfig.variableName];
@@ -2536,10 +2635,10 @@ export class FlowEngine {
           }
         }
         return 'es' as SupportedLanguage; // Fallback
-      
+
       case 'fixed':
         return (i18nConfig.fixedLanguage || 'es') as SupportedLanguage;
-      
+
       default:
         return (ctx.user?.language || 'es') as SupportedLanguage;
     }
@@ -2551,13 +2650,13 @@ export class FlowEngine {
    * @param i18nConfig Optional configuration for determining which language to use for i18n texts
    */
   private resolvePlaceholders(
-    text: string, 
+    text: string,
     ctx: ExecutionContext,
-    i18nConfig?: { 
-      source: 'user_language' | 'custom_field' | 'variable' | 'fixed'; 
-      customFieldName?: string; 
-      variableName?: string; 
-      fixedLanguage?: string; 
+    i18nConfig?: {
+      source: 'user_language' | 'custom_field' | 'variable' | 'fixed';
+      customFieldName?: string;
+      variableName?: string;
+      fixedLanguage?: string;
     }
   ): string {
     if (!text) return '';
@@ -2586,14 +2685,14 @@ export class FlowEngine {
       if (trimmedPath.toUpperCase().startsWith('TEXT.')) {
         const textKey = trimmedPath.substring(5).toUpperCase(); // Remove "TEXT." prefix
         const resolvedText = getTextSync(textKey, userLang);
-        
+
         logger.info('flow', {
           action: 'text_registry_resolved',
           key: textKey,
           lang: userLang,
           resolved: resolvedText ? resolvedText.substring(0, 50) + '...' : 'NOT_FOUND',
         });
-        
+
         if (resolvedText) {
           // Recursively resolve any variables inside the text, passing i18nConfig
           return this.resolvePlaceholders(resolvedText, ctx, i18nConfig);
@@ -2701,9 +2800,9 @@ export class FlowEngine {
 
         // Use WithId versions to capture messageId, pass i18nConfig for language resolution
         const blockMessageId = await this.executeMessageBlockWithId(
-          block, 
-          chatId, 
-          ctx, 
+          block,
+          chatId,
+          ctx,
           blockKeyboard,
           config.i18nConfig
         );
@@ -2791,17 +2890,17 @@ export class FlowEngine {
   ): Promise<ExecutionResult> {
     // Get configuration from new format or legacy format
     const scheduleConfig = config.scheduleMessageConfig;
-    
+
     // Determine schedule type
-    const scheduleType = scheduleConfig?.type || 
+    const scheduleType = scheduleConfig?.type ||
       (config.scheduleType === 'after_inactivity' ? 'after_inactivity' : 'fixed_time');
-    
+
     // Get message content
     const messageText = this.resolvePlaceholders(
-      scheduleConfig?.messageContent || config.messageContent || '', 
+      scheduleConfig?.messageContent || config.messageContent || '',
       ctx
     );
-    
+
     if (!messageText) {
       logger.warn('flow', {
         action: 'schedule_message_skipped',
@@ -2810,7 +2909,7 @@ export class FlowEngine {
       });
       return { success: false, output: { error: 'Message content is empty' } };
     }
-    
+
     try {
       // Build scheduled message params
       const scheduleParams: any = {
@@ -2820,7 +2919,7 @@ export class FlowEngine {
         message: { text: messageText },
         createdBy: 'system',
       };
-      
+
       // Add type-specific config
       if (scheduleType === 'after_inactivity') {
         scheduleParams.delayMinutes = scheduleConfig?.delayMinutes || config.scheduleDelay || 30;
@@ -2829,17 +2928,17 @@ export class FlowEngine {
       } else if (scheduleType === 'on_event' && scheduleConfig?.triggerEvent) {
         scheduleParams.triggerEvent = scheduleConfig.triggerEvent;
       }
-      
+
       // Add expiration if configured
       if (scheduleConfig?.expiresInHours) {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + scheduleConfig.expiresInHours);
         scheduleParams.expiresAt = expiresAt;
       }
-      
+
       // Create the scheduled message
       const result = await createScheduledMessage(scheduleParams);
-      
+
       logger.info('flow', {
         action: 'schedule_message_created',
         scheduledMessageId: result?._id?.toString(),
@@ -2849,15 +2948,15 @@ export class FlowEngine {
         scheduledAt: scheduleParams.scheduledAt,
         triggerEvent: scheduleParams.triggerEvent,
       });
-      
-      return { 
-        success: !!result, 
-        output: { 
+
+      return {
+        success: !!result,
+        output: {
           scheduledMessageId: result?._id?.toString(),
           scheduleType,
           scheduledAt: scheduleParams.scheduledAt,
           delayMinutes: scheduleParams.delayMinutes,
-        } 
+        }
       };
     } catch (error) {
       logger.error('flow', {
@@ -2865,10 +2964,10 @@ export class FlowEngine {
         error: error instanceof Error ? error.message : String(error),
         sessionId: ctx.sessionId,
       });
-      
-      return { 
-        success: false, 
-        output: { error: error instanceof Error ? error.message : 'Failed to schedule message' } 
+
+      return {
+        success: false,
+        output: { error: error instanceof Error ? error.message : 'Failed to schedule message' }
       };
     }
   }
@@ -2889,7 +2988,7 @@ export class FlowEngine {
     switch (block.type) {
       case 'text': {
         const content = this.resolvePlaceholders(block.content || '', ctx, i18nConfig);
-        
+
         logger.info('flow', {
           action: 'send_block_text_preparing',
           chatId,
@@ -2900,12 +2999,12 @@ export class FlowEngine {
           hasReplyMarkup: !!replyMarkup,
           i18nSource: i18nConfig?.source || 'user_language',
         });
-        
+
         if (!content) {
           logger.info('flow', { action: 'send_block_text_empty', chatId, reason: 'no_content' });
           return null; // Empty text is ok - skipped
         }
-        
+
         // Attempt to send via channel router
         logger.info('flow', {
           action: 'send_block_text_sending',
@@ -2913,10 +3012,10 @@ export class FlowEngine {
           channel: ctx.channel || 'telegram',
           contentPreview: content.substring(0, 50),
         });
-        
+
         // Use omnichannel message routing
         const messageId = await sendMessageToChannel(ctx, content, { replyMarkup, parseMode });
-        
+
         if (messageId) {
           logger.info('flow', {
             action: 'send_block_text_success',
@@ -2980,11 +3079,11 @@ export class FlowEngine {
         // Use omnichannel message routing
         const success = await sendAudioToChannel(ctx, block.url, !!(block as any).isVoiceNote, { replyMarkup });
         if (!success) {
-          logger.error('flow', { 
-            action: (block as any).isVoiceNote ? 'send_block_voice_failed' : 'send_block_audio_failed', 
-            chatId, 
+          logger.error('flow', {
+            action: (block as any).isVoiceNote ? 'send_block_voice_failed' : 'send_block_audio_failed',
+            chatId,
             channel: ctx.channel || 'telegram',
-            url: block.url 
+            url: block.url
           });
           return false;
         }
@@ -3252,13 +3351,13 @@ export class FlowEngine {
     // Note: sessionId might have changed during execution (e.g., assign_agent creates new session)
     // so we also search by chatId from buttonData
     const chatId = buttonData?.user?.telegramId || buttonData?.chatId;
-    
+
     let execution = await FlowExecution.findOne({
       flowId,
       sessionId,
       status: { $in: ['running', 'paused'] },
     });
-    
+
     // If not found by sessionId, try by chatId (in case sessionId changed during execution)
     if (!execution && chatId) {
       execution = await FlowExecution.findOne({
@@ -3266,7 +3365,7 @@ export class FlowEngine {
         chatId,
         status: { $in: ['running', 'paused'] },
       });
-      
+
       if (execution) {
         logger.info('flow', {
           action: 'execution_found_by_chatId',
@@ -3358,7 +3457,7 @@ export class FlowEngine {
       // Categorize target nodes
       const messageNodes: string[] = [];
       const actionNodes: string[] = [];
-      
+
       for (const edge of buttonEdges) {
         const targetNode = flow.nodes.find(n => n.id === edge.target);
         if (targetNode && targetNode.type === 'action') {
@@ -3389,7 +3488,7 @@ export class FlowEngine {
       if (messageNodes.length > 0) {
         // Use the first message node as the "next" node
         const nextNodeId = messageNodes[0];
-        
+
         // Check if we should edit instead of send
         const messageMode = buttonData.button?.onClick?.messageMode || 'send_new';
         if (messageMode === 'edit_message' && execution.context.lastMessageId) {
@@ -3420,7 +3519,7 @@ export class FlowEngine {
 
               if (resolvedContent) {
                 await editMessage(execution.context.chatId, execution.context.lastMessageId, resolvedContent, { replyMarkup, parseMode });
-                
+
                 // Check if the message node has buttons
                 const hasKeyboard = config?.keyboard?.rows?.length > 0 ||
                   config?.messageBlocks?.some((b: any) => b.keyboard?.rows?.length > 0);
@@ -3592,10 +3691,10 @@ export class FlowEngine {
               // No buttons - continue execution to process any connected nodes
               // The message was edited, so we don't need to execute send_message again
               // but we DO need to continue to any nodes connected to nextNode
-              
+
               // Find the node AFTER nextNode (the send_message we just edited)
               const afterEditNodeId = this.getNextNode(flow, nextNodeId);
-              
+
               logger.info('flow', {
                 action: 'continuing_after_edit_no_buttons',
                 nodeId,
@@ -3604,7 +3703,7 @@ export class FlowEngine {
                 buttonId,
                 messageId: execution.context.lastMessageId,
               });
-              
+
               // Mark the send_message node as completed
               const sendMsgStep: ExecutionStep = {
                 nodeId: nextNodeId,
@@ -3625,7 +3724,7 @@ export class FlowEngine {
               execution.currentNodeId = nextNodeId;
               execution.resume();
               await execution.save();
-              
+
               // Continue from the node AFTER nextNode (if it exists)
               if (afterEditNodeId) {
                 await this.executeFromNode(execution, flow, afterEditNodeId);
@@ -3720,6 +3819,7 @@ export class FlowEngine {
     const userInfo = data.user || {};
     const now = new Date();
     const context: ExecutionContext = {
+      flowName: flow.name,
       triggerType: 'button_clicked',
       triggerData: {
         buttonId: data.button?.id,
@@ -3765,7 +3865,7 @@ export class FlowEngine {
     // Don't resume executions that were paused very recently (within 2 seconds)
     // This prevents the message that triggered the flow from also resuming it
     const minPausedAt = new Date(Date.now() - 2000);
-    
+
     const executions = await FlowExecution.find({
       sessionId,
       status: 'paused',
@@ -3786,7 +3886,7 @@ export class FlowEngine {
 
       // Check for data collection config
       const dcConfig = execution.context.variables._dataCollection;
-      
+
       logger.info('flow', {
         action: 'resume_checking_data_collection',
         executionId: execution._id.toString(),
@@ -3794,7 +3894,7 @@ export class FlowEngine {
         variablesFromDB: JSON.stringify(execution.context.variables),
         userResponse: userResponse?.substring(0, 50),
       });
-      
+
       if (dcConfig && userResponse) {
         // Validate the response
         const validation = this.validateResponse(userResponse, dcConfig);
@@ -3802,7 +3902,7 @@ export class FlowEngine {
         if (!validation.valid) {
           // Increment retry count
           dcConfig.retryCount = (dcConfig.retryCount || 0) + 1;
-          
+
           // Update the config in execution context
           execution.context.variables._dataCollection = dcConfig;
           execution.markModified('context');
@@ -3840,7 +3940,7 @@ export class FlowEngine {
           const varName = dcConfig.variableName;
           execution.context.variables[varName] = userResponse;
           delete execution.context.variables._dataCollection;
-          
+
           // Mark context as modified for Mongoose to detect nested changes
           execution.markModified('context');
           execution.markModified('context.variables');
@@ -3861,7 +3961,7 @@ export class FlowEngine {
             if (userResponse === 'true') typedValue = true;
             else if (userResponse === 'false') typedValue = false;
             else if (!isNaN(Number(userResponse)) && userResponse !== '') typedValue = Number(userResponse);
-            
+
             await setUserFieldByKey(user._id!.toString(), varName, typedValue);
           }
 
@@ -3876,12 +3976,12 @@ export class FlowEngine {
       }
 
       execution.resume();
-      
+
       // Store variables before save to ensure they persist
       const savedVariables = { ...execution.context.variables };
-      
+
       await execution.save();
-      
+
       // Restore variables to execution context (in case Mongoose reset them)
       execution.context.variables = savedVariables;
 
@@ -3946,6 +4046,7 @@ export class FlowEngine {
 
     // Build full context with defaults
     const fullContext: ExecutionContext = {
+      flowName: flow.name,
       triggerType: context.triggerType || 'chat_created',
       triggerData: context.triggerData || {},
       sessionId: context.sessionId || 'sim_session_001',
@@ -4118,7 +4219,7 @@ export class FlowEngine {
     }
 
     const newText = this.resolvePlaceholders(editConfig.newText || '', ctx);
-    
+
     // Build keyboard if needed
     let replyMarkup: InlineKeyboardMarkup | undefined;
     if (editConfig.updateKeyboard && editConfig.newKeyboard) {
@@ -4218,7 +4319,7 @@ export class FlowEngine {
     }
 
     let newKeyboard: InlineKeyboardMarkup | undefined;
-    
+
     switch (kbConfig.operation) {
       case 'replace':
       case 'add_row':
@@ -4257,7 +4358,7 @@ export class FlowEngine {
     execution: IFlowExecution
   ): Promise<ExecutionResult> {
     const messageId = execution.context.variables._lastBotMessageId;
-    
+
     if (!messageId) {
       return { success: false, error: 'No message ID found to remove keyboard' };
     }
@@ -4307,7 +4408,7 @@ export class FlowEngine {
     });
 
     const messageText = this.resolvePlaceholders(kbConfig.messageText || 'Selecciona una opción:', ctx);
-    
+
     const msgId = await sendMessageWithId(ctx.chatId, messageText, {
       replyMarkup,
       parseMode: 'HTML',
@@ -4395,7 +4496,7 @@ export class FlowEngine {
     execution: IFlowExecution
   ): Promise<ExecutionResult> {
     const pinConfig = (config as any).pinMessageConfig;
-    
+
     let messageId: number | null = null;
 
     switch (pinConfig?.targetType || 'last_bot_message') {
@@ -4437,7 +4538,7 @@ export class FlowEngine {
     execution: IFlowExecution
   ): Promise<ExecutionResult> {
     const unpinConfig = (config as any).pinMessageConfig;
-    
+
     let messageId: number | undefined;
 
     if (unpinConfig?.targetType === 'specific_id' && unpinConfig.specificMessageId) {
@@ -4577,8 +4678,8 @@ export class FlowEngine {
 
     const phoneNumber = this.resolvePlaceholders(contactConfig.phoneNumber || '', ctx);
     const firstName = this.resolvePlaceholders(contactConfig.firstName || '', ctx);
-    const lastName = contactConfig.lastName 
-      ? this.resolvePlaceholders(contactConfig.lastName, ctx) 
+    const lastName = contactConfig.lastName
+      ? this.resolvePlaceholders(contactConfig.lastName, ctx)
       : undefined;
 
     const msgId = await sendContact(ctx.chatId, phoneNumber, firstName, {
@@ -4612,8 +4713,8 @@ export class FlowEngine {
       return { success: false, error: 'No sticker config provided' };
     }
 
-    const sticker = stickerConfig.stickerSource === 'url' 
-      ? stickerConfig.stickerUrl 
+    const sticker = stickerConfig.stickerSource === 'url'
+      ? stickerConfig.stickerUrl
       : stickerConfig.stickerId;
 
     if (!sticker) {
@@ -4646,7 +4747,7 @@ export class FlowEngine {
   ): Promise<ExecutionResult> {
     // For now, copy the last user message
     const sourceMessageId = ctx.message?.id ? parseInt(ctx.message.id, 10) : null;
-    
+
     if (!sourceMessageId) {
       return { success: false, error: 'No source message ID found' };
     }
@@ -4731,36 +4832,36 @@ export class FlowEngine {
     if (subflowConfig.waitForCompletion) {
       // Execute subflow synchronously
       const subExecution = await this.startExecution(subflow, subflowContext, triggerNode.id);
-      
+
       // Wait for completion (with timeout)
       const maxWait = 30000; // 30 seconds
       const startTime = Date.now();
-      
+
       while (Date.now() - startTime < maxWait) {
         const updatedExecution = await FlowExecution.findById(subExecution._id);
         if (!updatedExecution) break;
-        
+
         if (['completed', 'failed', 'cancelled'].includes(updatedExecution.status)) {
           // Copy variables back to parent
           if (subflowConfig.passVariables) {
             Object.assign(execution.context.variables, updatedExecution.context.variables);
             execution.markModified('context.variables');
           }
-          
+
           return {
             success: updatedExecution.status === 'completed',
             output: { subflowStatus: updatedExecution.status },
           };
         }
-        
+
         await new Promise(resolve => setTimeout(resolve, 500));
       }
-      
+
       logger.warn('flow', {
         action: 'run_subflow_timeout',
         subflowId: subflow._id.toString(),
       });
-      
+
       return { success: false, error: 'Subflow execution timeout' };
     } else {
       // Execute subflow asynchronously (fire and forget)
@@ -4770,7 +4871,7 @@ export class FlowEngine {
           error: String(err),
         });
       });
-      
+
       return { success: true };
     }
   }

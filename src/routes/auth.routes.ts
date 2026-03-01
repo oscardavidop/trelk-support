@@ -8,7 +8,7 @@ import { loginAgent, logoutAgent, refreshToken } from '../services/auth.service.
 import { clearLockOnLogout } from '../services/auto-lock.service.js';
 import { createAgent } from '../services/agent.service.js';
 import { authMiddleware, requirePermission } from '../middleware/auth.js';
-import { authRateLimit, applyFailurePenalty } from '../middleware/rate-limit.js';
+import { authRateLimit, mfaVerifyRateLimit, applyFailurePenalty } from '../middleware/rate-limit.js';
 import { ENV } from '../config/index.js';
 import { startQRLogin, getQRStatus } from '../services/qr-login.service.js';
 import {
@@ -201,6 +201,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
    */
   fastify.post<{ Body: { loginToken: string; deviceFingerprint?: string } }>(
     '/api/auth/mfa/complete-login',
+    { preHandler: mfaVerifyRateLimit },
     async (request, reply) => {
       const { loginToken, deviceFingerprint } = request.body;
 
@@ -394,40 +395,64 @@ export async function registerAuthRoutes(fastify: FastifyInstance): Promise<void
   /**
    * Setup first admin (only when no agents exist)
    * This route is only available during initial setup
+   * Uses Redis lock to prevent race condition creating multiple admins
    */
-  fastify.post<{ Body: RegisterBody }>('/api/auth/setup', async (request, reply) => {
+  fastify.post<{ Body: RegisterBody }>('/api/auth/setup', { preHandler: authRateLimit }, async (request, reply) => {
     const { Agent } = await import('../database/index.js');
+    
+    // Use Redis lock to prevent race condition
+    let lockValue: string | null = null;
+    try {
+      const { acquireLock, releaseLock } = await import('../services/redis.js');
+      lockValue = await acquireLock('setup_admin', 10);
+    } catch { /* Redis may not be available */ }
+
     const count = await Agent.countDocuments();
 
     if (count > 0) {
+      if (lockValue) {
+        const { releaseLock } = await import('../services/redis.js');
+        await releaseLock('setup_admin', lockValue);
+      }
       return reply.code(403).send({ ok: false, error: 'Setup already completed' });
     }
 
     const { name, email, password } = request.body;
 
     if (!name || !email || !password) {
+      if (lockValue) {
+        const { releaseLock } = await import('../services/redis.js');
+        await releaseLock('setup_admin', lockValue);
+      }
       return reply.code(400).send({ ok: false, error: 'Name, email, and password required' });
     }
 
-    const agent = await createAgent({ name, email, password, role: 'admin' });
-    
-    // Extract device info for the setup login
-    const deviceInfo = extractDeviceInfo(request);
-    const loginResult = await loginAgent(email, password, deviceInfo);
+    try {
+      const agent = await createAgent({ name, email, password, role: 'admin' });
+      
+      // Extract device info for the setup login
+      const deviceInfo = extractDeviceInfo(request);
+      const loginResult = await loginAgent(email, password, deviceInfo);
 
-    reply.setCookie('token', loginResult.token!, {
-      httpOnly: true,
-      secure: ENV.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60,
-    });
+      reply.setCookie('token', loginResult.token!, {
+        httpOnly: true,
+        secure: ENV.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 24 * 60 * 60,
+      });
 
-    return {
-      ok: true,
-      agent,
-      token: loginResult.token,
-    };
+      return {
+        ok: true,
+        agent,
+        token: loginResult.token,
+      };
+    } finally {
+      if (lockValue) {
+        const { releaseLock } = await import('../services/redis.js');
+        await releaseLock('setup_admin', lockValue);
+      }
+    }
   });
 
   // ============= QR LOGIN ROUTES =============

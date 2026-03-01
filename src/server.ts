@@ -34,11 +34,13 @@ import { initializeSocketIO } from "./services/socket.js";
 import { initializeWebChatSocket, setDashboardIO } from "./services/webchat-socket.service.js";
 import { initializeChannelManager } from "./channels/index.js";
 import { performFullReconciliation } from "./services/reconciliation.service.js";
-import { initPresenceService } from "./services/presence.service.js";
+import { initPresenceService, stopPresenceService } from "./services/presence.service.js";
 import { registerAPIRoutes } from "./routes/index.js";
 import { logger } from "./services/logger.js";
 import type { TelegramUpdate } from "./types/index.js";
 import fs from "fs";
+import { registerSecurityHeaders } from "./middleware/security-headers.js";
+import { inputSanitizer } from "./middleware/input-sanitizer.js";
 // Redis & BullMQ
 import {
   initializeRedis,
@@ -107,6 +109,12 @@ async function registerPlugins(): Promise<void> {
   await fastify.register(fastifyCookie, {
     secret: ENV.JWT_SECRET,
   });
+
+  // Security headers (Helmet equivalent)
+  registerSecurityHeaders(fastify);
+
+  // Global input sanitization (NoSQL injection prevention)
+  fastify.addHook('preHandler', inputSanitizer);
 }
 
 // ============= TELEGRAM WEBHOOK ENDPOINT =============
@@ -117,7 +125,8 @@ fastify.post(WEBHOOK_CONFIG.path, async (request, reply) => {
   const secretToken = request.headers[WEBHOOK_CONFIG.secretHeader] as string;
 
   if (secretToken !== ENV.WEBHOOK_SECRET) {
-    // logger.warn('api', { error: 'Invalid webhook secret' });
+    logger.warn('api', { action: 'webhook_invalid_secret', ip: request.ip });
+    return reply.code(401).send({ ok: false, error: 'Unauthorized' });
   }
 
   const update = request.body as TelegramUpdate;
@@ -139,6 +148,13 @@ fastify.post(WEBHOOK_CONFIG.path, async (request, reply) => {
 // Handles QR Login callbacks and commands
 
 fastify.post("/webhook/notifications", async (request, reply) => {
+  // Validate secret token on notification webhook too
+  const secretToken = request.headers[WEBHOOK_CONFIG.secretHeader] as string;
+  if (secretToken !== ENV.WEBHOOK_SECRET) {
+    logger.warn('api', { action: 'notification_webhook_invalid_secret', ip: request.ip });
+    return reply.code(401).send({ ok: false, error: 'Unauthorized' });
+  }
+
   const update = request.body as NotificationBotUpdate;
 
   // Process update asynchronously using centralized handler
@@ -156,40 +172,15 @@ fastify.post("/webhook/notifications", async (request, reply) => {
 // ============= HEALTH & STATUS ENDPOINTS =============
 
 fastify.get("/health", async () => {
-  const redisHealth = getRedisHealth();
-  const queuesInitialized = areWorkersInitialized();
-  const pollingStatus = getPollingStatus();
-
+  // Only expose minimal health info publicly
   return {
     status: "ok",
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    version: "2.0.0",
-    mode: pollingStatus.enabled ? "polling" : "webhook",
-    redis: {
-      connected: isRedisConnected(),
-      hitRate: redisHealth.hitRate,
-      errors: redisHealth.errorCount,
-    },
-    queues: {
-      initialized: queuesInitialized,
-    },
-    polling: pollingStatus.enabled
-      ? {
-          supportBot: pollingStatus.supportBot,
-          notificationBot: pollingStatus.notificationBot,
-        }
-      : undefined,
   };
 });
 
 fastify.get("/", async () => {
-  return {
-    name: "Trelk Support Platform",
-    version: "2.0.0",
-    status: "running",
-    mode: isPollingEnabled() ? "polling" : "webhook",
-  };
+  return { status: "ok" };
 });
 
 // ============= WEBHOOK MANAGEMENT ENDPOINTS =============
@@ -246,9 +237,10 @@ fastify.post("/webhook/notifications/setup", async (request, reply) => {
     return reply.code(401).send({ ok: false });
   }
 
-  const NOTIFICATION_BOT_TOKEN =
-    process.env.NOTIFICATION_BOT_TOKEN ||
-    "7588166869:AAGroOeWsYbM_QmovwQmf6RvYFZ_maalwI0";
+  const NOTIFICATION_BOT_TOKEN = ENV.NOTIFICATION_BOT_TOKEN;
+  if (!NOTIFICATION_BOT_TOKEN) {
+    return reply.code(500).send({ ok: false, error: 'NOTIFICATION_BOT_TOKEN not configured' });
+  }
   const TELEGRAM_API_BASE =
     process.env.TELEGRAM_API_BASE_URL || "https://api.telegram.org";
   const webhookUrl = `${ENV.WEBHOOK_URL}/webhook/notifications`;
@@ -285,9 +277,10 @@ fastify.post("/webhook/notifications/setup", async (request, reply) => {
 
     return reply
       .code(500)
-      .send({ ok: false, error: data.description || "Failed to set webhook" });
+      .send({ ok: false, error: "Failed to set webhook" });
   } catch (error) {
-    return reply.code(500).send({ ok: false, error: String(error) });
+    logger.error('api', { action: 'notification_webhook_setup_error', error: String(error) });
+    return reply.code(500).send({ ok: false, error: 'Internal server error' });
   }
 });
 
@@ -297,9 +290,10 @@ fastify.get("/webhook/notifications/info", async (request, reply) => {
     return reply.code(401).send({ ok: false });
   }
 
-  const NOTIFICATION_BOT_TOKEN =
-    process.env.NOTIFICATION_BOT_TOKEN ||
-    "7588166869:AAGroOeWsYbM_QmovwQmf6RvYFZ_maalwI0";
+  const NOTIFICATION_BOT_TOKEN = ENV.NOTIFICATION_BOT_TOKEN;
+  if (!NOTIFICATION_BOT_TOKEN) {
+    return reply.code(500).send({ ok: false, error: 'NOTIFICATION_BOT_TOKEN not configured' });
+  }
   const TELEGRAM_API_BASE =
     process.env.TELEGRAM_API_BASE_URL || "https://api.telegram.org";
 
@@ -310,14 +304,15 @@ fastify.get("/webhook/notifications/info", async (request, reply) => {
     const data = await response.json();
     return { ok: true, webhook: data };
   } catch (error) {
-    return reply.code(500).send({ ok: false, error: String(error) });
+    logger.error('api', { action: 'notification_webhook_info_error', error: String(error) });
+    return reply.code(500).send({ ok: false, error: 'Internal server error' });
   }
 });
 
 fastify.get("/api/widget/trelk-chat.js", async (request, reply) => {
   const filePath = path.join(__dirname, "../widget/trelk-chat.js");
   if (fs.existsSync(filePath)) {
-    return reply.type("application/javascript").send(fs.createReadStream("/workspaces/support/widget/trelk-chat.js"));
+    return reply.type("application/javascript").send(fs.createReadStream(filePath));
   } else {
     return reply.code(404).send("Not found");
   }
@@ -356,7 +351,8 @@ fastify.get("/queues/stats", async (request, reply) => {
       },
     };
   } catch (error) {
-    return reply.code(500).send({ ok: false, error: String(error) });
+    logger.error('api', { action: 'queue_stats_error', error: String(error) });
+    return reply.code(500).send({ ok: false, error: 'Internal server error' });
   }
 });
 
@@ -510,6 +506,10 @@ async function shutdown(): Promise<void> {
 
     // Stop Flow Engine
     flowEngine.stop();
+
+    // Stop Presence Service intervals
+    stopPresenceService();
+    console.log("   ✅ Presence Service stopped");
 
     // Stop cache sync and flush pending writes to MongoDB
     stopCacheSync();

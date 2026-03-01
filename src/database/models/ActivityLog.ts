@@ -33,9 +33,14 @@ export type ActivityAction =
   | 'user_unblocked'
   | 'first_response'
   | 'sla_warning'
-  | 'sla_breached';
+  | 'sla_breached'
+  | 'note_created'
+  | 'custom_field_set'
+  | 'chat_closed'
+  | 'added_to_queue'
+  | 'agent_assigned'
 
-export type ActorType = 'user' | 'agent' | 'supervisor' | 'system' | 'rule' | 'bot';
+export type ActorType = 'user' | 'agent' | 'supervisor' | 'system' | 'rule' | 'bot' | 'flow';
 
 export interface IActivityActor {
   type: ActorType;
@@ -85,7 +90,9 @@ const ActivityLogSchema = new Schema<IActivityLog>(
         'rating_received', 'rule_triggered', 'user_blocked', 'user_unblocked',
         'first_response', 'sla_warning', 'sla_breached',
         'scheduled_message_created', 'scheduled_message_sent', 'scheduled_message_cancelled',
-        'scheduled_message_expired', 'scheduled_message_failed'
+        'scheduled_message_expired', 'scheduled_message_failed',
+        'note_created', 'custom_field_set', 'chat_closed',
+        'added_to_queue', 'agent_assigned',
       ],
       required: true,
       index: true,
@@ -93,7 +100,7 @@ const ActivityLogSchema = new Schema<IActivityLog>(
     actor: {
       type: {
         type: String,
-        enum: ['user', 'agent', 'supervisor', 'system', 'rule', 'bot'],
+        enum: ['user', 'agent', 'supervisor', 'system', 'rule', 'bot', 'flow'],
         required: true,
       },
       id: {

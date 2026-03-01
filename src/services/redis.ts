@@ -521,3 +521,94 @@ export async function ping(): Promise<boolean> {
     return false;
   }
 }
+
+// ============= ATOMIC OPERATIONS (for fraud detection, rate limiting) =============
+
+/**
+ * Atomic increment (INCR) - returns new value
+ */
+export async function increment(key: string): Promise<number> {
+  if (!isRedisAvailable()) return 0;
+  try {
+    operationCount++;
+    const result = await redisClient!.incr(key);
+    lastSuccessfulOperation = Date.now();
+    return result;
+  } catch (error) {
+    errorCount++;
+    logger.error('redis', { action: 'incr_error', key, error: String(error) });
+    return 0;
+  }
+}
+
+/**
+ * Set expiration time on key (seconds)
+ */
+export async function expire(key: string, seconds: number): Promise<boolean> {
+  if (!isRedisAvailable()) return false;
+  try {
+    await redisClient!.expire(key, seconds);
+    return true;
+  } catch (error) {
+    errorCount++;
+    logger.error('redis', { action: 'expire_error', key, error: String(error) });
+    return false;
+  }
+}
+
+/**
+ * Add member to set (SADD)
+ */
+export async function sadd(key: string, ...members: string[]): Promise<number> {
+  if (!isRedisAvailable()) return 0;
+  try {
+    operationCount++;
+    const result = await redisClient!.sadd(key, ...members);
+    lastSuccessfulOperation = Date.now();
+    return result;
+  } catch (error) {
+    errorCount++;
+    logger.error('redis', { action: 'sadd_error', key, error: String(error) });
+    return 0;
+  }
+}
+
+/**
+ * Get all members of set (SMEMBERS)
+ */
+export async function smembers(key: string): Promise<string[]> {
+  if (!isRedisAvailable()) return [];
+  try {
+    operationCount++;
+    const result = await redisClient!.smembers(key);
+    lastSuccessfulOperation = Date.now();
+    return result;
+  } catch (error) {
+    errorCount++;
+    logger.error('redis', { action: 'smembers_error', key, error: String(error) });
+    return [];
+  }
+}
+
+/**
+ * Set value only if key does not exist (SETNX)
+ * Returns true if set, false if key already exists
+ */
+export async function setnx(key: string, value: string, ttlSeconds?: number): Promise<boolean> {
+  if (!isRedisAvailable()) return false;
+  try {
+    operationCount++;
+    let result: string | null;
+    if (ttlSeconds) {
+      result = await redisClient!.set(key, value, 'EX', ttlSeconds, 'NX');
+    } else {
+      result = await redisClient!.set(key, value, 'NX');
+    }
+    lastSuccessfulOperation = Date.now();
+    return result === 'OK';
+  } catch (error) {
+    errorCount++;
+    logger.error('redis', { action: 'setnx_error', key, error: String(error) });
+    return false;
+  }
+}

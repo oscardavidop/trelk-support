@@ -12,6 +12,7 @@ import { logger } from '../services/logger.js';
 
 // In-memory fallback for when Redis is unavailable
 const memoryRateLimits = new Map<string, { count: number; resetAt: number }>();
+const MAX_MEMORY_ENTRIES = 10000; // Cap to prevent memory exhaustion under DDoS
 
 // Clean up old entries periodically (every 5 minutes)
 setInterval(() => {
@@ -28,22 +29,37 @@ export const RATE_LIMIT_CONFIG = {
   // Auth endpoints (login, MFA verify, password reset)
   auth: {
     windowSeconds: 60, // 1 minute window
-    maxRequests: 10, // 10 requests per window per IP
+    maxRequests: 50, // 5 requests per window per IP (hardened from 10)
   },
   // MFA verification (stricter)
   mfaVerify: {
     windowSeconds: 60,
-    maxRequests: 5, // 5 attempts per minute per IP
+    maxRequests: 3, // 3 attempts per minute per IP (hardened from 5)
   },
   // Password reset (very strict)
   passwordReset: {
     windowSeconds: 3600, // 1 hour window
     maxRequests: 5, // 5 requests per hour per IP
   },
-  // General API (less strict)
+  // General API (standard protection)
   api: {
     windowSeconds: 60,
-    maxRequests: 100, // 100 requests per minute
+    maxRequests: 1000, // 100 requests per minute
+  },
+  // Export endpoints (prevent mass exfiltration)
+  export: {
+    windowSeconds: 60,
+    maxRequests: 10, // 10 exports per minute
+  },
+  // Translation endpoints (prevent cost abuse)
+  translation: {
+    windowSeconds: 60,
+    maxRequests: 30, // 30 translations per minute
+  },
+  // State change (prevent fraud)
+  stateChange: {
+    windowSeconds: 60,
+    maxRequests: 10, // 10 state changes per minute
   },
 } as const;
 
@@ -57,28 +73,11 @@ interface RateLimitResult {
 }
 
 /**
- * Get the client IP address, handling proxies
+ * Get the client IP address safely
+ * Uses Fastify's request.ip which respects trustProxy configuration
  */
 function getClientIp(request: FastifyRequest): string {
-  // X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2)
-  const forwarded = request.headers['x-forwarded-for'];
-  if (forwarded) {
-    const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    // Get the first IP (client IP)
-    const clientIp = ips.split(',')[0].trim();
-    // Validate it looks like an IP (basic check)
-    if (clientIp && /^[\d.:a-fA-F]+$/.test(clientIp)) {
-      return clientIp;
-    }
-  }
-  
-  // X-Real-IP (common with nginx)
-  const realIp = request.headers['x-real-ip'];
-  if (realIp && typeof realIp === 'string') {
-    return realIp;
-  }
-  
-  // Fallback to connection IP
+  // request.ip already handles X-Forwarded-For via Fastify's trustProxy
   return request.ip || 'unknown';
 }
 
@@ -148,7 +147,17 @@ async function checkRateLimit(
     };
   }
 
-  // Create new entry
+  // Create new entry (with memory cap)
+  if (memoryRateLimits.size >= MAX_MEMORY_ENTRIES) {
+    // Reject when memory is exhausted to prevent DoS
+    return {
+      allowed: false,
+      remaining: 0,
+      resetAt,
+      error: 'Demasiadas solicitudes. Por favor, espera e intenta de nuevo.',
+    };
+  }
+  
   memoryRateLimits.set(key, {
     count: 1,
     resetAt: now + config.windowSeconds * 1000,
@@ -206,6 +215,9 @@ export const authRateLimit = createRateLimitMiddleware('auth');
 export const mfaVerifyRateLimit = createRateLimitMiddleware('mfaVerify');
 export const passwordResetRateLimit = createRateLimitMiddleware('passwordReset');
 export const apiRateLimit = createRateLimitMiddleware('api');
+export const exportRateLimit = createRateLimitMiddleware('export');
+export const translationRateLimit = createRateLimitMiddleware('translation');
+export const stateChangeRateLimit = createRateLimitMiddleware('stateChange');
 
 /**
  * Penalty: Add extra count for failed authentication attempts

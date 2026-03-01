@@ -9,11 +9,11 @@ import i18n from './i18n';
 import { TooltipProvider } from './AutoTooltip.tsx';
 
 createRoot(document.getElementById('root')!).render(
-  // <StrictMode>
+  <StrictMode>
   <TooltipProvider>
     <I18nextProvider i18n={i18n}>
       <App />
     </I18nextProvider>
   </TooltipProvider>
-  // </StrictMode>
+ </StrictMode>
 )

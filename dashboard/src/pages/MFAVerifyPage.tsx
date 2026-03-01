@@ -434,20 +434,16 @@ export default function MFAVerifyPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
-          {/* Logo */}
-          <div className="inline-flex items-center justify-center mb-4 w-full">
-            <img
-              src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
-              alt="Trelk Logo"
-              className="h-14 w-auto"
-            />
-          </div>
 
           {/* Card */}
           <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-8 shadow-2xl">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 bg-indigo-500/20">
-                <Shield className="w-6 h-6 text-indigo-400" />
+              <div className="inline-flex items-center justify-center">
+                <img
+                  src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
+                  alt="Trelk Logo"
+                  className="h-17 w-auto"
+                />
               </div>
               <h1 className="text-2xl font-bold text-zinc-50 mb-2">
                 Verificación de Seguridad
@@ -525,11 +521,6 @@ export default function MFAVerifyPage() {
               Volver al inicio de sesión
             </button>
           </div>
-
-          {/* Footer */}
-          <p className="text-center text-zinc-600 text-xs mt-8">
-            © {new Date().getFullYear()} Trelk Support Platform
-          </p>
         </div>
       </div>
     );
@@ -541,30 +532,17 @@ export default function MFAVerifyPage() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        {/* Logo */}
-        <div className="inline-flex items-center justify-center mb-4 w-full">
-          <img
-            src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
-            alt="Trelk Logo"
-            className="h-14 w-auto"
-          />
-        </div>
+       
 
         {/* Card */}
         <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div
-              className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 ${
-                currentMethod === "telegram"
-                  ? "bg-blue-500/20"
-                  : "bg-purple-500/20"
-              }`}
-            >
-              {currentMethod === "telegram" ? (
-                <Send className="w-6 h-6 text-blue-400" />
-              ) : (
-                <QrCode className="w-6 h-6 text-purple-400" />
-              )}
+            <div className="inline-flex items-center justify-center">
+              <img
+                src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
+                alt="Trelk Logo"
+                className="h-17 w-auto"
+              />
             </div>
             <h1 className="text-2xl font-bold text-zinc-50 mb-2">
               Verificación de Seguridad
@@ -633,20 +611,18 @@ export default function MFAVerifyPage() {
                     (currentMethod === "telegram" && timeLeft === 0)
                   }
                   className={`w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all
-                    ${
-                      digit
-                        ? currentMethod === "telegram"
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-purple-500 bg-purple-500/10"
-                        : "border-zinc-700 bg-zinc-800/50"
+                    ${digit
+                      ? currentMethod === "telegram"
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-purple-500 bg-purple-500/10"
+                      : "border-zinc-700 bg-zinc-800/50"
                     }
-                    ${
-                      isVerifying ||
+                    ${isVerifying ||
                       (currentMethod === "telegram" && timeLeft === 0)
-                        ? "opacity-50 cursor-not-allowed"
-                        : currentMethod === "telegram"
-                          ? "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                          : "focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                      ? "opacity-50 cursor-not-allowed"
+                      : currentMethod === "telegram"
+                        ? "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        : "focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
                     }
                     text-zinc-50 outline-none`}
                 />
@@ -727,13 +703,12 @@ export default function MFAVerifyPage() {
                 : code.join("").length !== 6) ||
               (currentMethod === "telegram" && !isBackupCode && timeLeft === 0)
             }
-            className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 text-zinc-50 font-medium rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
-              isBackupCode
-                ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-500/25"
-                : currentMethod === "telegram"
-                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/25"
-                  : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/25"
-            }`}
+            className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 text-zinc-50 font-medium rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${isBackupCode
+              ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-500/25"
+              : currentMethod === "telegram"
+                ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/25"
+                : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/25"
+              }`}
           >
             {isVerifying ? (
               <>
@@ -820,10 +795,6 @@ export default function MFAVerifyPage() {
             Volver al inicio de sesión
           </button>
         </div>
-        {/* Footer */}
-        <p className="text-center text-zinc-600 text-xs mt-8">
-          © {new Date().getFullYear()} Trelk Support Platform
-        </p>
       </div>
     </div>
   );

@@ -693,7 +693,7 @@ export default function MediaPage() {
   const detectOrphans = async () => {
     setOrphanLoading(true);
     try {
-      const res = await api.post<{ ok: boolean; orphanCount: number }>('/api/media-admin/orphans/detect');
+      const res = await api.post<{ ok: boolean; orphanCount: number }>('/api/media-admin/orphans/detect', {  });
       if (res.ok) {
         showToast(`Se detectaron ${res.data.orphanCount} archivos huérfanos`, 'success');
         loadOrphans();

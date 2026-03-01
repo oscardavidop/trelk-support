@@ -268,11 +268,6 @@ export default function ForceChangePasswordPage() {
             </button>
           </div>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-zinc-600 text-xs mt-8">
-          © {new Date().getFullYear()} Trelk Support Platform
-        </p>
       </div>
     </div>
   );

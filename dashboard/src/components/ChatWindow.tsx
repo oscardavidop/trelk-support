@@ -930,7 +930,11 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
             {/* Close Session Button */}
             {session.status === 'human' && isMySession && canClose && (
               <button
-                onClick={setCloseChatModal.bind(null, true)}
+                onClick={
+                  () => {
+                    setCloseChatModal(true);
+                  }
+                }
                 className="group flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-red-500/10 hover:border-red-500/30 text-zinc-400 hover:text-red-400 text-xs font-bold rounded-lg transition-all shadow-sm active:scale-95"
                 title="Finalizar sesión"
               >
@@ -1267,6 +1271,17 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
 
       {session.user && (
         <BlockUserModal
+          onBlockSuccess={() => {
+            setShowBlockModal(false);
+            closeSession(session.sessionId, 'Agent blocked user', {
+              categoryId: '69a38373f02eb26f50c170bb',
+              comment: 'El agente bloqueó al usuario desde la interfaz de chat',
+            }, (result: any) => {
+              if (result.ok) {
+                handleClose();
+              }
+            });
+          }}
           isOpen={showBlockModal}
           onClose={() => setShowBlockModal(false)}
           telegramId={session.user.telegramId}
@@ -1590,8 +1605,8 @@ function MessageBubble({
           {/* Reply */}
           {message.replyToMessage && (
             <div className={`mb-2 rounded-lg overflow-hidden border-l-4 ${isAgent
-                ? 'border-white/40 bg-white/10'
-                : 'border-primary bg-primary/15'
+              ? 'border-white/40 bg-white/10'
+              : 'border-primary bg-primary/15'
               }`}>
               <div className="px-2.5 py-1.5">
                 <p className={`text-[11px] font-semibold mb-0.5 ${isAgent ? 'text-white/80' : 'text-primary'

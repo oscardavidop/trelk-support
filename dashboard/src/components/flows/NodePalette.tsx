@@ -1,18 +1,18 @@
 /**
  * NodePalette - Sidebar with draggable nodes
- * Refactored: Premium Zinc Style (Full Feature Set)
+ * Refactored: Premium Zinc Style (Full Feature Set) + Pixel Perfect Collapsable
  */
 
 import React, { useState } from 'react';
 import type { NodeType } from '../../types/flow';
-import { 
-  Zap, GitFork, PlayCircle, Clock, CheckSquare, Search, 
-  MessageSquare, User, Hash, Pause, MousePointerClick, 
+import {
+  Zap, GitFork, PlayCircle, Clock, CheckSquare, Search,
+  MessageSquare, User, Hash, Pause, MousePointerClick,
   ChevronDown, MessageCircle, MapPin, Phone, StickyNote,
-  Globe, Layout, Sticker, RefreshCw, XCircle, 
+  Globe, Layout, Sticker, RefreshCw, XCircle,
   Workflow, UserPlus, FileText, Keyboard, ArrowRightLeft,
-  FolderInput, Pin, PinOff, Activity, Webhook, Edit3, 
-  Copy, Save, Trash2, Delete
+  FolderInput, Pin, PinOff, Activity, Webhook, Edit3,
+  Copy, Save, Trash2, Delete, ChevronRight, ChevronLeft
 } from 'lucide-react';
 
 interface NodePaletteProps {
@@ -45,21 +45,22 @@ interface NodeCategory {
   subCategories?: NodeSubCategory[];
 }
 
-// Estilos por tipo de nodo
+// Estilos por tipo de nodo (Se usan tanto en el icono expandido como en el botón colapsado)
 const getNodeStyles = (type: NodeType) => {
   switch (type) {
-    case 'trigger': return { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' };
-    case 'condition': return { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' };
-    case 'action': return { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' };
-    case 'delay': return { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' };
-    case 'end': return { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' };
-    default: return { bg: 'bg-zinc-800', text: 'text-zinc-400', border: 'border-zinc-700' };
+    case 'trigger': return { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', hover: 'hover:border-emerald-500/50' };
+    case 'condition': return { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', hover: 'hover:border-amber-500/50' };
+    case 'action': return { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', hover: 'hover:border-blue-500/50' };
+    case 'delay': return { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20', hover: 'hover:border-violet-500/50' };
+    case 'end': return { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', hover: 'hover:border-red-500/50' };
+    default: return { bg: 'bg-zinc-800', text: 'text-zinc-400', border: 'border-zinc-700', hover: 'hover:border-zinc-500' };
   }
 };
 
 const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>('triggers');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // ==================== DEFINICIÓN COMPLETA DE NODOS ====================
   const categories: NodeCategory[] = [
@@ -159,13 +160,13 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
       ],
     },
     {
-        id: 'flow_control',
-        label: 'Control de Flujo',
-        icon: Workflow,
-        color: 'text-red-400',
-        items: [
-            { type: 'end', label: 'Fin del Flujo', description: 'Terminar proceso', config: {}, icon: XCircle }
-        ]
+      id: 'flow_control',
+      label: 'Control de Flujo',
+      icon: Workflow,
+      color: 'text-red-400',
+      items: [
+        { type: 'end', label: 'Fin del Flujo', description: 'Terminar proceso', config: {}, icon: XCircle }
+      ]
     }
   ];
 
@@ -183,10 +184,26 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
     return items.filter(i => i.label.toLowerCase().includes(searchQuery.toLowerCase()) || i.description.toLowerCase().includes(searchQuery.toLowerCase()));
   };
 
-  // Render Node Item Component
+  // Render Node Item Component (Maneja el estado expandido vs colapsado)
   const renderItem = (item: NodeItem, idx: number) => {
     const styles = getNodeStyles(item.type);
     const Icon = item.icon;
+
+    if (isCollapsed) {
+      return (
+        <div
+          key={`${item.type}-${item.subType || idx}`}
+          draggable
+          onDragStart={(e) => onDragStart(e, item)}
+          onClick={() => onAddNode(item.type, item.label, item.config)}
+          title={`${item.label} - ${item.description}`}
+          className={`flex items-center justify-center w-[42px] h-[42px] mx-auto mb-2 rounded-xl cursor-grab active:cursor-grabbing transition-all border ${styles.bg} ${styles.border} ${styles.text} ${styles.hover}`}
+        >
+          <Icon className="w-[18px] h-[18px]" />
+
+        </div>
+      );
+    }
 
     return (
       <div
@@ -196,7 +213,7 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
         onClick={() => onAddNode(item.type, item.label, item.config)}
         className="group flex items-center gap-3 p-2.5 mx-2 mb-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg cursor-grab active:cursor-grabbing transition-all hover:bg-zinc-800/50"
       >
-        <div className={`p-2 rounded-md ${styles.bg} ${styles.text} border ${styles.border}`}>
+        <div className={`p-2 rounded-md shrink-0 ${styles.bg} ${styles.text} border ${styles.border}`}>
           <Icon className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
@@ -210,11 +227,21 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
   };
 
   return (
-    <div className="w-72 h-full bg-zinc-950 border-r border-zinc-800 flex flex-col overflow-hidden">
-      
-      {/* Header & Search */}
-      <div className="p-4 border-b border-zinc-800">
-        <h3 className="text-sm font-bold text-zinc-50 mb-3 uppercase r opacity-80">
+    <div
+      className={`relative h-full bg-[#09090b] border-r border-zinc-800 flex flex-col transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[68px]' : 'w-72'
+        }`}
+    >
+      {/* Botón Flotante Toggle */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-3 top-12 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-all shadow-lg"
+      >
+        {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+      </button>
+
+      {/* Header & Search (Oculto al colapsar) */}
+      <div className={`border-b border-zinc-800 transition-all duration-200 overflow-hidden ${isCollapsed ? 'opacity-0 h-0 p-0 border-none' : 'opacity-100 p-4'}`}>
+        <h3 className="text-sm font-bold text-zinc-50 mb-3 uppercase opacity-80">
           Nodos de Flujo
         </h3>
         <div className="relative">
@@ -230,63 +257,80 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
       </div>
 
       {/* Categories List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto scrollbar-hover overflow-x-hidden">
         <div className="py-2">
           {categories.map((cat) => {
             const hasSubcategories = !!cat.subCategories;
             const items = cat.items || [];
-            
-            // Search Filtering logic to keep categories open if needed
+
+            // Lógica de búsqueda
             let categoryHasMatches = false;
-            if (searchQuery) {
-               const directMatches = filterItems(items).length > 0;
-               const subMatches = cat.subCategories?.some(sub => filterItems(sub.items).length > 0);
-               categoryHasMatches = directMatches || !!subMatches;
-               if (!categoryHasMatches) return null;
+            if (searchQuery && !isCollapsed) {
+              const directMatches = filterItems(items).length > 0;
+              const subMatches = cat.subCategories?.some(sub => filterItems(sub.items).length > 0);
+              categoryHasMatches = directMatches || !!subMatches;
+              if (!categoryHasMatches) return null;
             }
 
-            const isExpanded = expandedCategory === cat.id || !!searchQuery;
+            const isExpanded = expandedCategory === cat.id || (!!searchQuery && !isCollapsed);
             const Icon = cat.icon;
 
             return (
               <div key={cat.id} className="mb-1">
                 {/* Category Header */}
                 <button
-                  onClick={() => setExpandedCategory(expandedCategory === cat.id ? null : cat.id)}
-                  className={`w-full flex items-center justify-between px-4 py-5 hover:bg-zinc-900/50 transition-colors ${isExpanded ? 'text-zinc-200' : 'text-zinc-500'}`}
+                  onClick={() => !isCollapsed && setExpandedCategory(expandedCategory === cat.id ? null : cat.id)}
+                  className={`w-full flex items-center transition-colors ${isCollapsed
+                    ? 'justify-center py-3 cursor-default'
+                    : `justify-between px-4 py-5 hover:bg-zinc-900/50 ${isExpanded ? 'text-zinc-200' : 'text-zinc-500'}`
+                    }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className={`w-5 h-5 ${isExpanded ? cat.color : 'text-zinc-600'}`} />
-                    {/* teeeeeeeeeeexto mas grande */}
-                    <span className="font-bold text-[14px]">{cat.label}</span>
-                  </div>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                  {isCollapsed ? (
+                    <>
+                      <Icon className={`w-5 h-5 ${cat.color} opacity-90`} />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2.5">
+                        <Icon className={`w-5 h-5 ${isExpanded ? cat.color : 'text-zinc-600'}`} />
+                        <span className="font-bold text-[14px]">{cat.label}</span>
+                      </div>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                    </>
+                  )}
                 </button>
 
+
                 {/* Items Container */}
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                  
+                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'block opacity-100' : isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+
                   {/* Direct Items */}
                   {items.length > 0 && (
-                    <div className="pb-2">
-                      {filterItems(items).map((item, idx) => renderItem(item, idx))}
+                    <div className={isCollapsed ? 'pb-2' : 'pb-2'}>
+                      {(isCollapsed ? items : filterItems(items)).map((item, idx) => renderItem(item, idx))}
                     </div>
                   )}
+                          <div className="border-t border-zinc-800 my-1" />
 
                   {/* Subcategories */}
                   {hasSubcategories && cat.subCategories!.map(sub => {
-                    const subItems = filterItems(sub.items);
-                    if (searchQuery && subItems.length === 0) return null;
+                    const subItems = isCollapsed ? sub.items : filterItems(sub.items);
+                    if (searchQuery && !isCollapsed && subItems.length === 0) return null;
 
                     return (
                       <div key={sub.id} className="mb-2">
-                        <div className="px-4 py-1.5 flex items-center gap-2">
-                           <div className="w-1 h-1 rounded-full bg-zinc-700" />
-                           <span className="text-[10px] font-bold text-zinc-500 uppercase ">
-                             {sub.label}
-                           </span>
-                        </div>
+                        {!isCollapsed && (
+                          <div className="px-4 py-1.5 flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-zinc-700" />
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase">
+                              {sub.label}
+                            </span>
+                          </div>
+                        )}
                         {subItems.map((item, idx) => renderItem(item, idx))}
+                        {isCollapsed && (
+                          <div className="border-t border-zinc-800 my-1" />
+                        )}
                       </div>
                     );
                   })}
@@ -297,13 +341,15 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
         </div>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-3 border-t border-zinc-800 bg-zinc-900/30">
-        <p className="text-[12px] text-zinc-500 text-center flex items-center justify-center gap-1.5">
-          <MousePointerClick className="w-3 h-3" />
-          Arrastra para añadir al flujo
-        </p>
-      </div>
+      {/* Footer Info (Oculto al colapsar) */}
+      {!isCollapsed && (
+        <div className="p-3 border-t border-zinc-800 bg-zinc-900/30">
+          <p className="text-[12px] text-zinc-500 text-center flex items-center justify-center gap-1.5">
+            <MousePointerClick className="w-3 h-3" />
+            Arrastra para añadir al flujo
+          </p>
+        </div>
+      )}
 
     </div>
   );

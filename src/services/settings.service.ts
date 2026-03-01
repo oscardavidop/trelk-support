@@ -5,6 +5,57 @@
 
 import { Settings, type ISettings, type IBotSettings, type IChatSettings, type IAgentRules, type ISecuritySettings } from '../database/index.js';
 
+// ============= FIELD WHITELISTS =============
+// Prevent arbitrary key injection into settings documents
+
+const ALLOWED_BOT_FIELDS = new Set<string>([
+  'name', 'username', 'welcomeMessage', 'transferMessage', 'offlineMessage',
+  'defaultLanguage', 'autoReplyEnabled', 'autoReplyDelay', 'typingIndicator',
+]);
+
+const ALLOWED_CHAT_FIELDS = new Set<string>([
+  'maxWaitTimeMinutes', 'autoCloseInactiveMinutes', 'queuedTimeoutMinutes',
+  'autoResponseEnabled', 'defaultBotMessage', 'maxQueueSize',
+  'enableFileSharing', 'maxFileSizeMB', 'allowedFileTypes',
+  'enableEmoji', 'enableSuggestions',
+]);
+
+const ALLOWED_AGENT_RULES_FIELDS = new Set<string>([
+  'maxConcurrentChats', 'autoAssignEnabled', 'assignmentMode',
+  'skillBasedRouting', 'priorityRouting', 'workingHoursEnabled',
+  'workingHoursStart', 'workingHoursEnd', 'workingHoursTimezone',
+  'focusModeEnabled',
+]);
+
+const ALLOWED_SECURITY_FIELDS = new Set<string>([
+  'jwtExpirationDays', 'rateLimitPerMinute', 'logCriticalEvents',
+  'sessionTimeoutMinutes', 'maxLoginAttempts', 'maxSessionsPerAgent',
+  'twoFactorEnabled', 'passwordMinLength', 'passwordRequireUppercase',
+  'passwordRequireNumbers', 'passwordRequireSpecial', 'auditLogRetentionDays',
+  'mfaRequiredForAll', 'mfaRequiredRoles', 'mfaBypassIPs',
+  'mfaTrustDevicesEnabled', 'mfaAllowedMethods',
+  'autoLockEnabled', 'autoLockTimeoutMinutes', 'autoLockRequirePassword',
+  'autoLockRequireMFA', 'autoLockShowLastActivity', 'autoLockGracePeriodSeconds',
+  'autoLockRoleTimeouts', 'autoLockExemptRoles',
+]);
+
+const ALLOWED_NOTIFICATION_FIELDS = new Set<string>([
+  'emailNotificationsEnabled', 'escalationAlertsEnabled', 'dailyReportEnabled',
+  'desktopNotificationsEnabled', 'newChatSoundEnabled', 'newMessageSoundEnabled',
+  'notificationVolume',
+]);
+
+/** Strip keys not in whitelist */
+function filterFields(data: Record<string, unknown>, allowed: Set<string>): Record<string, unknown> {
+  const filtered: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (allowed.has(key) && value !== undefined) {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+}
+
 // Cache settings in memory for performance
 let cachedSettings: ISettings | null = null;
 
@@ -41,11 +92,10 @@ export async function updateBotSettings(
   updatedBy?: string
 ): Promise<ISettings> {
   const updateData: Record<string, unknown> = {};
+  const safe = filterFields(data as Record<string, unknown>, ALLOWED_BOT_FIELDS);
   
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      updateData[`bot.${key}`] = value;
-    }
+  for (const [key, value] of Object.entries(safe)) {
+    updateData[`bot.${key}`] = value;
   }
   
   if (updatedBy) {
@@ -70,11 +120,10 @@ export async function updateChatSettings(
   updatedBy?: string
 ): Promise<ISettings> {
   const updateData: Record<string, unknown> = {};
+  const safe = filterFields(data as Record<string, unknown>, ALLOWED_CHAT_FIELDS);
   
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      updateData[`chat.${key}`] = value;
-    }
+  for (const [key, value] of Object.entries(safe)) {
+    updateData[`chat.${key}`] = value;
   }
   
   if (updatedBy) {
@@ -99,11 +148,10 @@ export async function updateAgentRules(
   updatedBy?: string
 ): Promise<ISettings> {
   const updateData: Record<string, unknown> = {};
+  const safe = filterFields(data as Record<string, unknown>, ALLOWED_AGENT_RULES_FIELDS);
   
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      updateData[`agentRules.${key}`] = value;
-    }
+  for (const [key, value] of Object.entries(safe)) {
+    updateData[`agentRules.${key}`] = value;
   }
   
   if (updatedBy) {
@@ -128,11 +176,10 @@ export async function updateSecuritySettings(
   updatedBy?: string
 ): Promise<ISettings> {
   const updateData: Record<string, unknown> = {};
+  const safe = filterFields(data as Record<string, unknown>, ALLOWED_SECURITY_FIELDS);
   
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      updateData[`security.${key}`] = value;
-    }
+  for (const [key, value] of Object.entries(safe)) {
+    updateData[`security.${key}`] = value;
   }
   
   if (updatedBy) {
@@ -164,34 +211,30 @@ export async function updateAllSettings(
   const updateData: Record<string, unknown> = {};
   
   if (data.bot) {
-    for (const [key, value] of Object.entries(data.bot)) {
-      if (value !== undefined) {
-        updateData[`bot.${key}`] = value;
-      }
+    const safe = filterFields(data.bot as Record<string, unknown>, ALLOWED_BOT_FIELDS);
+    for (const [key, value] of Object.entries(safe)) {
+      updateData[`bot.${key}`] = value;
     }
   }
   
   if (data.chat) {
-    for (const [key, value] of Object.entries(data.chat)) {
-      if (value !== undefined) {
-        updateData[`chat.${key}`] = value;
-      }
+    const safe = filterFields(data.chat as Record<string, unknown>, ALLOWED_CHAT_FIELDS);
+    for (const [key, value] of Object.entries(safe)) {
+      updateData[`chat.${key}`] = value;
     }
   }
   
   if (data.agentRules) {
-    for (const [key, value] of Object.entries(data.agentRules)) {
-      if (value !== undefined) {
-        updateData[`agentRules.${key}`] = value;
-      }
+    const safe = filterFields(data.agentRules as Record<string, unknown>, ALLOWED_AGENT_RULES_FIELDS);
+    for (const [key, value] of Object.entries(safe)) {
+      updateData[`agentRules.${key}`] = value;
     }
   }
   
   if (data.security) {
-    for (const [key, value] of Object.entries(data.security)) {
-      if (value !== undefined) {
-        updateData[`security.${key}`] = value;
-      }
+    const safe = filterFields(data.security as Record<string, unknown>, ALLOWED_SECURITY_FIELDS);
+    for (const [key, value] of Object.entries(safe)) {
+      updateData[`security.${key}`] = value;
     }
   }
   

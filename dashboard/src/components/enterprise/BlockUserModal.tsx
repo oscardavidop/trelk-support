@@ -14,6 +14,7 @@ interface BlockUserModalProps {
   telegramId: number;
   username?: string;
   firstName?: string;
+  onBlockSuccess?: () => void;
 }
 
 export const BlockUserModal: React.FC<BlockUserModalProps> = ({
@@ -22,6 +23,7 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
   telegramId,
   username,
   firstName,
+  onBlockSuccess,
 }) => {
   const { socket } = useSocket();
   const [blockType, setBlockType] = useState<'temporary' | 'permanent'>('temporary');
@@ -45,6 +47,18 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
         blockType,
         reason: reason.trim(),
         durationHours: blockType === 'temporary' ? duration : undefined,
+      }, (response: { ok: boolean; error?: string }) => {
+        if (response.ok) {
+          setIsLoading(false)
+          onClose();
+          setReason('');
+          setBlockType('temporary');
+          setDuration(24);
+          onBlockSuccess?.();
+        } else {
+          setError(response.error || 'Error al bloquear usuario');
+          // setIsLoading(false);
+        }
       });
 
       setTimeout(() => {

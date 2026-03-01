@@ -5,6 +5,8 @@
 
 import type { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../middleware/auth.js';
+import { translationRateLimit } from '../middleware/rate-limit.js';
+import { ChatSession } from '../database/models/ChatSession.js';
 import {
   translateTextV2,
   detectLanguage,
@@ -72,8 +74,9 @@ export async function translationRoutes(fastify: FastifyInstance): Promise<void>
   /**
    * POST /api/translation/translate
    * Translate text using the configured provider chain
+   * Rate limited to prevent cost abuse
    */
-  fastify.post<{ Body: TranslateBody }>('/translate', async (request, reply) => {
+  fastify.post<{ Body: TranslateBody }>('/translate', { preHandler: translationRateLimit }, async (request, reply) => {
     const agent = (request as any).agent;
     const body = request.body as TranslateBody;
 
@@ -229,6 +232,24 @@ export async function translationRoutes(fastify: FastifyInstance): Promise<void>
       return reply.code(400).send({ ok: false, error: 'Proxy host and port are required' });
     }
 
+    // SSRF protection: block internal/reserved IP ranges
+    const host = String(proxyConfig.host).toLowerCase().trim();
+    const blockedPatterns = [
+      /^localhost$/i,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2\d|3[01])\./,
+      /^192\.168\./,
+      /^169\.254\./,
+      /^0\./,
+      /^\[?::1\]?$/,
+      /^\[?fe80:/i,
+      /^\[?fd[0-9a-f]{2}:/i,
+    ];
+    if (blockedPatterns.some(p => p.test(host))) {
+      return reply.code(400).send({ ok: false, error: 'Internal/reserved addresses are not allowed as proxy host' });
+    }
+
     try {
       const result = await testProxyConnection({
         enabled: true,
@@ -317,6 +338,7 @@ export async function translationRoutes(fastify: FastifyInstance): Promise<void>
   /**
    * PATCH /api/translation/outgoing/session
    * Update per-session translation override
+   * IDOR FIX: Verify agent has access to the session
    */
   fastify.patch('/outgoing/session', async (request, reply) => {
     const body = request.body as {
@@ -324,9 +346,21 @@ export async function translationRoutes(fastify: FastifyInstance): Promise<void>
       outgoingEnabled?: boolean;
       outgoingTargetLang?: string;
     };
+    const agent = (request as any).agent;
 
     if (!body.sessionId) {
       return reply.code(400).send({ ok: false, error: 'Session ID is required' });
+    }
+
+    // IDOR FIX: Verify agent owns or can access this session
+    const session = await ChatSession.findOne({ sessionId: body.sessionId }).lean();
+    if (!session) {
+      return reply.code(404).send({ ok: false, error: 'Session not found' });
+    }
+    const isOwner = session.assignedAgent?.toString() === agent._id.toString();
+    const isSupervisor = ['admin', 'supervisor'].includes(agent.role);
+    if (!isOwner && !isSupervisor) {
+      return reply.code(403).send({ ok: false, error: 'Not authorized to modify this session' });
     }
 
     // get current config to check if agent override is allowed
@@ -366,6 +400,7 @@ export async function translationRoutes(fastify: FastifyInstance): Promise<void>
   /**
    * PATCH /api/translation/incoming/session
    * Update per-session incoming translation override
+   * IDOR FIX: Verify agent has access to the session
    */
   fastify.patch('/incoming/session', async (request, reply) => {
     const body = request.body as {
@@ -373,9 +408,21 @@ export async function translationRoutes(fastify: FastifyInstance): Promise<void>
       incomingEnabled?: boolean;
       incomingTargetLang?: string;
     };
+    const agent = (request as any).agent;
 
     if (!body.sessionId) {
       return reply.code(400).send({ ok: false, error: 'Session ID is required' });
+    }
+
+    // IDOR FIX: Verify agent owns or can access this session
+    const session = await ChatSession.findOne({ sessionId: body.sessionId }).lean();
+    if (!session) {
+      return reply.code(404).send({ ok: false, error: 'Session not found' });
+    }
+    const isOwner = session.assignedAgent?.toString() === agent._id.toString();
+    const isSupervisor = ['admin', 'supervisor'].includes(agent.role);
+    if (!isOwner && !isSupervisor) {
+      return reply.code(403).send({ ok: false, error: 'Not authorized to modify this session' });
     }
 
     // get current config to check if agent override is allowed

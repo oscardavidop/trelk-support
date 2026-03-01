@@ -47,6 +47,11 @@ const ACTION_DEFAULTS: Record<ActivityAction, { icon: string; color: 'green' | '
   first_response: { icon: '💬', color: 'green', description: 'First response sent' },
   sla_warning: { icon: '⚠️', color: 'yellow', description: 'SLA warning' },
   sla_breached: { icon: '🔴', color: 'red', description: 'SLA breached' },
+  note_created: { icon: '📝', color: 'blue', description: 'Note created' },
+  custom_field_set: { icon: '⚙️', color: 'blue', description: 'Custom field updated' },
+  chat_closed: { icon: '✅', color: 'green', description: 'Chat closed' },
+  added_to_queue: { icon: '📋', color: 'blue', description: 'Added to queue' },
+  agent_assigned: { icon: '🟢', color: 'green', description: 'Agent assigned' },
 };
 
 /**

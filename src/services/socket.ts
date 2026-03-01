@@ -76,7 +76,7 @@ import { triggerEventMessages } from './scheduledMessage.service.js';
 import { telegramErrorHandler } from './telegram-error-handler.js';
 import { hasPermission } from './permission.service.js';
 import { evaluateChatAction } from './policy-engine.service.js';
-import type { ChatCategory, IChatSession } from '../database/models/ChatSession.js';
+import { ChatSession, type ChatCategory, type IChatSession } from '../database/models/ChatSession.js';
 import { Message } from '../database/models/Message.js';
 import type { AvailabilityStatus } from '../database/models/Agent.js';
 import { webChatAdapter } from '../channels/webchat.adapter.js';
@@ -1031,6 +1031,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
     }
   });
 
+  
   // Close session with disposition (tipificación)
   socket.on('session:close', async ({ sessionId, reason, disposition }, callback) => {
     try {
@@ -1101,14 +1102,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
           console.log('Policy Engine Result for close_chat:', actionResult);
 
           if (!actionResult.allowed) {
-              return callback({
-                ok: false,
-                error: actionResult.errorMessage || 'Acción no permitida por política',
-                data: {
-                  ruleId: actionResult.ruleId,
-                  requiresApproval: actionResult.requiresApproval,
-                },
-              });
+            return callback({
+              ok: false,
+              error: actionResult.errorMessage || 'Acción no permitida por política',
+              data: {
+                ruleId: actionResult.ruleId,
+                requiresApproval: actionResult.requiresApproval,
+              },
+            });
           }
         }
       } catch (error) {
@@ -2383,6 +2384,16 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       io.emit('user:blocked', { telegramId, reason, blockType });
 
       callback?.({ ok: true, data: block });
+      // close all sessions with this user
+      // const sessions = await ChatSession.find({ telegramChatId: telegramId, status: 'human' });
+      // console.log('Sessions to close due to block:', sessions, telegramId);
+      // for (const session of sessions) {
+        // await closeSession(session._id.toString(), agentId, 'user_blocked');
+        // emitChatClosed(session._id.toString(), 'User is Blocked', 'agent');
+        // al socket fingir que llego session:close
+       
+      // }
+
     } catch (error) {
       logger.error('api', { action: 'block_error', error: String(error) });
       callback?.({ ok: false, error: String(error) });
@@ -2585,6 +2596,14 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
     agentSockets.delete(agentId);
 
+    // MEMORY LEAK FIX: Clean up sessionRooms for this agent
+    for (const [sessionId, agents] of sessionRooms) {
+      agents.delete(agentId);
+      if (agents.size === 0) {
+        sessionRooms.delete(sessionId);
+      }
+    }
+
     // Handle disconnection with chat reassignment
     const { affectedSessions } = await handleAgentDisconnection(agentId);
 
@@ -2648,7 +2667,25 @@ async function getDashboardStats(): Promise<DashboardStats> {
   return { sessions: sessionStats, agents };
 }
 
+// Throttle broadcastStats to prevent query stampede
+let _broadcastStatsTimer: ReturnType<typeof setTimeout> | null = null;
+let _broadcastStatsPending = false;
+
 async function broadcastStats(): Promise<void> {
+  // Debounce: only execute once per 500ms window
+  if (_broadcastStatsTimer) {
+    _broadcastStatsPending = true;
+    return;
+  }
+  
+  _broadcastStatsTimer = setTimeout(async () => {
+    _broadcastStatsTimer = null;
+    if (_broadcastStatsPending) {
+      _broadcastStatsPending = false;
+      await broadcastStats();
+    }
+  }, 500);
+
   const stats = await getDashboardStats();
   io.emit('stats:update', stats);
 }

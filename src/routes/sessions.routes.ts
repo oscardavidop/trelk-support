@@ -143,13 +143,19 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   });
 
   /**
-   * Get sessions by status
+   * Get sessions by status (supervisor/admin only for full listing)
    */
   fastify.get<{ Params: { status: string } }>('/api/sessions/status/:status', async (request, reply) => {
     const { status } = request.params;
+    const agent = (request as any).agent;
 
     if (!['bot', 'waiting', 'human', 'closed'].includes(status)) {
       return reply.code(400).send({ ok: false, error: 'Invalid status' });
+    }
+
+    // Only supervisor/admin can list all sessions by status
+    if (!['admin', 'supervisor'].includes(agent.role)) {
+      return reply.code(403).send({ ok: false, error: 'Insufficient permissions' });
     }
 
     const sessions = await getSessionsByStatus(status as any);
@@ -157,9 +163,13 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
   });
 
   /**
-   * Get session statistics
+   * Get session statistics (supervisor/admin only)
    */
-  fastify.get('/api/sessions/stats', async () => {
+  fastify.get('/api/sessions/stats', async (request, reply) => {
+    const agent = (request as any).agent;
+    if (!['admin', 'supervisor'].includes(agent.role)) {
+      return reply.code(403).send({ ok: false, error: 'Insufficient permissions' });
+    }
     const stats = await getSessionStats();
     return { ok: true, stats };
   });
@@ -355,6 +365,7 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
             'note_added',
             'tag_added',
             'tag_removed',
+            
           ];
           const filteredTimeline = timeline.filter(
             (item: { action: string }) => agentSafeActions.includes(item.action)
@@ -374,23 +385,36 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
 
   /**
    * Accept/assign session to current agent
+   * Uses Redis lock to prevent race condition (two agents accepting simultaneously)
    */
   fastify.post<{ Params: SessionParams }>('/api/sessions/:sessionId/accept', async (request, reply) => {
     const { sessionId } = request.params;
     const agentId = request.agent!._id.toString();
 
-    const session = await assignAgent(sessionId, agentId);
-
-    if (!session) {
-      return reply.code(404).send({ ok: false, error: 'Session not found' });
+    // Race condition fix: acquire lock before assignment
+    const { acquireLock, releaseLock } = await import('../services/redis.js');
+    const lockValue = await acquireLock(`session_accept:${sessionId}`, 10);
+    
+    if (!lockValue) {
+      return reply.code(409).send({ ok: false, error: 'Session is being assigned to another agent' });
     }
 
-    return { ok: true, session };
+    try {
+      const session = await assignAgent(sessionId, agentId);
+
+      if (!session) {
+        return reply.code(404).send({ ok: false, error: 'Session not found or already assigned' });
+      }
+
+      return { ok: true, session };
+    } finally {
+      await releaseLock(`session_accept:${sessionId}`, lockValue);
+    }
   });
 
   /**
    * Close session
-   * Requires: chats.close permission
+   * Requires: chats.close permission + ownership or supervisor role
    * Subject to chat action rules (may require note, tag, etc.)
    * Requires disposition (tipificación) if enabled in settings
    */
@@ -402,6 +426,16 @@ export async function registerSessionRoutes(fastify: FastifyInstance): Promise<v
       const { reason, closedByType = 'agent', closeReason = 'manual', disposition } = request.body;
       const agent = request.agent!;
       const agentId = agent._id.toString();
+
+      // Ownership check: only assigned agent or supervisor/admin can close
+      const sessionCheck = await ChatSession.findOne({ sessionId }).lean();
+      if (sessionCheck) {
+        const isOwner = sessionCheck.assignedAgent?.toString() === agentId;
+        const isSupervisor = ['admin', 'supervisor'].includes(agent.role);
+        if (!isOwner && !isSupervisor) {
+          return reply.code(403).send({ ok: false, error: 'Not authorized to close this session' });
+        }
+      }
 
       // ============= DISPOSITION VALIDATION =============
       // Check if disposition is required

@@ -461,4 +461,9 @@ AgentSchema.set('toJSON', {
   },
 });
 
+// Performance indexes: role for filtering, onlineStatus for presence
+AgentSchema.index({ role: 1 });
+AgentSchema.index({ onlineStatus: 1 });
+AgentSchema.index({ role: 1, isActive: 1 });
+
 export const Agent = mongoose.model<IAgent>('Agent', AgentSchema);

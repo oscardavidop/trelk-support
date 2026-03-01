@@ -10,8 +10,11 @@ import {
   trackDownload,
 } from '../services/export.service.js';
 import { ExportJob, type ExportFormat } from '../database/models/ExportJob.js';
-import { authMiddleware, requireRole } from '../middleware/auth.js';
+import { authMiddleware, requireRole, can } from '../middleware/auth.js';
 import { logAuditFromRequest, AuditActions } from '../services/audit-log.service.js';
+import { exportRateLimit } from '../middleware/rate-limit.js';
+import { trackExportRequest, logSecurityAnomaly } from '../services/fraud-detection.service.js';
+import { ChatSession } from '../database/models/ChatSession.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -76,10 +79,11 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
 
   /**
    * POST /api/exports/session/:sessionId
-   * Export a single session
+   * Export a single session — with ownership check & rate limit
    */
   fastify.post<{ Params: SessionParams; Body: ExportBody }>(
     '/session/:sessionId',
+    { preHandler: exportRateLimit },
     async (
       request: FastifyRequest<{ Params: SessionParams; Body: ExportBody }>,
       reply: FastifyReply
@@ -94,6 +98,29 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
             success: false,
             error: 'Invalid format. Must be pdf, json, csv, xlsx, zip, or html',
           });
+        }
+
+        // IDOR FIX: Verify agent has access to this session
+        const session = await ChatSession.findOne({ sessionId }).lean();
+        if (!session) {
+          return reply.status(404).send({ success: false, error: 'Session not found' });
+        }
+        
+        // Only assigned agent, supervisor, or admin can export
+        const isOwner = session.assignedAgent?.toString() === agent._id.toString();
+        const isSupervisor = ['admin', 'supervisor'].includes(agent.role);
+        if (!isOwner && !isSupervisor) {
+          return reply.status(403).send({ success: false, error: 'Not authorized to export this session' });
+        }
+
+        // Fraud detection: track export requests
+        const fraudCheck = await trackExportRequest(agent._id.toString(), 'session');
+        if (fraudCheck.flagged) {
+          await logSecurityAnomaly(request, 'mass_export', {
+            agentId: agent._id.toString(),
+            reason: fraudCheck.reason,
+          }, 'high');
+          return reply.status(429).send({ success: false, error: 'Export rate limit exceeded' });
         }
 
         const job = await createExportJob(agent._id, {
@@ -281,13 +308,14 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
 
   /**
    * GET /api/exports/jobs/:jobId
-   * Get export job status
+   * Get export job status — with ownership check
    */
   fastify.get<{ Params: JobParams }>(
     '/jobs/:jobId',
     async (request: FastifyRequest<{ Params: JobParams }>, reply: FastifyReply) => {
       try {
         const { jobId } = request.params;
+        const agent = (request as any).agent;
 
         const job = await getExportJobStatus(jobId);
         if (!job) {
@@ -295,6 +323,13 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
             success: false,
             error: 'Export job not found',
           });
+        }
+
+        // IDOR FIX: Only creator, admin, or supervisor can view job status
+        const isCreator = job.requestedBy?.toString() === agent._id.toString();
+        const isSupervisor = ['admin', 'supervisor'].includes(agent.role);
+        if (!isCreator && !isSupervisor) {
+          return reply.status(403).send({ success: false, error: 'Not authorized to view this export job' });
         }
 
         return {
@@ -329,13 +364,30 @@ export async function exportRoutes(fastify: FastifyInstance): Promise<void> {
 
   /**
    * GET /api/exports/jobs/:jobId/download
-   * Download the exported file
+   * Download the exported file — with ownership check
    */
   fastify.get<{ Params: JobParams }>(
     '/jobs/:jobId/download',
     async (request: FastifyRequest<{ Params: JobParams }>, reply: FastifyReply) => {
       try {
         const { jobId } = request.params;
+        const agent = (request as any).agent;
+
+        // IDOR FIX: Check ownership before allowing download
+        const jobRecord = await ExportJob.findById(jobId);
+        if (!jobRecord) {
+          return reply.status(404).send({ success: false, error: 'Export job not found' });
+        }
+        const isCreator = jobRecord.requestedBy?.toString() === agent._id.toString();
+        const isSupervisor = ['admin', 'supervisor'].includes(agent.role);
+        if (!isCreator && !isSupervisor) {
+          await logSecurityAnomaly(request, 'unauthorized_export_download', {
+            agentId: agent._id.toString(),
+            jobId,
+            jobOwner: jobRecord.requestedBy?.toString(),
+          }, 'high');
+          return reply.status(403).send({ success: false, error: 'Not authorized to download this export' });
+        }
 
         const filePath = await trackDownload(jobId);
         if (!filePath) {

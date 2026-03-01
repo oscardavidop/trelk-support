@@ -446,7 +446,7 @@ export default function LoginPage() {
               <img
                 src={`/assets/img/logo-${resolvedTheme == 'dark' ? 'dark' : 'light'}.png`}
                 alt="Trelk Logo"
-                className="h-20 w-auto"
+                className="h-16 w-auto"
               />
             </div>
             {!showForgotPassword && (
@@ -494,9 +494,6 @@ export default function LoginPage() {
                 // Request Form
                 <form onSubmit={handleForgotPassword} className="space-y-5">
                   <div className="text-center mb-6">
-                    <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-500/20 rounded-full mb-4">
-                      <KeyRound className="w-7 h-7 text-indigo-400" />
-                    </div>
                     <h3 className="text-xl font-semibold text-zinc-50 mb-2">
                       ¿Olvidaste tu contraseña?
                     </h3>
@@ -688,11 +685,6 @@ export default function LoginPage() {
             </form>
           )}
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-zinc-600 text-xs mt-8">
-          © {new Date().getFullYear()} Trelk Support Platform v2.4.0
-        </p>
       </div>
       {/* QR Login Modal - Premium Zinc Style */}
       {showQRModal && (

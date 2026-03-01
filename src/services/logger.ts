@@ -1,5 +1,8 @@
 /**
- * Simple Logger for Trelk Support Bot (Improved)
+ * Simple Logger for Trelk Support Bot (Hardened)
+ * - Structured JSON output in production
+ * - Sensitive field redaction
+ * - Security event tracking
  */
 
 import { ENV } from '../config/index.js';
@@ -18,6 +21,36 @@ const currentLevel =
   LOG_LEVELS[ENV.LOG_LEVEL as LogLevel] ?? LOG_LEVELS.info;
 
 const isDev = ENV.NODE_ENV === 'development';
+
+// Fields that must NEVER appear in logs
+const SENSITIVE_KEYS = new Set([
+  'password', 'currentPassword', 'newPassword', 'confirmPassword',
+  'token', 'accessToken', 'refreshToken', 'jwt', 'secret',
+  'apiKey', 'api_key', 'authorization', 'cookie',
+  'proxyPassword', 'proxyUsername', 'credentials',
+  'creditCard', 'ssn', 'socialSecurity',
+  'NOTIFICATION_BOT_TOKEN', 'BOT_TOKEN', 'WEBHOOK_SECRET', 'JWT_SECRET',
+]);
+
+/**
+ * Redact sensitive fields from data before logging
+ */
+function redactData(data: Record<string, unknown>, depth = 0): Record<string, unknown> {
+  if (depth > 5) return { '[truncated]': true };
+  const redacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (SENSITIVE_KEYS.has(key) || SENSITIVE_KEYS.has(key.toLowerCase())) {
+      redacted[key] = '[REDACTED]';
+    } else if (typeof value === 'string' && value.length > 500) {
+      redacted[key] = value.slice(0, 500) + '...[truncated]';
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      redacted[key] = redactData(value as Record<string, unknown>, depth + 1);
+    } else {
+      redacted[key] = value;
+    }
+  }
+  return redacted;
+}
 
 /* ───────────── colors ───────────── */
 const colors = {
@@ -87,12 +120,15 @@ function log(
 ): void {
   if (LOG_LEVELS[level] < currentLevel) return;
 
+  // Always redact sensitive fields
+  const safeData = redactData(data);
+
   const entry: LogEntry = {
     level,
     type,
     userId,
     chatId,
-    data,
+    data: safeData,
     timestamp: Date.now(),
   };
 

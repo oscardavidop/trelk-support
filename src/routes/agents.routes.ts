@@ -5,7 +5,8 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { authMiddleware, requirePermission } from '../middleware/auth.js';
+import { authMiddleware, requirePermission, can } from '../middleware/auth.js';
+import { authRateLimit } from '../middleware/rate-limit.js';
 import {
   getAllAgents,
   findAgentById,
@@ -85,9 +86,19 @@ export async function registerAgentRoutes(fastify: FastifyInstance): Promise<voi
   
   /**
    * Get single agent by ID
+   * Only self, supervisors, or admins can view full profile
    */
   fastify.get<{ Params: AgentParams }>('/api/agents/:agentId', async (request, reply) => {
     const { agentId } = request.params;
+    const currentAgent = request.agent!;
+    
+    // IDOR FIX: Only allow viewing own profile, or require agents.view permission
+    const isSelf = currentAgent._id.toString() === agentId;
+    const canViewAgents = can(currentAgent, 'agents.view') || ['admin', 'supervisor'].includes(currentAgent.role);
+    
+    if (!isSelf && !canViewAgents) {
+      return reply.code(403).send({ ok: false, error: 'Not authorized to view this agent' });
+    }
     
     const agent = await findAgentById(agentId);
     
@@ -134,8 +145,12 @@ export async function registerAgentRoutes(fastify: FastifyInstance): Promise<voi
   
   /**
    * Update current agent's password
+   * Rate limited to prevent brute force of current password
    */
-  fastify.patch<{ Body: UpdatePasswordBody }>('/api/agents/me/password', async (request, reply) => {
+  fastify.patch<{ Body: UpdatePasswordBody }>(
+    '/api/agents/me/password',
+    { preHandler: authRateLimit },
+    async (request, reply) => {
     const agentId = request.agent!._id.toString();
     const { currentPassword, newPassword } = request.body;
     
