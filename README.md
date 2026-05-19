@@ -4,7 +4,7 @@
 
 **Production-grade omnichannel support system — Telegram bot, real-time agent dashboard, and embeddable WebChat widget**
 
-[![CI](https://github.com/your-username/trelk-support/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/trelk-support/actions/workflows/ci.yml)
+[![CI](https://github.com/oscardavidop/trelk-support/actions/workflows/ci.yml/badge.svg)](https://github.com/oscardavidop/trelk-support/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-22-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org)
@@ -12,12 +12,15 @@
 
 </div>
 
+<p align="center">
+  <img src="./assets/img/trelk-support.png" alt="Trelk Support Preview" width="100%" />
+</p>
+
 ---
 
 ## 🚀 Demo
 
-> 🔗 **Live API:** https://api.trelk.site/health  
-> 📖 **API Docs (Swagger):** https://api.trelk.site/docs  
+> 🔗 **Live Demo:** https://support.trelkbot.com  
 > 🤖 **Bot:** [@TrelkSupportBot](https://t.me/TrelkSupportBot)
 
 ---
