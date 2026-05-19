@@ -28,16 +28,6 @@ dump.rdb
 uploads/
 exports/
 
-# Media files
-*.mp3
-*.webm
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.pdf
-*.docx
-*.zip
 
 # SSL certs (never commit private keys)
 certs/*
@@ -63,6 +53,7 @@ telegram-bot-api
 # Dashboard build
 dashboard/dist/
 dashboard/node_modules/
+scripts/
 
 # Telegram bot token folders (accidentally created)
 [0-9]*:*/
