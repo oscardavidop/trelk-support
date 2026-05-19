@@ -471,7 +471,7 @@ const SessionItem = memo(({ session, isActive, isNew, currentAgentId, onClick }:
       <div className="relative shrink-0">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-zinc-50 shadow-inner border border-white/5 ${isClosed ? 'bg-zinc-800 text-zinc-500' : 'bg-gradient-to-br from-indigo-600 to-violet-700'}`}>
           {session.user?.photoFileId ? (
-            <img src={`/api/media/${session.user.photoFileId}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
+            <img src={`/api/media/${session.user.photoFileId}?isProfilePhoto=true&userId=${session.user.telegramId}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
           ) : (
             <span>{session.user?.firstName?.charAt(0)?.toUpperCase() || '?'}</span>
           )}

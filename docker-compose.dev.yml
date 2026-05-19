@@ -1,0 +1,46 @@
+services:
+  api:
+    build:
+      context: .
+    restart: "no"
+    ports:
+      - "8443:8443"
+    env_file: .env
+    environment:
+      NODE_ENV: development
+      POLLING_ENABLED: "true"
+      MONGODB_URI: mongodb://mongo:27017/trelk_support_dev
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    volumes:
+      - ./src:/app/src
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongo
+      - redis
+    command: npm run dev
+    networks:
+      - internal
+
+  mongo:
+    image: mongo:7-jammy
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_dev_data:/data/db
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mongo_dev_data:

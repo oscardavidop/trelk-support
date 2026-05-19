@@ -38,7 +38,7 @@ export default function ContactProfileHeader({ contactInfo }: ContactProfileHead
                     >
                         {contactInfo.user?.photoFileId ? (
                             <img
-                                src={`/api/media/${contactInfo.user.photoFileId}`}
+                                src={`/api/media/${contactInfo.user.photoFileId}?isProfilePhoto=true&userId=${contactInfo.user.telegramId}`}
                                 alt={contactInfo.user.firstName}
                                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                             />

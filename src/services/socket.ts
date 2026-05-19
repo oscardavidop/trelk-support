@@ -1076,7 +1076,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
       }
 
       try {
-        const { evaluateChatAction } = await import('../services/policy-engine.service.js');
+        const { evaluateChatAction } = await import('./policy-engine.service.js');
         const { Note } = await import('../database/models/Note.js');
         const session = await getSessionById(sessionId);
 
@@ -1132,7 +1132,7 @@ async function handleConnection(socket: Socket<ClientToServerEvents, ServerToCli
 
       // Audit log for disposition
       if (disposition) {
-        const { logAudit } = await import('../services/audit-log.service.js');
+        const { logAudit } = await import('./audit-log.service.js');
         const clientIp = socket.handshake.headers['x-forwarded-for']?.toString()?.split(',')[0] || socket.handshake.address || 'unknown';
         await logAudit({
           action: 'chat_closed_with_disposition',

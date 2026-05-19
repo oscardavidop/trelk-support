@@ -32,6 +32,9 @@
   "paths": {
     "@/*": [
       "src/*"
+    ],
+    "@reactflow/packages/core/src/*": [
+      "node_modules/@reactflow/core/dist/umd/*"
     ]
   },
   "include": [

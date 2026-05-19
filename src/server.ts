@@ -8,6 +8,8 @@ import Fastify from "fastify";
 import fastifyCors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ENV, WEBHOOK_CONFIG, validateConfig } from "./config/index.js";
@@ -115,12 +117,47 @@ async function registerPlugins(): Promise<void> {
 
   // Global input sanitization (NoSQL injection prevention)
   fastify.addHook('preHandler', inputSanitizer);
+
+  // OpenAPI / Swagger (only expose in non-production or when explicitly enabled)
+  if (ENV.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true') {
+    await fastify.register(fastifySwagger, {
+      openapi: {
+        info: {
+          title: 'Trelk Support Platform API',
+          description: 'Real-time omnichannel support platform — Telegram bot, live dashboard, and WebChat widget',
+          version: '2.0.0',
+          contact: { name: 'Trelk Team' },
+          license: { name: 'MIT' },
+        },
+        servers: [{ url: ENV.DASHBOARD_PUBLIC_URL || `http://${ENV.HOST}:${ENV.PORT}` }],
+        components: {
+          securitySchemes: {
+            bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        tags: [
+          { name: 'auth', description: 'Authentication & session management' },
+          { name: 'agents', description: 'Agent management' },
+          { name: 'sessions', description: 'Chat sessions' },
+          { name: 'messages', description: 'Messaging' },
+          { name: 'contacts', description: 'Contact management' },
+          { name: 'system', description: 'System & health endpoints' },
+        ],
+      },
+    });
+
+    await fastify.register(fastifySwaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: { deepLinking: true },
+      staticCSP: true,
+    });
+  }
 }
 
 // ============= TELEGRAM WEBHOOK ENDPOINT =============
 
 fastify.post(WEBHOOK_CONFIG.path, async (request, reply) => {
-  console.log("Received webhook update");
   // Validate secret token
   const secretToken = request.headers[WEBHOOK_CONFIG.secretHeader] as string;
 
@@ -192,7 +229,7 @@ fastify.post("/api/webhook/setup", async (request, reply) => {
   }
 
   const webhookUrl = `${ENV.WEBHOOK_URL}${WEBHOOK_CONFIG.path}`;
-  console.log("Setting webhook URL to:", webhookUrl);
+  logger.info('api', { action: 'webhook_setup', url: webhookUrl });
   const result = await setWebhook(webhookUrl, ENV.WEBHOOK_SECRET);
 
   if (result) {
@@ -369,19 +406,10 @@ async function start(): Promise<void> {
     // Initialize Redis (optional - will fallback to DB if unavailable)
     const redisConnected = await initializeRedis();
     if (redisConnected) {
-      console.log("   ✅ Redis Connected");
-
-      // Start write-behind cache sync jobs
       startCacheSync();
-      console.log("   ✅ Cache Sync Started");
-
-      // Initialize BullMQ workers
-      const workersStarted = await initializeWorkers();
-      if (workersStarted) {
-        console.log("   ✅ BullMQ Workers Started");
-      }
+      await initializeWorkers();
     } else {
-      console.log("   ⚠️  Redis unavailable - using DB fallback");
+      logger.warn('api', { action: 'redis_unavailable', fallback: 'db-only' });
     }
 
 
@@ -413,7 +441,6 @@ async function start(): Promise<void> {
 
     // Initialize Presence Service (agent status engine + anti-fraud)
     initPresenceService(dashboardIO);
-    console.log('   ✅ Presence Service Initialized');
 
     // Initialize WebChat Socket.IO (Widget)
     const webChatIO = initializeWebChatSocket(fastify.server);
@@ -438,7 +465,6 @@ async function start(): Promise<void> {
     // Initialize Text Registry (i18n) cache
     await initializeTextRegistry();
     await seedDefaultTexts();
-    console.log("   ✅ Text Registry Initialized");
 
     // Queued session timers are now persisted in Redis via BullMQ
     // No need to restore - jobs survive server restarts
@@ -456,81 +482,47 @@ async function start(): Promise<void> {
     // Determine update mode (polling vs webhook)
     const updateMode = isPollingEnabled() ? "POLLING" : "WEBHOOK";
 
-    console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║   🤖 Trelk Support Platform v2.0                             ║
-║                                                              ║
-║   Bot: @${(botInfo.username || "TrelkSupportBot").padEnd(44)}║
-║   API: http://${ENV.HOST}:${String(ENV.PORT).padEnd(38)}║
-║   Mode: ${updateMode.padEnd(44)}║
-║   Environment: ${ENV.NODE_ENV.padEnd(36)}║
-║                                                              ║
-║   ✅ MongoDB Connected                                       ║
-║   ✅ Socket.IO Ready                                         ║
-║   ✅ API Routes Registered                                   ║
-║   ✅ Flow Engine Started                                     ║
-║   ✅ Policy Engine Ready                                     ║
-║   ✅ Redis & BullMQ Ready                                    ║
-║                                                              ║
-║   Ready for support operations!                              ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-    `);
+    logger.info('api', {
+      action: 'server_ready',
+      bot: botInfo.username,
+      port: ENV.PORT,
+      mode: updateMode,
+      env: ENV.NODE_ENV,
+    });
 
     // Start polling or configure webhook based on config
     if (isPollingEnabled()) {
       await startPolling();
-      console.log("   📡 Polling mode active for both bots\n");
+      logger.info('api', { action: 'polling_started' });
     } else if (ENV.WEBHOOK_URL) {
       const webhookUrl = `${ENV.WEBHOOK_URL}${WEBHOOK_CONFIG.path}`;
-      // Webhooks can be configured manually via /webhook/setup endpoint
-      console.log(`   📡 Webhook mode - configure at: ${webhookUrl}\n`);
+      logger.info('api', { action: 'webhook_mode', url: webhookUrl });
     }
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error('api', { action: 'startup_failed', error: String(error) });
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 async function shutdown(): Promise<void> {
-  console.log("\n🛑 Shutting down gracefully...");
+  logger.info('api', { action: 'shutdown_started' });
 
   try {
-    // Stop polling if enabled
-    if (isPollingEnabled()) {
-      await stopPolling();
-      console.log("   ✅ Polling stopped");
-    }
-
-    // Stop Flow Engine
+    if (isPollingEnabled()) await stopPolling();
     flowEngine.stop();
-
-    // Stop Presence Service intervals
     stopPresenceService();
-    console.log("   ✅ Presence Service stopped");
-
-    // Stop cache sync and flush pending writes to MongoDB
     stopCacheSync();
-    console.log("   ⏳ Flushing pending cache writes...");
     const flushed = await flushPendingWrites();
-    console.log(
-      `   ✅ Flushed ${flushed.executions} executions, ${flushed.userFields} user fields`,
-    );
-
-    // Shutdown BullMQ workers (handles scheduled messages now)
+    logger.info('api', { action: 'cache_flushed', ...flushed });
     await shutdownWorkers();
-
-    // Close Redis connection
     await closeRedis();
-
     await fastify.close();
     await disconnectDatabase();
-    console.log("✅ Server closed successfully");
+    logger.info('api', { action: 'shutdown_complete' });
     process.exit(0);
   } catch (error) {
-    console.error("Error during shutdown:", error);
+    logger.error('api', { action: 'shutdown_error', error: String(error) });
     process.exit(1);
   }
 }

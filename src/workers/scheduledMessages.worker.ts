@@ -294,7 +294,7 @@ export function startScheduledMessagesWorker(): void {
   );
 
   isWorkerRegistered = true;
-  console.log('✅ [Worker] Scheduled messages worker started');
+  logger.info('worker:scheduled', { action: 'started' });
 }
 
 // ============= MIGRATION HELPER =============

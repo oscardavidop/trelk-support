@@ -266,7 +266,7 @@ export async function scheduleCleanupJobs(): Promise<void> {
     });
   }
 
-  console.log('✅ [Worker] Cleanup jobs scheduled');
+  logger.info('worker:cleanup', { action: 'jobs_scheduled' });
 }
 
 // ============= WORKER REGISTRATION =============
@@ -289,5 +289,5 @@ export function startCleanupWorker(): void {
   );
 
   isWorkerRegistered = true;
-  console.log('✅ [Worker] Cleanup worker started');
+  logger.info('worker:cleanup', { action: 'started' });
 }

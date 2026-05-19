@@ -810,7 +810,7 @@ export default function ChatWindow({ session, onToggleSidebar, isSidebarOpen, ta
               <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden relative">
                 {session.user?.photoFileId ? (
                   <img
-                    src={`/api/media/${session.user.photoFileId}`}
+                    src={`/api/media/${session.user.photoFileId}?isProfilePhoto=true&userId=${session.user.telegramId}`}
                     alt="Avatar"
                     className="w-full h-full object-cover"
                   />

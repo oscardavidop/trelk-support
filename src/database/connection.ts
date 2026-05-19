@@ -15,14 +15,12 @@ export async function connectDatabase(): Promise<void> {
     await mongoose.connect(ENV.MONGODB_URI);
     isConnected = true;
     logger.info('api', { action: 'mongodb_connected' });
-    console.log('✅ MongoDB connected successfully');
     
     // Initialize system roles after connection
     const { initializeSystemRoles } = await import('./models/Role.js');
     await initializeSystemRoles();
   } catch (error) {
     logger.error('api', { action: 'mongodb_error', error: String(error) });
-    console.error('❌ MongoDB connection error:', error);
     throw error;
   }
 }

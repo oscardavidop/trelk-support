@@ -94,7 +94,6 @@ function createClient(config: RedisConfig = DEFAULT_CONFIG): RedisClient {
   client.on('ready', () => {
     isConnected = true;
     connectionAttempts = 0;
-    console.log('✅ [Redis] Connected and ready');
     logger.info('redis', { action: 'ready' });
   });
 
@@ -144,10 +143,9 @@ export async function initializeRedis(config?: Partial<RedisConfig>): Promise<bo
       subscriberClient.connect(),
     ]);
 
-    console.log('✅ [Redis] Both clients connected');
+    logger.info('redis', { action: 'both_clients_connected' });
     return true;
   } catch (error) {
-    console.warn('⚠️ [Redis] Connection failed, running in DB-only mode:', error);
     logger.warn('redis', {
       action: 'init_failed',
       error: error instanceof Error ? error.message : String(error),
@@ -171,7 +169,7 @@ export async function disconnectRedis(): Promise<void> {
       redisClient = null;
     }
     isConnected = false;
-    console.log('✅ [Redis] Disconnected gracefully');
+    logger.info('redis', { action: 'disconnected' });
   } catch (error) {
     logger.error('redis', {
       action: 'disconnect_error',

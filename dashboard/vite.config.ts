@@ -1,68 +1,67 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
-import { visualizer } from "rollup-plugin-visualizer";
+
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss(), visualizer({ open: true })],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  server: {
-    allowedHosts: ['trelk.site', 'api.trelk.site'],
-    port: 5173,
-    proxy: {
-      // '/api': {
-      //   target: 'https://api.trelk.site', // <-- Tu nuevo dominio para el backend
-      //   changeOrigin: true,
-      //   secure: false, // Ponlo en true si el certificado SSL de tu API es estricto/válido
-        
-      //   // ATENCIÓN A ESTA LÍNEA:
-      //   // Si tu nuevo backend espera rutas como "api.trelk.site/users" (sin la palabra /api),
-      //   // descomenta la siguiente línea para que Vite la borre antes de enviar la petición:
-        
-      //   // rewrite: (path) => path.replace(/^\/api/, '') 
-      // },
-      '/api': {
-        target: 'https://localhost:8443',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/uploads': {
-        target: 'https://localhost:8443',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/socket.io': {
-        target: 'https://localhost:8443',
-        ws: true,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/webchat-socket': {
-        target: 'https://localhost:8443',
-        ws: true,
-        changeOrigin: true,
-        secure: false,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const apiTarget = env.VITE_API_URL || 'https://localhost:8443'
+  const isProd = mode === 'production'
+
+  return {
+    plugins: [react(), tailwindcss()],
+
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
       },
     },
-  },
-  build: {
-    rollupOptions: {
-      // output: {
-      //   manualChunks(id) {
-      //     if (id.includes('node_modules')) {
-      //       // Separa las librerías grandes en sus propios archivos
-      //       if (id.includes('react')) return 'vendor-react';
-      //       if (id.includes('lucide')) return 'vendor-icons';
-      //       if (id.includes('chart.js')) return 'vendor-charts';
-      //       return 'vendor-others'; // El resto de librerías
-      //     }
-      //   },
-      // },
+
+    server: {
+      allowedHosts: ['trelk.site', 'api.trelk.site', 'support.trelkbot.com'],
+      port: 5175,
+      proxy: {
+        '/api': {
+          target: apiTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/socket.io': {
+          target: apiTarget,
+          ws: true,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/webchat-socket': {
+          target: apiTarget,
+          ws: true,
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+    },
+
+    build: {
+      minify: 'esbuild',
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return
+            if (id.includes('react-dom') || id.includes('react-router')) return 'vendor-react'
+            if (id.includes('reactflow') || id.includes('@reactflow')) return 'vendor-flow'
+            if (id.includes('socket.io')) return 'vendor-socket'
+            if (id.includes('recharts')) return 'vendor-charts'
+            if (id.includes('lucide')) return 'vendor-icons'
+            return 'vendor'
+          },
+        },
+      },
+    },
+
+    esbuild: {
+      // Strip console.* and debugger in production builds
+      drop: isProd ? ['console', 'debugger'] : [],
     },
   }
 })

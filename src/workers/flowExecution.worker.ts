@@ -444,5 +444,5 @@ export function startFlowExecutionWorker(): void {
   );
 
   isWorkerRegistered = true;
-  console.log('✅ [Worker] Flow execution worker started');
+  logger.info('worker:flow', { action: 'started' });
 }

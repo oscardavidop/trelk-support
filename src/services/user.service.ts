@@ -12,7 +12,7 @@ import { getUserProfilePhotos } from './telegram.js';
  */
 export async function getOrCreateUser(telegramUser: TelegramUser, chatId: number): Promise<IUser> {
   const existingUser = await User.findOne({ telegramId: telegramUser.id });
-  
+
   if (existingUser) {
     // Update last activity and any changed fields
     existingUser.lastActivity = new Date();
@@ -28,10 +28,10 @@ export async function getOrCreateUser(telegramUser: TelegramUser, chatId: number
     await existingUser.save();
     return existingUser;
   }
-  
+
   // Detect language from Telegram settings
   const language: Language = telegramUser.language_code?.startsWith('es') ? 'es' : 'en';
-  
+
   const newUser = await User.create({
     telegramId: telegramUser.id,
     username: telegramUser.username,
@@ -40,7 +40,7 @@ export async function getOrCreateUser(telegramUser: TelegramUser, chatId: number
     language,
     photoFileId: await getTelegramPhoto(telegramUser.id)
   });
-  
+
   return newUser;
 }
 
@@ -72,6 +72,10 @@ export async function getUserByTelegramId(telegramId: number): Promise<IUser | n
  */
 export async function getUserById(userId: string): Promise<IUser | null> {
   return User.findById(userId);
+}
+
+export async function updateUserPhoto(telegramId: number, fileId: string | null): Promise<void> {
+  await User.updateOne({ telegramId }, { photoFileId: fileId, lastActivity: new Date() });
 }
 
 /**

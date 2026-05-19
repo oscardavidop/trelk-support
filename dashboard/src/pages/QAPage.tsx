@@ -12,7 +12,7 @@ import {
   XCircle, Settings2, ChevronDown, ChevronUp, Award, Target,
   RefreshCw, Minus, BookOpen, ExternalLink, MessageSquare, Clock
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../../node_modules/react-i18next';
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';

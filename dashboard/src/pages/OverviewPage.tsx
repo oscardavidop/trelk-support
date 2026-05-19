@@ -4,7 +4,7 @@
  */
 
 import { useAuthStore } from '../stores/authStore';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../../node_modules/react-i18next';
 import { useDashboardStore } from '../stores/dashboardStore';
 import { useQuickStats, useDashboardSocket } from '../hooks/useDashboard';
 import { AdminDashboard } from '../components/dashboard/AdminDashboard';

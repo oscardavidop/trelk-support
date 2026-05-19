@@ -1,9 +1,9 @@
 # Dependencies
 node_modules/
+package-lock.json
 
 # Build output
 dist/
-
 
 # Logs
 logs/
@@ -18,15 +18,56 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Session data
+# Session / runtime data
 sessions/
 *.session
-uploads/
 *.binlog
+dump.rdb
+
+# Uploads & generated files
+uploads/
+exports/
+
+# Media files
 *.mp3
 *.webm
 *.jpg
+*.jpeg
+*.png
+*.gif
 *.pdf
 *.docx
 *.zip
-dump.rdb
+
+# SSL certs (never commit private keys)
+certs/
+
+# Binaries
+binaries/
+telegram-bot-api
+
+# Environment variables (NEVER commit)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temp files
+*.bak
+*.tmp
+*.swp
+*.swo
+*.swn
+
+# Dashboard build
+dashboard/dist/
+dashboard/node_modules/
+
+# Telegram bot token folders (accidentally created)
+[0-9]*:*/
+
+# Docker
+.dockerignore
+
+uploads/

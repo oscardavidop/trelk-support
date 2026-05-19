@@ -307,7 +307,7 @@ function FlowBuilderInner({
           >
             <Controls className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden [&>button]:border-b [&>button]:border-zinc-800 [&>button]:bg-zinc-900 [&>button]:fill-zinc-400 [&>button:hover]:bg-zinc-800" showInteractive={!readOnly} />
             <MiniMap 
-              nodeColor={n => NODE_COLORS[n.type as NodeType] || edgeColor} 
+              nodeColor={(n: { type?: string }) => NODE_COLORS[n.type as NodeType] || edgeColor} 
               maskColor={maskColor} 
               className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl" 
             />

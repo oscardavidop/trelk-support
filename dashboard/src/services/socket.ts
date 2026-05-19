@@ -779,7 +779,7 @@ export function initializeSocket(): Socket {
       ...data,
       targetAgentId: useAuthStore.getState().agent?._id || '',
       isRead: false,
-    });
+    } as any);
     
     // Dispatch event
     const event = new CustomEvent('whisper:new', { detail: data });

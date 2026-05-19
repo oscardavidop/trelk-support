@@ -17,6 +17,7 @@ import { Message } from '../database/index.js';
 import { ChatSession } from '../database/index.js';
 import fs from 'fs';
 import path from 'path';
+import { getTelegramPhoto, updateUserPhoto } from '../services/user.service.js';
 
 // MIME type mapping
 const MIME_TYPES: Record<string, string> = {
@@ -82,13 +83,14 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
    * 1. Call getFile(fileId) to get the local path
    * 2. Read and serve the file
    */
-  fastify.get<{ Params: MediaParams }>(
+  fastify.get<{ Params: MediaParams, Querystring: { isProfilePhoto?: string, userId?: string } }>(
     '/api/media/:fileId',
     { preHandler: authMiddleware },
-    async (request: FastifyRequest<{ Params: MediaParams }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Params: MediaParams, Querystring: { isProfilePhoto?: string, userId?: string } }>, reply: FastifyReply) => {
+      const { download, isProfilePhoto, userId } = request.query as { download?: string, isProfilePhoto?: string, userId?: string };
+
       try {
         const { fileId } = request.params;
-        const { download } = request.query as { download?: string };
 
         if (!fileId) {
           return reply.status(400).send({ ok: false, error: 'File ID required' });
@@ -144,11 +146,45 @@ export async function registerMediaRoutes(fastify: FastifyInstance): Promise<voi
         return reply.send(stream);
 
       } catch (error) {
-        console.error('Media serve error:', error);
-        return reply.status(500).send({ ok: false, error: 'Failed to serve file' });
+        if (isProfilePhoto === 'true' && userId) { 
+          // redirect to default profile photo if there's an error serving the requested one
+          // permanently redirect to the profile photo endpoint which will attempt to fetch the photo again (in case it was a temporary issue) or serve a default image if it still fails
+          return reply.redirect(`/api/media/profile-photo/${userId}`, 301);
+        }
+          console.error('Media serve error:', error);
+        return reply.status(500).send({ ok: false, error: 'Failed to serve file.' });
       }
     }
   );
+
+  /**
+   * Get /api/media/profile-photo/:userId
+   * Serves a user's profile photo by their Telegram user ID
+   */
+  fastify.get<{ Params: { userId: string } }>(
+    '/api/media/profile-photo/:userId',
+    { preHandler: authMiddleware },
+    async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
+      try {
+        const { userId } = request.params;
+        const telegramId = parseInt(userId, 10);
+        if (isNaN(telegramId)) {
+          return reply.status(400).send({ ok: false, error: 'Invalid user ID' });
+        }
+        const fileId = await getTelegramPhoto(telegramId);
+        if (!fileId) {
+          return reply.status(404).send({ ok: false, error: 'Profile photo not found' });
+        }
+        // Redirect to the media endpoint to serve the photo
+        updateUserPhoto(telegramId, fileId).catch(err => console.error('Failed to update user photo:', err));
+        return reply.redirect(`/api/media/${fileId}`, 302);
+      } catch (error) {
+        console.error('Profile photo error:', error);
+        return reply.status(500).send({ ok: false, error: 'Failed to get profile photo' });
+      }
+    }
+  );
+
 
   /**
    * GET /api/download/:fileId

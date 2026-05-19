@@ -75,7 +75,6 @@ function extractDeviceInfo(request: FastifyRequest, bodyDeviceInfo?: LoginBody['
   const cfCountry = request.headers['cf-ipcountry'];
   const country = Array.isArray(cfCountry) ? cfCountry[0] : (cfCountry || 'Unknown');
   
-  console.log('Extracted device info:', { deviceType, browser, os, ip, country }, request.headers);
   return {
     deviceType: bodyDeviceInfo?.deviceType || deviceType,
     browser: bodyDeviceInfo?.browser || browser,

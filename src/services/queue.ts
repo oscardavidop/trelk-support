@@ -192,7 +192,7 @@ export function registerWorker<T>(
   });
 
   workers.set(queueName, worker);
-  console.log(`✅ [Queue] Worker registered for ${queueName}`);
+  logger.info('queue', { action: 'worker_registered', queue: queueName });
   
   return worker;
 }
@@ -453,10 +453,9 @@ export async function initializeQueues(): Promise<boolean> {
     }
 
     isInitialized = true;
-    console.log('✅ [Queue] All queues initialized');
+    logger.info('queue', { action: 'all_queues_initialized' });
     return true;
   } catch (error) {
-    console.error('❌ [Queue] Initialization failed:', error);
     logger.error('queue', {
       action: 'init_failed',
       error: error instanceof Error ? error.message : String(error),
@@ -504,7 +503,7 @@ export async function shutdownQueues(): Promise<void> {
   queues.clear();
 
   isInitialized = false;
-  console.log('✅ [Queue] All queues shutdown gracefully');
+  logger.info('queue', { action: 'shutdown_complete' });
 }
 
 // ============= HEALTH & METRICS =============

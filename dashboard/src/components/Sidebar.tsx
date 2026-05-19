@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { Agent, DashboardStats, AvailabilityStatus } from '../types';
 import { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../../node_modules/react-i18next';
 import NotificationCenter from './NotificationCenter';
 import { useThemeStore } from '../hooks';
 import { usePresenceStore, formatLiveTime } from '../stores/presenceStore';

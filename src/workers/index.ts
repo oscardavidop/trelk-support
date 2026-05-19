@@ -26,7 +26,7 @@ export async function initializeWorkers(): Promise<boolean> {
   }
 
   try {
-    console.log('🔧 [Workers] Initializing all workers...');
+    logger.info('workers', { action: 'initializing' });
 
     // Initialize queues first
     const queuesReady = await initializeQueues();
@@ -45,7 +45,7 @@ export async function initializeWorkers(): Promise<boolean> {
     await scheduleCleanupJobs();
 
     isInitialized = true;
-    console.log('✅ [Workers] All workers initialized successfully');
+    logger.info('workers', { action: 'initialized' });
 
     // Store worker start timestamps in Redis for uptime tracking
     if (isRedisConnected()) {
@@ -59,7 +59,7 @@ export async function initializeWorkers(): Promise<boolean> {
     
     return true;
   } catch (error) {
-    console.error('❌ [Workers] Initialization failed:', error);
+
     logger.error('workers', {
       action: 'init_failed',
       error: error instanceof Error ? error.message : String(error),
@@ -76,13 +76,13 @@ export async function shutdownWorkers(): Promise<void> {
     return;
   }
 
-  console.log('🔧 [Workers] Shutting down all workers...');
+  logger.info('workers', { action: 'shutdown_started' });
   
   stopInactivityWorker();
   await shutdownQueues();
   
   isInitialized = false;
-  console.log('✅ [Workers] All workers shutdown gracefully');
+  logger.info('workers', { action: 'shutdown_complete' });
 }
 
 /**

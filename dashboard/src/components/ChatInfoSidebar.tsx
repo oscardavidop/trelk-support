@@ -26,7 +26,7 @@ import { CopilotSection } from './sidebar/Copilot';
 import { SidebarDisposition } from './sidebar/Disposition';
 import { SidebarMedia } from './sidebar/Media';
 import { SidebarPlaybook } from './sidebar/SidebarPlaybook';
-import ContactProfileHeader from './0';
+import ContactProfileHeader from './ContactProfileHeader';
 import QAReviewPanel from './QAReviewPanel';
 import ExportPanel from './sidebar/ExportPanel';
 import { SidebarIncomingTranslation, SidebarTranslation } from './sidebar/Translations';
